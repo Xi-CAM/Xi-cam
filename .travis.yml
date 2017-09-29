@@ -1,0 +1,35 @@
+language: python
+python:
+- '3.5'
+branches:
+  only:
+  - master
+sudo: false
+cache:
+  apt: true
+  pip: true
+  directories:
+# Attempt to save virtualenv between builds; might not be working
+#  - /home/travis/virtualenv/python2.7.9/lib/python2.7/site-packages
+#  - /home/travis/virtualenv/python2.7_with_system_site_packages/local/lib/python.7/site-packages
+#  - /usr/lib/python2.7/dist-packages
+addons:
+  apt:
+    packages:
+    - python3-numpy
+    - libqt5-dev
+virtualenv:
+  system_site_packages: true
+install:
+#- pip install PySide --no-index --find-links https://parkin.github.io/python-wheelhouse/;
+- pip install .
+script:
+- pip install pylint
+# always returns exit code 0; Write the errors but not cause failure
+- "pylint xicamlauncher xicam pipeline --errors-only || :"
+- pip install coverage
+- coverage run xicam/core/__init__.py
+- coverage run xicam/gui/__init__.py
+after_success:
+- pip install codecov --upgrade
+- bash <(curl -s https://codecov.io/bash)
