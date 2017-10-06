@@ -1,3 +1,5 @@
+from typing import Callable
+
 from qtpy.QtCore import *
 from qtpy.QtGui import *
 from qtpy.QtWidgets import *
@@ -6,22 +8,38 @@ from xicam.gui import static
 
 
 class XicamSplashScreen(QSplashScreen):
-    def __init__(self, mainwindow=QMainWindow, f=Qt.WindowStaysOnTopHint | Qt.SplashScreen):
-        # self.pixmap = QPixmap(str(static.path('images/animated_logo.gif')))
+    def __init__(self, mainwindow: Callable[[], QMainWindow] = QMainWindow,
+                 f: int = Qt.WindowStaysOnTopHint | Qt.SplashScreen):
+        """
+        A QSplashScreen customized to display an animated gif. The splash triggers launch when clicked.
+
+        Parameters
+        ----------
+        mainwindow  :   class
+            Subclass of QMainWindow to display after splashing
+        f           :   int
+            Extra flags (see base class)
+        """
+
+        # Get logo movie from relative path
         self.movie = QMovie(str(static.path('images/animated_logo.gif')))
+
+        # Setup drawing
         self.movie.frameChanged.connect(self.paintFrame)
         self.movie.jumpToFrame(1)
-        pixmap = QPixmap(self.movie.frameRect().size())
+        self.pixmap = QPixmap(self.movie.frameRect().size())
+        super(XicamSplashScreen, self).__init__(self.pixmap, f)
+        self.setMask(self.pixmap.mask())
 
-        super(XicamSplashScreen, self).__init__(pixmap, f)
-
+        # Setup timed triggers for launching the QMainWindow
         self.timer = QTimer(self)
         self.timer.singleShot(1000, self.launchwindow)
         self.timer.singleShot(3000, self.hide)
         self._launching = False
         self.mainwindow = mainwindow
+
+        # Start splashing
         self.setAttribute(Qt.WA_DeleteOnClose)
-        self.setMask(pixmap.mask())
         self.show()
         self.raise_()
         self.activateWindow()
@@ -53,9 +71,12 @@ class XicamSplashScreen(QSplashScreen):
             self.mainwindow = self.mainwindow()
             self.timer.stop()
 
+            # Show the QMainWindow
             self.mainwindow.show()
             self.mainwindow.raise_()
             self.mainwindow.activateWindow()
             app.setActiveWindow(self.mainwindow)
+
+            # Stop splashing
             self.hide()
             self.finish(self.mainwindow)
