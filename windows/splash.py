@@ -1,3 +1,4 @@
+import logging
 from typing import Callable
 
 from qtpy.QtCore import *
@@ -20,6 +21,8 @@ class XicamSplashScreen(QSplashScreen):
         f           :   int
             Extra flags (see base class)
         """
+        # Start logging to the splash screen
+        logging.getLogger().addHandler(self.showMessage)
 
         # Get logo movie from relative path
         self.movie = QMovie(str(static.path('images/animated_logo.gif')))
