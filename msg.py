@@ -53,7 +53,7 @@ def showMessage(*args, timeout=0, **kwargs):
 
 
 def logMessage(*args, level=INFO, loggername=None, timestamp=None, suppressreprint=False):
-    s = ' '.join(args)
+    s = ' '.join(map(str, args))
 
     # ATTENTION: loggername is 'intelligently' determined with inspect. You probably want to leave it None.
     if loggername is not None:
