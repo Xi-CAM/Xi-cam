@@ -2,7 +2,7 @@ import inspect
 import logging
 import sys
 import time
-from typing import Tuple
+from typing import Any
 
 # TODO: Add logging for images
 # TODO: Add icons in GUI reflection
@@ -96,7 +96,7 @@ def showMessage(*args, timeout=0, **kwargs):
     logMessage(*args, **kwargs)
 
 
-def logMessage(*args: Tuple[str], level: int = INFO, loggername: str = None, timestamp: str = None,
+def logMessage(*args: Any, level: int = INFO, loggername: str = None, timestamp: str = None,
                suppressreprint: bool = False):
     """
     Logs messages to logging log. Gui widgets can be subscribed to the log with:

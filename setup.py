@@ -80,17 +80,17 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=[],
+    install_requires=['databroker', 'pathlib'],
 
     setup_requires=[],
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
     # for example:
-    # $ pip install -e .[dev,test]
+    # $ pip install -e .[dev,tests]
     extras_require={
         # 'dev': ['check-manifest'],
-        'test': ['pytest', 'coverage'],
+        'tests': ['pytest', 'coverage'],
     },
 
     # If there are data files included in your packages that need to be
