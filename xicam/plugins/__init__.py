@@ -26,8 +26,7 @@ class IVisualizationPlugin(IPlugin):
     pass
 
 
-class IFileFormatPlugin(IPlugin):
-    pass
+from .IFileFormatPlugin import IFileFormatPlugin
 
 
 manager = PluginManager()
