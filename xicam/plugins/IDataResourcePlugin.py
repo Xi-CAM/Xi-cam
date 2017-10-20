@@ -56,15 +56,17 @@ except ImportError:
     pass
 
 
-class IDataSourceModel(QAbstractItemModel):
+class IDataSourceItemModel(QAbstractItemModel):
     def __init__(self, dataresource: IDataResourcePlugin):
-        super(IDataSourceModel, self).__init__()
+        super(IDataSourceItemModel, self).__init__()
         self.dataresource = dataresource
         self.dataresource.model = self
+        self.columnCount = dataresource.columnCount
+        self.rowCount = dataresource.rowCount
+        self.data = dataresource.data
+        self.headerData = dataresource.headerData
 
-    def __getattr__(self, attr):  ## implicitly wrap methods from dataresource
-        if hasattr(self.dataresource, attr):
-            m = getattr(self.dataresource, attr)
-            if hasattr(m, '__call__'):
-                return m
-        raise NameError(attr)
+
+class IDataSourceListModel(QAbstractListModel, IDataSourceItemModel):
+    def __init__(self, dataresource: IDataResourcePlugin):
+        super(IDataSourceListModel, self).__init__(dataresource)

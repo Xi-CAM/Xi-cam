@@ -76,3 +76,60 @@ def test_IFittableModelPlugin():
     assert round(m.amplitude.value) == 2
     assert round(m.mean.value) == 1
     assert round(m.stddev.value) == 3
+
+
+def makeapp():
+    from qtpy.QtWidgets import QApplication
+    app = QApplication([])
+    return app
+
+
+def mainloop():
+    from qtpy.QtWidgets import QApplication
+    app = QApplication.instance()
+    app.exec_()
+
+
+def test_IDataSourcePlugin():
+    from ..IDataResourcePlugin import IDataResourcePlugin, IDataSourceListModel
+
+    class SpotDataResourcePlugin(IDataResourcePlugin):
+        def __init__(self, user='anonymous', password='',
+                     query='skipnum=0&sortterm=fs.stage_date&sorttype=desc&search=end_station=bl832'):
+            scheme = 'https'
+            host = 'portal-auth.nersc.gov'
+            path = 'als/hdf/search'
+            config = {'scheme': scheme, 'host': host, 'path': path, 'query': query}
+            super(SpotDataResourcePlugin, self).__init__(flags={'canPush': False}, **config)
+            from requests import Session
+            self.session = Session()
+            self.session.post("https://newt.nersc.gov/newt/auth", {"username": user, "password": password})
+            r = self.session.get(
+                'https://portal-auth.nersc.gov/als/hdf/search?skipnum=0&limitnum=10&sortterm=fs.stage_date&sorttype=desc&search=end_station=bl832')
+            self._data = eval(r.content.replace(b'false', b'False'))
+
+        def columnCount(self, index=None):
+            return len(self._data[0])
+
+        def rowCount(self, index=None):
+            return len(self._data)
+
+        def data(self, index, role):
+            from qtpy.QtCore import Qt, QVariant
+            if index.isValid() and role == Qt.DisplayRole:
+                return QVariant(self._data[index.row()]['name'])
+            else:
+                return QVariant()
+
+                # TODO: remove qtcore dependence
+
+    app = makeapp()
+    from qtpy.QtWidgets import QListView
+
+    # TODO: handle password for testing
+    spot = IDataSourceListModel(SpotDataResourcePlugin())
+
+    lv = QListView()
+    lv.setModel(spot)
+    lv.show()
+    mainloop()
