@@ -133,3 +133,19 @@ def test_IDataSourcePlugin():
     lv.setModel(spot)
     lv.show()
     mainloop()
+
+
+def test_IProcessingPlugin():
+    from ..IProcessingPlugin import IProcessingPlugin, Input
+
+    class SumProcessingPlugin(IProcessingPlugin):
+        a = Input(default=1, unit='nm', min=0)
+        b = Input(default=2)
+        c = Input(default=0)
+
+        def evaluate(self):
+            self.c.value = self.a.value + self.b.value
+            return self.c.value
+
+    t = SumProcessingPlugin()
+    assert t.evaluate() == 3
