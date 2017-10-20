@@ -15,3 +15,4 @@ class Input(object):
         self.description = description
         self.default = default
         self.unit = unit
+        self.value = default

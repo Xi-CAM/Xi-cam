@@ -23,6 +23,7 @@ def test_IFileFormatPlugin():
 
     f = fabio.open(fname)
     assert np.all(np.equal(f.data, data))
+    del f
 
     # cleanup
     import os
