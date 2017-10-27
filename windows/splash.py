@@ -9,7 +9,7 @@ from xicam.gui import static
 
 
 class XicamSplashScreen(QSplashScreen):
-    def __init__(self, mainwindow: Callable[[], QMainWindow] = QMainWindow,
+    def __init__(self, mainwindow: Callable[[], QMainWindow],
                  f: int = Qt.WindowStaysOnTopHint | Qt.SplashScreen):
         """
         A QSplashScreen customized to display an animated gif. The splash triggers launch when clicked.
