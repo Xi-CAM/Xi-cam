@@ -1,8 +1,10 @@
 import os
 
 from appdirs import user_config_dir, site_config_dir
+from yapsy import PluginInfo
 from yapsy.PluginManager import PluginManager
 
+from xicam.core import msg
 from .IDataResourcePlugin import IDataResourcePlugin
 from .IFileFormatPlugin import IFileFormatPlugin
 from .IFittableModelPlugin import IFittable1DModelPlugin
@@ -13,9 +15,23 @@ user_plugin_dir = user_config_dir('xicam/plugins')
 site_plugin_dir = site_config_dir('xicam/plugins')
 
 
+class XicamPluginManager(PluginManager):
+    def collectPlugins(self):
+        """
+        Walk through the plugins' places and look for plugins.  Then
+        for each plugin candidate look for its category, load it and
+        stores it in the appropriate slot of the category_mapping.
+        """
+
+        self.locatePlugins()
+        self.loadPlugins(callback=self.showLoading)
+
+    def showLoading(self, plugininfo: PluginInfo):
+        name = plugininfo.name
+        msg.logMessage(f'Loading {name}')
 
 
-manager = PluginManager()
+manager = XicamPluginManager()
 manager.setPluginPlaces([os.path.dirname(__file__), user_plugin_dir, site_plugin_dir])
 manager.setCategoriesFilter({
     "GUIPlugin": IGUIPlugin,

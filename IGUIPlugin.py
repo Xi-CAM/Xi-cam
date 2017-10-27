@@ -8,7 +8,6 @@ from yapsy.IPlugin import IPlugin
 class IGUIPlugin(IPlugin):
     def __init__(self):
         super(IGUIPlugin, self).__init__()
-        self._stages = OrderedDict()
         self.stage = list(self.stages.values())[0]
 
     def appendDocuments(self, doc:List[dict], **kwargs):
