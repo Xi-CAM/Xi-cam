@@ -1,11 +1,15 @@
-from yapsy.IPlugin import IPlugin
-from typing import Dict,List
 from collections import OrderedDict
+from enum import Enum
+from typing import Dict, List
+
+from yapsy.IPlugin import IPlugin
+
 
 class IGUIPlugin(IPlugin):
     def __init__(self):
         super(IGUIPlugin, self).__init__()
-        self.stage = self.stages[0]
+        self._stages = OrderedDict()
+        self.stage = list(self.stages.values())[0]
 
     def appendDocuments(self, doc:List[dict], **kwargs):
         # kwargs can include flags for how the data append operation is handled, i.e.:
@@ -23,16 +27,32 @@ class IGUIPlugin(IPlugin):
 
     @property
     def stages(self) -> OrderedDict:
-        raise NotImplementedError
+        return self._stages
+
+    @stages.setter
+    def stages(self, stages):
+        self._stages = stages
 
     @property
     def exposedvars(self) -> Dict:
         raise NotImplementedError
 
-class stage(object):
-    def __init__(self,centerwidget,leftwidget,rightwidget,bottomwidget,topwidget):
-        self.leftwidget = leftwidget
-        self.rightwidget = rightwidget
-        self.centerwidget = centerwidget
-        self.bottomwidget = bottomwidget
-        self.topwidget = topwidget
+
+class PanelState(Enum):
+    Disabled = 1
+    Defaulted = 2
+    Customized = 3
+
+
+class GUILayout(object):
+    def __init__(self, center, left=PanelState.Defaulted, right=PanelState.Defaulted, bottom=PanelState.Defaulted,
+                 lefttop=PanelState.Defaulted, righttop=PanelState.Defaulted, leftbottom=PanelState.Defaulted,
+                 rightbottom=PanelState.Defaulted):
+        self.centerwidget = center
+        self.leftwidget = left
+        self.rightwidget = right
+        self.bottomwidget = bottom
+        self.lefttopwidget = lefttop
+        self.righttopwidget = righttop
+        self.leftbottomwidget = leftbottom
+        self.rightbottomwidget = rightbottom
