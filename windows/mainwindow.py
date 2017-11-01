@@ -35,8 +35,9 @@ class XicamMainWindow(QMainWindow):
 
     def setStage(self, i):
         plugin = self.currentGUIPlugin.plugin_object
-        plugin.stage = list(plugin.stages.values())[i]
-        self.rebuild_layout()
+        if i < len(plugin.stages):
+            plugin.stage = list(plugin.stages.values())[i]
+            self.rebuild_layout()
 
     @property
     def currentGUIPlugin(self) -> PluginInfo:
@@ -80,6 +81,7 @@ class XicamMainWindow(QMainWindow):
         self.setCorner(Qt.BottomLeftCorner, Qt.LeftDockWidgetArea)
         self.setCorner(Qt.BottomRightCorner, Qt.RightDockWidgetArea)
 
+        # Set contents
         self.centralWidget().addWidget(self.currentGUIPlugin.plugin_object.stage.centerwidget)
         self.centralWidget().setCurrentWidget(self.currentGUIPlugin.plugin_object.stage.centerwidget)
 
@@ -108,7 +110,7 @@ class pluginModeWidget(QToolBar):
                 button.setAutoFillBackground(False)
                 button.setCheckable(True)
                 button.setAutoExclusive(True)
-                # button.clicked.connect(plugin.activate)
+                button.clicked.connect(partial(self.activate, plugin))
                 # if plugin is self.plugins.values()[0]:
                 #     button.setChecked(True)
                 self.addWidget(button)
@@ -118,3 +120,7 @@ class pluginModeWidget(QToolBar):
                 self.addWidget(label)
 
         self.layout().takeAt(self.layout().count() - 1).widget().deleteLater()  # Delete the last pipe symbol
+
+    def activate(self, plugin):
+        self.parent().currentGUIPlugin = plugin
+        self.parent().rebuild_layout()
