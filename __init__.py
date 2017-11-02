@@ -14,6 +14,8 @@ from .ProcessingPlugin import IProcessingPlugin
 user_plugin_dir = user_config_dir('xicam/plugins')
 site_plugin_dir = site_config_dir('xicam/plugins')
 
+# Observers will be notified when active plugins changes
+observers = []
 
 class XicamPluginManager(PluginManager):
     def collectPlugins(self):
@@ -27,6 +29,9 @@ class XicamPluginManager(PluginManager):
 
         self.locatePlugins()
         self.loadPlugins(callback=self.showLoading)
+
+        for observer in observers:
+            observer.pluginsChanged()
 
     def showLoading(self, plugininfo: PluginInfo):
         # Indicate loading status
