@@ -5,7 +5,8 @@ from qtpy.QtGui import *
 from qtpy.QtWidgets import *
 from yapsy import PluginInfo
 
-from xicam.plugins import manager
+from xicam.plugins import manager as pluginmanager
+from xicam.plugins import observers as pluginobservers
 from xicam.plugins.GUIPlugin import PanelState
 
 
@@ -30,7 +31,7 @@ class XicamMainWindow(QMainWindow):
 
 
         # Initialize layout with first plugin
-        self._currentGUIPlugin = manager.getPluginsOfCategory("GUIPlugin")[0]
+        self._currentGUIPlugin = pluginmanager.getPluginsOfCategory("GUIPlugin")[0]
         self.build_layout()
 
         # Make F key bindings
@@ -132,12 +133,15 @@ class pluginModeWidget(QToolBar):
         # Align right
         self.setLayoutDirection(Qt.RightToLeft)
 
-        # Build children
-        self.reload()
+        # Subscribe to plugins
+        pluginobservers.append(self)
 
-    def reload(self):
+        # Build children
+        self.pluginsChanged()
+
+    def pluginsChanged(self):
         # Loop over each "GUIPlugin" plugin
-        for plugin in manager.getPluginsOfCategory("GUIPlugin"):
+        for plugin in pluginmanager.getPluginsOfCategory("GUIPlugin"):
             if plugin.is_activated or True:
                 # Make the pushbutton
                 button = QPushButton(plugin.name)
