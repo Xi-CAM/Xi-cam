@@ -15,6 +15,8 @@ class XicamSplashScreen(QSplashScreen):
         """
         A QSplashScreen customized to display an animated gif. The splash triggers launch when clicked.
 
+        After minsplashtime, this splash waits until the animation finishes before triggering the launch.
+
         Parameters
         ----------
         mainwindow  :   class
@@ -22,8 +24,6 @@ class XicamSplashScreen(QSplashScreen):
         f           :   int
             Extra flags (see base class)
         """
-        # Start logging to the splash screen
-        # logging.getLogger().addHandler(self.showMessage)
 
         # Get logo movie from relative path
         self.movie = QMovie(str(static.path('images/animated_logo.gif')))
@@ -50,7 +50,7 @@ class XicamSplashScreen(QSplashScreen):
         self.activateWindow()
         QApplication.instance().setActiveWindow(self)
 
-    def showMessage(self, message, color=Qt.white):
+    def showMessage(self, message: str, color=Qt.white):
         # TODO: Make this work.
         super(XicamSplashScreen, self).showMessage(message, color)
 
@@ -60,9 +60,15 @@ class XicamSplashScreen(QSplashScreen):
         self.execlaunch()
 
     def showEvent(self, event):
+        """
+        Start the animation when shown
+        """
         self.movie.start()
 
     def paintFrame(self):
+        """
+        Paint the current frame
+        """
         self.pixmap = self.movie.currentPixmap()
         self.setMask(self.pixmap.mask())
         self.setPixmap(self.pixmap)
@@ -72,16 +78,24 @@ class XicamSplashScreen(QSplashScreen):
         return self.movie.scaledSize()
 
     def restartmovie(self):
+        """
+        Once the animation reaches the end, check if its time to launch, otherwise restart animation
+        """
         if self._launchready:
             self.execlaunch()
             return
         self.movie.start()
 
     def launchwindow(self):
+        """
+        Save state, defer launch until animation finishes
+        """
         self._launchready = True
 
     def execlaunch(self):
-
+        """
+        Launch the mainwindow
+        """
         if not self._launching:
             self._launching = True
 
