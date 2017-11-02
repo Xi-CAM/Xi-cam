@@ -3,17 +3,19 @@ from qtpy.QtWidgets import *
 from yapsy.IPlugin import IPlugin
 
 
-class _metaVisualizationPlugin(type(QWidget), type(IPlugin)):
+# TODO: make classes usable without qt
+
+class _metaQWidgetPlugin(type(QWidget), type(IPlugin)):
     pass
 
 
-class VisualizationPlugin(QWidget, IPlugin, metaclass=_metaVisualizationPlugin):
+class QWidgetPlugin(QWidget, IPlugin, metaclass=_metaQWidgetPlugin):
     pass
 
 
-def test_VisualizationPlugin():
+def test_QWidgetPlugin():
     from pyqtgraph import ImageView
-    class ImageViewPlugin(VisualizationPlugin, ImageView):
+    class ImageViewPlugin(QWidgetPlugin, ImageView):
         pass
 
     app = makeapp()

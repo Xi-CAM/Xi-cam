@@ -45,11 +45,12 @@ class PanelState(Enum):
 
 class GUILayout(object):
     def __init__(self, center, left=PanelState.Defaulted, right=PanelState.Defaulted, bottom=PanelState.Defaulted,
-                 lefttop=PanelState.Defaulted, righttop=PanelState.Defaulted, leftbottom=PanelState.Defaulted,
-                 rightbottom=PanelState.Defaulted):
-        self.centerwidget = center
+                 top=PanelState.Defaulted, lefttop=PanelState.Defaulted, righttop=PanelState.Defaulted,
+                 leftbottom=PanelState.Defaulted, rightbottom=PanelState.Defaulted):
+        self.topwidget = top
         self.leftwidget = left
         self.rightwidget = right
+        self.centerwidget = center
         self.bottomwidget = bottom
         self.lefttopwidget = lefttop
         self.righttopwidget = righttop
