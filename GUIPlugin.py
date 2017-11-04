@@ -5,9 +5,9 @@ from typing import Dict, List
 from yapsy.IPlugin import IPlugin
 
 
-class IGUIPlugin(IPlugin):
+class GUIPlugin(IPlugin):
     def __init__(self):
-        super(IGUIPlugin, self).__init__()
+        super(GUIPlugin, self).__init__()
         self.stage = list(self.stages.values())[0]
 
     def appendDocuments(self, doc:List[dict], **kwargs):
