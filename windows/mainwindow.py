@@ -140,6 +140,11 @@ class pluginModeWidget(QToolBar):
         self.pluginsChanged()
 
     def pluginsChanged(self):
+        # Remove+delete previous children
+        layout = self.layout()
+        for i in reversed(range(layout.count())):
+            layout.itemAt(i).widget().setParent(None)
+
         # Loop over each "GUIPlugin" plugin
         for plugin in pluginmanager.getPluginsOfCategory("GUIPlugin"):
             if plugin.is_activated or True:
