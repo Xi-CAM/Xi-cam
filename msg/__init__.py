@@ -127,6 +127,7 @@ def logMessage(*args: Any, level: int = INFO, loggername: str = None, timestamp:
     if loggername is not None:
         loggername = inspect.stack()[1][3]
     logger = logging.getLogger(loggername)
+    logger.setLevel(DEBUG)
 
     # Set the logging level
     try:
