@@ -4,6 +4,7 @@ from urllib import parse
 import pip
 import requests
 
+from . import manager
 from . import venvs
 
 
@@ -34,3 +35,5 @@ def install(name: str):
         pip.main(["install", ''.join(uri[1:]), "--prefix", venvs.current_environment])
     elif uri.scheme == 'conda':
         raise NotImplementedError
+
+    manager.collectPlugins()

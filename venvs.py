@@ -7,6 +7,7 @@ user_venv_dir = user_config_dir('xicam/venvs')
 site_venv_dir = site_config_dir('xicam/venvs')
 
 venvs = {}
+observers = []
 
 # Python 2 style execfile function
 execfile = lambda filename, globals=None, locals=None: exec(open(filename).read(), globals, locals)
@@ -39,6 +40,8 @@ def use_environment(name):
     """
     activate_script = str(pathlib.Path(user_venv_dir, name, "bin", "activate_this.py"))
     execfile(activate_script, dict(__file__=activate_script))
+    for observer in observers:
+        observer.venvChanged()
 
 
 # TODO: create default environment if it doesn't exist

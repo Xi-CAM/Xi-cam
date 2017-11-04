@@ -8,8 +8,9 @@ from xicam.core import msg
 from .DataResourcePlugin import IDataResourcePlugin
 from .FileFormatPlugin import IFileFormatPlugin
 from .FittableModelPlugin import IFittable1DModelPlugin
-from .GUIPlugin import IGUIPlugin, GUILayout
+from .GUIPlugin import GUIPlugin, GUILayout
 from .ProcessingPlugin import IProcessingPlugin
+from .venvs import observers as venvsobservers
 
 user_plugin_dir = user_config_dir('xicam/plugins')
 site_plugin_dir = site_config_dir('xicam/plugins')
@@ -18,6 +19,10 @@ site_plugin_dir = site_config_dir('xicam/plugins')
 observers = []
 
 class XicamPluginManager(PluginManager):
+    def __init__(self):
+        super(XicamPluginManager, self).__init__()
+        venvsobservers.append(self)
+
     def collectPlugins(self):
         """
         Walk through the plugins' places and look for plugins.  Then
@@ -38,12 +43,17 @@ class XicamPluginManager(PluginManager):
         name = plugininfo.name
         msg.logMessage(f'Loading {name}')
 
+    def venvChanged(self):
+        self.setPluginPlaces([venvs.current_environment])
+        self.collectPlugins()
+
+
 
 # Setup plugin manager
 manager = XicamPluginManager()
-manager.setPluginPlaces([os.path.dirname(__file__), user_plugin_dir, site_plugin_dir])
+manager.setPluginPlaces([os.path.dirname(__file__), user_plugin_dir, site_plugin_dir, venvs.current_environment])
 manager.setCategoriesFilter({
-    "GUIPlugin": IGUIPlugin,
+    "GUIPlugin": GUIPlugin,
     "ProcessingPlugin": IProcessingPlugin,
     "FileFormatPlugin": IFileFormatPlugin,
 })
