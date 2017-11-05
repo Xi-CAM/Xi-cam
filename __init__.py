@@ -1,4 +1,5 @@
 import os
+import sys
 
 from appdirs import user_config_dir, site_config_dir
 from yapsy import PluginInfo
@@ -10,6 +11,7 @@ from .FileFormatPlugin import IFileFormatPlugin
 from .FittableModelPlugin import IFittable1DModelPlugin
 from .GUIPlugin import GUIPlugin, GUILayout
 from .ProcessingPlugin import IProcessingPlugin
+from .WidgetPlugin import QWidgetPlugin
 from .venvs import observers as venvsobservers
 
 user_plugin_dir = user_config_dir('xicam/plugins')
@@ -33,6 +35,17 @@ class XicamPluginManager(PluginManager):
         """
 
         self.locatePlugins()
+
+        # Link categories to base classes
+        categoriesfilter = {'GUIPlugin': GUIPlugin,
+                            'WidgetPlugin': QWidgetPlugin}
+
+        # If xicam.gui is not loaded (running headless), don't load GUIPlugins or WidgetPlugins
+        if 'xicam.gui' not in sys.modules:
+            categoriesfilter['GUIPlugin'] = None
+            categoriesfilter['WidgetPlugin'] = None
+
+        self.setCategoriesFilter(categoriesfilter)
         self.loadPlugins(callback=self.showLoading)
 
         for observer in observers:
@@ -52,11 +65,6 @@ class XicamPluginManager(PluginManager):
 # Setup plugin manager
 manager = XicamPluginManager()
 manager.setPluginPlaces([os.path.dirname(__file__), user_plugin_dir, site_plugin_dir, venvs.current_environment])
-manager.setCategoriesFilter({
-    "GUIPlugin": GUIPlugin,
-    "ProcessingPlugin": IProcessingPlugin,
-    "FileFormatPlugin": IFileFormatPlugin,
-})
 
 # Collect all the plugins
 manager.collectPlugins()
