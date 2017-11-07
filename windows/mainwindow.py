@@ -29,6 +29,15 @@ class XicamMainWindow(QMainWindow):
         # NOTE: CentralWidgets are force-deleted when replaced, even if the object is still referenced;
         # To avoid this, a QStackedWidget is used for the central widget.
 
+        # Setup menubar
+        menubar = QMenuBar()
+        file = QMenu('&File')
+        menubar.addMenu(file)
+        file.addAction('Se&ttings', self.showSettings, shortcut=QKeySequence(Qt.CTRL + Qt.ALT + Qt.Key_S))
+        help = QMenu('&Help')
+        menubar.addMenu(help)
+        self.setMenuBar(menubar)
+
 
         # Initialize layout with first plugin
         self._currentGUIPlugin = pluginmanager.getPluginsOfCategory("GUIPlugin")[0]
@@ -40,6 +49,9 @@ class XicamMainWindow(QMainWindow):
         self.Fshortcuts = [QShortcut(QKeySequence(key), self) for key in fkeys]
         for i in range(12):
             self.Fshortcuts[i].activated.connect(partial(self.setStage, i))
+
+    def showSettings(self):
+        pass
 
     def setStage(self, i: int):
         """
