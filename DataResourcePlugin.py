@@ -51,22 +51,22 @@ class IDataResourcePlugin(IPlugin):
 
 try:
     from qtpy.QtCore import *
+
+
+    class IDataSourceItemModel(QAbstractItemModel):
+        def __init__(self, dataresource: IDataResourcePlugin):
+            super(IDataSourceItemModel, self).__init__()
+            self.dataresource = dataresource
+            self.dataresource.model = self
+            self.columnCount = dataresource.columnCount
+            self.rowCount = dataresource.rowCount
+            self.data = dataresource.data
+            self.headerData = dataresource.headerData
+
+
+    class IDataSourceListModel(QAbstractListModel, IDataSourceItemModel):
+        def __init__(self, dataresource: IDataResourcePlugin):
+            super(IDataSourceListModel, self).__init__(dataresource)
 except ImportError:
     # TODO: how should this be handled?
     pass
-
-
-class IDataSourceItemModel(QAbstractItemModel):
-    def __init__(self, dataresource: IDataResourcePlugin):
-        super(IDataSourceItemModel, self).__init__()
-        self.dataresource = dataresource
-        self.dataresource.model = self
-        self.columnCount = dataresource.columnCount
-        self.rowCount = dataresource.rowCount
-        self.data = dataresource.data
-        self.headerData = dataresource.headerData
-
-
-class IDataSourceListModel(QAbstractListModel, IDataSourceItemModel):
-    def __init__(self, dataresource: IDataResourcePlugin):
-        super(IDataSourceListModel, self).__init__(dataresource)
