@@ -1,8 +1,14 @@
 from qtpy.QtWidgets import *
 
-app = QApplication([])
 
-from xicam.gui.windows import splash
+def main():
+    app = QApplication([])
 
-splash = splash.XicamSplashScreen()
-app.exec_()
+    from xicam.gui.windows import splash
+
+    splash = splash.XicamSplashScreen()
+    app.exec_()
+
+
+if __name__ == '__main__':
+    main()
