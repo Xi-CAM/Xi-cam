@@ -8,6 +8,7 @@ from yapsy import PluginInfo
 from xicam.plugins import manager as pluginmanager
 from xicam.plugins import observers as pluginobservers
 from xicam.plugins.GUIPlugin import PanelState
+from .settings import ConfigDialog
 
 
 class XicamMainWindow(QMainWindow):
@@ -22,6 +23,9 @@ class XicamMainWindow(QMainWindow):
         self.topwidget = self.leftwidget = self.rightwidget = self.bottomwidget = self.lefttopwidget = \
             self.righttopwidget = self.leftbottomwidget = self.rightbottomwidget = None
 
+        # Setup appearance
+        self.setWindowTitle('Xi-cam')
+
         # Setup center/toolbar/statusbar
         self.addToolBar(pluginModeWidget())
         self.setStatusBar(QStatusBar())
@@ -30,13 +34,12 @@ class XicamMainWindow(QMainWindow):
         # To avoid this, a QStackedWidget is used for the central widget.
 
         # Setup menubar
-        menubar = QMenuBar()
-        file = QMenu('&File')
+        menubar = self.menuBar()
+        file = QMenu('&File', parent=menubar)
         menubar.addMenu(file)
         file.addAction('Se&ttings', self.showSettings, shortcut=QKeySequence(Qt.CTRL + Qt.ALT + Qt.Key_S))
-        help = QMenu('&Help')
+        help = QMenu('&Help', parent=menubar)
         menubar.addMenu(help)
-        self.setMenuBar(menubar)
 
 
         # Initialize layout with first plugin
@@ -51,7 +54,8 @@ class XicamMainWindow(QMainWindow):
             self.Fshortcuts[i].activated.connect(partial(self.setStage, i))
 
     def showSettings(self):
-        pass
+        self._configdialog = ConfigDialog()
+        self._configdialog.show()
 
     def setStage(self, i: int):
         """
