@@ -8,7 +8,7 @@ Usage: pip install -e .
 
 import sys
 
-deps = ['databroker', 'pathlib', 'qtpy', 'PyQt5', 'yapsy', 'astropy', 'signalslot', 'numpy']
+deps = ['databroker', 'pathlib', 'qtpy', 'PyQt5', 'yapsy', 'astropy', 'signalslot', 'numpy', 'pyqtgraph']
 
 # These bits don't get collected automatically when packaging:
 loosebits = ['numpy.core._methods', "numpy.lib.recfunctions"]
