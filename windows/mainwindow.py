@@ -43,8 +43,9 @@ class XicamMainWindow(QMainWindow):
 
 
         # Initialize layout with first plugin
-        self._currentGUIPlugin = pluginmanager.getPluginsOfCategory("GUIPlugin")[0]
-        self.build_layout()
+        if pluginmanager.getPluginsOfCategory("GUIPlugin"):
+            self._currentGUIPlugin = pluginmanager.getPluginsOfCategory("GUIPlugin")[0]
+            self.build_layout()
 
         # Make F key bindings
         fkeys = [Qt.Key_F1, Qt.Key_F2, Qt.Key_F3, Qt.Key_F4, Qt.Key_F5, Qt.Key_F6,
@@ -186,7 +187,8 @@ class pluginModeWidget(QToolBar):
                 self.addWidget(label)
 
         # Remove last separator
-        self.layout().takeAt(self.layout().count() - 1).widget().deleteLater()  # Delete the last pipe symbol
+        if self.layout().count():
+            self.layout().takeAt(self.layout().count() - 1).widget().deleteLater()  # Delete the last pipe symbol
 
     def activate(self, plugin):
         # Set the current plugin (automatically replaces layout)

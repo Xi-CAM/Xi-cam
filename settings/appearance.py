@@ -7,20 +7,33 @@ from xicam.plugins import SettingsPlugin
 
 
 class AppearanceSettingsPlugin(SettingsPlugin):
+    name = "Appearance"
+
     def __init__(self):
+        self.widget = ParameterTree()
         super(AppearanceSettingsPlugin, self).__init__(QIcon(str(path('icons/colors.png'))),
-                                                       'Appearance')
-        self.widget = AppearanceSettings()
+                                                       self.name,
+                                                       self.widget)
+        self.parameter = AppearanceSettings()
+        self.widget.setParameters(self.parameter, showTop=False)
+
+    def save(self):
+        return self.parameter.saveState()
+
+    def restore(self, state):
+        self.parameter.restoreState(state)
 
 
-class AppearanceSettings(ParameterTree):
+
+
+class AppearanceSettings(Parameter):
     def __init__(self):
-        super(AppearanceSettings, self).__init__(showHeader=False)
         settings = [dict(name='Theme',
                          value='Default',
                          values={'Default': 0,
                                  'QtDarkStyle': 1,
                                  'QtModern': 2},
                          type='list')]
-        param = Parameter(name='Appearance', type='group', children=settings)
-        self.setParameters(param, showTop=False)
+        super(AppearanceSettings, self).__init__(name='Appearance', type='group', children=settings)
+
+
