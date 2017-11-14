@@ -38,7 +38,14 @@ def use_environment(name):
     name : str
         Name of virtual environment to activate
     """
-    activate_script = str(pathlib.Path(user_venv_dir, name, "bin", "activate_this.py"))
+
+    activate_script=pathlib.Path(user_venv_dir, name, "bin", "activate_this.py")
+    if not activate_script.is_file():
+        activate_script = pathlib.Path(user_venv_dir, name, "Scripts", "activate_this.py")
+    if not activate_script.is_file():
+        raise ValueError(f"Virtual environment '{name}' could not be found.")
+
+    activate_script = str(activate_script)
     execfile(activate_script, dict(__file__=activate_script))
     for observer in observers:
         observer.venvChanged()
@@ -46,6 +53,6 @@ def use_environment(name):
 
 # TODO: create default environment if it doesn't exist
 # TODO: find all venvs; populate the venvs global
-use_environment("default")
 # create_environment("default")
+use_environment("default")
 current_environment = str(pathlib.Path(user_venv_dir, "default"))
