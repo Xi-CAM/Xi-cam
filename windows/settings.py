@@ -2,17 +2,19 @@
 
 
 # TODO QtModern, QtDarkStyle
+# TODO Add remotes config
+# TODO Add usage statistics config
 # TODO QSettings
 
-from qtpy.QtGui import *
+from pathlib import Path
+
+import yaml
+from appdirs import user_config_dir, site_config_dir
 from qtpy.QtCore import *
+from qtpy.QtGui import *
 from qtpy.QtWidgets import *
 
 from xicam.plugins import manager as pluginmanager
-from xicam.plugins import observers as pluginobservers
-import yaml
-from appdirs import user_config_dir, site_config_dir
-from pathlib import Path
 
 user_settings_dir = user_config_dir('xicam/settings')
 site_settings_dir = site_config_dir('xicam/settings')

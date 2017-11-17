@@ -38,6 +38,7 @@ class XicamMainWindow(QMainWindow):
         file = QMenu('&File', parent=menubar)
         menubar.addMenu(file)
         file.addAction('Se&ttings', self.showSettings, shortcut=QKeySequence(Qt.CTRL + Qt.ALT + Qt.Key_S))
+        file.addAction('E&xit', self.close)
         help = QMenu('&Help', parent=menubar)
         menubar.addMenu(help)
 
