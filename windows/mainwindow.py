@@ -91,14 +91,14 @@ class XicamMainWindow(QMainWindow):
                 self.removeDockWidget(dockwidget)
 
         # Make new docks
-        self.topwidget = QDockWidget('top', parent=self)
-        self.leftwidget = QDockWidget('left', parent=self)
-        self.rightwidget = QDockWidget('right', parent=self)
-        self.bottomwidget = QDockWidget('bottom', parent=self)
-        self.lefttopwidget = QDockWidget('lefttop', parent=self)
-        self.righttopwidget = QDockWidget('righttop', parent=self)
-        self.leftbottomwidget = QDockWidget('leftbottom', parent=self)
-        self.rightbottomwidget = QDockWidget('rightbottom', parent=self)
+        self.topwidget = QDockWidget(parent=self)
+        self.leftwidget = QDockWidget(parent=self)
+        self.rightwidget = QDockWidget(parent=self)
+        self.bottomwidget = QDockWidget(parent=self)
+        self.lefttopwidget = QDockWidget(parent=self)
+        self.righttopwidget = QDockWidget(parent=self)
+        self.leftbottomwidget = QDockWidget(parent=self)
+        self.rightbottomwidget = QDockWidget(parent=self)
 
         # Place the docks
         self.addDockWidget(Qt.TopDockWidgetArea, self.topwidget)
@@ -135,6 +135,8 @@ class XicamMainWindow(QMainWindow):
         self.righttopwidget.setHidden(stage.righttopwidget in [PanelState.Disabled, PanelState.Defaulted])
         self.leftbottomwidget.setHidden(stage.leftbottomwidget in [PanelState.Disabled, PanelState.Defaulted])
         self.rightbottomwidget.setHidden(stage.rightbottomwidget in [PanelState.Disabled, PanelState.Defaulted])
+
+        if isinstance(stage.topwidget, QWidget): self.topwidget.setWidget(stage.topwidget)
 
 
 class pluginModeWidget(QToolBar):

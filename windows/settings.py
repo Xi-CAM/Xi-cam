@@ -6,9 +6,6 @@
 # TODO Add usage statistics config
 # TODO QSettings
 
-from pathlib import Path
-
-import yaml
 from appdirs import user_config_dir, site_config_dir
 from qtpy.QtCore import *
 from qtpy.QtGui import *
@@ -18,6 +15,10 @@ from xicam.plugins import manager as pluginmanager
 
 user_settings_dir = user_config_dir('xicam/settings')
 site_settings_dir = site_config_dir('xicam/settings')
+
+QCoreApplication.setOrganizationName("Camera")
+# QCoreApplication.setOrganizationDomain("mysoft.com")
+QCoreApplication.setApplicationName("Xi-cam")
 
 class ConfigDialog(QDialog):
     def __init__(self):
@@ -79,11 +80,12 @@ class ConfigDialog(QDialog):
         self.createIcons()
 
     def restore(self):
-        for pluginInfo in pluginmanager.getPluginsOfCategory('SettingsPlugin'):
-            path = Path(user_settings_dir, pluginInfo.name+'.yml')
-            if path.is_file():
-                with open(path, 'r') as infile:
-                    pluginInfo.plugin_object.restore(yaml.load(infile))
+        try:
+            for pluginInfo in pluginmanager.getPluginsOfCategory('SettingsPlugin'):
+                pluginInfo.plugin_object.restore(QSettings().value(pluginInfo.name))
+        except AttributeError:
+            # No settings saved
+            pass
 
     def ok(self):
         self._empty()
@@ -92,10 +94,7 @@ class ConfigDialog(QDialog):
 
     def apply(self):
         for pluginInfo in pluginmanager.getPluginsOfCategory('SettingsPlugin'):
-            path = Path(user_settings_dir, pluginInfo.name+'.yml')
-            path.parent.mkdir(parents=True, exist_ok=True)
-            with open(path, 'w') as outfile:
-                yaml.dump(pluginInfo.plugin_object.save(), outfile)
+            QSettings().setValue(pluginInfo.name, pluginInfo.plugin_object.save())
 
     def close(self):
         self._empty()
