@@ -1,5 +1,9 @@
+import sys
+
+import qtpy
 from qtpy.QtWidgets import *
 
+if qtpy.API_NAME == 'PyQt4': del sys.modules['PySide']
 
 def main():
     app = QApplication([])
