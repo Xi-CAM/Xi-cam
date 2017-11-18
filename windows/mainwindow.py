@@ -137,6 +137,13 @@ class XicamMainWindow(QMainWindow):
         self.rightbottomwidget.setHidden(stage.rightbottomwidget in [PanelState.Disabled, PanelState.Defaulted])
 
         if isinstance(stage.topwidget, QWidget): self.topwidget.setWidget(stage.topwidget)
+        if isinstance(stage.leftwidget, QWidget): self.topwidget.setWidget(stage.leftwidget)
+        if isinstance(stage.rightwidget, QWidget): self.topwidget.setWidget(stage.rightwidget)
+        if isinstance(stage.bottomwidget, QWidget): self.topwidget.setWidget(stage.bottomwidget)
+        if isinstance(stage.lefttopwidget, QWidget): self.topwidget.setWidget(stage.lefttopwidget)
+        if isinstance(stage.righttopwidget, QWidget): self.topwidget.setWidget(stage.righttopwidget)
+        if isinstance(stage.leftbottomwidget, QWidget): self.topwidget.setWidget(stage.leftbottomwidget)
+        if isinstance(stage.rightbottomwidget, QWidget): self.topwidget.setWidget(stage.rightbottomwidget)
 
 
 class pluginModeWidget(QToolBar):
