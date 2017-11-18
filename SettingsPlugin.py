@@ -1,3 +1,5 @@
+from typing import List
+
 from yapsy.IPlugin import IPlugin
 
 
@@ -7,9 +9,21 @@ class SettingsPlugin(IPlugin):
         self.icon = icon
         self.name = name
         self.widget = widget
-        # self.setTextAlignment(Qt.AlignHCenter)
-        # self.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-        # self.setSizeHint(QSize(136, 80))
 
-    # def type(self):
-    #     return self.UserType + 1
+    @staticmethod
+    def fromParameter(icon, name: str, paramdicts: List[dict]):
+        from pyqtgraph.parametertree import Parameter, ParameterTree
+        widget = ParameterTree()
+        parameter = Parameter(name=name, type='group', children=paramdicts)
+        widget.setParameters(parameter, showTop=False)
+
+        def __init__(self):
+            SettingsPlugin.__init__(self, icon, name, widget)
+
+        return type(name + 'SettingsPlugin', (SettingsPlugin,), {'__init__': __init__, 'parameter': parameter})
+
+    def save(self):
+        return self.parameter.saveState()
+
+    def restore(self, state):
+        self.parameter.restoreState(state)
