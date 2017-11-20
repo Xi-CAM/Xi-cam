@@ -22,8 +22,12 @@ class SettingsPlugin(IPlugin):
 
         return type(name + 'SettingsPlugin', (SettingsPlugin,), {'__init__': __init__, 'parameter': parameter})
 
+    def apply(self):
+        raise NotImplementedError
+
     def save(self):
-        return self.parameter.saveState()
+        self.apply()
+        return self.parameter.saveState(filter='user')
 
     def restore(self, state):
         self.parameter.restoreState(state)
