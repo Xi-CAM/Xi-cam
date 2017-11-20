@@ -86,6 +86,7 @@ class ConfigDialog(QDialog):
         except AttributeError:
             # No settings saved
             pass
+        self.apply()
 
     def ok(self):
         self._empty()

@@ -55,6 +55,9 @@ class XicamMainWindow(QMainWindow):
         for i in range(12):
             self.Fshortcuts[i].activated.connect(partial(self.setStage, i))
 
+        # Restore Settings
+        ConfigDialog().restore()
+
     def showSettings(self):
         self._configdialog = ConfigDialog()
         self._configdialog.show()
