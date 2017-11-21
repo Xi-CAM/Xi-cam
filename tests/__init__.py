@@ -1,9 +1,9 @@
 def test_IFileFormatPlugin():
     import numpy as np
     import fabio
-    from ..IFileFormatPlugin import IFileFormatPlugin
+    from ..FileFormatPlugin import FileFormatPlugin
 
-    class npyImage(IFileFormatPlugin):
+    class npyImage(FileFormatPlugin):
         DEFAULT_EXTENTIONS = [".npy"]
 
         def read(self, fname, frame=None):
@@ -31,13 +31,13 @@ def test_IFileFormatPlugin():
 
 
 def test_IFittableModelPlugin():
-    from ..IFittableModelPlugin import IFittable1DModelPlugin
+    from ..FittableModelPlugin import Fittable1DModelPlugin
     import numpy as np
     from astropy.modeling.fitting import LevMarLSQFitter
     from astropy.modeling import Parameter
 
     # Below example copied from AstroPy for demonstration; Gaussian1D is already a member of astropy's models
-    class Gaussian1D(IFittable1DModelPlugin):
+    class Gaussian1D(Fittable1DModelPlugin):
         amplitude = Parameter("amplitude")
         mean = Parameter("mean")
         stddev = Parameter("stddev")
@@ -80,9 +80,9 @@ def test_IFittableModelPlugin():
 
 
 def test_IProcessingPlugin():
-    from ..IProcessingPlugin import IProcessingPlugin, Input, Output
+    from ..ProcessingPlugin import ProcessingPlugin, Input, Output
 
-    class SumProcessingPlugin(IProcessingPlugin):
+    class SumProcessingPlugin(ProcessingPlugin):
         a = Input(default=1, unit='nm', min=0)
         b = Input(default=2)
         c = Output()
@@ -93,8 +93,8 @@ def test_IProcessingPlugin():
 
     t = SumProcessingPlugin()
     assert t.evaluate() == 3
-    assert t.inputs['a'].name=='a'
-    assert t.outputs['c'].name=='c'
+    assert t.inputs['a'].name == 'a'
+    assert t.outputs['c'].name == 'c'
     assert t.outputs['c'].value == 3
 
 
@@ -111,9 +111,9 @@ def mainloop():
 
 
 def test_IDataSourcePlugin():
-    from ..IDataResourcePlugin import IDataResourcePlugin, IDataSourceListModel
+    from ..DataResourcePlugin import DataResourcePlugin, DataSourceListModel
 
-    class SpotDataResourcePlugin(IDataResourcePlugin):
+    class SpotDataResourcePlugin(DataResourcePlugin):
         def __init__(self, user='anonymous', password='',
                      query='skipnum=0&sortterm=fs.stage_date&sorttype=desc&search=end_station=bl832'):
             scheme = 'https'
@@ -147,7 +147,7 @@ def test_IDataSourcePlugin():
     from qtpy.QtWidgets import QListView
 
     # TODO: handle password for testing
-    spot = IDataSourceListModel(SpotDataResourcePlugin())
+    spot = DataSourceListModel(SpotDataResourcePlugin())
 
     lv = QListView()
     lv.setModel(spot)

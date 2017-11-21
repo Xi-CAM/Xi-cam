@@ -6,9 +6,7 @@ from yapsy import PluginInfo
 from yapsy.PluginManager import PluginManager
 
 from xicam.core import msg
-from .DataResourcePlugin import IDataResourcePlugin
-from .FileFormatPlugin import IFileFormatPlugin
-from .FittableModelPlugin import IFittable1DModelPlugin
+from .FileFormatPlugin import FileFormatPlugin
 from .GUIPlugin import GUIPlugin, GUILayout
 from .ProcessingPlugin import ProcessingPlugin, Input, Output
 from .SettingsPlugin import SettingsPlugin

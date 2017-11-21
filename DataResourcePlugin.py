@@ -3,7 +3,7 @@ from yapsy.IPlugin import IPlugin
 viewTypes = ["ListView", "TreeView", ""]
 
 
-class IDataResourcePlugin(IPlugin):
+class DataResourcePlugin(IPlugin):
     def __init__(self, flags: dict = None, **config):
         """
         Config keys should follow RFC 3986 URI format:
@@ -13,7 +13,7 @@ class IDataResourcePlugin(IPlugin):
         mimics the same functionality, and so can easily be wrapped in a QAbstractItemModel for GUI views. A parent
         model assigns itself to self.model
         """
-        super(IDataResourcePlugin, self).__init__()
+        super(DataResourcePlugin, self).__init__()
         self.model = None
         self.config = config
         self.flags = flags if flags else {'isFlat': True, 'canPush': False}
@@ -53,9 +53,9 @@ try:
     from qtpy.QtCore import *
 
 
-    class IDataSourceItemModel(QAbstractItemModel):
-        def __init__(self, dataresource: IDataResourcePlugin):
-            super(IDataSourceItemModel, self).__init__()
+    class DataSourceItemModel(QAbstractItemModel):
+        def __init__(self, dataresource: DataResourcePlugin):
+            super(DataSourceItemModel, self).__init__()
             self.dataresource = dataresource
             self.dataresource.model = self
             self.columnCount = dataresource.columnCount
@@ -64,9 +64,9 @@ try:
             self.headerData = dataresource.headerData
 
 
-    class IDataSourceListModel(QAbstractListModel, IDataSourceItemModel):
-        def __init__(self, dataresource: IDataResourcePlugin):
-            super(IDataSourceListModel, self).__init__(dataresource)
+    class DataSourceListModel(QAbstractListModel, DataSourceItemModel):
+        def __init__(self, dataresource: DataResourcePlugin):
+            super(DataSourceListModel, self).__init__(dataresource)
 except ImportError:
     # TODO: how should this be handled?
     pass

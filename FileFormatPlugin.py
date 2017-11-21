@@ -2,7 +2,7 @@ from fabio.fabioimage import FabioImage
 from yapsy.IPlugin import IPlugin
 
 
-class IFileFormatPlugin(FabioImage, IPlugin):
+class FileFormatPlugin(FabioImage, IPlugin):
     """
     This base class defines a reader/writer for an on-disk file format. This interface will be structured such that the
     format definition is registered with FabIO at activation, and will mirror the FabIO API structure. Subclass
