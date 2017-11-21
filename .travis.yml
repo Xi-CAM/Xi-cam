@@ -35,3 +35,4 @@ script:
 after_success:
 - pip install codecov --upgrade
 - bash <(curl -s https://codecov.io/bash)
+
