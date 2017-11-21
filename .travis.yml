@@ -1,6 +1,6 @@
 language: python
 python:
-- '3.6_with_system_site_packages'
+- '3.6'
 branches:
   only:
   - master
@@ -16,10 +16,7 @@ cache:
 addons:
   apt:
     packages:
-    - python3-numpy
-    - qtbase5-dev
-virtualenv:
-  system_site_packages: true
+    - libqt5-dev
 install:
 #- pip install PySide --no-index --find-links https://parkin.github.io/python-wheelhouse/;
 - pip install .
