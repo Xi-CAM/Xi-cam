@@ -27,7 +27,7 @@ install:
 script:
 - pip install pylint
 # always returns exit code 0; Write the errors but not cause failure
-- "pylint xicamlauncher xicam pipeline --errors-only || :"
+- "pylint xicam --errors-only || :"
 - pip install coverage
 - coverage run xicam/test.py
 - python setup.py build_exe
