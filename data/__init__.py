@@ -1,8 +1,6 @@
 import pathlib
 from typing import Union
 
-import fabio
-
 
 def loadDoc(filename: Union[str, pathlib.Path] = None, uuid: str = None):
     """
@@ -19,5 +17,4 @@ def loadDoc(filename: Union[str, pathlib.Path] = None, uuid: str = None):
 
     """
 
-    if filename:
-        f = fabio.open(str(filename))
+    pass

@@ -5,7 +5,8 @@ from xicam.plugins import ProcessingPlugin
 class Workflow(object):
     def __init__(self, processes=None):
         self._processes = []
-        if processes: self._processes.extend(processes)
+        if processes:
+            self._processes.extend(processes)
         self.staged = False
 
     def addProcess(self, process: ProcessingPlugin, autoconnect: bool = False):
@@ -28,8 +29,8 @@ class Workflow(object):
 
     def stage(self, connection):
         """
-        Stages required data resources to the compute resource. Connection will be a Connection object (WIP) keeping a connection to a
-        compute resource, include connection.hostname, connection.username...
+        Stages required data resources to the compute resource. Connection will be a Connection object (WIP) keeping a
+        connection to a compute resource, include connection.hostname, connection.username...
 
         Returns
         -------
@@ -43,8 +44,8 @@ class Workflow(object):
 
     def execute(self, connection):
         """
-        Execute this workflow on the specified host. Connection will be a Connection object (WIP) keeping a connection to a
-        compute resource, include connection.hostname, connection.username...
+        Execute this workflow on the specified host. Connection will be a Connection object (WIP) keeping a connection
+        to a compute resource, include connection.hostname, connection.username...
 
         Returns
         -------
@@ -52,7 +53,8 @@ class Workflow(object):
             A concurrent.futures-like qthread to monitor status. Returns True if successful
 
         """
-        if not self.staged: self.stage(connection)
+        if not self.staged:
+            self.stage(connection)
         # TODO: add execution path
 
     def validate(self):

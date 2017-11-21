@@ -29,8 +29,8 @@ setup(
     version=version,
 
     description='The CAMERA platform for synchrotron data management, visualization, and reduction. The xicam.core '
-                'package contains all backend code of the Xi-cam platform, as part of the xicam namespace package. For the '
-                'gui components, see "xicam.gui".',
+                'package contains all backend code of the Xi-cam platform, as part of the xicam namespace package. For '
+                'the gui components, see "xicam.gui".',
     long_description=long_description,
 
     # The project's main homepage.

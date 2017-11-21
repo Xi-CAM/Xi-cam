@@ -8,7 +8,9 @@ from typing import Any
 # TODO: Add icons in GUI reflection
 
 # Mirror all print calls to the log
-# logging.basicConfig(stream=sys.stdout, level=logging.DEBUG, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+# logging.basicConfig(stream=sys.stdout,
+#                     level=logging.DEBUG,
+#                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 statusbar = None  # Must be registered to output to a ui status bar
 progressbar = None
@@ -93,7 +95,6 @@ def showMessage(*args, timeout=0, **kwargs):
     if statusbar is not None:
         statusbar.showMessage(s, timeout * 1000)
 
-
     logMessage(*args, **kwargs)
 
 
@@ -138,7 +139,8 @@ def logMessage(*args: Any, level: int = INFO, loggername: str = None, timestamp:
     logger.addHandler(stdch)
 
     # Make timestamp
-    if timestamp is None: timestamp = time.asctime()
+    if timestamp is None:
+        timestamp = time.asctime()
 
     # Lookup levelname from level
     levelname = levels[level]
