@@ -17,7 +17,7 @@ addons:
   apt:
     packages:
     - python3-numpy
-    - libqt5-dev
+    - qtbase5-dev
 virtualenv:
   system_site_packages: true
 install:
@@ -29,6 +29,8 @@ script:
 - "pylint xicamlauncher xicam pipeline --errors-only || :"
 - pip install coverage
 - coverage run xicam/test.py
+- python setup.py build_exe
+- python setup.py build_rpm
 after_success:
 - pip install codecov --upgrade
 - bash <(curl -s https://codecov.io/bash)
