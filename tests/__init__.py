@@ -4,7 +4,7 @@ def test_msg():
 
 
 def test_threads():
-    from xicam.core import threading
+    from xicam.gui import threading
     from qtpy.QtWidgets import QApplication
     from qtpy.QtCore import QTimer, QObject, Signal
     app = QApplication([])
