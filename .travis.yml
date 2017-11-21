@@ -19,6 +19,10 @@ addons:
     - qtbase5-dev
 install:
 #- pip install PySide --no-index --find-links https://parkin.github.io/python-wheelhouse/;
+- pip install cx_freeze==6.0b1
+- pip install git+https://github.com/lbl-camera/Xi-cam.core.git
+- pip install git+https://github.com/lbl-camera/Xi-cam.plugins.git
+- pip install git+https://github.com/lbl-camera/Xi-cam.gui.git
 - pip install .
 script:
 - pip install pylint
