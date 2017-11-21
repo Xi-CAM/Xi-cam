@@ -16,7 +16,7 @@ cache:
 addons:
   apt:
     packages:
-    - libqt5-dev
+    - qtbase5-dev
 install:
 #- pip install PySide --no-index --find-links https://parkin.github.io/python-wheelhouse/;
 - pip install .
