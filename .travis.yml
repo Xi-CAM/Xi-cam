@@ -1,6 +1,6 @@
 language: python
 python:
-- '3.6'
+- '3.6_with_system_site_packages'
 branches:
   only:
   - master
