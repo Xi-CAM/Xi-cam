@@ -28,8 +28,7 @@ script:
 # always returns exit code 0; Write the errors but not cause failure
 - "pylint xicamlauncher xicam pipeline --errors-only || :"
 - pip install coverage
-- coverage run xicam/core/__init__.py
-- coverage run xicam/gui/__init__.py
+- coverage run xicam/test.py
 after_success:
 - pip install codecov --upgrade
 - bash <(curl -s https://codecov.io/bash)
