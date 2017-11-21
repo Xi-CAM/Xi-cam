@@ -4,7 +4,7 @@ def test_msg():
 
 
 def test_threads():
-    from xicam.gui import threading
+    from xicam.gui import threads
     from qtpy.QtWidgets import QApplication
     from qtpy.QtCore import QTimer, QObject, Signal
     app = QApplication([])
@@ -18,7 +18,7 @@ def test_threads():
         sig = Signal(int)
 
     callback = Callback()
-    t2 = threading.QThreadFuture(sum, [1, 2, 3, 4], callback_slot=callback.sig)
+    t2 = threads.QThreadFuture(sum, [1, 2, 3, 4], callback_slot=callback.sig)
 
     q.singleShot(1000, t.start)
     q.singleShot(1000, t2.start)

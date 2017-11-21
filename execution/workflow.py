@@ -1,4 +1,4 @@
-from xicam.gui.threading import QThreadFuture
+from xicam.gui.threads import QThreadFuture
 from xicam.plugins import ProcessingPlugin
 
 
