@@ -50,7 +50,7 @@ class ConfigDialog(QDialog):
 
         mainLayout = QVBoxLayout()
         mainLayout.addLayout(horizontalLayout)
-        mainLayout.addStretch(1)
+        # mainLayout.addStretch(1)
         mainLayout.addSpacing(12)
         mainLayout.addWidget(self.buttonboxWidget)
 
@@ -105,6 +105,11 @@ class ConfigDialog(QDialog):
     def _empty(self):
         """
         Disown all widget children (otherwise their c++ objects are force deleted when the dialog closes).
+        Must be run in reverse to avoid index update errors
         """
-        for i in range(self.pagesWidget.count()):
+        for i in reversed(range(self.pagesWidget.count())):
             self.pagesWidget.widget(i).setParent(None)
+
+    def closeEvent(self, event):
+        self.close()
+        event.accept()
