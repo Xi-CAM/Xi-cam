@@ -10,9 +10,13 @@ from xicam.plugins import cammart
 
 
 class CamMartSettingsPlugin(SettingsPlugin):
+    """
+    A built-in settings plugin to configure installed packages
+    """
     name = 'Plugins'
 
     def __init__(self):
+        # Setup UI
         self.widget = QWidget()
         self.widget.setLayout(QHBoxLayout())
         self.listview = QListView()
@@ -31,6 +35,7 @@ class CamMartSettingsPlugin(SettingsPlugin):
                                                     self.widget)
 
     def addplugin(self):
+        # Open the CamMart install dialog
         self._dialog = CamMartInstallDialog()
         self._dialog.show()
 
@@ -51,55 +56,62 @@ class CamMartInstallDialog(QDialog):
     def __init__(self):
         super(CamMartInstallDialog, self).__init__()
 
+        # Setup ListView
         self.packagesWidget = QListView()
-        # self.packagesWidget.setViewMode(QListView.Mode)
-        # self.contentsWidget.setIconSize(QSize(96, 84))
         self.packagesWidget.setMovement(QListView.Static)
-        # self.packagesWidget.setMaximumWidth(174)
-        # self.packagesWidget.setSpacing(12)
         self.packagesWidget.setSelectionMode(QAbstractItemView.SingleSelection)
 
+        # Setup Model
         self.packagesModel = QStandardItemModel()
         self.packagesWidget.setModel(self.packagesModel)
         self.packageInfoWidget = PackageInfoWidget(self.packagesWidget)
         self.packagesWidget.selectionModel().currentChanged.connect(self.packageInfoWidget.refresh)
 
+        # Setup dialog buttons
         self.installButton = QPushButton("&Install Package")
         self.manageButton = QPushButton("&Manage Repositories")
         self.installButton.clicked.connect(self.install)
         self.manageButton.clicked.connect(self.manage)
-
         self.buttonboxWidget = QDialogButtonBox()
         self.buttonboxWidget.addButton(self.installButton, QDialogButtonBox.ActionRole)
         self.buttonboxWidget.addButton(self.manageButton, QDialogButtonBox.ActionRole)
 
+        # Setup splitter layout
         splitter = QSplitter()
         splitter.addWidget(self.packagesWidget)
         splitter.addWidget(self.packageInfoWidget)
 
+        # Setup search box
         self.searchbox = SearchLineEdit()
 
+        # Compose main layout
         mainLayout = QVBoxLayout()
         mainLayout.addWidget(self.searchbox)
         mainLayout.addWidget(splitter)
         mainLayout.addSpacing(12)
         mainLayout.addWidget(self.buttonboxWidget)
-
         self.setLayout(mainLayout)
         self.setWindowTitle("Install Packages...")
 
+        # Load packages into view
         self.refresh()
 
     def refresh(self):
+        # Clear model
         self.packagesModel.clear()
+
+        # For each repo
         for repo in repositories:
             # TODO: check behavior for >25 items (pagesize)
+            # For each package
             for packageinfo in eval(requests.get(f'http://{repo}/pluginpackages').content)["_items"]:
+                # Add an item to the model
                 item = QStandardItem(packageinfo['name'])
                 item.info = packageinfo
                 self.packagesModel.appendRow(item)
 
     def install(self):
+        # Install the selected package using cammart
         cammart.install(self.packagesModel.itemFromIndex(self.packagesWidget.selectedIndexes()[0]).text())
 
     def manage(self):
@@ -113,7 +125,10 @@ class PackageInfoWidget(QTextEdit):
         self.view = view
 
     def refresh(self, current, previous):
+        # Get info of current package from the model's item
         info = self.view.model().itemFromIndex(current).info
+
+        # Display info
         self.setText(
             f"""
             <h1>{info['name']}</h1>
@@ -124,12 +139,3 @@ class PackageInfoWidget(QTextEdit):
             <p>Reference: {info['documentation'].get('reference')}</p>
             <p>Keywords: {", ".join(info['documentation'].get('keywords'))}</p>
             """)
-        #
-        # self.description
-        # self.keywords
-        # self.authors
-        # self.version
-        # self.reference
-        # self.publication
-        # self.installuri
-        # self.plugins
