@@ -52,6 +52,9 @@ class ConfigDialog(QDialog):
         self.setLayout(mainLayout)
         self.setWindowTitle("Config Dialog")
 
+        # Set modality
+        self.setModal(True)
+
         self.createIcons()
         self.restore()
 
@@ -78,7 +81,7 @@ class ConfigDialog(QDialog):
         try:
             for pluginInfo in pluginmanager.getPluginsOfCategory('SettingsPlugin'):
                 pluginInfo.plugin_object.restore(QSettings().value(pluginInfo.name))
-        except AttributeError:
+        except (AttributeError, TypeError):
             # No settings saved
             pass
         self.apply()
@@ -108,3 +111,9 @@ class ConfigDialog(QDialog):
     def closeEvent(self, event):
         self.close()
         event.accept()
+
+    def keyPressEvent(self, e: QKeyEvent):
+        if e.key() != Qt.Key_Escape:
+            super(ConfigDialog, self).keyPressEvent(e)
+        else:
+            self.close()
