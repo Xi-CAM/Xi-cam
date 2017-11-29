@@ -40,16 +40,19 @@ class CamMartSettingsPlugin(SettingsPlugin):
         self.refresh()
 
     def refresh(self):
+        self.packagesmodel.clear()
         for name, scheme in cammart.pkg_registry.items():
             self.packagesmodel.appendRow(QStandardItem(name))
 
     def addplugin(self):
         # Open the CamMart install dialog
         self._dialog = CamMartInstallDialog()
-        self._dialog.show()
+        self._dialog.exec_()
+        self.refresh()
 
     def removeplugin(self):
         cammart.uninstall(self.packagesmodel.itemFromIndex(self.listview.selectedIndexes()[0]).text())
+        self.refresh()
 
     def save(self):
         return None  # self.parameter.saveState()
@@ -101,6 +104,9 @@ class CamMartInstallDialog(QDialog):
         mainLayout.addWidget(self.buttonboxWidget)
         self.setLayout(mainLayout)
         self.setWindowTitle("Install Packages...")
+
+        # Set modality
+        self.setModal(True)
 
         # Load packages into view
         self.refresh()
