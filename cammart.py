@@ -28,10 +28,10 @@ def install(name: str):
     # TODO: check if package is in repo
 
     # Get install plugin package information from cam-mart repository
-    o = requests.get(f'http://127.0.0.1:5000/pluginpackages/{name}')
+    o = requests.get(f'http://127.0.0.1:5000/pluginpackages?where={{"name":"{name}"}}')
 
     # Get the uri from the plugin package information
-    uri = parse.urlparse(json.loads(o.content)["installuri"])
+    uri = parse.urlparse(json.loads(o.content)['_items'][0]["installuri"])
 
     failure = True
 
@@ -54,7 +54,7 @@ def uninstall(name: str):
     if name in pkg_registry:
         scheme = pkg_registry[name]
         if scheme in ['pipgit', 'pip']:
-            failure = pip.main(['uninstall', name])
+            failure = pip.main(['uninstall', '-y', name])
         elif scheme == 'conda':
             raise NotImplementedError
     else:

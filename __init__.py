@@ -24,17 +24,6 @@ class XicamPluginManager(PluginManager):
         super(XicamPluginManager, self).__init__()
         venvsobservers.append(self)
 
-    def collectPlugins(self):
-        """
-        Walk through the plugins' places and look for plugins.  Then
-        for each plugin candidate look for its category, load it and
-        stores it in the appropriate slot of the category_mapping.
-
-        Overloaded to add callback.
-        """
-
-        self.locatePlugins()
-
         # Link categories to base classes
         categoriesfilter = {'GUIPlugin': GUIPlugin,
                             'WidgetPlugin': QWidgetPlugin,
@@ -46,6 +35,18 @@ class XicamPluginManager(PluginManager):
             categoriesfilter['WidgetPlugin'] = None
 
         self.setCategoriesFilter(categoriesfilter)
+
+    def collectPlugins(self):
+        """
+        Walk through the plugins' places and look for plugins.  Then
+        for each plugin candidate look for its category, load it and
+        stores it in the appropriate slot of the category_mapping.
+
+        Overloaded to add callback.
+        """
+
+        self.locatePlugins()
+
         self.loadPlugins(callback=self.showLoading)
 
         for observer in observers:
