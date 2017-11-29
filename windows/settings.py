@@ -6,18 +6,13 @@
 # TODO Add usage statistics config
 # TODO QSettings
 
-from appdirs import user_config_dir, site_config_dir
 from qtpy.QtCore import *
 from qtpy.QtGui import *
 from qtpy.QtWidgets import *
 
 from xicam.plugins import manager as pluginmanager
 
-user_settings_dir = user_config_dir('xicam/settings')
-site_settings_dir = site_config_dir('xicam/settings')
-
 QCoreApplication.setOrganizationName("Camera")
-# QCoreApplication.setOrganizationDomain("mysoft.com")
 QCoreApplication.setApplicationName("Xi-cam")
 
 class ConfigDialog(QDialog):

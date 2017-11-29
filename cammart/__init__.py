@@ -20,6 +20,9 @@ class CamMartSettingsPlugin(SettingsPlugin):
         self.widget = QWidget()
         self.widget.setLayout(QHBoxLayout())
         self.listview = QListView()
+        self.packagesmodel = QStandardItemModel()
+        self.listview.setModel(self.packagesmodel)
+
         self.plugintoolbar = QToolBar()
         self.plugintoolbar.setOrientation(Qt.Vertical)
         self.plugintoolbar.addAction(QIcon(str(path('icons/plus.png'))),
@@ -34,13 +37,19 @@ class CamMartSettingsPlugin(SettingsPlugin):
                                                     self.name,
                                                     self.widget)
 
+        self.refresh()
+
+    def refresh(self):
+        for name, scheme in cammart.pkg_registry.items():
+            self.packagesmodel.appendRow(QStandardItem(name))
+
     def addplugin(self):
         # Open the CamMart install dialog
         self._dialog = CamMartInstallDialog()
         self._dialog.show()
 
     def removeplugin(self):
-        pass
+        cammart.uninstall(self.packagesmodel.itemFromIndex(self.listview.selectedIndexes()[0]).text())
 
     def save(self):
         return None  # self.parameter.saveState()
