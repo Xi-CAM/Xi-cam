@@ -33,6 +33,7 @@ class XicamPluginManager(PluginManager):
         if 'xicam.gui' not in sys.modules:
             categoriesfilter['GUIPlugin'] = None
             categoriesfilter['WidgetPlugin'] = None
+            categoriesfilter['SettingsPlugin'] = None
 
         self.setCategoriesFilter(categoriesfilter)
 

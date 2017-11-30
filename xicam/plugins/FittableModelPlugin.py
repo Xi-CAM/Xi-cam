@@ -24,3 +24,5 @@ class Fittable1DModelPlugin(Fittable1DModel, IPlugin):
     @property
     def inverse(self):
         raise NotImplementedError
+
+        # TODO: add fitting convenience method
