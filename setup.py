@@ -9,7 +9,7 @@ Usage: pip install -e .
 from codecs import open
 from os import path
 
-from setuptools import setup, find_packages
+from setuptools import setup
 
 # Single-source the version
 with open(path.join(path.dirname(__file__), 'VERSION')) as version_file:
@@ -68,7 +68,7 @@ setup(
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
-    packages=find_packages('xicam/gui', exclude=['contrib', 'docs', 'tests']),
+    packages=['xicam.gui'],
 
     package_dir={},
 
