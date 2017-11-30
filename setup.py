@@ -68,7 +68,7 @@ setup(
 
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
-    packages=find_packages(exclude=['contrib', 'docs', 'tests']),
+    packages=find_packages('xicam/gui', exclude=['contrib', 'docs', 'tests']),
 
     package_dir={},
 
