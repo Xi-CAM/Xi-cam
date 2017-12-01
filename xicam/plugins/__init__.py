@@ -49,6 +49,15 @@ class XicamPluginManager(PluginManager):
 
         self.locatePlugins()
 
+        # Prevent loading two plugins with the same name
+        candidatesset = {c[2].name:c for c in self._candidates}.values()
+
+        for plugin in self._candidates:
+            if plugin[2] not in candidatesset:
+                msg.logMessage(f'Possible duplicate plugin name "{plugin[2].name}"',level=msg.WARNING)
+
+        self._candidates=candidatesset
+
         self.loadPlugins(callback=self.showLoading)
 
         for observer in observers:
