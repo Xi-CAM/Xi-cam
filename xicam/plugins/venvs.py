@@ -53,6 +53,6 @@ def use_environment(name):
 
 # TODO: create default environment if it doesn't exist
 # TODO: find all venvs; populate the venvs global
-# create_environment("default")
+create_environment("default")
 use_environment("default")
 current_environment = str(pathlib.Path(user_venv_dir, "default"))

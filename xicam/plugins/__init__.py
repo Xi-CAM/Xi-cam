@@ -1,4 +1,5 @@
 import sys
+import os
 from pathlib import Path
 
 from appdirs import user_config_dir, site_config_dir
@@ -67,7 +68,7 @@ class XicamPluginManager(PluginManager):
 # Setup plugin manager
 manager = XicamPluginManager()
 manager.setPluginPlaces(
-    [str(Path(__file__).parent.parent), user_plugin_dir, site_plugin_dir, venvs.current_environment])
+    [os.getcwd(), str(Path(__file__).parent.parent), user_plugin_dir, site_plugin_dir, venvs.current_environment])
 
 # Collect all the plugins
 manager.collectPlugins()
