@@ -5,3 +5,5 @@ from . import static
 from . import threads
 from . import widgets
 from . import windows
+
+__all__ = ['cammart', 'settings', 'static', 'threads', 'widgets', 'windows']
