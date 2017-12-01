@@ -22,11 +22,12 @@ def create_environment(name: str):
     name : str
         Name of virtual envirnoment to create.
     """
-    virtualenv.create_environment(str(pathlib.Path(user_venv_dir, name)), site_packages=False, clear=False,
-                                  unzip_setuptools=False,
-                                  prompt=None, search_dirs=None, download=False,
-                                  no_setuptools=False, no_pip=False, no_wheel=False,
-                                  symlink=True)
+    if not pathlib.Path(user_venv_dir, name).exists():
+        virtualenv.create_environment(str(pathlib.Path(user_venv_dir, name)), site_packages=False, clear=False,
+                                      unzip_setuptools=False,
+                                      prompt=None, search_dirs=None, download=False,
+                                      no_setuptools=False, no_pip=False, no_wheel=False,
+                                      symlink=True)
 
 
 def use_environment(name):
