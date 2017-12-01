@@ -44,9 +44,10 @@ class XicamMainWindow(QMainWindow):
 
         # Initialize layout with first plugin
         self._currentGUIPlugin = None
+        self.build_layout()
         if pluginmanager.getPluginsOfCategory("GUIPlugin"):
             self._currentGUIPlugin = pluginmanager.getPluginsOfCategory("GUIPlugin")[0]
-            self.build_layout()
+            self.populate_layout()
 
         # Make F key bindings
         fkeys = [Qt.Key_F1, Qt.Key_F2, Qt.Key_F3, Qt.Key_F4, Qt.Key_F5, Qt.Key_F6,
@@ -118,8 +119,6 @@ class XicamMainWindow(QMainWindow):
         self.setCorner(Qt.TopRightCorner, Qt.RightDockWidgetArea)
         self.setCorner(Qt.BottomLeftCorner, Qt.LeftDockWidgetArea)
         self.setCorner(Qt.BottomRightCorner, Qt.RightDockWidgetArea)
-
-        self.populate_layout()
 
     def populate_layout(self):
         # Get current stage
