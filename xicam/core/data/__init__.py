@@ -1,5 +1,6 @@
 import pathlib
 from typing import Union
+import suitcase
 
 
 def loadDoc(filename: Union[str, pathlib.Path] = None, uuid: str = None):
@@ -18,3 +19,4 @@ def loadDoc(filename: Union[str, pathlib.Path] = None, uuid: str = None):
     """
 
     pass
+

@@ -1,5 +1,6 @@
 from xicam.plugins import ProcessingPlugin
 
+# TODO: add debug flag that checks mutations by hashing inputs
 
 class Workflow(object):
     def __init__(self, processes=None):
