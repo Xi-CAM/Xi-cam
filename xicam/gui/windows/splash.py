@@ -84,7 +84,7 @@ class XicamSplashScreen(QSplashScreen):
         if self._launchready:
             self.execlaunch()
             return
-        self.timer.singleShot(0.000001, self.movie.start)
+        self.movie.start()
 
     def launchwindow(self):
         """

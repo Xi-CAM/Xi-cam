@@ -1,0 +1,3 @@
+recursive-include xicam/gui/static *
+include README.rst
+include LICENSE.md
