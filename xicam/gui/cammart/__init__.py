@@ -62,7 +62,7 @@ class CamMartSettingsPlugin(SettingsPlugin):
         pass  # self.parameter.restoreState(state)
 
 
-repositories = ['localhost:5000']
+repositories = ['cam.lbl.gov:5000']
 
 
 class CamMartInstallDialog(QDialog):
