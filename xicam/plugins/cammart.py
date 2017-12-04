@@ -28,7 +28,7 @@ def install(name: str):
     # TODO: check if package is in repo
 
     # Get install plugin package information from cam-mart repository
-    o = requests.get(f'http://127.0.0.1:5000/pluginpackages?where={{"name":"{name}"}}')
+    o = requests.get(f'http://cam.lbl.gov:5000/pluginpackages?where={{"name":"{name}"}}')
 
     # Get the uri from the plugin package information
     uri = parse.urlparse(json.loads(o.content)['_items'][0]["installuri"])
