@@ -20,6 +20,14 @@ class ConfigDialog(QDialog):
     def __init__(self):
         super(ConfigDialog, self).__init__()
 
+        # Set size and position
+        self.setGeometry(0, 0, 900, 550)
+        frameGm = self.frameGeometry()
+        screen = QApplication.desktop().screenNumber(QApplication.desktop().cursor().pos())
+        centerPoint = QApplication.desktop().screenGeometry(screen).center()
+        frameGm.moveCenter(centerPoint)
+        self.move(frameGm.topLeft())
+
         self.contentsWidget = QListView()
         self.contentsWidget.setViewMode(QListView.IconMode)
         # self.contentsWidget.setIconSize(QSize(96, 84))

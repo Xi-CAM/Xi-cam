@@ -33,7 +33,7 @@ class CamMartSettingsPlugin(SettingsPlugin):
                                      self.removeplugin)
         self.widget.layout().addWidget(self.listview)
         self.widget.layout().addWidget(self.plugintoolbar)
-        super(CamMartSettingsPlugin, self).__init__(QIcon(str(path('icons/python.png'))),
+        super(CamMartSettingsPlugin, self).__init__(QIcon(str(path('icons/box.png'))),
                                                     self.name,
                                                     self.widget)
 
@@ -68,6 +68,14 @@ repositories = ['cam.lbl.gov:5000']
 class CamMartInstallDialog(QDialog):
     def __init__(self):
         super(CamMartInstallDialog, self).__init__()
+
+        # Set size and position
+        self.setGeometry(0, 0, 800, 500)
+        frameGm = self.frameGeometry()
+        screen = QApplication.desktop().screenNumber(QApplication.desktop().cursor().pos())
+        centerPoint = QApplication.desktop().screenGeometry(screen).center()
+        frameGm.moveCenter(centerPoint)
+        self.move(frameGm.topLeft())
 
         # Setup ListView
         self.packagesWidget = QListView()

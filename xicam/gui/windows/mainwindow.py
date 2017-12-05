@@ -19,6 +19,14 @@ class XicamMainWindow(QMainWindow):
     def __init__(self):
         super(XicamMainWindow, self).__init__()
 
+        # Set size and position
+        self.setGeometry(0, 0, 1000, 600)
+        frameGm = self.frameGeometry()
+        screen = QApplication.desktop().screenNumber(QApplication.desktop().cursor().pos())
+        centerPoint = QApplication.desktop().screenGeometry(screen).center()
+        frameGm.moveCenter(centerPoint)
+        self.move(frameGm.topLeft())
+
         # Init child widgets to None
         self.topwidget = self.leftwidget = self.rightwidget = self.bottomwidget = self.lefttopwidget = \
             self.righttopwidget = self.leftbottomwidget = self.rightbottomwidget = None
