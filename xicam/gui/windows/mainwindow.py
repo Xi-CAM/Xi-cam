@@ -27,7 +27,9 @@ class XicamMainWindow(QMainWindow):
         self.setWindowTitle('Xi-cam')
 
         # Setup center/toolbar/statusbar
-        self.addToolBar(pluginModeWidget())
+        pluginmodewidget = pluginModeWidget()
+        pluginmodewidget.sigSetStage.connect(self.setStage)
+        self.addToolBar(pluginmodewidget)
         self.setStatusBar(QStatusBar())
         self.setCentralWidget(QStackedWidget())
         # NOTE: CentralWidgets are force-deleted when replaced, even if the object is still referenced;
@@ -63,6 +65,7 @@ class XicamMainWindow(QMainWindow):
         self._configdialog = ConfigDialog()
         self._configdialog.show()
 
+    @Slot(int)
     def setStage(self, i: int):
         """
         Set the current Stage/Layout/Plugin mode to number i in its sequence. Triggered by menu (TODO) or F keybindings.
@@ -152,6 +155,7 @@ class pluginModeWidget(QToolBar):
     """
     A series of styled QPushButtons with pipe characters between them. Used to switch between plugin modes.
     """
+    sigSetStage = Signal(int)
 
     def __init__(self):
         super(pluginModeWidget, self).__init__()
@@ -179,13 +183,14 @@ class pluginModeWidget(QToolBar):
         for plugin in pluginmanager.getPluginsOfCategory("GUIPlugin"):
             if plugin.is_activated or True:
                 # Make the pushbutton
-                button = QPushButton(plugin.name)
+                button = HoverMenuButton(stages=plugin.plugin_object.stages, text=plugin.name)
                 button.setFlat(True)
                 button.setFont(self.font)
                 button.setProperty('isMode', True)
                 button.setAutoFillBackground(False)
                 button.setCheckable(True)
                 button.setAutoExclusive(True)
+                button.sigSetStage.connect(self.sigSetStage)
                 self.addWidget(button)
 
                 # Connect pushbutton
@@ -206,3 +211,30 @@ class pluginModeWidget(QToolBar):
     def activate(self, plugin):
         # Set the current plugin (automatically replaces layout)
         self.parent().currentGUIPlugin = plugin
+
+
+class HoverMenuButton(QPushButton):
+    sigSetGUIPlugin = Signal()
+    sigSetStage = Signal(int)
+
+    def __init__(self, stages, *args, **kwargs):
+        super(HoverMenuButton, self).__init__(*args, **kwargs)
+        if len(stages) > 1:
+            menu = QMenu()
+            for i, name in enumerate(stages.keys()):
+                menu.addAction(name, partial(self.menuClicked, i))
+            menu.leaveEvent = self.leaveEvent
+            self.setMenu(menu)
+
+    def menuClicked(self, stage):
+        self.clicked.emit()
+        self.setChecked(True)
+        self.sigSetStage.emit(stage)
+
+    def enterEvent(self, event):
+        if self.menu():
+            self.showMenu()
+
+    def leaveEvent(self, *args, **kwargs):
+        if self.menu():
+            self.menu().hide()
