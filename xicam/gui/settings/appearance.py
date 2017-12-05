@@ -20,13 +20,17 @@ def setDark():
 def setModern():
     styles.dark(QApplication.instance())
 
+def setUglyGreen():
+    QApplication.instance().setStyleSheet("QWidget {background-color: darkgreen;}")
+
 
 AppearanceSettingsPlugin = SettingsPlugin.fromParameter(QIcon(str(path('icons/colors.png'))),
                                                         'Appearance',
                                                         [dict(name='Theme',
                                                               values=OrderedDict([('Default', setDefault),
                                                                                   ('QDarkStyle', setDark),
-                                                                                  ('QtModern', setModern)]),
+                                                                                  ('QtModern', setModern),
+                                                                                  ('UglyGreen', setUglyGreen)]),
                                                               type='list')]
                                                         )
 
