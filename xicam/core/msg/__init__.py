@@ -149,10 +149,10 @@ def logMessage(*args: Any, level: int = INFO, loggername: str = None, timestamp:
     logger.log(level, f'{timestamp} - {loggername} - {levelname} - {s}')
 
     # Also, print message to stdout
-    try:
-        if not suppressreprint: print(f'{timestamp} - {loggername} - {levelname} - {s}')
-    except UnicodeEncodeError:
-        print('A unicode string could not be written to console. Some logging will not be displayed.')
+    # try:
+    #     if not suppressreprint: print(f'{timestamp} - {loggername} - {levelname} - {s}')
+    # except UnicodeEncodeError:
+    #     print('A unicode string could not be written to console. Some logging will not be displayed.')
 
 
 def clearMessage():
