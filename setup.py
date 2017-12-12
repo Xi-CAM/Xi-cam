@@ -6,16 +6,18 @@ Usage: pip install -e .
        twine upload dist/*
 """
 
+# NOTE: Requires cx_freeze==6.0.b1 for linux builds
+
 import sys
 
-deps = ['databroker', 'pathlib', 'qtpy', 'PyQt5', 'yapsy', 'astropy', 'signalslot', 'numpy', 'pyqtgraph']
+deps = ['databroker', 'pathlib', 'qtpy', 'PyQt5', 'yapsy', 'astropy', 'signalslot', 'numpy', 'pyqtgraph', 'appdirs']
 
 # These bits don't get collected automatically when packaging:
 loosebits = ['numpy.core._methods', "numpy.lib.recfunctions"]
 
 if sys.argv[1] in ['build', 'bdist_rpm', 'build_exe']:
     from cx_Freeze import setup, Executable
-    import opcode
+    import opcode, typing
     import os
 
     include_files = []
@@ -23,38 +25,59 @@ if sys.argv[1] in ['build', 'bdist_rpm', 'build_exe']:
 
 
     def include_package(packagename):
-        path = __import__(packagename).__file__
-        if os.path.basename == '__init__.py':
-            path = os.path.dirname(path)
-        include_files.append(path)
+        pkg = __import__(packagename)
+        path = [getattr(pkg, '__file__', None)]
+        if not path[0]: path = getattr(pkg,'__path__', None)._path
+        for p in path:
+            if os.path.basename(p) == '__init__.py':
+                p = os.path.dirname(p)
+            include_files.append(p)
         if packagename in deps: deps.remove(packagename)
         excludes.append(packagename)
+        print(f'Including path: {path}')
 
 
     def include_builtin(name):
-        # opcode is not a virtualenv module, so we can use it to find the stdlib; this is the same
-        # trick used by distutils itself it installs itself into the virtualenv
+        # opcode and typing are not virtualenv modules, so we can use them to find the stdlib; this is the same
+        # trick used by distutils itself it installs itself into the virtualenv; one is for /usr/lib,
+        # the other is /usr/lib64
+        path = os.path.join(os.path.dirname(typing.__file__), name)
+        if os.path.exists(path):
+            include_files.append((path, name))
+            print(f'Including path: {path}')
+            return
         path = os.path.join(os.path.dirname(opcode.__file__), name)
-        include_files.append((path, name))
+        if os.path.exists(path):
+            include_files.append((path, name))
+            print(f'Including path: {path}')
+            return
+
+
 
 
     # Some packages are messy under cx_freeze; this bypasses the import parsing and copies all contents directly
     include_package('astropy')
     include_package('virtualenv')
     include_package('_sysconfigdata_m_linux_x86_64-linux-gnu')
+    include_package('xicam')
     include_package('site')
-    include_builtin('distutils')
+    include_package('yapsy')
+    include_builtin('distutils/')
+    include_builtin('typing.py')
+    include_builtin('_sitebuiltins.py')
 
     # include the virtualenv's orig-prefix.txt
-    import pathlib, astropy
-
-    include_files.append(pathlib.Path(astropy.__file__).parent.parent.parent / 'orig-prefix.txt')
+    # import pathlib, astropy
+    # include_files.append(pathlib.Path(astropy.__file__).parent.parent.parent / 'orig-prefix.txt')
 
     # Dependencies are automatically detected, but it might need
     # fine tuning.
     buildOptions = dict(includes=deps + loosebits,
+                        # namespace_packages=['xicam'],
                         excludes=["distutils"] + excludes,
-                        include_files=include_files)
+                        include_files=include_files,
+                        optimize=0)
+
 
     import sys
 
