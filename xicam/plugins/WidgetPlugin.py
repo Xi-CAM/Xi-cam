@@ -5,12 +5,10 @@ from yapsy.IPlugin import IPlugin
 
 # TODO: make classes usable without qt
 
-class _metaQWidgetPlugin(type(QWidget), type(IPlugin)):
-    pass
 
 
-class QWidgetPlugin(QWidget, IPlugin, metaclass=_metaQWidgetPlugin):
-    pass
+class QWidgetPlugin(IPlugin):
+    widget = None
 
 
 def test_QWidgetPlugin():

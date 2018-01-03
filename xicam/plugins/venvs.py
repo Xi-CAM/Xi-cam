@@ -12,6 +12,8 @@ observers = []
 # Python 2 style execfile function
 execfile = lambda filename, globals=None, locals=None: exec(open(filename).read(), globals, locals)
 
+# TODO: transition to http://virtualenvwrapper.readthedocs.io/en/latest/index.html
+
 
 def create_environment(name: str):
     """

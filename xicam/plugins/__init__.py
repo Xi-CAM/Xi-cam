@@ -7,7 +7,7 @@ from yapsy import PluginInfo
 from yapsy.PluginManager import PluginManager
 
 from xicam.core import msg
-from .FileFormatPlugin import FileFormatPlugin
+from .DataHandlerPlugin import DataHandlerPlugin
 from .GUIPlugin import GUIPlugin, GUILayout
 from .ProcessingPlugin import ProcessingPlugin, Input, Output
 from .SettingsPlugin import SettingsPlugin
@@ -28,7 +28,8 @@ class XicamPluginManager(PluginManager):
         # Link categories to base classes
         categoriesfilter = {'GUIPlugin': GUIPlugin,
                             'WidgetPlugin': QWidgetPlugin,
-                            'SettingsPlugin': SettingsPlugin}
+                            'SettingsPlugin': SettingsPlugin,
+                            'DataHandlerPlugin': DataHandlerPlugin}
 
         # If xicam.gui is not loaded (running headless), don't load GUIPlugins or WidgetPlugins
         if 'xicam.gui' not in sys.modules:
