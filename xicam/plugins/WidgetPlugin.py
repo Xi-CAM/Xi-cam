@@ -7,8 +7,16 @@ from yapsy.IPlugin import IPlugin
 
 
 
-class QWidgetPlugin(IPlugin):
-    widget = None
+# class _metaQWidgetPlugin(type(QObject), type(IPlugin)):
+#     pass
+#
+#
+# class QWidgetPlugin(metaclass=_metaQWidgetPlugin):
+#     isSingleton = False
+
+
+class QWidgetPlugin(QWidget, IPlugin):
+    isSingleton = False
 
 
 def test_QWidgetPlugin():

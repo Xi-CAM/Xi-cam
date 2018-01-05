@@ -61,8 +61,24 @@ class XicamPluginManager(PluginManager):
 
         self.loadPlugins(callback=self.showLoading)
 
+        self.instanciateLatePlugins()
+
         for observer in observers:
             observer.pluginsChanged()
+
+    def instanciateLatePlugins(self):
+        for plugin_info in self.getPluginsOfCategory('GUIPlugin'):
+            if callable(plugin_info.plugin_object):
+                plugin_info.plugin_object = plugin_info.plugin_object() # Force late singleton-ing of GUIPlugins
+
+    def instanciateElement(self, element):
+        '''
+        The default behavior is that each plugin is instanciated at load time; the class is thrown away.
+        Add the isSingleton = False attribute to your plugin class to prevent this behavior!
+        '''
+        if getattr(element, 'isSingleton', True):
+            return element()
+        return element
 
     def showLoading(self, plugininfo: PluginInfo):
         # Indicate loading status
