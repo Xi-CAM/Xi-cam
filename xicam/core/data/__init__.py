@@ -407,28 +407,47 @@ class NonDBHeader(object):
     def meta_array(self, field):
         return DocMetaArray(self, field)
 
+from functools import lru_cache
+import numpy as np
+
 class DocMetaArray(object):
     def __init__(self, document:NonDBHeader, field):
         self.document = document
         self.field = field
-        self._currentindex = 0
-        self._currentframe = self.slice(0)
-        self.dtype = self._currentframe.dtype
-        self.shape = (len(self.document.eventdocs), *self._currentframe.shape)
-        self.ndim = self._currentframe.ndim + 1
-        self.size = self._currentframe.size * len(self.document.eventdocs)
+        firstslice = self.slice(0)
+        self.dtype = firstslice.dtype
+        self.shape = (len(self.document.eventdocs), *firstslice.shape)
+        self.ndim = firstslice.ndim + 1
+        self.size = firstslice.size * len(self.document.eventdocs)
 
     def min(self):
-        return min(self._currentframe)
+        return self._min
 
     def max(self):
-        return max(self._currentframe)
+        return self._max
 
+    @lru_cache(maxsize=3)
     def slice(self, i):
-        return self.document.eventdocs[i]['data'][self.field].asarray()
+        arr = self.document.eventdocs[i]['data'][self.field].asarray()
+        self._min = arr.min()
+        self._max = arr.max()
+        return arr
 
-    def __getitem__(self, item):
-        return self._currentframe[item]
+    def __getitem__(self, item: Union[List[slice], int]):
+        if isinstance(item, list) and len(item)>1:
+            rmin = item[0].start if item[0].start is not None else 0
+            rmax = item[0].stop if item[0].stop is not None else self.shape[0]
+            rstep = item[0].step if item[0].step is not None else 1
+            r = range(rmin, rmax, rstep)
+
+            return np.array([self.slice(i)[item[1:]] for i in r])
+        return self.slice(item)
+
+    def transpose(self,ax):
+        if ax != [0,1,2]:
+            raise ValueError('A DocMetaArray cannot actually be transposed; the transpose method is provided for '
+                             'compatibility with pyqtgraph''s ImageView')
+        return self
 
 
 def doc_to_lazyarray(document: NonDBHeader):
