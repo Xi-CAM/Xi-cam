@@ -4,6 +4,7 @@ import datetime
 from typing import Tuple,List
 from xicam.core.data import lazyfield
 
+# Note: Split into DataHandlerPlugin and IngestorPlugin?
 
 class DataHandlerPlugin(IPlugin):
     """
@@ -16,6 +17,7 @@ class DataHandlerPlugin(IPlugin):
     See xicam.plugins.tests for examples.
 
     """
+    isSingleton = False
 
     DESCRIPTION = ""
 
@@ -23,11 +25,55 @@ class DataHandlerPlugin(IPlugin):
 
     MAGIC_NUMBERS = []
 
-    Handler = None
+    def __call__(self, *args, **kwargs):
+        raise NotImplementedError
+
+    @classmethod
+    def getStartDoc(cls, paths, start_uid):
+        metadata = cls.parseTXTFile(paths[0])
+        metadata.update(cls.parseDataFile(paths[0]))
+        descriptor_keys = getattr(cls,'descriptor_keys',[])
+        metadata = dict([(key, metadata[key]) for key in descriptor_keys])
+        return start_doc(start_uid=start_uid)
+
+    @classmethod
+    def getEventDocs(cls, paths, descriptor_uid):
+        shape = cls(paths[0])().shape # Assumes each frame has same shape
+        for path in paths:
+            metadata = cls.parseTXTFile(path)
+            metadata.update(cls.parseDataFile(path))
+            yield embedded_local_event_doc(descriptor_uid, 'image', cls, (path,), metadata=metadata)
 
     @staticmethod
-    def ingest(paths):
-        return NotImplementedError
+    def getDescriptorUIDs(paths):
+        return str(uuid.uuid4())
+
+    @classmethod
+    def getDescriptorDocs(cls, paths, start_uid, descriptor_uid):
+        metadata = cls.parseTXTFile(paths[0])
+        metadata.update(cls.parseDataFile(paths[0]))
+        descriptor_keys = ['Dim_1', 'Dim_2', 'count_time']
+        metadata = dict([(key, metadata[key]) for key in descriptor_keys])
+        yield descriptor_doc(start_uid, descriptor_uid, metadata=metadata)
+
+    @staticmethod
+    def getStopDoc(paths, start_uid):
+        return stop_doc(start_uid=start_uid)
+
+    @classmethod
+    def ingest(cls, paths):
+        start_uid = str(uuid.uuid4())
+        descriptor_uids = cls.getDescriptorUIDs(paths)
+        return {'start': cls.getStartDoc(paths, start_uid),
+                'descriptors': list(cls.getDescriptorDocs(paths, start_uid, descriptor_uids)),
+                'events': list(cls.getEventDocs(paths, descriptor_uids)),
+                'stop': cls.getStopDoc(paths, start_uid)}
+
+    def parseTXTFile(self, *args, **kwargs):
+        raise NotImplementedError
+
+    def parseDataFile(self, *args, **kwargs):
+        raise NotImplementedError
 
 
 def start_doc(start_uid: str, metadata: dict = None):
