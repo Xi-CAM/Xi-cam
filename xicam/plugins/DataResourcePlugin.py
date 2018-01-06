@@ -46,6 +46,9 @@ class DataResourcePlugin(IPlugin):
     @property
     def host(self): return self.config['host']
 
+    @property
+    def path(self): return self.config['path']
+
     # TODO: convenience properties for each config
 
 
