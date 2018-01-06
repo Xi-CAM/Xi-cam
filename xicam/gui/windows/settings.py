@@ -90,7 +90,7 @@ class ConfigDialog(QDialog):
         try:
             for pluginInfo in pluginmanager.getPluginsOfCategory('SettingsPlugin'):
                 pluginInfo.plugin_object.restore(QSettings().value(pluginInfo.name))
-        except (AttributeError, TypeError):
+        except (AttributeError, TypeError, SystemError):
             # No settings saved
             pass
         self.apply()

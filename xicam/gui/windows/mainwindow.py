@@ -34,6 +34,12 @@ class XicamMainWindow(QMainWindow):
         # Setup appearance
         self.setWindowTitle('Xi-cam')
 
+        # Restore Settings
+        ConfigDialog().restore()
+
+        # Load GUIPlugins
+        pluginmanager.instanciateLatePlugins()
+
         # Setup center/toolbar/statusbar
         pluginmodewidget = pluginModeWidget()
         pluginmodewidget.sigSetStage.connect(self.setStage)
@@ -65,9 +71,6 @@ class XicamMainWindow(QMainWindow):
         self.Fshortcuts = [QShortcut(QKeySequence(key), self) for key in fkeys]
         for i in range(12):
             self.Fshortcuts[i].activated.connect(partial(self.setStage, i))
-
-        # Restore Settings
-        ConfigDialog().restore()
 
     def showSettings(self):
         self._configdialog = ConfigDialog()
