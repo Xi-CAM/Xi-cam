@@ -6,20 +6,22 @@ from xicam.gui.static import path
 
 
 class SearchLineEdit(QLineEdit):
-    def __init__(self, text='', parent=None):
+    def __init__(self, text='', clearable = True, parent=None):
         QLineEdit.__init__(self, text=text, parent=parent)
 
         searchPixmap = QPixmap(str(path("icons/search.png")))
-        clearPixmap = QPixmap(str(path("icons/clear.png")))
 
+        clearPixmap = QPixmap(str(path("icons/clear.png")))
         self.clearButton = QToolButton(self)
         self.clearButton.setIcon(QIcon(clearPixmap))
         self.clearButton.setIconSize(QSize(16, 16))
         self.clearButton.setCursor(Qt.ArrowCursor)
         self.clearButton.setStyleSheet("QToolButton { border: none; padding: 0 px;}")
         self.clearButton.hide()
-        self.clearButton.clicked.connect(self.clear)
-        self.textChanged.connect(self.updateCloseButton)
+
+        if clearable:
+            self.clearButton.clicked.connect(self.clear)
+            self.textChanged.connect(self.updateCloseButton)
 
         self.searchButton = QToolButton(self)
         self.searchButton.setIcon(QIcon(searchPixmap))
