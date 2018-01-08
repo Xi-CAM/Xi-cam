@@ -6,8 +6,8 @@ from xicam.gui.static import path
 
 
 class SearchLineEdit(QLineEdit):
-    def __init__(self, parent=None):
-        QLineEdit.__init__(self, parent)
+    def __init__(self, text='', parent=None):
+        QLineEdit.__init__(self, text=text, parent=parent)
 
         searchPixmap = QPixmap(str(path("icons/search.png")))
         clearPixmap = QPixmap(str(path("icons/clear.png")))
