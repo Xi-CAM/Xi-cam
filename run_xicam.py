@@ -2,8 +2,12 @@ import sys
 
 import qtpy
 from qtpy.QtWidgets import *
+from qtpy.QtCore import *
 
 if qtpy.API_NAME == 'PyQt5' and 'PySide' in sys.modules: del sys.modules['PySide']
+
+QCoreApplication.setOrganizationName("Camera")
+QCoreApplication.setApplicationName("Xi-cam")
 
 def main():
     app = QApplication([])
