@@ -12,9 +12,6 @@ from qtpy.QtWidgets import *
 
 from xicam.plugins import manager as pluginmanager
 
-QCoreApplication.setOrganizationName("Camera")
-QCoreApplication.setApplicationName("Xi-cam")
-
 
 class ConfigDialog(QDialog):
     def __init__(self):
