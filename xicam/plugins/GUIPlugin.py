@@ -1,6 +1,7 @@
 from collections import OrderedDict
 from enum import Enum
 from typing import Dict, List
+from xicam.core.data import NonDBHeader
 
 from yapsy.IPlugin import IPlugin
 
@@ -16,18 +17,18 @@ class GUIPlugin(IPlugin):
         super(GUIPlugin, self).__init__()
         self.stage = list(self.stages.values())[0]
 
-    def appendDocuments(self, doc:List[dict], **kwargs):
+    def appendHeader(self, doc:NonDBHeader, **kwargs):
         # kwargs can include flags for how the data append operation is handled, i.e.:
         #   - as a new doc
         #   - merged into the current doc (stream)
         #   - as a new doc, flattened by some operation (average)
         raise NotImplementedError
 
-    def currentDocument(self) -> Dict:
+    def currentheader(self) -> Dict:
         raise NotImplementedError
 
     @property
-    def documents(self) -> OrderedDict:
+    def headers(self) -> OrderedDict:
         raise NotImplementedError
 
     @property
@@ -62,3 +63,7 @@ class GUILayout(object):
         self.righttopwidget = righttop
         self.leftbottomwidget = leftbottom
         self.rightbottomwidget = rightbottom
+
+    def __getitem__(self, item:str):
+        if not item.endswith('widget'): item += 'widget'
+        return getattr(self, item, PanelState.Defaulted)
