@@ -1,5 +1,6 @@
 from xicam.plugins import DataResourcePlugin
 import sys, os
+from xicam.core.data import load_header
 
 if 'qtpy' in sys.modules:
     from qtpy.QtWidgets import *
@@ -12,6 +13,7 @@ if 'qtpy' in sys.modules:
             super(LocalFileSystemResourcePlugin, self).__init__()
 
             self.config = {'path': QSettings().value('lastlocaldir', os.getcwd())}
+            self.setResolveSymlinks(True)
 
             self.setRootPath(self.config['path'])
 
@@ -39,3 +41,7 @@ if 'qtpy' in sys.modules:
 
         def refresh(self):
             self.setRootPath(self.config['path'])
+
+        def getHeader(self, indexes):
+            uris = [self.filePath(index) for index in indexes]
+            return load_header(uris=uris)

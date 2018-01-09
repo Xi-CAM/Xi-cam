@@ -3,37 +3,13 @@ from qtpy.QtCore import *
 from qtpy.QtGui import *
 from ..clientonlymodels.LocalFileSystemResource import LocalFileSystemResourcePlugin
 from xicam.gui.static import path
+from xicam.core.data import NonDBHeader
 from .searchlineedit import SearchLineEdit
 from urllib import parse
 from pathlib import Path
 import os
 
-class DataResourceBrowser(QWidget):
-    def __init__(self):
-        super(DataResourceBrowser, self).__init__()
-        vbox = QVBoxLayout()
-        vbox.setSpacing(0)
-        vbox.setContentsMargins(0,0,0,0)
 
-        self.browsertabwidget = BrowserTabWidget(self)
-        self.browsertabbar = BrowserTabBar(self.browsertabwidget, self)
-        self.addBrowser(DataBrowser(LocalFileSystemTree()), 'Local', closable=False)
-        self.browsertabbar.setCurrentIndex(0)
-
-        vbox.addWidget(self.browsertabwidget)
-
-        self.setLayout(vbox)
-
-    def addBrowser(self, databrowser, text, closable=True):
-        tab = self.browsertabwidget.addTab(databrowser, text)
-        # self.browsertabbar.addTab(text)
-        if closable is False:
-            try:
-                self.browsertabbar.tabButton(tab, QTabBar.RightSide).resize(0, 0)
-                self.browsertabbar.tabButton(tab, QTabBar.RightSide).hide()
-            except AttributeError:
-                self.browsertabbar.tabButton(tab, QTabBar.LeftSide).resize(0, 0)
-                self.browsertabbar.tabButton(tab, QTabBar.LeftSide).hide()
 
 
 class BrowserTabWidget(QTabWidget):
@@ -90,6 +66,8 @@ class BrowserTabBar(QTabBar):
 
 
 class DataBrowser(QWidget):
+    sigOpen = Signal(NonDBHeader)
+
     def __init__(self, browserview):
         super(DataBrowser, self).__init__()
 
@@ -102,13 +80,15 @@ class DataBrowser(QWidget):
         self.setContentsMargins(0,0,0,0)
 
         self.browserview = browserview
+        self.browserview.sigOpen.connect(self.sigOpen)
         self.browserview.sigConfigChanged.connect(self.pushConfigtoURI)
         self.toolbar = QToolBar()
         self.toolbar.addAction(QIcon(QPixmap(str(path('icons/up.png')))), 'Move up directory', self.moveUp)
         # self.toolbar.addAction(QIcon(QPixmap(str(path('icons/filter.png')))), 'Filter')
         self.toolbar.addAction(QIcon(QPixmap(str(path('icons/refresh.png')))), 'Refresh', self.hardRefreshURI)
         self.toolbar.setToolButtonStyle(Qt.ToolButtonIconOnly)
-        self.URILineEdit = SearchLineEdit(QSettings().value('lastlocaldir'),clearable=False)
+        self.URILineEdit = SearchLineEdit('',clearable=False)
+        self.pushConfigtoURI()
 
         hbox.addWidget(self.toolbar)
         hbox.addWidget(self.URILineEdit)
@@ -139,12 +119,12 @@ class DataBrowser(QWidget):
 
     def pushConfigtoURI(self):
         config = self.browserview.model.config
-        uri = parse.ParseResult(scheme=config['scheme'],
-                                netloc=config['host'],
-                                path=config['path'],
-                                params=config['params'],
-                                query=config['query'],
-                                fragment=config['fragment'])
+        uri = parse.ParseResult(scheme=config.get('scheme',''),
+                                netloc=config.get('host',''),
+                                path=config.get('path',''),
+                                params=config.get('params',''),
+                                query=config.get('query',''),
+                                fragment=config.get('fragment',''))
         uri = parse.urlunparse(uri)
         self.URILineEdit.setText(uri)
         return config
@@ -162,19 +142,33 @@ class DataBrowser(QWidget):
 
     softRefreshURI = hardRefreshURI
 
-class DataResourceMixin(QWidget):
-    sigOpen = Signal(list)
+
+
+class DataResourceTree(QTreeView):
+    sigOpen = Signal(NonDBHeader)
     sigOpenPath = Signal(str)
     sigItemPreview = Signal(str)
 
-
-
-class DataResourceTree(QTreeView, DataResourceMixin):
     def __init__(self, model):
         super(DataResourceTree, self).__init__()
         self.model = model
         self.setModel(self.model)
         self.doubleClicked.connect(self.open)
+        self.setSelectionMode(self.ExtendedSelection)
+        self.setSelectionBehavior(self.SelectRows)
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.menuRequested)
+
+        self.menu = QMenu()
+        standardActions = [QAction('Open', self),
+                           QAction('Open Externally', self),
+                           QAction('Enable/Disable Streaming'),
+                           QAction('Delete', self)]
+        self.menu.addActions(standardActions)
+        standardActions[0].triggered.connect(self.open)
+
+    def menuRequested(self, position):
+        self.menu.exec_(self.viewport().mapToGlobal(position))
 
     def refresh(self):
         self.model.refresh()
@@ -191,11 +185,47 @@ class LocalFileSystemTree(DataResourceTree):
         self.model = LocalFileSystemResourcePlugin()
         super(LocalFileSystemTree, self).__init__(self.model)
 
-    def open(self, index):
-        path = self.model.filePath(index)
-        if os.path.isdir(path):
-            self.model.path = path
-            self.setRootIndex(index)
-            self.sigConfigChanged.emit()
-        else:
-            self.sigOpen.emit(self.model.getHeader(index))
+    def open(self, _):
+        indexes = self.selectionModel().selectedRows()
+        if len(indexes)==1:
+            path = self.model.filePath(indexes[0])
+            if os.path.isdir(path):
+                self.model.path = path
+                self.setRootIndex(indexes[0])
+                self.sigConfigChanged.emit()
+                return
+
+        indexes = self.selectionModel().selectedRows()
+        self.sigOpen.emit(self.model.getHeader(indexes))
+
+class DataResourceBrowser(QWidget):
+    sigOpen = Signal(NonDBHeader)
+
+    def __init__(self):
+        super(DataResourceBrowser, self).__init__()
+        vbox = QVBoxLayout()
+        vbox.setSpacing(0)
+        vbox.setContentsMargins(0,0,0,0)
+
+        self.browsertabwidget = BrowserTabWidget(self)
+        self.browsertabbar = BrowserTabBar(self.browsertabwidget, self)
+        self.addBrowser(DataBrowser(LocalFileSystemTree()), 'Local', closable=False)
+        self.browsertabbar.setCurrentIndex(0)
+
+        vbox.addWidget(self.browsertabwidget)
+
+        self.setLayout(vbox)
+
+        self.sigOpen.connect(print)
+
+    def addBrowser(self, databrowser:DataBrowser, text:str, closable:bool=True):
+        databrowser.sigOpen.connect(self.sigOpen)
+        tab = self.browsertabwidget.addTab(databrowser, text)
+        # self.browsertabbar.addTab(text)
+        if closable is False:
+            try:
+                self.browsertabbar.tabButton(tab, QTabBar.RightSide).resize(0, 0)
+                self.browsertabbar.tabButton(tab, QTabBar.RightSide).hide()
+            except AttributeError:
+                self.browsertabbar.tabButton(tab, QTabBar.LeftSide).resize(0, 0)
+                self.browsertabbar.tabButton(tab, QTabBar.LeftSide).hide()
