@@ -7,7 +7,7 @@ from xicam.core.data import NonDBHeader
 from .searchlineedit import SearchLineEdit
 from urllib import parse
 from pathlib import Path
-import os
+import os, webbrowser
 
 
 
@@ -81,6 +81,7 @@ class DataBrowser(QWidget):
 
         self.browserview = browserview
         self.browserview.sigOpen.connect(self.sigOpen)
+        self.browserview.sigOpenExternally.connect(self.openExternally)
         self.browserview.sigConfigChanged.connect(self.pushConfigtoURI)
         self.toolbar = QToolBar()
         self.toolbar.addAction(QIcon(QPixmap(str(path('icons/up.png')))), 'Move up directory', self.moveUp)
@@ -140,6 +141,9 @@ class DataBrowser(QWidget):
         self.browserview.refresh()
         self.pushConfigtoURI()
 
+    def openExternally(self, uri):
+        webbrowser.open(uri)
+
     softRefreshURI = hardRefreshURI
 
 
@@ -147,6 +151,7 @@ class DataBrowser(QWidget):
 class DataResourceTree(QTreeView):
     sigOpen = Signal(NonDBHeader)
     sigOpenPath = Signal(str)
+    sigOpenExternally = Signal(str)
     sigItemPreview = Signal(str)
 
     def __init__(self, model):
@@ -162,10 +167,12 @@ class DataResourceTree(QTreeView):
         self.menu = QMenu()
         standardActions = [QAction('Open', self),
                            QAction('Open Externally', self),
-                           QAction('Enable/Disable Streaming'),
+                           QAction('Enable/Disable Streaming', self),
                            QAction('Delete', self)]
         self.menu.addActions(standardActions)
         standardActions[0].triggered.connect(self.open)
+        standardActions[1].triggered.connect(self.openExternally)
+
 
     def menuRequested(self, position):
         self.menu.exec_(self.viewport().mapToGlobal(position))
@@ -175,6 +182,9 @@ class DataResourceTree(QTreeView):
         self.setRootIndex(self.model.index(self.model.path))
 
     def open(self, index):
+        pass
+
+    def openExternally(self, uri:str):
         pass
 
 
@@ -194,9 +204,13 @@ class LocalFileSystemTree(DataResourceTree):
                 self.setRootIndex(indexes[0])
                 self.sigConfigChanged.emit()
                 return
-
-        indexes = self.selectionModel().selectedRows()
         self.sigOpen.emit(self.model.getHeader(indexes))
+
+    def openExternally(self, uri:str):
+        indexes = self.selectionModel().selectedRows()
+        for index in indexes:
+            self.sigOpenExternally.emit(self.model.filePath(index))
+
 
 class DataResourceBrowser(QWidget):
     sigOpen = Signal(NonDBHeader)
