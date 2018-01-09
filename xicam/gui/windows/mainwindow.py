@@ -8,6 +8,7 @@ from yapsy import PluginInfo
 
 from xicam.plugins import manager as pluginmanager
 from xicam.plugins import observers as pluginobservers
+from ..widgets import defaultstage
 from .settings import ConfigDialog
 
 
@@ -72,6 +73,14 @@ class XicamMainWindow(QMainWindow):
         for i in range(12):
             self.Fshortcuts[i].activated.connect(partial(self.setStage, i))
 
+        # Wireup default widgets
+        defaultstage['left'].sigOpen.connect(self.open)
+        defaultstage['left'].sigOpen.connect(print)
+
+    def open(self, header):
+        print(header)
+        self.currentGUIPlugin.plugin_object.appendHeader(header)
+
     def showSettings(self):
         self._configdialog = ConfigDialog()
         self._configdialog.show()
@@ -119,12 +128,12 @@ class XicamMainWindow(QMainWindow):
         self.rightbottomwidget = QDockWidget(parent=self)
 
         # Place the docks
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.lefttopwidget)
+        self.addDockWidget(Qt.RightDockWidgetArea, self.righttopwidget)
         self.addDockWidget(Qt.TopDockWidgetArea, self.topwidget)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.leftwidget)
         self.addDockWidget(Qt.RightDockWidgetArea, self.rightwidget)
-        self.addDockWidget(Qt.LeftDockWidgetArea, self.lefttopwidget)
         self.addDockWidget(Qt.BottomDockWidgetArea, self.bottomwidget)
-        self.addDockWidget(Qt.RightDockWidgetArea, self.righttopwidget)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.leftbottomwidget)
         self.addDockWidget(Qt.RightDockWidgetArea, self.rightbottomwidget)
 
@@ -143,24 +152,21 @@ class XicamMainWindow(QMainWindow):
         self.centralWidget().setCurrentWidget(stage.centerwidget)
 
         # Set visibility based on panel state and (TODO) insert default widgets when defaulted
-        self.topwidget.setHidden(stage.topwidget in [PanelState.Disabled, PanelState.Defaulted])
-        self.leftwidget.setHidden(stage.leftwidget in [PanelState.Disabled, PanelState.Defaulted])
-        self.rightwidget.setHidden(stage.rightwidget in [PanelState.Disabled, PanelState.Defaulted])
-        self.bottomwidget.setHidden(stage.bottomwidget in [PanelState.Disabled, PanelState.Defaulted])
-        self.lefttopwidget.setHidden(stage.lefttopwidget in [PanelState.Disabled, PanelState.Defaulted])
-        self.righttopwidget.setHidden(stage.righttopwidget in [PanelState.Disabled, PanelState.Defaulted])
-        self.leftbottomwidget.setHidden(stage.leftbottomwidget in [PanelState.Disabled, PanelState.Defaulted])
-        self.rightbottomwidget.setHidden(stage.rightbottomwidget in [PanelState.Disabled, PanelState.Defaulted])
+        for position in ['top','left','right','bottom','lefttop','righttop','leftbottom','rightbottom']:
+            self.populate_hidden(stage, position)
+            self.populate_position(stage, position)
 
-        if isinstance(stage.topwidget, QWidget): self.topwidget.setWidget(stage.topwidget)
-        if isinstance(stage.leftwidget, QWidget): self.leftwidget.setWidget(stage.leftwidget)
-        if isinstance(stage.rightwidget, QWidget): self.rightwidget.setWidget(stage.rightwidget)
-        if isinstance(stage.bottomwidget, QWidget): self.bottomwidget.setWidget(stage.bottomwidget)
-        if isinstance(stage.lefttopwidget, QWidget): self.lefttopwidget.setWidget(stage.lefttopwidget)
-        if isinstance(stage.righttopwidget, QWidget): self.righttopwidget.setWidget(stage.righttopwidget)
-        if isinstance(stage.leftbottomwidget, QWidget): self.leftbottomwidget.setWidget(stage.leftbottomwidget)
-        if isinstance(stage.rightbottomwidget, QWidget): self.rightbottomwidget.setWidget(stage.rightbottomwidget)
+    def populate_hidden(self, stage, position):
+        getattr(self,position+'widget').setHidden((stage[position] == PanelState.Disabled) or
+                                                  (stage[position] == PanelState.Defaulted and
+                                                   defaultstage[position] == PanelState.Defaulted))
 
+    def populate_position(self, stage, position:str):
+        if isinstance(stage[position], QWidget):
+            getattr(self,position+'widget').setWidget(stage[position])
+        elif stage[position] == PanelState.Defaulted:
+            if not defaultstage[position]==PanelState.Defaulted:
+                getattr(self,position+'widget').setWidget(defaultstage[position])
 
 class pluginModeWidget(QToolBar):
     """
