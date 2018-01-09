@@ -9,7 +9,7 @@ from warnings import warn
 
 # extension_map = {EDFPlugin: ['edf']}
 
-def load_header(filenames: List[Union[str, Path]] = None, uuid: str = None):
+def load_header(uris: List[Union[str, Path]] = None, uuid: str = None):
     """
     Load a document object, either from a file source or a databroker source, by uuid. If loading from a filename, the
     file will be registered in databroker.
@@ -28,7 +28,7 @@ def load_header(filenames: List[Union[str, Path]] = None, uuid: str = None):
     # ext = Path(filename).suffix[1:]
     # for cls, extensions in extension_map.items():
     #     if ext in extensions:
-    return NonDBHeader(**EDFPlugin.plugin_object.ingest(filenames))
+    return NonDBHeader(**EDFPlugin.plugin_object.ingest(uris))
 
 
 class NonDBHeader(object):
@@ -233,7 +233,7 @@ class NonDBHeader(object):
         Loop through the documents from a run.
 
         >>> h = db[-1]
-        >>> for name, doc in h.documents():
+        >>> for name, doc in h.headers():
         ...     # do something
         """
         yield self.start
