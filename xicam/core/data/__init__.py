@@ -28,7 +28,11 @@ def load_header(uris: List[Union[str, Path]] = None, uuid: str = None):
     # ext = Path(filename).suffix[1:]
     # for cls, extensions in extension_map.items():
     #     if ext in extensions:
-    return NonDBHeader(**EDFPlugin.plugin_object.ingest(uris))
+    try:
+        return NonDBHeader(**EDFPlugin.plugin_object.ingest(uris))
+    except (IsADirectoryError, TypeError):
+        # TODO: add Header ingestor for directory
+        return NonDBHeader({}, [], [], {})
 
 
 class NonDBHeader(object):
