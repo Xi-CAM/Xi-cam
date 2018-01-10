@@ -3,6 +3,7 @@ import logging
 import sys
 import time
 from typing import Any
+import traceback
 
 # TODO: Add logging for images
 # TODO: Add icons in GUI reflection
@@ -157,3 +158,13 @@ def logMessage(*args: Any, level: int = INFO, loggername: str = None, timestamp:
 
 def clearMessage():
     statusbar.clearMessage()
+
+
+def logError(exception: Exception, _, tb, **kwargs):
+    kwargs['level'] = ERROR
+    logMessage(exception, '\n', *traceback.format_tb(tb), **kwargs)
+
+
+import sys
+
+sys._excepthook = sys.excepthook = logError
