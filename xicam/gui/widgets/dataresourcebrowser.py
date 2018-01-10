@@ -67,6 +67,7 @@ class BrowserTabBar(QTabBar):
 
 class DataBrowser(QWidget):
     sigOpen = Signal(NonDBHeader)
+    sigPreview = Signal(NonDBHeader)
 
     def __init__(self, browserview):
         super(DataBrowser, self).__init__()
@@ -81,6 +82,7 @@ class DataBrowser(QWidget):
 
         self.browserview = browserview
         self.browserview.sigOpen.connect(self.sigOpen)
+        self.browserview.sigPreview.connect(self.sigPreview)
         self.browserview.sigOpenExternally.connect(self.openExternally)
         self.browserview.sigConfigChanged.connect(self.pushConfigtoURI)
         self.toolbar = QToolBar()
@@ -152,7 +154,7 @@ class DataResourceTree(QTreeView):
     sigOpen = Signal(NonDBHeader)
     sigOpenPath = Signal(str)
     sigOpenExternally = Signal(str)
-    sigItemPreview = Signal(str)
+    sigPreview = Signal(NonDBHeader)
 
     def __init__(self, model):
         super(DataResourceTree, self).__init__()
@@ -173,7 +175,6 @@ class DataResourceTree(QTreeView):
         standardActions[0].triggered.connect(self.open)
         standardActions[1].triggered.connect(self.openExternally)
 
-
     def menuRequested(self, position):
         self.menu.exec_(self.viewport().mapToGlobal(position))
 
@@ -182,6 +183,9 @@ class DataResourceTree(QTreeView):
         self.setRootIndex(self.model.index(self.model.path))
 
     def open(self, index):
+        pass
+
+    def currentChanged(self, current, previous):
         pass
 
     def openExternally(self, uri:str):
@@ -206,6 +210,12 @@ class LocalFileSystemTree(DataResourceTree):
                 return
         self.sigOpen.emit(self.model.getHeader(indexes))
 
+    def currentChanged(self, current, previous):
+        if current.isValid():
+            self.sigPreview.emit(self.model.getHeader([current]))
+
+
+
     def openExternally(self, uri:str):
         indexes = self.selectionModel().selectedRows()
         for index in indexes:
@@ -214,12 +224,15 @@ class LocalFileSystemTree(DataResourceTree):
 
 class DataResourceBrowser(QWidget):
     sigOpen = Signal(NonDBHeader)
+    sigPreview = Signal(NonDBHeader)
 
     def __init__(self):
         super(DataResourceBrowser, self).__init__()
         vbox = QVBoxLayout()
         vbox.setSpacing(0)
         vbox.setContentsMargins(0,0,0,0)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.setMinimumSize(QSize(250, 400))
 
         self.browsertabwidget = BrowserTabWidget(self)
         self.browsertabbar = BrowserTabBar(self.browsertabwidget, self)
@@ -232,8 +245,12 @@ class DataResourceBrowser(QWidget):
 
         self.sigOpen.connect(print)
 
+    def sizeHint(self):
+        return QSize(250, 400)
+
     def addBrowser(self, databrowser:DataBrowser, text:str, closable:bool=True):
         databrowser.sigOpen.connect(self.sigOpen)
+        databrowser.sigPreview.connect(self.sigPreview)
         tab = self.browsertabwidget.addTab(databrowser, text)
         # self.browsertabbar.addTab(text)
         if closable is False:

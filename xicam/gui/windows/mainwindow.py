@@ -76,6 +76,7 @@ class XicamMainWindow(QMainWindow):
         # Wireup default widgets
         defaultstage['left'].sigOpen.connect(self.open)
         defaultstage['left'].sigOpen.connect(print)
+        defaultstage['left'].sigPreview.connect(defaultstage['lefttop'].preview_header)
 
     def open(self, header):
         print(header)
