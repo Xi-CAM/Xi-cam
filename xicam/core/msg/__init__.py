@@ -160,9 +160,9 @@ def clearMessage():
     statusbar.clearMessage()
 
 
-def logError(exception: Exception, _, tb, **kwargs):
+def logError(exception: Exception, value, tb, **kwargs):
     kwargs['level'] = ERROR
-    logMessage(exception, '\n', *traceback.format_tb(tb), **kwargs)
+    logMessage('\n', *traceback.format_exception(exception, value, tb), **kwargs)
 
 
 import sys
