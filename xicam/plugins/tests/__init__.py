@@ -1,35 +1,3 @@
-# def test_IFileFormatPlugin():
-#     import numpy as np
-#     import fabio
-#     from ..FileFormatPlugin import FileFormatPlugin
-#
-#     class npyImage(FileFormatPlugin):
-#         DEFAULT_EXTENTIONS = [".npy"]
-#
-#         def read(self, fname, frame=None):
-#             np.load(fname)
-#
-#         def write(self, fname):
-#             np.save(fname, self.data)
-#
-#         _readheader = dict
-#
-#     data = np.ones((101, 100))
-#     fname = 'test.npy'
-#
-#     f = npyImage(data=data)
-#     f.write(fname)
-#     del f
-#
-#     f = fabio.open(fname)
-#     assert np.all(np.equal(f.data, data))
-#     del f
-#
-#     # cleanup
-#     import os
-#     os.remove(fname)
-
-
 def test_IFittableModelPlugin():
     from ..FittableModelPlugin import Fittable1DModelPlugin
     import numpy as np
@@ -91,11 +59,14 @@ def test_IProcessingPlugin():
             self.c.value = self.a.value + self.b.value
             return self.c.value
 
-    t = SumProcessingPlugin()
-    assert t.evaluate() == 3
-    assert t.inputs['a'].name == 'a'
-    assert t.outputs['c'].name == 'c'
-    assert t.outputs['c'].value == 3
+    t1 = SumProcessingPlugin()
+    t2 = SumProcessingPlugin()
+    assert t1.evaluate() == 3
+    t1.a.value = 100
+    assert t2.a.value == 1
+    assert t1.inputs['a'].name == 'a'
+    assert t1.outputs['c'].name == 'c'
+    assert t1.outputs['c'].value == 3
 
 
 def makeapp():
