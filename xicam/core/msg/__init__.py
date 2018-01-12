@@ -5,19 +5,26 @@ import time
 from typing import Any
 import traceback
 
+"""
+This module provides application-wide logging tools. Unhandled exceptions are hooked into the log. Messages and progress
+can be displayed in the main Xi-cam window using showProgress and showMessage.
+
+"""
+
+
 # TODO: Add logging for images
 # TODO: Add icons in GUI reflection
 
-# Mirror all print calls to the log
-# logging.basicConfig(stream=sys.stdout,
-#                     level=logging.DEBUG,
-#                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-statusbar = None  # Must be registered to output to a ui status bar
+
+
+# GUI widgets are registered into these slots to display messages/progress
+statusbar = None
 progressbar = None
 
 stdch = logging.StreamHandler(sys.stdout)
 
+# Log levels constants
 DEBUG = logging.DEBUG  # 10
 INFO = logging.INFO  # 20
 WARNING = logging.WARNING  # 30
@@ -157,10 +164,17 @@ def logMessage(*args: Any, level: int = INFO, loggername: str = None, timestamp:
 
 
 def clearMessage():
+    """
+    Clear messages from the statusbar
+    """
     statusbar.clearMessage()
 
 
 def logError(exception: Exception, value, tb, **kwargs):
+    """
+    Logs an exception with traceback. All uncaught exceptions get hooked here
+
+    """
     kwargs['level'] = ERROR
     logMessage('\n', *traceback.format_exception(exception, value, tb), **kwargs)
 
