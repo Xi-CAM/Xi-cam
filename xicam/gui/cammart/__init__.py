@@ -37,25 +37,34 @@ class CamMartSettingsPlugin(SettingsPlugin):
                                                     self.name,
                                                     self.widget)
 
+        # Refresh packages list
         self.refresh()
 
     def refresh(self):
+        """
+        Refresh the list of packages by updating the model
+        """
         self.packagesmodel.clear()
         for name, scheme in cammart.pkg_registry.items():
             self.packagesmodel.appendRow(QStandardItem(name))
 
     def addplugin(self):
-        # Open the CamMart install dialog
+        """
+        Open the CamMart install dialog
+        """
         self._dialog = CamMartInstallDialog()
         self._dialog.exec_()
         self.refresh()
 
     def removeplugin(self):
-        if self.listview.selectedIndexes():  # TODO: disable remove when nothing is selected
+        """
+        Uninstalls a plugin
+        """
+        if self.listview.selectedIndexes():
             cammart.uninstall(self.packagesmodel.itemFromIndex(self.listview.selectedIndexes()[0]).text())
             self.refresh()
 
-    def save(self):
+    def save(self):  # This class has no settings to save, it is driven by the packages list
         return None  # self.parameter.saveState()
 
     def restore(self, state):
