@@ -61,6 +61,7 @@ class XicamPluginManager(PluginManager):
 
         self.loadPlugins(callback=self.showLoading)
 
+        self.instanciateLatePlugins()
         for observer in observers:
             observer.pluginsChanged()
 
