@@ -1,7 +1,6 @@
 from pathlib import Path
 from typing import Union, List
 
-from lazyarray import larray
 from databroker.utils import ALL
 from databroker._core import Header
 from warnings import warn
@@ -16,11 +15,12 @@ def load_header(uris: List[Union[str, Path]] = None, uuid: str = None):
 
     Parameters
     ----------
-    filename
+    uris
     uuid
 
     Returns
     -------
+    NonDBHeader
 
     """
     from xicam.plugins import manager as pluginmanager # must be a late import
@@ -452,10 +452,6 @@ class DocMetaArray(object):
             raise ValueError('A DocMetaArray cannot actually be transposed; the transpose method is provided for '
                              'compatibility with pyqtgraph''s ImageView')
         return self
-
-
-def doc_to_lazyarray(document: NonDBHeader):
-    return larray(lambda i: document.eventdocs[i]['data']['image'])
 
 class lazyfield(object):
     def __init__(self, handler, *args, **kwargs):
