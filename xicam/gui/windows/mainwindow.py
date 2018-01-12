@@ -39,7 +39,7 @@ class XicamMainWindow(QMainWindow):
         ConfigDialog().restore()
 
         # Load GUIPlugins
-        pluginmanager.instanciateLatePlugins()
+        # pluginmanager.instanciateLatePlugins()
 
         # Setup center/toolbar/statusbar
         pluginmodewidget = pluginModeWidget()
