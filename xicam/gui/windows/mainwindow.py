@@ -179,7 +179,7 @@ class pluginModeWidget(QToolBar):
         super(pluginModeWidget, self).__init__()
 
         # Setup font
-        self.font = QFont()
+        self.font = QFont('Zero Threes')
         self.font.setPointSize(16)
 
         # Align right
