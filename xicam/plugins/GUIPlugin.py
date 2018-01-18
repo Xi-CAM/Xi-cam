@@ -2,6 +2,7 @@ from collections import OrderedDict
 from enum import Enum
 from typing import Dict, List
 from xicam.core.data import NonDBHeader
+from qtpy.QtGui import *
 
 from yapsy.IPlugin import IPlugin
 
@@ -17,19 +18,19 @@ class GUIPlugin(IPlugin):
         super(GUIPlugin, self).__init__()
         self.stage = list(self.stages.values())[0]
 
-    def appendHeader(self, doc:NonDBHeader, **kwargs):
+    def appendHeader(self, header: NonDBHeader, **kwargs):
         # kwargs can include flags for how the data append operation is handled, i.e.:
         #   - as a new doc
         #   - merged into the current doc (stream)
         #   - as a new doc, flattened by some operation (average)
-        raise NotImplementedError
+        pass
 
     def currentheader(self) -> Dict:
         raise NotImplementedError
 
     @property
-    def headers(self) -> OrderedDict:
-        raise NotImplementedError
+    def headers(self) -> List[NonDBHeader]:
+        return [self.headermodel.item(i) for i in range(self.headermodel.count())]
 
     @property
     def stages(self) -> OrderedDict:
