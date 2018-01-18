@@ -430,7 +430,6 @@ class DocMetaArray(object):
     def max(self):
         return self._max
 
-    @lru_cache(maxsize=3)
     def slice(self, i):
         arr = self.document.eventdocs[i]['data'][self.field].asarray()
         self._min = arr.min()
