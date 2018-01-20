@@ -64,6 +64,7 @@ class ContextMenuTabBar(QTabBar):
             self.tabCloseRequested.emit(i)
 
     def mousePressEvent(self, event: QMouseEvent):
+        super(ContextMenuTabBar, self).mousePressEvent(event)
         self._rightclickedtab = self.tabAt(event.pos())
         if self._rightclickedtab != -1:
             if event.button() == Qt.RightButton:

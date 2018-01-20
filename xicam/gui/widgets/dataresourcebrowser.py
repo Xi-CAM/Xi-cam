@@ -4,10 +4,14 @@ from qtpy.QtGui import *
 from ..clientonlymodels.LocalFileSystemResource import LocalFileSystemResourcePlugin
 from xicam.gui.static import path
 from xicam.core.data import NonDBHeader
+from xicam.plugins import manager as pluginmanager
+from xicam.plugins.DataResourcePlugin import DataSourceListModel
 from .searchlineedit import SearchLineEdit
 from urllib import parse
 from pathlib import Path
+from functools import partial
 import os, webbrowser
+from xicam.gui.widgets.tabview import ContextMenuTabBar
 
 
 
@@ -16,54 +20,6 @@ class BrowserTabWidget(QTabWidget):
     def __init__(self, parent=None):
         super(BrowserTabWidget, self).__init__(parent)
         self.setContentsMargins(0,0,0,0)
-
-class BrowserTabBar(QTabBar):
-    sigAddBrowser = Signal()
-
-    def __init__(self, tabwidget:QTabWidget, parent=None):
-        super(BrowserTabBar, self).__init__(parent)
-
-        self.tabwidget = tabwidget
-        self.tabwidget.setTabBar(self)
-
-        self.setExpanding(False)
-        self.setTabsClosable(True)
-
-        plusPixmap = QPixmap(str(path("icons/plus.png")))
-        self.plusIcon = QIcon(plusPixmap)
-        # self.plus_button.setToolTip('Open a new browser')
-        # self.plus_button.setParent(self)
-        # self.plus_button.setMaximumSize(32, 32)
-        # self.plus_button.setMinimumSize(32, 32)
-        # self.plus_button.clicked.connect(self.sigAddBrowser.emit)
-        tab = self.addTab(self.plusIcon, '')
-        try:
-            self.tabButton(tab, QTabBar.RightSide).resize(0, 0)
-            self.tabButton(tab, QTabBar.RightSide).hide()
-        except AttributeError:
-            self.tabButton(tab, QTabBar.LeftSide).resize(0, 0)
-            self.tabButton(tab, QTabBar.LeftSide).hide()
-        # self.movePlusButton()  # Move to the correct location
-        # self.setDocumentMode(True)
-        self.currentChanged.connect(self.tabwidget.setCurrentIndex)
-        self.installEventFilter(self)
-
-    def addTab(self, *args, **kwargs):
-        return self.insertTab(self.count()-1,*args,**kwargs)
-
-    def eventFilter(self, object, event):
-        try:
-            if object == self and event.type() in [QEvent.MouseButtonPress,
-                                                   QEvent.MouseButtonRelease] and event.button() == Qt.LeftButton:
-
-                if event.type() == QEvent.MouseButtonPress:
-                    tabIndex = object.tabAt(event.pos())
-                    if tabIndex == self.count()-1:
-                        return True
-            return False
-        except Exception as e:
-            print("Exception raised in eventfilter", e)
-
 
 class DataBrowser(QWidget):
     sigOpen = Signal(NonDBHeader)
@@ -149,15 +105,72 @@ class DataBrowser(QWidget):
     softRefreshURI = hardRefreshURI
 
 
+class BrowserTabBar(ContextMenuTabBar):
+    sigAddBrowser = Signal(DataBrowser, str)
 
-class DataResourceTree(QTreeView):
-    sigOpen = Signal(NonDBHeader)
-    sigOpenPath = Signal(str)
-    sigOpenExternally = Signal(str)
-    sigPreview = Signal(NonDBHeader)
+    def __init__(self, tabwidget: QTabWidget):
+        super(BrowserTabBar, self).__init__()
 
+        self.tabwidget = tabwidget
+        self.tabwidget.setTabBar(self)
+
+        self.setExpanding(False)
+        self.setTabsClosable(True)
+
+        plusPixmap = QPixmap(str(path("icons/plus.png")))
+        self.plusIcon = QIcon(plusPixmap)
+        # self.plus_button.setToolTip('Open a new browser')
+        # self.plus_button.setParent(self)
+        # self.plus_button.setMaximumSize(32, 32)
+        # self.plus_button.setMinimumSize(32, 32)
+        # self.plus_button.clicked.connect(self.sigAddBrowser.emit)
+        tab = self.addTab(self.plusIcon, '')
+        try:
+            self.tabButton(tab, QTabBar.RightSide).resize(0, 0)
+            self.tabButton(tab, QTabBar.RightSide).hide()
+        except AttributeError:
+            self.tabButton(tab, QTabBar.LeftSide).resize(0, 0)
+            self.tabButton(tab, QTabBar.LeftSide).hide()
+        # self.movePlusButton()  # Move to the correct location
+        # self.setDocumentMode(True)
+        self.currentChanged.connect(self.tabwidget.setCurrentIndex)
+        self.installEventFilter(self)
+
+    def addTab(self, *args, **kwargs):
+        return self.insertTab(self.count() - 1, *args, **kwargs)
+
+    def eventFilter(self, object, event):
+        try:
+            if object == self and event.type() in [QEvent.MouseButtonPress,
+                                                   QEvent.MouseButtonRelease] and event.button() == Qt.LeftButton:
+
+                if event.type() == QEvent.MouseButtonPress:
+                    tabIndex = object.tabAt(event.pos())
+                    if tabIndex == self.count() - 1:
+                        self.showMenu(self.mapToGlobal(event.pos()))
+                        return True
+            return False
+        except Exception as e:
+            print("Exception raised in eventfilter", e)
+
+    def showMenu(self, pos):
+        self.menu = QMenu()
+        # Add all resource plugins
+        self.actions = {}
+        for plugin in pluginmanager.getPluginsOfCategory('DataResourcePlugin'):
+            self.actions[plugin.name] = QAction(plugin.name)
+            self.actions[plugin.name].triggered.connect(partial(self._addBrowser, plugin))
+            self.menu.addAction(self.actions[plugin.name])
+
+        self.menu.popup(pos)
+
+    def _addBrowser(self, plugin):
+        self.sigAddBrowser.emit(DataBrowser(DataResourceList(DataSourceListModel(plugin.plugin_object))), plugin.name)
+
+
+class DataResourceView(QObject):
     def __init__(self, model):
-        super(DataResourceTree, self).__init__()
+        super(DataResourceView, self).__init__()
         self.model = model
         self.setModel(self.model)
         self.doubleClicked.connect(self.open)
@@ -178,10 +191,6 @@ class DataResourceTree(QTreeView):
     def menuRequested(self, position):
         self.menu.exec_(self.viewport().mapToGlobal(position))
 
-    def refresh(self):
-        self.model.refresh()
-        self.setRootIndex(self.model.index(self.model.path))
-
     def open(self, index):
         pass
 
@@ -192,8 +201,33 @@ class DataResourceTree(QTreeView):
         pass
 
 
-class LocalFileSystemTree(DataResourceTree):
+class DataResourceTree(QTreeView, DataResourceView):
+    sigOpen = Signal(NonDBHeader)
+    sigOpenPath = Signal(str)
+    sigOpenExternally = Signal(str)
+    sigPreview = Signal(NonDBHeader)
     sigConfigChanged = Signal()
+
+    def __init__(self, *args):
+        super(DataResourceTree, self).__init__(*args)
+
+    def refresh(self):
+        self.model.refresh()
+        self.setRootIndex(self.model.index(self.model.path))
+
+
+class DataResourceList(QListView, DataResourceView):
+    sigOpen = Signal(NonDBHeader)
+    sigOpenPath = Signal(str)
+    sigOpenExternally = Signal(str)
+    sigPreview = Signal(NonDBHeader)
+    sigConfigChanged = Signal()
+
+    def refresh(self):
+        self.model.refresh()
+
+
+class LocalFileSystemTree(DataResourceTree):
 
     def __init__(self):
         self.model = LocalFileSystemResourcePlugin()
@@ -235,7 +269,11 @@ class DataResourceBrowser(QWidget):
         self.setMinimumSize(QSize(250, 400))
 
         self.browsertabwidget = BrowserTabWidget(self)
-        self.browsertabbar = BrowserTabBar(self.browsertabwidget, self)
+        self.browsertabbar = BrowserTabBar(self.browsertabwidget)
+        self.browsertabbar.sigAddBrowser.connect(self.addBrowser)
+        self.browsertabbar.tabCloseRequested.connect(self.closetab)
+
+        # Add the required 'Local' browser
         self.addBrowser(DataBrowser(LocalFileSystemTree()), 'Local', closable=False)
         self.browsertabbar.setCurrentIndex(0)
 
@@ -245,12 +283,18 @@ class DataResourceBrowser(QWidget):
 
         self.sigOpen.connect(print)
 
+    def closetab(self, i):
+        if hasattr(self.browsertabwidget.widget(i), 'closable'):
+            if self.browsertabwidget.widget(i).closable:
+                self.browsertabwidget.removeTab(i)
+
     def sizeHint(self):
         return QSize(250, 400)
 
     def addBrowser(self, databrowser:DataBrowser, text:str, closable:bool=True):
         databrowser.sigOpen.connect(self.sigOpen)
         databrowser.sigPreview.connect(self.sigPreview)
+        databrowser.closable = closable
         tab = self.browsertabwidget.addTab(databrowser, text)
         # self.browsertabbar.addTab(text)
         if closable is False:
