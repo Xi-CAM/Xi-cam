@@ -11,6 +11,7 @@ from .DataHandlerPlugin import DataHandlerPlugin
 from .GUIPlugin import GUIPlugin, GUILayout
 from .ProcessingPlugin import ProcessingPlugin, Input, Output
 from .SettingsPlugin import SettingsPlugin
+from .DataResourcePlugin import DataResourcePlugin
 from .WidgetPlugin import QWidgetPlugin
 from .venvs import observers as venvsobservers
 
@@ -29,7 +30,8 @@ class XicamPluginManager(PluginManager):
         categoriesfilter = {'GUIPlugin': GUIPlugin,
                             'WidgetPlugin': QWidgetPlugin,
                             'SettingsPlugin': SettingsPlugin,
-                            'DataHandlerPlugin': DataHandlerPlugin}
+                            'DataHandlerPlugin': DataHandlerPlugin,
+                            'DataResourcePlugin': DataResourcePlugin}
 
         # If xicam.gui is not loaded (running headless), don't load GUIPlugins or WidgetPlugins
         if 'xicam.gui' not in sys.modules:
