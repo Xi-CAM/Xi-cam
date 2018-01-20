@@ -56,20 +56,22 @@ try:
     from qtpy.QtCore import *
 
 
-    class DataSourceItemModel(QAbstractItemModel):
+    class DataSourceListModel(QAbstractListModel):
+
         def __init__(self, dataresource: DataResourcePlugin):
-            super(DataSourceItemModel, self).__init__()
+            super(DataSourceListModel, self).__init__()
             self.dataresource = dataresource
             self.dataresource.model = self
-            self.columnCount = dataresource.columnCount
             self.rowCount = dataresource.rowCount
             self.data = dataresource.data
-            self.headerData = dataresource.headerData
+            self.columnCount = dataresource.columnCount
+            self.refresh = dataresource.refresh
+
+        @property
+        def config(self):
+            return self.dataresource.config
 
 
-    class DataSourceListModel(QAbstractListModel, DataSourceItemModel):
-        def __init__(self, dataresource: DataResourcePlugin):
-            super(DataSourceListModel, self).__init__(dataresource)
 except ImportError:
     # TODO: how should this be handled?
     pass
