@@ -168,6 +168,9 @@ class XicamMainWindow(QMainWindow):
         elif stage[position] == PanelState.Defaulted:
             if not defaultstage[position]==PanelState.Defaulted:
                 getattr(self,position+'widget').setWidget(defaultstage[position])
+        elif isinstance(stage[position], type):
+            raise TypeError(
+                f'A type is not acceptable value for stages. You must instance this class: {stage[position]}, {position}')
 
 class pluginModeWidget(QToolBar):
     """
