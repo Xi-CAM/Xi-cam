@@ -42,7 +42,7 @@ class DataHandlerPlugin(IPlugin):
         for path in paths:
             metadata = cls.parseTXTFile(path)
             metadata.update(cls.parseDataFile(path))
-            yield embedded_local_event_doc(descriptor_uid, 'image', cls, (path,), metadata=metadata)
+            yield embedded_local_event_doc(descriptor_uid, 'pilatus2M_image', cls, (path,), metadata=metadata)
 
     @staticmethod
     def getDescriptorUIDs(paths):
@@ -52,7 +52,7 @@ class DataHandlerPlugin(IPlugin):
     def getDescriptorDocs(cls, paths, start_uid, descriptor_uid):
         metadata = cls.parseTXTFile(paths[0])
         metadata.update(cls.parseDataFile(paths[0]))
-        descriptor_keys = ['Dim_1', 'Dim_2', 'count_time']
+        descriptor_keys = ['Dim_1', 'Dim_2', 'count_time', 'object_keys']
         metadata = dict([(key, metadata[key]) for key in descriptor_keys])
         yield descriptor_doc(start_uid, descriptor_uid, metadata=metadata)
 
@@ -88,7 +88,7 @@ def event_doc(data_uid: str, descriptor_uid: str, metadata: dict = None):
     metadata.update({'descriptor': descriptor_uid,
                      'time': datetime.datetime.now().strftime('%a %b %d %H:%M:%S %Y'),
                      'uid': str(uuid.uuid4()),
-                     'data': {'image': data_uid}})
+                     'data': {'pilatus2M_image': data_uid}})
     return metadata
 
 
