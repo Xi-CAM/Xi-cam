@@ -10,6 +10,7 @@ from xicam.plugins import manager as pluginmanager
 from xicam.plugins import observers as pluginobservers
 from ..widgets import defaultstage
 from .settings import ConfigDialog
+from ..static import path
 
 
 class XicamMainWindow(QMainWindow):
@@ -19,6 +20,9 @@ class XicamMainWindow(QMainWindow):
 
     def __init__(self):
         super(XicamMainWindow, self).__init__()
+
+        # Set icon
+        self.setWindowIcon(QIcon(QPixmap(str(path('icons/xicam.gif')))))
 
         # Set size and position
         self.setGeometry(0, 0, 1000, 600)
@@ -202,28 +206,29 @@ class pluginModeWidget(QToolBar):
 
         # Loop over each "GUIPlugin" plugin
         for plugin in pluginmanager.getPluginsOfCategory("GUIPlugin"):
-            if plugin.is_activated or True:
-                # Make the pushbutton
-                button = HoverMenuButton(stages=plugin.plugin_object.stages, text=plugin.name)
-                button.setFlat(True)
-                button.setFont(self.font)
-                button.setProperty('isMode', True)
-                button.setAutoFillBackground(False)
-                button.setCheckable(True)
-                button.setAutoExclusive(True)
-                button.sigSetStage.connect(self.sigSetStage)
-                self.addWidget(button)
+            if hasattr(plugin, 'is_activated'):  # catches plugins which failed to load
+                if plugin.is_activated or True:
+                    # Make the pushbutton
+                    button = HoverMenuButton(stages=plugin.plugin_object.stages, text=plugin.name)
+                    button.setFlat(True)
+                    button.setFont(self.font)
+                    button.setProperty('isMode', True)
+                    button.setAutoFillBackground(False)
+                    button.setCheckable(True)
+                    button.setAutoExclusive(True)
+                    button.sigSetStage.connect(self.sigSetStage)
+                    self.addWidget(button)
 
-                # Connect pushbutton
-                button.clicked.connect(partial(self.activate, plugin))
-                # if plugin is self.plugins.values()[0]:
-                #     button.setChecked(True)
+                    # Connect pushbutton
+                    button.clicked.connect(partial(self.activate, plugin))
+                    # if plugin is self.plugins.values()[0]:
+                    #     button.setChecked(True)
 
-                # Make separator pipe
-                label = QLabel('|')
-                label.setFont(self.font)
-                # label.setStyleSheet('background-color:#111111;')
-                self.addWidget(label)
+                    # Make separator pipe
+                    label = QLabel('|')
+                    label.setFont(self.font)
+                    # label.setStyleSheet('background-color:#111111;')
+                    self.addWidget(label)
 
         # Remove last separator
         if self.layout().count():
