@@ -9,7 +9,6 @@ class TabView(QTabWidget):
         self.setTabBar(ContextMenuTabBar())
 
     def setModel(self, model: QStandardItemModel):
-        self.widgetcls = None
         self.model = model
         model.dataChanged.connect(self.dataChanged)
         model.dataChanged.connect(print)
@@ -19,7 +18,6 @@ class TabView(QTabWidget):
         self.setDocumentMode(True)
 
     def dataChanged(self, start, end):
-        print(start, end)
         for i in range(self.model.rowCount()):
 
             if self.widget(i):
