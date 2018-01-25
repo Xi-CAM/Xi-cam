@@ -25,7 +25,8 @@ class TabView(QTabWidget):
             if self.widget(i):
                 if self.widget(i).header == self.model.item(i).header:
                     continue
-            self.setCurrentIndex(self.insertTab(i, self.widgetcls(self.model.item(i).header, 'image'), '????'))
+            self.setCurrentIndex(
+                self.insertTab(i, self.widgetcls(self.model.item(i).header, 'pilatus2M_image'), '????'))
 
         for i in reversed(range(self.model.rowCount(), self.count())):
             self.removeTab(i)

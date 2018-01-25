@@ -37,7 +37,7 @@ class PreviewWidget(GraphicsLayoutWidget):
 
     def preview_header(self, header: NonDBHeader):
         try:
-            data = header.meta_array('image')[0]
+            data = header.meta_array('pilatus2M_image')[0]
             self.setImage(data)
         except IndexError:
             self.imageitem.clear()
@@ -55,7 +55,4 @@ class PreviewWidget(GraphicsLayoutWidget):
         self.textitem.setText(text)
         self.imageitem.clear()
         self.textitem.setVisible(True)
-
-        self.autoPixelRange
-        from pyqtgraph import ImageView
         self.view.autoRange()
