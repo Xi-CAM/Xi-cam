@@ -124,7 +124,7 @@ class NonDBHeader(object):
         --------
         :meth:`Header.devices`
         """
-        raise NotImplementedError
+        return {key for event in self['eventdocs'] for key in event['data'].keys()}
 
     def devices(self, stream_name=ALL):
         """
