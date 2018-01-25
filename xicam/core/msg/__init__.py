@@ -37,6 +37,14 @@ levels = {DEBUG: 'DEBUG',
           ERROR: 'ERROR',
           CRITICAL: 'CRITICAL'}
 
+trayicon = None
+if 'qtpy' in sys.modules:
+    from qtpy.QtWidgets import QSystemTrayIcon
+    from qtpy.QtGui import QIcon, QPixmap
+    from xicam.gui.static import path
+
+    trayicon = QSystemTrayIcon(QIcon(QPixmap(str(path('icons/xicam.gif')))))  # TODO: better icon
+
 
 def showProgress(value: int, minval: int = 0, maxval: int = 100):
     """
@@ -81,6 +89,33 @@ def hideBusy():
 # aliases
 showReady = hideBusy
 hideProgress = hideBusy
+
+
+def notifyMessage(*args, timeout=8000, title='', level: int = INFO):
+    """
+    Same as logMessage, but displays to the subscribed statusbar with a timeout.
+
+    Parameters
+    ----------
+    args        :   tuple(str)
+        See logMessage...
+    timeout     :   int
+        How long the message is displayed. If set 0, the message is persistent.
+    kwargs      :   dict
+        See logMessage...
+    Returns
+    -------
+
+    """
+    global trayicon
+    if trayicon:
+        icon = None
+        if level in [INFO, DEBUG]: icon = trayicon.Information
+        if level == WARNING: icon = trayicon.Warning
+        if level in [ERROR, CRITICAL]: icon = trayicon.Critical
+        if icon is None: raise ValueError('Invalid message level.')
+        trayicon.show()
+        trayicon.showMessage(''.join(args), title, icon, timeout)  # TODO: check if title and message are swapped?
 
 
 def showMessage(*args, timeout=0, **kwargs):
