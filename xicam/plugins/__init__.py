@@ -70,7 +70,12 @@ class XicamPluginManager(PluginManager):
     def instanciateLatePlugins(self):
         for plugin_info in self.getPluginsOfCategory('GUIPlugin'):
             if callable(plugin_info.plugin_object):
-                plugin_info.plugin_object = plugin_info.plugin_object() # Force late singleton-ing of GUIPlugins
+                try:
+                    plugin_info.plugin_object = plugin_info.plugin_object()  # Force late singleton-ing of GUIPlugins
+                except Exception as ex:
+                    msg.notifyMessage(f'The "{plugin_info.name}" plugin could not be loaded. {repr(ex)}',
+                                      level=msg.CRITICAL)
+                    msg.logError(ex, ex, ex.__traceback__)
 
     def instanciateElement(self, element):
         '''
