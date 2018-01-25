@@ -45,9 +45,33 @@ class ProcessingPlugin(IPlugin):
     def inverted_outputs(self):
         return {param: name for name, param in self.__class__.__dict__.items() if isinstance(param, Output)}
 
+class Var(object):
+    def __init__(self):
+        self.workflow = None
+        self.parent = None
+        self.conn_type = None # input or output
+        self.map_inputs = []
+        self.subscriptions = []
 
-class Input(object):
+    def connect(self, var):
+        # find which variable and connect to it.
+        var.map_inputs.append([var.name, self])
+
+    def disconnect(self, var):
+        pass
+
+
+    def subscribe(self, var):
+        # find which variable and connect to it.
+        self.subscriptions.append([var.name, var])
+        self.map_inputs.append([self.name, var])
+
+    def unsubscribe(self, var):
+        pass
+
+class Input(Var):
     def __init__(self, name='', description='', default=None, type=None, unit=None, min=None, max=None, bounds=None):
+        super().__init__()
         self.name = name
         self.description = description
         self.default = default
@@ -61,6 +85,7 @@ class Input(object):
     def clone_to_instance(self, instance):
         clone = self.__class__(self.name, self.description, self.default, self.unit, self.value,
                                self.min, self.max)
+        clone.parent = instance
         instance.inputs[self.name] = clone
         setattr(instance, self.name, clone)
         return clone
@@ -76,8 +101,9 @@ class Input(object):
         #     self.clone_to_instance(instance).value = value
 
 
-class Output(object):
+class Output(Var):
     def __init__(self, name='', description='', type=None, unit=None):
+        super().__init__()
         self.name = name
         self.description = description
         self.unit = unit
@@ -86,6 +112,7 @@ class Output(object):
 
     def clone_to_instance(self, instance):
         clone = self.__class__(self.name, self.description, self.type, self.unit)
+        clone.parent = instance
         instance.outputs[self.name] = clone
         setattr(instance, self.name, clone)
         return clone

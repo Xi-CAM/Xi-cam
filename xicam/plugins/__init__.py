@@ -14,6 +14,7 @@ from .SettingsPlugin import SettingsPlugin
 from .DataResourcePlugin import DataResourcePlugin
 from .WidgetPlugin import QWidgetPlugin
 from .venvs import observers as venvsobservers
+from .DataResourcePlugin import DataResourcePlugin
 
 user_plugin_dir = user_config_dir('xicam/plugins')
 site_plugin_dir = site_config_dir('xicam/plugins')
