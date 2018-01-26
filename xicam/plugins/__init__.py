@@ -15,6 +15,7 @@ from .DataResourcePlugin import DataResourcePlugin
 from .WidgetPlugin import QWidgetPlugin
 from .venvs import observers as venvsobservers
 from .DataResourcePlugin import DataResourcePlugin
+from .EZPlugin import _EZPlugin, EZPlugin
 
 user_plugin_dir = user_config_dir('xicam/plugins')
 site_plugin_dir = site_config_dir('xicam/plugins')
@@ -32,7 +33,8 @@ class XicamPluginManager(PluginManager):
                             'WidgetPlugin': QWidgetPlugin,
                             'SettingsPlugin': SettingsPlugin,
                             'DataHandlerPlugin': DataHandlerPlugin,
-                            'DataResourcePlugin': DataResourcePlugin}
+                            'DataResourcePlugin': DataResourcePlugin,
+                            'EZPlugin': _EZPlugin}
 
         # If xicam.gui is not loaded (running headless), don't load GUIPlugins or WidgetPlugins
         if 'xicam.gui' not in sys.modules:

@@ -1,9 +1,9 @@
 from typing import List
-
+from qtpy.QtCore import QObject
 from yapsy.IPlugin import IPlugin
 
 
-class SettingsPlugin(IPlugin):
+class SettingsPlugin(QObject, IPlugin):
     def __init__(self, icon, name, widget):
         super(SettingsPlugin, self).__init__()
         self.icon = icon
@@ -30,4 +30,4 @@ class SettingsPlugin(IPlugin):
         return self.parameter.saveState(filter='user')
 
     def restore(self, state):
-        self.parameter.restoreState(state)
+        self.parameter.restoreState(state, addChildren=False, removeChildren=False)
