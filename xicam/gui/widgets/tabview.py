@@ -11,7 +11,6 @@ class TabView(QTabWidget):
     def setModel(self, model: QStandardItemModel):
         self.model = model
         model.dataChanged.connect(self.dataChanged)
-        model.dataChanged.connect(print)
         self.tabCloseRequested.connect(self.closeTab)
 
         self.setTabsClosable(True)
