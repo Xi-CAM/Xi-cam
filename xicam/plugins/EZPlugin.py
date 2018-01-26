@@ -6,7 +6,7 @@ from qtpy.QtGui import *
 
 
 class _EZPlugin(GUIPlugin):
-    def __init__(self, name, toolbuttons=None, parameters=None, openfileshandler=None,
+    def __init__(self, name, toolbuttons=None, parameters=None, appendheadertest=None,
                  centerwidget=pg.ImageView,
                  bottomwidget=pg.PlotWidget):
         self.name = name
@@ -24,12 +24,13 @@ class _EZPlugin(GUIPlugin):
             for toolbutton in toolbuttons:
                 self.addToolButton(*toolbutton)
 
-        if openfileshandler: self.openfiles = openfileshandler
+        if appendheadertest: self.appendHeader = appendheadertest
 
         self.stages = {'EZPlugin': GUILayout(self.centerwidget, right=self.rightwidget, bottom=self.bottomwidget,
                                              top=self.toolbar)}
 
         super(_EZPlugin, self).__init__()
+        _EZPlugin.instance = self
 
     def setImage(self, data):
         self.centerwidget.setImage(data)
@@ -46,10 +47,10 @@ class _EZPlugin(GUIPlugin):
         self.toolbar.addAction(tb)
 
 
-def EZPlugin(name='TestPlugin', toolbuttons=None, parameters=None, openfileshandler=None,
+def EZPlugin(name='TestPlugin', toolbuttons=None, parameters=None, appendheadertest=None,
              centerwidget=pg.ImageView,
              bottomwidget=pg.PlotWidget):
     return type(name, (_EZPlugin,), {'__init__': lambda self: _EZPlugin.__init__(self, name, toolbuttons, parameters,
-                                                                                 openfileshandler, centerwidget,
+                                                                                 appendheadertest, centerwidget,
                                                                                  bottomwidget),
                                      })
