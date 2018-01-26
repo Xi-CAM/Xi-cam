@@ -405,7 +405,7 @@ class NonDBHeader(object):
         for event in self.events(stream_name=stream_name,
                                  fields=[field],
                                  fill=fill):
-            yield event['data'][field]
+            yield event['data'][field].asarray()
 
 
     def meta_array(self, field):
