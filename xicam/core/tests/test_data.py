@@ -9,7 +9,7 @@ def test_lazyfield():
             return fabio.open(self.path).data
 
     l = lazyfield(Handler, '/home/rp/data/YL1031/YL1031__2m_00000.edf')
-    assert l.asarray()
+    assert l.asarray() is not None
 
 
     # def test_data():
