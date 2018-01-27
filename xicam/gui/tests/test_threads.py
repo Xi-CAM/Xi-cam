@@ -1,8 +1,22 @@
-def test_threads():
-    from xicam.gui import threads
+import pytest
+
+
+@pytest.yield_fixture(autouse=True)
+def with_QApplication():
+    # Code that will run before your test
     from qtpy.QtWidgets import QApplication
-    from qtpy.QtCore import QTimer, QObject, Signal
     app = QApplication([])
+    # A test function will be run at this point
+    yield
+    # Code that will run after your test, for example:
+    # ... do something to check the existing files
+    assert QApplication.exec_() == 0
+
+def test_threads():
+    from qtpy.QtWidgets import QApplication
+    app = QApplication([])
+    from xicam.gui import threads
+    from qtpy.QtCore import QTimer, QObject, Signal
     q = QTimer()
 
     def callback(a):
