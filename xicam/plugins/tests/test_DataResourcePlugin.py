@@ -23,10 +23,11 @@ def test_IDataSourcePlugin():
             super(SpotDataResourcePlugin, self).__init__(flags={'canPush': False}, **config)
             from requests import Session
             self.session = Session()
-            self.session.post("https://newt.nersc.gov/newt/auth", {"username": user, "password": password})
-            r = self.session.get(
-                'https://portal-auth.nersc.gov/als/hdf/search?skipnum=0&limitnum=10&sortterm=fs.stage_date&sorttype=desc&search=end_station=bl832')
-            self._data = eval(r.content.replace(b'false', b'False'))
+            self.refresh()
+            try:
+                self.session.post("https://newt.nersc.gov/newt/auth", {"username": user, "password": password})
+            except ConnectionError:
+                pass  # TODO: Something
 
         def columnCount(self, index=None):
             return len(self._data[0])
@@ -43,13 +44,25 @@ def test_IDataSourcePlugin():
 
                 # TODO: remove qtcore dependence
 
-    app = makeapp()
-    from qtpy.QtWidgets import QListView
+        def refresh(self):
+            self._data = []
+            try:
+                r = self.session.get(
+                    'https://portal-auth.nersc.gov/als/hdf/search?skipnum=0&limitnum=10&sortterm=fs.stage_date&sorttype=desc&search=end_station=bl832')
+                self._data = eval(r.content.replace(b'false', b'False'))
+            except ConnectionError:
+                pass  # TODO: SOMethING?
 
-    # TODO: handle password for testing
-    spot = DataSourceListModel(SpotDataResourcePlugin())
+    # app = makeapp()
+    # from qtpy.QtWidgets import QListView
+    #
+    # # TODO: handle password for testing
+    # spot = DataSourceListModel(SpotDataResourcePlugin())
+    #
+    # lv = QListView()
+    # lv.setModel(spot)
+    # lv.show()
+    # mainloop()
 
-    lv = QListView()
-    lv.setModel(spot)
-    lv.show()
-    mainloop()
+    spot = SpotDataResourcePlugin()
+    assert spot.rowCount()

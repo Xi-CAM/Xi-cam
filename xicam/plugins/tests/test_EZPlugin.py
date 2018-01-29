@@ -1,7 +1,19 @@
 from xicam.plugins import EZPlugin
 from xicam.gui.static import path
 from xicam.core.data import NonDBHeader
+import pytest
 
+
+@pytest.yield_fixture(autouse=True)
+def with_QApplication():
+    # Code that will run before your test
+    from qtpy.QtWidgets import QApplication
+    app = QApplication([])
+    # A test function will be run at this point
+    yield
+    # Code that will run after your test, for example:
+    # ... do something to check the existing files
+    # assert QApplication.exec_() == 0
 
 def test_EZPlugin():
     def runtest():

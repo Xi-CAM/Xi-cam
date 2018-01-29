@@ -49,6 +49,8 @@ class DataResourcePlugin(IPlugin):
     @property
     def path(self): return self.config['path']
 
+    def refresh(self): pass
+
     # TODO: convenience properties for each config
 
 
