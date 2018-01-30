@@ -48,6 +48,7 @@ class XicamMainWindow(QMainWindow):
         # Setup center/toolbar/statusbar
         pluginmodewidget = pluginModeWidget()
         pluginmodewidget.sigSetStage.connect(self.setStage)
+        pluginmodewidget.sigSetGUIPlugin.connect(self.setGUIPlugin)
         self.addToolBar(pluginmodewidget)
         self.setStatusBar(QStatusBar())
         self.setCentralWidget(QStackedWidget())
@@ -103,6 +104,10 @@ class XicamMainWindow(QMainWindow):
         if i < len(plugin.stages):
             plugin.stage = list(plugin.stages.values())[i]
             self.populate_layout()
+
+    @Slot(int)
+    def setGUIPlugin(self, i: int):
+        self.currentGUIPlugin = pluginmanager.getPluginsOfCategory('GUIPlugin')[i]
 
     @property
     def currentGUIPlugin(self) -> PluginInfo:
@@ -176,14 +181,18 @@ class XicamMainWindow(QMainWindow):
             raise TypeError(
                 f'A type is not acceptable value for stages. You must instance this class: {stage[position]}, {position}')
 
+
 class pluginModeWidget(QToolBar):
     """
     A series of styled QPushButtons with pipe characters between them. Used to switch between plugin modes.
     """
     sigSetStage = Signal(int)
+    sigSetGUIPlugin = Signal(int)
 
     def __init__(self):
         super(pluginModeWidget, self).__init__()
+
+        self.GUIPluginActionGroup = QActionGroup(self)
 
         # Setup font
         self.font = QFont('Zero Threes')
@@ -199,68 +208,115 @@ class pluginModeWidget(QToolBar):
         self.pluginsChanged()
 
     def pluginsChanged(self):
+        self.showGUIPlugins()
+
+    def fadeOut(self, callback, distance=-20):
+        duration = 200
+        self._effects = []
+        for action in self.actions():
+            for widget in action.associatedWidgets():
+                if widget is not self:
+                    a = QPropertyAnimation(widget, b'pos', widget)
+                    a.setStartValue(widget.pos())
+                    a.setEndValue(widget.pos() + QPoint(0, distance))
+                    self._effects.append(a)
+                    a.setDuration(duration)
+                    a.setEasingCurve(QEasingCurve.OutBack)
+                    a.start(QPropertyAnimation.DeleteWhenStopped)
+
+                    effect = QGraphicsOpacityEffect(self)
+                    widget.setGraphicsEffect(effect)
+                    self._effects.append(effect)
+                    b = QPropertyAnimation(effect, b'opacity')
+                    self._effects.append(b)
+                    b.setDuration(duration)
+                    b.setStartValue(1)
+                    b.setEndValue(0)
+                    b.setEasingCurve(QEasingCurve.OutBack)
+                    b.start(QPropertyAnimation.DeleteWhenStopped)
+                    b.finished.connect(partial(self.removeAction, action))
+                    b.finished.connect(callback)
+        if not self.actions(): callback()
+
+    def fadeIn(self):
+        self._effects = []
+        for action in self.actions():
+            effect = QGraphicsOpacityEffect(self)
+            self._effects.append(effect)
+            for widget in action.associatedWidgets():
+                if widget is not self: widget.setGraphicsEffect(effect)
+            a = QPropertyAnimation(effect, b'opacity')
+            self._effects.append(a)
+            a.setDuration(1000)
+            a.setStartValue(0)
+            a.setEndValue(1)
+            a.setEasingCurve(QEasingCurve.OutBack)
+            a.start(QPropertyAnimation.DeleteWhenStopped)
+
+    def showStages(self, plugin):
+        self.sigSetGUIPlugin.emit(plugin)
+        if len(self.parent().currentGUIPlugin.plugin_object.stages) > 1:
+            names = self.parent().currentGUIPlugin.plugin_object.stages.keys()
+            self.fadeOut(callback=partial(self.mkButtons, names=names, callback=self.sigSetStage.emit,
+                                          parent=self.parent().currentGUIPlugin.name))
+
+    def showGUIPlugins(self):
+        plugins = pluginmanager.getPluginsOfCategory('GUIPlugin')
+        # TODO: test deactivated plugins
+        names = [plugin.name for plugin in plugins if hasattr(plugin, 'is_activated') and (plugin.is_activated or True)]
+        self.fadeOut(callback=partial(self.mkButtons, names=names, callback=self.showStages), distance=20)
+
+    def mkButtons(self, names, callback, parent=None):
         # Remove+delete previous children
         layout = self.layout()
         for i in reversed(range(layout.count())):
             layout.itemAt(i).widget().setParent(None)
 
+        if parent:
+            action = QAction('↑', self)
+            action.setFont(self.font)
+            action.triggered.connect(self.showGUIPlugins)
+            action.setProperty('isMode', True)
+            self.addAction(action)
+            # Make separator pipe
+            label = QAction('|', self)
+            label.setFont(self.font)
+            label.setDisabled(True)
+            self.addAction(label)
+
         # Loop over each "GUIPlugin" plugin
-        for plugin in pluginmanager.getPluginsOfCategory("GUIPlugin"):
-            if hasattr(plugin, 'is_activated'):  # catches plugins which failed to load
-                if plugin.is_activated or True:
-                    # Make the pushbutton
-                    button = HoverMenuButton(stages=plugin.plugin_object.stages, text=plugin.name)
-                    button.setFlat(True)
-                    button.setFont(self.font)
-                    button.setProperty('isMode', True)
-                    button.setAutoFillBackground(False)
-                    button.setCheckable(True)
-                    button.setAutoExclusive(True)
-                    button.sigSetStage.connect(self.sigSetStage)
-                    self.addWidget(button)
+        for i, name in enumerate(names):
+            action = QAction(name, self)
+            action.triggered.connect(partial(callback, i))
+            action.setFont(self.font)
+            action.setProperty('isMode', True)
+            action.setCheckable(True)
+            action.setActionGroup(self.GUIPluginActionGroup)
+            self.addAction(action)
 
-                    # Connect pushbutton
-                    button.clicked.connect(partial(self.activate, plugin))
-                    # if plugin is self.plugins.values()[0]:
-                    #     button.setChecked(True)
+            # Make separator pipe
+            label = QAction('|', self)
+            label.setFont(self.font)
+            label.setDisabled(True)
+            self.addAction(label)
 
-                    # Make separator pipe
-                    label = QLabel('|')
-                    label.setFont(self.font)
-                    # label.setStyleSheet('background-color:#111111;')
-                    self.addWidget(label)
 
         # Remove last separator
         if self.layout().count():
             self.layout().takeAt(self.layout().count() - 1).widget().deleteLater()  # Delete the last pipe symbol
 
-    def activate(self, plugin):
-        # Set the current plugin (automatically replaces layout)
-        self.parent().currentGUIPlugin = plugin
+        if parent:
+            # Make separator pipe
+            label = QAction('>', self)
+            label.setFont(self.font)
+            label.setDisabled(True)
+            self.addAction(label)
 
+            action = QAction(parent, self)
+            action.setFont(self.font)
+            action.setProperty('isMode', True)
+            action.setDisabled(True)
+            action.setActionGroup(self.GUIPluginActionGroup)
+            self.addAction(action)
 
-class HoverMenuButton(QPushButton):
-    sigSetGUIPlugin = Signal()
-    sigSetStage = Signal(int)
-
-    def __init__(self, stages, *args, **kwargs):
-        super(HoverMenuButton, self).__init__(*args, **kwargs)
-        if len(stages) > 1:
-            menu = QMenu()
-            for i, name in enumerate(stages.keys()):
-                menu.addAction(name, partial(self.menuClicked, i))
-            menu.leaveEvent = self.leaveEvent
-            self.setMenu(menu)
-
-    def menuClicked(self, stage):
-        self.clicked.emit()
-        self.setChecked(True)
-        self.sigSetStage.emit(stage)
-
-    def enterEvent(self, event):
-        if self.menu():
-            self.showMenu()
-
-    def leaveEvent(self, *args, **kwargs):
-        if self.menu():
-            self.menu().hide()
+        self.fadeIn()
