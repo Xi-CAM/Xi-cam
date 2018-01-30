@@ -8,6 +8,10 @@ if qtpy.API_NAME == 'PyQt5' and 'PySide' in sys.modules: del sys.modules['PySide
 
 QCoreApplication.setOrganizationName("Camera")
 QCoreApplication.setApplicationName("Xi-cam")
+try:
+    QSettings().allKeys()
+except Exception:
+    QSettings().allKeys()
 
 def main():
     app = QApplication([])
