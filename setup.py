@@ -69,7 +69,7 @@ setup(
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
     packages=['xicam.gui', 'xicam.gui.cammart', 'xicam.gui.settings', 'xicam.gui.static', 'xicam.gui.threads',
-              'xicam.gui.widgets', 'xicam.gui.windows'],
+              'xicam.gui.widgets', 'xicam.gui.windows', 'xicam.gui.patches', 'xicam.gui.clientonlymodels'],
 
     package_dir={},
 
