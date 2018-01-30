@@ -10,8 +10,7 @@ Usage: pip install -e .
 
 import sys
 
-deps = ['databroker', 'pathlib', 'qtpy', 'PyQt5', 'yapsy', 'astropy', 'signalslot', 'numpy', 'pyqtgraph', 'appdirs',
-        'xicam.core', 'xicam.plugins', 'xicam.gui']
+deps = ['databroker', 'pathlib', 'qtpy', 'PyQt5', 'yapsy', 'astropy', 'signalslot', 'numpy', 'pyqtgraph', 'appdirs']
 
 # These bits don't get collected automatically when packaging:
 loosebits = ['numpy.core._methods', "numpy.lib.recfunctions"]
@@ -74,7 +73,6 @@ if sys.argv[1] in ['build', 'bdist_rpm', 'build_exe']:
     # Dependencies are automatically detected, but it might need
     # fine tuning.
     buildOptions = dict(includes=deps + loosebits,
-                        # namespace_packages=['xicam'],
                         excludes=["distutils"] + excludes,
                         include_files=include_files,
                         optimize=0)
@@ -156,7 +154,7 @@ else:
         # your project is installed. For an analysis of "install_requires" vs pip's
         # requirements files see:
         # https://packaging.python.org/en/latest/requirements.html
-        install_requires=deps,
+        install_requires=deps + ['xicam.core', 'xicam.plugins', 'xicam.gui'],
 
         setup_requires=[],
 
