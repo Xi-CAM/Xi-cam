@@ -29,18 +29,18 @@ class XicamPluginManager(PluginManager):
         venvsobservers.append(self)
 
         # Link categories to base classes
-        categoriesfilter = {'GUIPlugin': GUIPlugin,
-                            'WidgetPlugin': QWidgetPlugin,
-                            'SettingsPlugin': SettingsPlugin,
-                            'DataHandlerPlugin': DataHandlerPlugin,
+        categoriesfilter = {'DataHandlerPlugin': DataHandlerPlugin,
                             'DataResourcePlugin': DataResourcePlugin,
-                            'EZPlugin': _EZPlugin}
+                            }
 
         # If xicam.gui is not loaded (running headless), don't load GUIPlugins or WidgetPlugins
-        if 'xicam.gui' not in sys.modules:
-            categoriesfilter['GUIPlugin'] = None
-            categoriesfilter['WidgetPlugin'] = None
-            categoriesfilter['SettingsPlugin'] = None
+        if 'qtpy' in sys.modules:
+            from qtpy.QtWidgets import QApplication
+            if QApplication.instance():
+                categoriesfilter.update({'GUIPlugin': GUIPlugin,
+                                         'WidgetPlugin': QWidgetPlugin,
+                                         'SettingsPlugin': SettingsPlugin,
+                                         'EZPlugin': _EZPlugin})
 
         self.setCategoriesFilter(categoriesfilter)
         self.setPluginPlaces(

@@ -1,11 +1,12 @@
 import collections
 import json
 from urllib import parse
+import os, sys
 
-import pip
 import requests
 import yaml
 from appdirs import user_config_dir, site_config_dir
+import subprocess
 
 from . import manager
 from . import venvs
@@ -37,9 +38,9 @@ def install(name: str):
 
     # Install from the uri
     if uri.scheme == 'pipgit':  # Clones a git repo and installs with pip
-        failure = pip.main(["install", 'git+https://' + ''.join(uri[1:]), "--prefix", venvs.current_environment])
+        failure = subprocess.Popen([pippath(), 'install', 'git+https://' + ''.join(uri[1:])]).wait()
     elif uri.scheme == 'pip':
-        failure = pip.main(["install", ''.join(uri[1:]), "--prefix", venvs.current_environment])
+        failure = subprocess.Popen([pippath(), 'install', ''.join(uri[1:])]).wait()
     elif uri.scheme == 'conda':
         raise NotImplementedError
 
@@ -54,7 +55,7 @@ def uninstall(name: str):
     if name in pkg_registry:
         scheme = pkg_registry[name]
         if scheme in ['pipgit', 'pip']:
-            failure = pip.main(['uninstall', '-y', name])
+            failure = subprocess.Popen([pippath(), 'uninstall', '-y', name]).returncode
         elif scheme == 'conda':
             raise NotImplementedError
     else:
@@ -66,6 +67,10 @@ def uninstall(name: str):
 
     return not failure
 
+
+def pippath():
+    # Get absolute path to pip, to avoid system PATH sending to the wrong one
+    return os.path.join(venvs.current_environment, 'bin', 'pip')
 
 class pkg_registry(collections.MutableMapping):
     def __init__(self):

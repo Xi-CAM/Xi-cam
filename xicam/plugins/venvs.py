@@ -1,7 +1,9 @@
 import pathlib
 
+import sys, os
 import virtualenv
 from appdirs import user_config_dir, site_config_dir
+import subprocess
 
 user_venv_dir = user_config_dir('xicam/venvs')
 site_venv_dir = site_config_dir('xicam/venvs')
@@ -24,12 +26,15 @@ def create_environment(name: str):
     name : str
         Name of virtual envirnoment to create.
     """
-    if not pathlib.Path(user_venv_dir, name).exists():
-        virtualenv.create_environment(str(pathlib.Path(user_venv_dir, name)), site_packages=False, clear=False,
-                                      unzip_setuptools=False,
-                                      prompt=None, search_dirs=None, download=False,
-                                      no_setuptools=False, no_pip=False, no_wheel=False,
-                                      symlink=True)
+    env = os.environ.copy()
+    if not 'python' in os.path.basename(sys.executable):
+        python = os.path.join(os.path.dirname(sys.executable), 'python')
+        env['VIRTUALENV_INTERPRETER_RUNNING'] = 'true'
+    else:
+        python = sys.executable
+
+    subprocess.Popen([python, virtualenv.__file__, str(pathlib.Path(user_venv_dir, name))], env=env)
+
 
 
 def use_environment(name):
@@ -50,6 +55,8 @@ def use_environment(name):
 
     activate_script = str(activate_script)
     execfile(activate_script, dict(__file__=activate_script))
+    global current_environment
+    current_environment = str(pathlib.Path(user_venv_dir, name))
     for observer in observers:
         observer.venvChanged()
 
