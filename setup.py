@@ -56,7 +56,6 @@ if sys.argv[1] in ['build', 'bdist_rpm', 'build_exe']:
     # MANY packages are messy under cx_freeze; this bypasses the import parsing and copies all contents directly
     include_package('astropy')
     include_package('asyncio')
-    include_package('scipy')
     include_package('virtualenv')
     include_package('_sysconfigdata_m_linux_x86_64-linux-gnu')
     include_package('xicam')
