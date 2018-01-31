@@ -33,7 +33,7 @@ class DataHandlerPlugin(IPlugin):
         metadata = cls.parseTXTFile(paths[0])
         metadata.update(cls.parseDataFile(paths[0]))
         descriptor_keys = getattr(cls,'descriptor_keys',[])
-        metadata = dict([(key, metadata[key]) for key in descriptor_keys])
+        metadata = dict([(key, metadata.get(key)) for key in descriptor_keys])
         return start_doc(start_uid=start_uid)
 
     @classmethod
