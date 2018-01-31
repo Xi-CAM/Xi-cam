@@ -1,4 +1,5 @@
 from typing import Callable
+import sys
 
 from qtpy.QtCore import *
 from qtpy.QtGui import *
@@ -36,11 +37,9 @@ class XicamSplashScreen(QSplashScreen):
         self.setMask(self.pixmap.mask())
         self.movie.finished.connect(self.restartmovie)
 
-        # Setup timed triggers for launching the QMainWindow
-        self.timer = QTimer(self)
-        self.timer.singleShot(self.minsplashtime, self.launchwindow)
         self._launching = False
         self._launchready = False
+        self.timer = QTimer(self)
         self.mainwindow = mainwindow
 
         # Start splashing
@@ -49,6 +48,11 @@ class XicamSplashScreen(QSplashScreen):
         self.raise_()
         self.activateWindow()
         QApplication.instance().setActiveWindow(self)
+        if '--quicksplash' in sys.argv:
+            self.execlaunch()
+        else:
+            # Setup timed triggers for launching the QMainWindow
+            self.timer.singleShot(self.minsplashtime, self.launchwindow)
 
     def showMessage(self, message: str, color=Qt.white):
         # TODO: Make this work.
