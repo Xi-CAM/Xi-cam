@@ -74,9 +74,6 @@ if sys.argv[1] in ['build', 'bdist_rpm', 'build_exe']:
     include_builtin('profile.py')
     include_builtin('concurrent/')
 
-    # for debug
-    include_package('ipdb')
-
     # include the virtualenv's orig-prefix.txt
     import pathlib, astropy, glob
 
