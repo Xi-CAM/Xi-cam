@@ -10,7 +10,7 @@ Usage: pip install -e .
 
 import sys
 
-deps = ['databroker', 'pathlib', 'qtpy', 'yapsy', 'astropy', 'signalslot', 'numpy', 'appdirs']
+deps = ['databroker', 'pathlib', 'qtpy', 'yapsy', 'astropy', 'signalslot', 'numpy', 'appdirs', 'qdarkstyle', 'qtmodern']
 
 # These bits don't get collected automatically when packaging:
 loosebits = ['numpy.core._methods', "numpy.lib.recfunctions"]
