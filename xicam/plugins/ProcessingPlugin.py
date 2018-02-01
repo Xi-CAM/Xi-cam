@@ -4,7 +4,7 @@ from yapsy.IPlugin import IPlugin
 # TODO allow outputs/inputs to connect
 
 class ProcessingPlugin(IPlugin):
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
         super(ProcessingPlugin, self).__init__()
         self._clone_descriptors()
         self._nameparameters()
@@ -44,6 +44,23 @@ class ProcessingPlugin(IPlugin):
     @property
     def inverted_outputs(self):
         return {param: name for name, param in self.__class__.__dict__.items() if isinstance(param, Output)}
+
+
+import inspect
+
+
+def EZProcessingPlugin(method):
+    def __init__(self, method):
+        self.method = method
+        argspec = inspect.getfullargspec(method)
+        self.inputs = [Input(name=argname) for argname in argspec.args + argspec.varargs + argspec.keywords]
+        self.outputs = [Output(name='result')]
+        super(EZProcessingPlugin, self).__init__()
+
+    def evaluate(self):
+        self.method(*[i.value for i in self.inputs])
+
+    return type(method.__name__, (ProcessingPlugin,), {'__init__': __init__, 'evaluate': evaluate})
 
 class Var(object):
     def __init__(self):
