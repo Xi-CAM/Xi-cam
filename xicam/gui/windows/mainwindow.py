@@ -68,7 +68,7 @@ class XicamMainWindow(QMainWindow):
         self._currentGUIPlugin = None
         self.build_layout()
         if pluginmanager.getPluginsOfCategory("GUIPlugin"):
-            self._currentGUIPlugin = pluginmanager.getPluginsOfCategory("GUIPlugin")[0]
+            # self._currentGUIPlugin = pluginmanager.getPluginsOfCategory("GUIPlugin")[0]
             self.populate_layout()
 
         # Make F key bindings
@@ -155,7 +155,10 @@ class XicamMainWindow(QMainWindow):
 
     def populate_layout(self):
         # Get current stage
-        stage = self.currentGUIPlugin.plugin_object.stage
+        if self.currentGUIPlugin:
+            stage = self.currentGUIPlugin.plugin_object.stage
+        else:
+            stage = defaultstage
 
         # Set center contents
         self.centralWidget().addWidget(stage.centerwidget)
