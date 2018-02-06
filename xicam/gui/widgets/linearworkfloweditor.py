@@ -100,12 +100,12 @@ class WorkflowModel(QAbstractTableModel):
 
     def mimeData(self, indexes):
         mimedata = QMimeData()
-        mimedata.setData('text/xml', pickle.dumps(self.workflow.processes[indexes[0].row()]))
+        mimedata.setData('text/xml', pickle.dumps((indexes[0].row(), self.workflow.processes[indexes[0].row()])))
         return mimedata
 
     def dropMimeData(self, data, action, row, column, parent):
-        process = pickle.loads(data.data('text/xml'))
-        self.workflow.removeProcess(process)
+        srcindex, process = pickle.loads(data.data('text/xml'))
+        self.workflow.removeProcess(index=srcindex)
         self.workflow.insertProcess(parent.row(), process)
         return True
 
@@ -135,7 +135,7 @@ class WorkflowModel(QAbstractTableModel):
         elif index.column() == 1:
             return getattr(process, 'name', process.__name__)
         elif index.column() == 2:
-            return partial(self.workflow.removeProcess, process)
+            return partial(self.workflow.removeProcess, index=index.row())
         return ''
 
     def headerData(self, col, orientation, role):
