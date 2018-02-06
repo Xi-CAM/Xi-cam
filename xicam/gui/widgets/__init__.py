@@ -1,8 +1,8 @@
 from xicam.plugins.GUIPlugin import GUILayout
-from .splashwidget import SplashWidget
+from .motd import MOTD
 from .dataresourcebrowser import DataResourceBrowser
 from .previewwidget import PreviewWidget
 
-defaultstage = GUILayout(center=SplashWidget(),
+defaultstage = GUILayout(center=MOTD(),
                          left=DataResourceBrowser(),
                          lefttop=PreviewWidget())
