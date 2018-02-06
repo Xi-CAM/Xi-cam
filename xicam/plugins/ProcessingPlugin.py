@@ -4,6 +4,8 @@ from yapsy.IPlugin import IPlugin
 # TODO allow outputs/inputs to connect
 
 class ProcessingPlugin(IPlugin):
+    isSingleton = False
+
     def __init__(self):
         super(ProcessingPlugin, self).__init__()
         self._clone_descriptors()

@@ -31,6 +31,7 @@ class XicamPluginManager(PluginManager):
         # Link categories to base classes
         categoriesfilter = {'DataHandlerPlugin': DataHandlerPlugin,
                             'DataResourcePlugin': DataResourcePlugin,
+                            'ProcessingPlugin': ProcessingPlugin,
                             }
 
         # If xicam.gui is not loaded (running headless), don't load GUIPlugins or WidgetPlugins
