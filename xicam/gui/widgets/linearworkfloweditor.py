@@ -28,6 +28,9 @@ class WorkflowEditor(QSplitter):
         self.addWidget(self.processeditor)
         self.addWidget(WorkflowWidget(self.workflowview))
 
+        self.workflowview.sigShowParameter.connect(
+            lambda parameter: self.processeditor.setParameters(parameter, showTop=False))
+
 
 class WorkflowProcessEditor(ParameterTree):
     pass
@@ -45,7 +48,7 @@ class WorkflowWidget(QWidget):
         addfunctionmenu = QToolButton()
         functionmenu = QMenu()
         for plugin in pluginmanager.getPluginsOfCategory('ProcessingPlugin'):
-            functionmenu.addAction(plugin.name, partial(self.view.model().workflow.addProcess, plugin.plugin_object))
+            functionmenu.addAction(plugin.name, partial(self.view.model().workflow.addProcess, plugin.plugin_object()))
         addfunctionmenu.setMenu(functionmenu)
         addfunctionmenu.setIcon(QIcon(path('icons/addfunction.png')))
         addfunctionmenu.setText('Add Function')
@@ -64,6 +67,8 @@ class WorkflowWidget(QWidget):
 
 
 class LinearWorkflowView(QTableView):
+    sigShowParameter = Signal(object)
+
     def __init__(self, workflowmodel=None, *args, **kwargs):
         super(LinearWorkflowView, self).__init__(*args, **kwargs)
         self.setItemDelegateForColumn(0, DisableDelegate(self))
@@ -84,6 +89,11 @@ class LinearWorkflowView(QTableView):
         self.setDropIndicatorShown(True)
         self.setSelectionMode(QAbstractItemView.SingleSelection)
         self.setSelectionBehavior(QAbstractItemView.SelectRows)
+
+    def selectionChanged(self, selected, deselected):
+        if self.selectedIndexes():
+            process = self.model().workflow.processes[self.selectedIndexes()[0].row()]
+            self.sigShowParameter.emit(process.parameter)
 
 
 class WorkflowModel(QAbstractTableModel):
@@ -133,7 +143,7 @@ class WorkflowModel(QAbstractTableModel):
         elif index.column() == 0:
             return partial(self.workflow.disableProcess, process)
         elif index.column() == 1:
-            return getattr(process, 'name', process.__name__)
+            return getattr(process, 'name', process.__class__.__name__)
         elif index.column() == 2:
             return partial(self.workflow.removeProcess, index=index.row())
         return ''
