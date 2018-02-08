@@ -82,7 +82,7 @@ class XicamPluginManager(PluginManager):
                 except Exception as ex:
                     msg.notifyMessage(f'The "{plugin_info.name}" plugin could not be loaded. {repr(ex)}',
                                       level=msg.CRITICAL)
-                    msg.logError(ex, ex, ex.__traceback__)
+                    msg.logError(ex)
 
     def instanciateElement(self, element):
         '''
