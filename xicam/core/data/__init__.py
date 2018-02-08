@@ -24,15 +24,20 @@ def load_header(uris: List[Union[str, Path]] = None, uuid: str = None):
 
     """
     from xicam.plugins import manager as pluginmanager # must be a late import
-    EDFPlugin = pluginmanager.getPluginByName('EDFPlugin', 'DataHandlerPlugin')
     # ext = Path(filename).suffix[1:]
     # for cls, extensions in extension_map.items():
     #     if ext in extensions:
-    try:
-        return NonDBHeader(**EDFPlugin.plugin_object.ingest(uris))
-    except (IsADirectoryError, TypeError):
-        # TODO: add Header ingestor for directory
-        return NonDBHeader({}, [], [], {})
+    handlercandidates = []
+    ext = Path(uris[0]).suffix
+    for plugin in pluginmanager.getPluginsOfCategory('DataHandlerPlugin'):
+        if ext in plugin.plugin_object.DEFAULT_EXTENTIONS:
+            handlercandidates.append(plugin)
+    if not handlercandidates: return NonDBHeader({}, [], [], {})
+    # try:
+    return NonDBHeader(**handlercandidates[0].plugin_object.ingest(uris))
+    # except (IsADirectoryError, TypeError):
+    #     # TODO: add Header ingestor for directory
+    #     return NonDBHeader({}, [], [], {})
 
 
 class NonDBHeader(object):
@@ -379,7 +384,8 @@ class NonDBHeader(object):
         #                             fields=fields, fill=fill)
 
         for ev in self.eventdocs:
-            yield ev
+            if not set(fields).isdisjoint(set(ev['data'].keys())):
+                yield ev
 
     def data(self, field, stream_name='primary', fill=True):
         """
@@ -407,22 +413,23 @@ class NonDBHeader(object):
                                  fill=fill):
             yield event['data'][field].asarray()
 
-
-    def meta_array(self, field):
+    def meta_array(self, field=None):
         return DocMetaArray(self, field)
 
 from functools import lru_cache
 import numpy as np
 
 class DocMetaArray(object):
-    def __init__(self, document:NonDBHeader, field):
-        self.document = document
+    def __init__(self, header: NonDBHeader, field=None):
+        self.events = list(header.events(fields=[field]))
+        if not field: field = list(self.events[0].keys())[0]
         self.field = field
         firstslice = self.slice(0)
         self.dtype = firstslice.dtype
-        self.shape = (len(self.document.eventdocs), *firstslice.shape)
+        self.len = len(list(self.events))
+        self.shape = (self.len, *firstslice.shape)
         self.ndim = firstslice.ndim + 1
-        self.size = firstslice.size * len(self.document.eventdocs)
+        self.size = firstslice.size * self.len
 
     def min(self):
         return self._min
@@ -431,7 +438,7 @@ class DocMetaArray(object):
         return self._max
 
     def slice(self, i):
-        arr = self.document.eventdocs[i]['data'][self.field].asarray()
+        arr = self.events[i]['data'][self.field].asarray()
         self._min = arr.min()
         self._max = arr.max()
         return arr
@@ -452,6 +459,10 @@ class DocMetaArray(object):
                              'compatibility with pyqtgraph''s ImageView')
         return self
 
+    def __len__(self):
+        return self.len
+
+
 class lazyfield(object):
     def __init__(self, handler, *args, **kwargs):
         self.handler = handler
@@ -463,7 +474,7 @@ class lazyfield(object):
         if t == 'MetaArray': return True
 
     def asarray(self):
-        return self.handler(*self.args, **self.kwargs)()
+        return self.handler()(*self.args, **self.kwargs)
 
 # TODO: Eliminate lazyfield and use only handler in doc?
 
