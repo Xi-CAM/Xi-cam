@@ -26,14 +26,17 @@ def create_environment(name: str):
     name : str
         Name of virtual envirnoment to create.
     """
-    env = os.environ.copy()
-    if not 'python' in os.path.basename(sys.executable):
-        python = os.path.join(os.path.dirname(sys.executable), 'python')
-        env['VIRTUALENV_INTERPRETER_RUNNING'] = 'true'
-    else:
-        python = sys.executable
+    venvpath = str(pathlib.Path(user_venv_dir, name))
 
-    subprocess.Popen([python, virtualenv.__file__, str(pathlib.Path(user_venv_dir, name))], env=env)
+    if not os.path.isdir(venvpath):
+        env = os.environ.copy()
+        if not 'python' in os.path.basename(sys.executable):
+            python = os.path.join(os.path.dirname(sys.executable), 'python')
+            env['VIRTUALENV_INTERPRETER_RUNNING'] = 'true'
+        else:
+            python = sys.executable
+
+        subprocess.Popen([python, virtualenv.__file__, venvpath], env=env)
 
 
 
