@@ -38,7 +38,7 @@ class DataHandlerPlugin(IPlugin):
 
     @classmethod
     def getEventDocs(cls, paths, descriptor_uid):
-        shape = cls(paths[0])().shape # Assumes each frame has same shape
+        shape = cls()(paths[0]).shape  # Assumes each frame has same shape
         for path in paths:
             metadata = cls.parseTXTFile(path)
             metadata.update(cls.parseDataFile(path))
@@ -56,12 +56,17 @@ class DataHandlerPlugin(IPlugin):
         metadata = dict([(key, metadata[key]) for key in getattr(cls, 'descriptor_keys', [])])
         yield descriptor_doc(start_uid, descriptor_uid, metadata=metadata)
 
-    @staticmethod
-    def getStopDoc(paths, start_uid):
+    @classmethod
+    def getStopDoc(cls, paths, start_uid):
         return stop_doc(start_uid=start_uid)
 
     @classmethod
+    def reduce_paths(cls, paths):
+        return paths
+
+    @classmethod
     def ingest(cls, paths):
+        paths = cls.reduce_paths(paths)
         start_uid = str(uuid.uuid4())
         descriptor_uids = cls.getDescriptorUIDs(paths)
         return {'start': cls.getStartDoc(paths, start_uid),
