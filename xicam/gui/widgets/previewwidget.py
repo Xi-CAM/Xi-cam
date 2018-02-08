@@ -37,7 +37,7 @@ class PreviewWidget(GraphicsLayoutWidget):
 
     def preview_header(self, header: NonDBHeader):
         try:
-            data = header.meta_array('pilatus2M_image')[0]
+            data = header.meta_array()[0]
             self.setImage(data)
         except IndexError:
             self.imageitem.clear()
