@@ -288,7 +288,7 @@ class pluginModeWidget(QToolBar):
             self.addAction(label)
 
         # Loop over each "GUIPlugin" plugin
-        for i, name in enumerate(names):
+        for i, name in zip(reversed(range(len(names))), reversed(list(names))):
             action = QAction(name, self)
             action.triggered.connect(partial(callback, i))
             action.setFont(self.font)
