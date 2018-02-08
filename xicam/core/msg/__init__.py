@@ -39,11 +39,14 @@ levels = {DEBUG: 'DEBUG',
 
 trayicon = None
 if 'qtpy' in sys.modules:
-    from qtpy.QtWidgets import QSystemTrayIcon
-    from qtpy.QtGui import QIcon, QPixmap
-    from xicam.gui.static import path
+    from qtpy.QtWidgets import QApplication
 
-    trayicon = QSystemTrayIcon(QIcon(QPixmap(str(path('icons/xicam.gif')))))  # TODO: better icon
+    if QApplication.instance():
+        from qtpy.QtWidgets import QSystemTrayIcon
+        from qtpy.QtGui import QIcon, QPixmap
+        from xicam.gui.static import path
+
+        trayicon = QSystemTrayIcon(QIcon(QPixmap(str(path('icons/xicam.gif')))))  # TODO: better icon
 
 
 def showProgress(value: int, minval: int = 0, maxval: int = 100):
