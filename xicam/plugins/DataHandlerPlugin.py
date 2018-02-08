@@ -52,8 +52,8 @@ class DataHandlerPlugin(IPlugin):
     def getDescriptorDocs(cls, paths, start_uid, descriptor_uid):
         metadata = cls.parseTXTFile(paths[0])
         metadata.update(cls.parseDataFile(paths[0]))
-        descriptor_keys = ['Dim_1', 'Dim_2', 'count_time', 'object_keys']
-        metadata = dict([(key, metadata[key]) for key in descriptor_keys])
+
+        metadata = dict([(key, metadata[key]) for key in getattr(cls, 'descriptor_keys', [])])
         yield descriptor_doc(start_uid, descriptor_uid, metadata=metadata)
 
     @staticmethod
@@ -70,10 +70,10 @@ class DataHandlerPlugin(IPlugin):
                 'stop': cls.getStopDoc(paths, start_uid)}
 
     def parseTXTFile(self, *args, **kwargs):
-        raise NotImplementedError
+        return {}
 
     def parseDataFile(self, *args, **kwargs):
-        raise NotImplementedError
+        return {}
 
 
 def start_doc(start_uid: str, metadata: dict = None):
