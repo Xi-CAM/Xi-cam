@@ -4,9 +4,14 @@ from qtpy.QtCore import *
 
 
 class TabView(QTabWidget):
-    def __init__(self):
+    def __init__(self, model=None, widgetcls=None, field=None):
         super(TabView, self).__init__()
         self.setTabBar(ContextMenuTabBar())
+
+        self.setWidgetClass(widgetcls)
+        self.model = None
+        if model: self.setModel(model)
+        self.field = field
 
     def setModel(self, model: QStandardItemModel):
         self.model = model
@@ -23,7 +28,7 @@ class TabView(QTabWidget):
                 if self.widget(i).header == self.model.item(i).header:
                     continue
             self.setCurrentIndex(
-                self.insertTab(i, self.widgetcls(self.model.item(i).header, 'pilatus2M_image'), '????'))
+                self.insertTab(i, self.widgetcls(self.model.item(i).header, self.field), '????'))
 
         for i in reversed(range(self.model.rowCount(), self.count())):
             self.removeTab(i)
