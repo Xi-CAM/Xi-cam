@@ -8,6 +8,7 @@ class ProcessingPlugin(IPlugin):
         super(ProcessingPlugin, self).__init__()
         self._clone_descriptors()
         self._nameparameters()
+        self.__internal_data__ = None
 
     def evaluate(self):
         raise NotImplementedError
@@ -100,6 +101,17 @@ class Input(Var):
         # def __set__(self, instance, value):
         #     self.clone_to_instance(instance).value = value
 
+
+    def __setattr__(self, name, value):
+        import pickle
+        if name=="value":
+            try:
+              pickle.dumps(value)
+            except:
+              print("cannot pickle", name, value)
+            super().__setattr__(name, value)
+        else:
+            super().__setattr__(name, value)
 
 class Output(Var):
     def __init__(self, name='', description='', type=None, unit=None):
