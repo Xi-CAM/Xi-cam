@@ -3,6 +3,7 @@ import uuid
 import datetime
 from typing import Tuple,List
 from xicam.core.data import lazyfield
+from pathlib import Path
 
 # Note: Split into DataHandlerPlugin and IngestorPlugin?
 
@@ -65,11 +66,22 @@ class DataHandlerPlugin(IPlugin):
         return paths
 
     @classmethod
+    def title(cls, paths):
+        if len(paths) > 1:
+            return f'Series: {Path(paths[0]).resolve().stem}…'
+        return Path(paths[0]).resolve().stem
+
+    @classmethod
+    def _setTitle(cls, startdoc, paths):
+        startdoc['sample_name'] = cls.title(paths)
+        return startdoc
+
+    @classmethod
     def ingest(cls, paths):
         paths = cls.reduce_paths(paths)
         start_uid = str(uuid.uuid4())
         descriptor_uids = cls.getDescriptorUIDs(paths)
-        return {'start': cls.getStartDoc(paths, start_uid),
+        return {'start': cls._setTitle(cls.getStartDoc(paths, start_uid), paths),
                 'descriptors': list(cls.getDescriptorDocs(paths, start_uid, descriptor_uids)),
                 'events': list(cls.getEventDocs(paths, descriptor_uids)),
                 'stop': cls.getStopDoc(paths, start_uid)}
