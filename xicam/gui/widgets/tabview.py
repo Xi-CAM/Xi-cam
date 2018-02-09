@@ -28,7 +28,7 @@ class TabView(QTabWidget):
                 if self.widget(i).header == self.model.item(i).header:
                     continue
             self.setCurrentIndex(
-                self.insertTab(i, self.widgetcls(self.model.item(i).header, self.field), '????'))
+                self.insertTab(i, self.widgetcls(self.model.item(i).header, self.field), self.model.item(i).text()))
 
         for i in reversed(range(self.model.rowCount(), self.count())):
             self.removeTab(i)
