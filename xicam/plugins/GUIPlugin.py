@@ -30,7 +30,7 @@ class GUIPlugin(IPlugin):
 
     @property
     def headers(self) -> List[NonDBHeader]:
-        return [self.headermodel.item(i) for i in range(self.headermodel.count())]
+        return [self.headermodel.item(i) for i in range(self.headermodel.rowCount())]
 
     @property
     def stages(self) -> OrderedDict:
