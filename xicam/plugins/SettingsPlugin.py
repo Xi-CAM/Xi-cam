@@ -1,9 +1,13 @@
 from typing import List
 from qtpy.QtCore import QObject
 from yapsy.IPlugin import IPlugin
+from xicam import plugins
 
 
 class SettingsPlugin(QObject, IPlugin):
+    def __new__(cls, *args, **kwargs):
+        if not plugins.qt_is_safe: return None
+
     def __init__(self, icon, name, widget):
         super(SettingsPlugin, self).__init__()
         self.icon = icon
@@ -12,6 +16,7 @@ class SettingsPlugin(QObject, IPlugin):
 
     @staticmethod
     def fromParameter(icon, name: str, paramdicts: List[dict]):
+        if not plugins.qt_is_safe: return None
         from pyqtgraph.parametertree import Parameter, ParameterTree
         widget = ParameterTree()
         parameter = Parameter(name=name, type='group', children=paramdicts)

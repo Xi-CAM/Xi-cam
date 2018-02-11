@@ -16,7 +16,7 @@ def test_IProcessingPlugin():
     from ..ProcessingPlugin import ProcessingPlugin, Input, Output
 
     class SumProcessingPlugin(ProcessingPlugin):
-        a = Input(default=1, unit='nm', min=0)
+        a = Input(default=1, units='nm', min=0)
         b = Input(default=2)
         c = Output()
 

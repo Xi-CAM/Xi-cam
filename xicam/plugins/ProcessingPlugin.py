@@ -12,9 +12,22 @@ class ProcessingPlugin(IPlugin):
         self._clone_descriptors()
         self._nameparameters()
         self._param = None
+        self.__internal_data__ = None
 
     def evaluate(self):
         raise NotImplementedError
+
+    def _getresult(self):
+        self.evaluate()
+        return tuple(output.value for output in self.outputs.values())
+
+    def asfunction(self, *args, **kwargs):
+        for input, arg in zip(self.inputs.values(), args):
+            input.value = arg
+        for k, v in kwargs.items():
+            if k in self.inputs:
+                self.inputs[k].value = v
+        return self._getresult()
 
     def _clone_descriptors(self):
         for name, param in self.__class__.__dict__.items():
@@ -141,6 +154,16 @@ class Input(Var):
         # def __set__(self, instance, value):
         #     self.clone_to_instance(instance).value = value
 
+    def __setattr__(self, name, value):
+        import pickle
+        if name == "value":
+            try:
+                pickle.dumps(value)
+            except:
+                print("cannot pickle", name, value)
+            super().__setattr__(name, value)
+        else:
+            super().__setattr__(name, value)
 
 class Output(Var):
     def __init__(self, name='', description='', type=None, units=None):

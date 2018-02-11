@@ -23,6 +23,14 @@ site_plugin_dir = site_config_dir('xicam/plugins')
 # Observers will be notified when active plugins changes
 observers = []
 
+qt_is_safe = False
+if 'qtpy' in sys.modules:
+    from qtpy.QtWidgets import QApplication
+
+    if QApplication.instance():
+        qt_is_safe = True
+
+
 class XicamPluginManager(PluginManager):
     def __init__(self):
         super(XicamPluginManager, self).__init__()
@@ -35,13 +43,11 @@ class XicamPluginManager(PluginManager):
                             }
 
         # If xicam.gui is not loaded (running headless), don't load GUIPlugins or WidgetPlugins
-        if 'qtpy' in sys.modules:
-            from qtpy.QtWidgets import QApplication
-            if QApplication.instance():
-                categoriesfilter.update({'GUIPlugin': GUIPlugin,
-                                         'WidgetPlugin': QWidgetPlugin,
-                                         'SettingsPlugin': SettingsPlugin,
-                                         'EZPlugin': _EZPlugin})
+        if qt_is_safe:
+            categoriesfilter.update({'GUIPlugin': GUIPlugin,
+                                     'WidgetPlugin': QWidgetPlugin,
+                                     'SettingsPlugin': SettingsPlugin,
+                                     'EZPlugin': _EZPlugin})
 
         self.setCategoriesFilter(categoriesfilter)
         self.setPluginPlaces(
@@ -75,14 +81,15 @@ class XicamPluginManager(PluginManager):
             observer.pluginsChanged()
 
     def instanciateLatePlugins(self):
-        for plugin_info in self.getPluginsOfCategory('GUIPlugin'):
-            if callable(plugin_info.plugin_object):
-                try:
-                    plugin_info.plugin_object = plugin_info.plugin_object()  # Force late singleton-ing of GUIPlugins
-                except Exception as ex:
-                    msg.notifyMessage(f'The "{plugin_info.name}" plugin could not be loaded. {repr(ex)}',
-                                      level=msg.CRITICAL)
-                    msg.logError(ex)
+        if qt_is_safe:
+            for plugin_info in self.getPluginsOfCategory('GUIPlugin'):
+                if callable(plugin_info.plugin_object):
+                    try:
+                        plugin_info.plugin_object = plugin_info.plugin_object()  # Force late singleton-ing of GUIPlugins
+                    except Exception as ex:
+                        msg.notifyMessage(f'The "{plugin_info.name}" plugin could not be loaded. {repr(ex)}',
+                                          level=msg.CRITICAL)
+                        msg.logError(ex)
 
     def instanciateElement(self, element):
         '''
@@ -101,6 +108,18 @@ class XicamPluginManager(PluginManager):
     def venvChanged(self):
         self.setPluginPlaces([venvs.current_environment])
         self.collectPlugins()
+
+    def __getitem__(self, item: str):
+        """
+        Convenient way to get plugins.
+
+        Usage
+        -----
+
+        manager['GUIPlugin']['SAXS']
+
+        """
+        return {plugin.name: plugin for plugin in self.getPluginsOfCategory(item)}
 
 
 # Setup plugin manager
