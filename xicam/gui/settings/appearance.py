@@ -6,6 +6,7 @@ from qtpy.QtGui import *
 from qtpy.QtWidgets import QApplication
 from xicam.gui.static import path
 import pyqtgraph as pg
+from xicam import plugins
 
 from xicam.plugins import SettingsPlugin
 
@@ -35,7 +36,8 @@ def setPlotDefault():
     pass
 
 
-AppearanceSettingsPlugin = SettingsPlugin.fromParameter(QIcon(str(path('icons/colors.png'))),
+if plugins.qt_is_safe:
+    AppearanceSettingsPlugin = SettingsPlugin.fromParameter(QIcon(str(path('icons/colors.png'))),
                                                         'Appearance',
                                                         [dict(name='Theme',
                                                               values=OrderedDict([('Default', setDefault),
@@ -51,9 +53,9 @@ AppearanceSettingsPlugin = SettingsPlugin.fromParameter(QIcon(str(path('icons/co
                                                         )
 
 
-def apply(self):
-    self.parameter['Theme']()
-    self.parameter['Plot Theme (requires restart)']()
+    def apply(self):
+        self.parameter['Theme']()
+        self.parameter['Plot Theme (requires restart)']()
 
 
-AppearanceSettingsPlugin.apply = apply
+    AppearanceSettingsPlugin.apply = apply
