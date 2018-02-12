@@ -1,4 +1,6 @@
 from xicam.core.execution.workflow import Workflow
+from xicam.core.execution.daskexecutor import DaskExecutor
+
 from xicam.plugins import Input, Output, ProcessingPlugin
 
 from pyFAI.detectors import Pilatus2M
@@ -68,7 +70,7 @@ class QIntegratePlugin(ProcessingPlugin):
                type=np.array)
 
     def evaluate(self):
-        self.q.value, self.I.value = self.integrator.value.integrate1d(data=self.data.value,
+        self.q.value, self.I.value = self.integrator.value().integrate1d(data=self.data.value,
                                                                        npt=self.npt.value,
                                                                        radial_range=self.radial_range.value,
                                                                        azimuth_range=self.azimuth_range.value,
@@ -89,11 +91,23 @@ def test_SAXSWorkflow():
     # set values
     AI = AzimuthalIntegrator(.283, 5.24e-3, 4.085e-3, 0, 0, 0, 1.72e-4, 1.72e-4, detector=Pilatus2M(),
                              wavelength=1.23984e-10)
-    thresholdmask.data.value = fabio.open('/home/rp/data/YL1031/AGB_5S_USE_2_2m.edf').data
-    qintegrate.integrator.value = AI
+    thresholdmask.data.value = fabio.open('/Users/hari/Downloads/AGB_5S_USE_2_2m.edf').data
+
+    def AI_func():
+        from pyFAI.detectors import Pilatus2M
+        from pyFAI import AzimuthalIntegrator, units
+        return AzimuthalIntegrator(.283, 5.24e-3, 4.085e-3, 0, 0, 0, 1.72e-4, 1.72e-4, detector=Pilatus2M(),
+                                   wavelength=1.23984e-10)
+
+    qintegrate.integrator.value = AI_func
     qintegrate.npt.value = 1000
     thresholdmask.minimum.value = 30
     thresholdmask.maximum.value = 1e12
+
+    qintegrate.data.value = fabio.open('/Users/hari/Downloads/AGB_5S_USE_2_2m.edf').data
+    thresholdmask.neighborhood.value = 1
+    qintegrate.normalization_factor.value = 0.5
+    qintegrate.method.value = "numpy"
 
     # connect processes
     thresholdmask.mask.connect(qintegrate.mask)
@@ -102,6 +116,11 @@ def test_SAXSWorkflow():
     wf = Workflow('QIntegrate')
     wf.addProcess(thresholdmask)
     wf.addProcess(qintegrate)
+
+    dsk = DaskExecutor()
+    result = dsk.execute(wf)
+    print(result)
+
 
 
 def test_autoconnect():
@@ -112,7 +131,7 @@ def test_autoconnect():
     # set values
     AI = AzimuthalIntegrator(.283, 5.24e-3, 4.085e-3, 0, 0, 0, 1.72e-4, 1.72e-4, detector=Pilatus2M(),
                              wavelength=1.23984e-10)
-    thresholdmask.data.value = fabio.open('/home/rp/data/YL1031/AGB_5S_USE_2_2m.edf').data
+    thresholdmask.data.value = fabio.open('/Users/hari/Downloads/AGB_5S_USE_2_2m.edf').data
     qintegrate.integrator.value = AI
     qintegrate.npt.value = 1000
     thresholdmask.minimum.value = 30

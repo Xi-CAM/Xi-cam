@@ -3,13 +3,105 @@ from typing import Callable
 
 # TODO: add debug flag that checks mutations by hashing inputs
 
+class WorkflowProcess():
+  def __init__(self, node, named_args, islocal=False):
+    self.node = node
+    self.named_args = named_args
+    self.islocal = islocal
+    self.queues_in = {}
+    self.queues_out = {}
+
+    self.node.__internal_data__ = self
+
+  def __call__(self, args):
+
+    if args is not None and len(args) > 0:
+        for i in range(len(args)):
+            self.node.inputs[self.named_args[i]].value = args[i][0].value
+
+    self.node.evaluate()
+
+    outputs = []
+    for i in self.node.outputs.keys():
+       outputs.append(self.node.outputs[i])
+
+    return outputs
+
+
 class Workflow(object):
-    def __init__(self, processes=None):
+    def __init__(self, name, processes=None):
         self._processes = []
         self._observers = []
+        self.name = name
+
         if processes:
             self._processes.extend(processes)
         self.staged = False
+
+    def findEndTasks(self):
+        """
+        find tasks at the end of the graph and work up
+        check inputs and remove dependency nodes, what is left is unique ones
+        """
+
+        is_dep_task = []
+
+        for node in self._processes:
+            for input in node.inputs.keys():
+                for im in node.inputs[input].map_inputs:
+                    is_dep_task.append(im[1].parent)
+
+        end_tasks = list(self._processes).copy()
+
+        for dep_task in is_dep_task:
+            if dep_task in end_tasks:
+                end_tasks.remove(dep_task)
+
+        return end_tasks
+
+    def generateGraph(self, dsk, node, mapped_node):
+        """
+        Recursive function that adds
+        :param dsk:
+        :param q:
+        :param node:
+        :param mapped_node:
+        :return:
+        """
+        if node in mapped_node:
+            return
+
+        mapped_node.append(node)
+
+        args = []
+        named_args = []
+
+        for input in node.inputs.keys():
+            for input_map in node.inputs[input].map_inputs:
+                self.generateGraph(dsk, input_map[1].parent, mapped_node)
+                args.append(input_map[1].parent.id)
+                named_args.append(input_map[0])  # TODO test to make sure output is in input
+
+        workflow = WorkflowProcess(node, named_args)
+        dsk[node.id] = tuple([workflow, args])
+
+    def convertGraph(self):
+        """
+        process from end tasks and into all dependent ones
+        """
+
+        for (i, node) in enumerate(self._processes):
+            node.id = str(i)
+
+        end_tasks = self.findEndTasks()
+
+        graph = {}
+        mapped_node = []
+
+        for task in end_tasks:
+            self.generateGraph(graph, task, mapped_node)
+
+        return graph, [i.id for i in end_tasks]
 
     def addProcess(self, process: ProcessingPlugin, autoconnect: bool = False):
         """
@@ -146,7 +238,7 @@ class Workflow(object):
     def attach(self, observer: Callable):
         self._observers.append(observer)
 
-    def detatch(self, observer: Callable):
+    def detach(self, observer: Callable):
         self._observers.remove(observer)
 
     def update(self):

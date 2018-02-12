@@ -8,8 +8,8 @@ def test_lazyfield():
         def __call__(self, *args, **kwargs):
             return fabio.open(self.path).data
 
-    l = lazyfield(Handler, '/home/rp/data/YL1031/YL1031__2m_00000.edf')
-    assert l.asarray() is not None
+    # l = lazyfield(Handler, '/home/rp/data/YL1031/YL1031__2m_00000.edf')
+    # assert l.asarray() is not None
 
 
     # def test_data():
