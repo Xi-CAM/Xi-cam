@@ -25,10 +25,12 @@ class DaskExecutor:
 
         print("Running: ", dsk[0], dsk[1])
         result = client.get(dsk[0], dsk[1])
+        client.close()
 
-        res = {}
-        for f in result:
-            for f1 in f:
-                res[f1.name] = f1.value
+        #res = {}
+        #for f in result:
+        #    for fx in f:
+        #        for f1 in fx:
+        #            res[f1.name] = f1.value
 
-        return res
+        return result

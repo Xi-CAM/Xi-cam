@@ -4,28 +4,27 @@ from typing import Callable
 # TODO: add debug flag that checks mutations by hashing inputs
 
 class WorkflowProcess():
-  def __init__(self, node, named_args, islocal=False):
-    self.node = node
-    self.named_args = named_args
-    self.islocal = islocal
-    self.queues_in = {}
-    self.queues_out = {}
+    def __init__(self, node, named_args, islocal=False):
+        self.node = node
+        self.named_args = named_args
+        self.islocal = islocal
+        self.queues_in = {}
+        self.queues_out = {}
 
-    self.node.__internal_data__ = self
+        self.node.__internal_data__ = self
 
-  def __call__(self, args):
+    def __call__(self, args):
 
-    if args is not None and len(args) > 0:
-        for i in range(len(args)):
-            self.node.inputs[self.named_args[i]].value = args[i][0].value
+        if args is not None and len(args) > 0:
+            for i in range(len(args)):
+                # self.node.inputs[self.named_args[i]].value = args[i][0].value
+                for key in args[i].keys():
+                    if key in self.named_args:
+                        self.node.inputs[self.named_args[key]].value = args[i][key].value
 
-    self.node.evaluate()
+        self.node.evaluate()
 
-    outputs = []
-    for i in self.node.outputs.keys():
-       outputs.append(self.node.outputs[i])
-
-    return outputs
+        return self.node.outputs
 
 
 class Workflow(object):
@@ -73,17 +72,18 @@ class Workflow(object):
 
         mapped_node.append(node)
 
-        args = []
-        named_args = []
+        args = set()
+        named_args = {}
 
-        for input in node.inputs.keys():
-            for input_map in node.inputs[input].map_inputs:
+        for inp in node.inputs.keys():
+            for input_map in node.inputs[inp].map_inputs:
                 self.generateGraph(dsk, input_map[1].parent, mapped_node)
-                args.append(input_map[1].parent.id)
-                named_args.append(input_map[0])  # TODO test to make sure output is in input
+                args.add(input_map[1].parent.id)
+                # named_args.append({input_map[1].name: input_map[0]})  # TODO test to make sure output is in input
+                named_args[input_map[1].name] = input_map[0]
 
         workflow = WorkflowProcess(node, named_args)
-        dsk[node.id] = tuple([workflow, args])
+        dsk[node.id] = tuple([workflow, list(args)])
 
     def convertGraph(self):
         """
