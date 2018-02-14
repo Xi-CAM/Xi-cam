@@ -9,7 +9,7 @@ from yapsy.PluginManager import PluginManager
 from xicam.core import msg
 from .DataHandlerPlugin import DataHandlerPlugin
 from .GUIPlugin import GUIPlugin, GUILayout
-from .ProcessingPlugin import ProcessingPlugin, EZProcessingPlugin, Input, Output
+from .ProcessingPlugin import ProcessingPlugin, EZProcessingPlugin, Input, Output, InOut
 from .SettingsPlugin import SettingsPlugin
 from .DataResourcePlugin import DataResourcePlugin
 from .WidgetPlugin import QWidgetPlugin
