@@ -126,51 +126,61 @@ class Workflow(object):
         self._processes.remove(process)
         self.update()
 
-    def autoConnectProcess(self, process: ProcessingPlugin):
-        # for each input of given process
-        for input in process.inputs:
-            bestmatch = None
-            matchness = None
-            # Parse backwards from the given process, looking for matching outputs
-            for process in reversed(self.processes[:self.processes.index(process)]):
-                # check each output
-                for output in process.outputs:
-                    # if matching name
-                    if output.name == input.name:
-                        # if a name match hasn't been found
-                        if matchness < 1:
-                            bestmatch = output
-                            matchness = 1
-                            # if a name+type match hasn't been found
-                            if output.type == input.type:
-                                if matchness < 2:
-                                    bestmatch = output
-                                    matchness = 2
-            if bestmatch:
-                bestmatch.connect(input)
+    def autoConnectAll(self):
+        self.clearConnections()
 
-        # for each output of given process
-        for output in process.outputs:
-            bestmatch = None
-            matchness = None
-            # Parse backwards from the given process, looking for matching outputs
-            for process in self.processes[self.processes.index(process) + 1:]:
-                # check each output
-                for input in process.inputs:
-                    # if matching name
-                    if output.name == input.name:
-                        # if a name match hasn't been found
-                        if matchness < 1:
-                            bestmatch = input
-                            matchness = 1
-                            # if a name+type match hasn't been found
-                            if output.type == input.type:
-                                if matchness < 2:
-                                    bestmatch = input
-                                    matchness = 2
-            if bestmatch:
-                output.connect(bestmatch)
+        # for each process
+        for inputprocess in self.processes:
 
+            # for each input of given process
+            for input in inputprocess.inputs.values():
+                bestmatch = None
+                matchness = 0
+                # Parse backwards from the given process, looking for matching outputs
+                for outputprocess in reversed(self.processes[:self.processes.index(inputprocess)]):
+                    # check each output
+                    for output in outputprocess.outputs.values():
+                        # if matching name
+                        if output.name == input.name:
+                            # if a name match hasn't been found
+                            if matchness < 1:
+                                bestmatch = output
+                                matchness = 1
+                                # if a name+type match hasn't been found
+                                if output.type == input.type:
+                                    if matchness < 2:
+                                        bestmatch = output
+                                        matchness = 2
+                if bestmatch:
+                    bestmatch.connect(input)
+                    print(
+                        f'connected {bestmatch.parent.__class__.__name__}:{bestmatch.name} to {input.parent.__class__.__name__}:{input.name}')
+
+                    # # for each output of given process
+                    # for output in process.outputs.values():
+                    #     bestmatch = None
+                    #     matchness = 0
+                    #     # Parse backwards from the given process, looking for matching outputs
+                    #     for process in self.processes[self.processes.index(process) + 1:]:
+                    #         # check each output
+                    #         for input in process.inputs.values():
+                    #             # if matching name
+                    #             if output.name == input.name:
+                    #                 # if a name match hasn't been found
+                    #                 if matchness < 1:
+                    #                     bestmatch = input
+                    #                     matchness = 1
+                    #                     # if a name+type match hasn't been found
+                    #                     if output.type == input.type:
+                    #                         if matchness < 2:
+                    #                             bestmatch = input
+                    #                             matchness = 2
+                    #     if bestmatch:
+                    #         output.connect(bestmatch)
+
+    def clearConnections(self):
+        for process in self.processes:
+            process.clearConnections()
 
     def disableProcess(self, process):
         pass  # TODO: allow processes to be disabled
