@@ -85,6 +85,10 @@ class ProcessingPlugin(IPlugin):
     def setParameterValue(self, name, value):
         self.inputs[name].value = value
 
+    def clearConnections(self):
+        for input in self.inputs.values():
+            input.map_inputs = []
+
 
 def EZProcessingPlugin(method):
     def __init__(self, method):
