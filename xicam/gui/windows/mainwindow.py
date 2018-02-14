@@ -8,6 +8,7 @@ from yapsy import PluginInfo
 
 from xicam.plugins import manager as pluginmanager
 from xicam.plugins import observers as pluginobservers
+from xicam.core import msg
 from ..widgets import defaultstage
 from .settings import ConfigDialog
 from ..static import path
@@ -45,12 +46,15 @@ class XicamMainWindow(QMainWindow):
         # Load plugins
         pluginmanager.collectPlugins()
 
-        # Setup center/toolbar/statusbar
+        # Setup center/toolbar/statusbar/progressbar
         pluginmodewidget = pluginModeWidget()
         pluginmodewidget.sigSetStage.connect(self.setStage)
         pluginmodewidget.sigSetGUIPlugin.connect(self.setGUIPlugin)
         self.addToolBar(pluginmodewidget)
-        self.setStatusBar(QStatusBar())
+        self.setStatusBar(QStatusBar(self))
+        msg.progressbar = QProgressBar(self)
+        msg.progressbar.hide()
+        self.statusBar().addPermanentWidget(msg.progressbar)
         self.setCentralWidget(QStackedWidget())
         # NOTE: CentralWidgets are force-deleted when replaced, even if the object is still referenced;
         # To avoid this, a QStackedWidget is used for the central widget.
