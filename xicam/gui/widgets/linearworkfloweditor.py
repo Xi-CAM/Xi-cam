@@ -117,6 +117,7 @@ class WorkflowModel(QAbstractTableModel):
         srcindex, process = pickle.loads(data.data('text/xml'))
         self.workflow.removeProcess(index=srcindex)
         self.workflow.insertProcess(parent.row(), process)
+        self.workflow.autoConnectAll()
         return True
 
     def supportedDropActions(self):
