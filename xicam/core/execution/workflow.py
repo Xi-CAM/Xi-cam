@@ -1,6 +1,6 @@
 from xicam.plugins import ProcessingPlugin
 from typing import Callable
-
+from .daskexecutor import DaskExecutor
 # TODO: add debug flag that checks mutations by hashing inputs
 
 class WorkflowProcess():
@@ -217,7 +217,8 @@ class Workflow(object):
         """
         if not self.staged:
             self.stage(connection)
-        # TODO: add execution path
+
+        return DaskExecutor().execute(self)
 
     def validate(self):
         """
