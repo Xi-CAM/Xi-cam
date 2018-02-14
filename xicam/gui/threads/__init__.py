@@ -1,5 +1,6 @@
 import time
 from functools import partial
+from xicam.core import msg
 
 from qtpy.QtCore import *
 
@@ -72,13 +73,19 @@ class QThreadFuture(QObject):
         except Exception as ex:
             self.exception = ex
             self.sigExcept.emit(ex)
+            msg.logMessage(f'Error in thread: '
+                           f'Method: {self.__repr__}\n'
+                           f'Args: {self.args}\n'
+                           f'Kwargs: {self.kwargs}', level=msg.ERROR)
+            msg.logError(ex)
         else:
             self.done = True
             self.sigFinished.emit()
 
     def result(self):
-        while not self.done:
+        while not self.done and not self.exception:
             time.sleep(100)
+        if self.exception: return self.exception
         return self.result
 
     def cancel(self):
