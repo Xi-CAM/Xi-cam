@@ -193,3 +193,7 @@ class Output(Var):
         #
         # def __delete__(self, instance):
         #     del instance._output_values[self]
+
+
+class InOut(Input, Output):
+    pass
