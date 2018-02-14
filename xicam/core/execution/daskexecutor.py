@@ -6,9 +6,9 @@ class DaskExecutor:
         import distributed
         # from distributed import Queue
 
-        client = distributed.Client()
-
         dsk = wf.convertGraph()
+
+        client = distributed.Client()
 
         # generate queues
         """
