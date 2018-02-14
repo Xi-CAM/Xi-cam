@@ -7,6 +7,7 @@ from xicam import plugins
 class SettingsPlugin(QObject, IPlugin):
     def __new__(cls, *args, **kwargs):
         if not plugins.qt_is_safe: return None
+        return super(SettingsPlugin, cls).__new__(cls, *args, **kwargs)
 
     def __init__(self, icon, name, widget):
         super(SettingsPlugin, self).__init__()
