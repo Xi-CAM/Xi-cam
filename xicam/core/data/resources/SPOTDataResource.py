@@ -12,9 +12,9 @@ class SpotDataResourcePlugin(DataResourcePlugin):
         super(SpotDataResourcePlugin, self).__init__(**self.config)
         from requests import Session
         self.session = Session()
-        self.session.post("https://newt.nersc.gov/newt/auth", {"username": user, "password": password})
+        # self.session.post("https://newt.nersc.gov/newt/auth", {"username": user, "password": password})
         self._data = []
-        self.refresh()
+        # self.refresh()
 
     def columnCount(self, index=None):
         return len(self._data[0])
