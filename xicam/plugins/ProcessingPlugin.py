@@ -1,6 +1,7 @@
 from yapsy.IPlugin import IPlugin
 import inspect
 
+
 # TODO allow outputs/inputs to connect
 
 class ProcessingPlugin(IPlugin):
@@ -12,6 +13,7 @@ class ProcessingPlugin(IPlugin):
         self._nameparameters()
         self._param = None
         self.__internal_data__ = None
+        self.disabled = False
 
     def evaluate(self):
         raise NotImplementedError
@@ -63,7 +65,7 @@ class ProcessingPlugin(IPlugin):
 
     @property
     def parameter(self):
-        if not self._param:
+        if not (hasattr(self, '_param') and self._param):
             from pyqtgraph.parametertree.Parameter import Parameter, PARAM_TYPES
             children = []
             for name, input in self.inputs.items():
@@ -90,7 +92,9 @@ class ProcessingPlugin(IPlugin):
             input.map_inputs = []
 
     def __reduce__(self):
-        return _ProcessingPluginRetriever(), (self.__class__.__name__, self.__dict__)
+        d = self.__dict__.copy()
+        if '_param' in d: del d['_param']
+        return _ProcessingPluginRetriever(), (self.__class__.__name__, d)
 
 
 class _ProcessingPluginRetriever(object):
