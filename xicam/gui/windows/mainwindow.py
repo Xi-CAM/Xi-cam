@@ -54,6 +54,7 @@ class XicamMainWindow(QMainWindow):
         self.setStatusBar(QStatusBar(self))
         msg.progressbar = QProgressBar(self)
         msg.progressbar.hide()
+        msg.statusbar = self.statusBar()
         self.statusBar().addPermanentWidget(msg.progressbar)
         self.setCentralWidget(QStackedWidget())
         # NOTE: CentralWidgets are force-deleted when replaced, even if the object is still referenced;
