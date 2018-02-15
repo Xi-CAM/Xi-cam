@@ -146,7 +146,7 @@ class WorkflowModel(QAbstractTableModel):
         elif index.column() == 1:
             return getattr(process, 'name', process.__class__.__name__)
         elif index.column() == 2:
-            return partial(self.workflow.removeProcess, index=index.row())
+            return partial(self.workflow.removeProcess, index=index.row(), autoconnectall=True)
         return ''
 
     def headerData(self, col, orientation, role):
