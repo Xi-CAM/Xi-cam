@@ -121,9 +121,10 @@ class Workflow(object):
         self._processes.insert(index, process)
         self.update()
 
-    def removeProcess(self, process: ProcessingPlugin = None, index=None):
+    def removeProcess(self, process: ProcessingPlugin = None, index=None, autoconnectall=False):
         if not process: process = self._processes[index]
         self._processes.remove(process)
+        if autoconnectall: self.autoConnectAll()
         self.update()
 
     def autoConnectAll(self):
