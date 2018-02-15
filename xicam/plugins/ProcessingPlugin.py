@@ -1,7 +1,6 @@
 from yapsy.IPlugin import IPlugin
 import inspect
 
-
 # TODO allow outputs/inputs to connect
 
 class ProcessingPlugin(IPlugin):
@@ -64,23 +63,24 @@ class ProcessingPlugin(IPlugin):
 
     @property
     def parameter(self):
+        if not self._param:
+            from pyqtgraph.parametertree.Parameter import Parameter, PARAM_TYPES
+            children = []
+            for name, input in self.inputs.items():
+                if getattr(input.type, '__name__') in PARAM_TYPES:
+                    childparam = Parameter.create(name=name,
+                                                  value=getattr(input, 'value', input.default),
+                                                  default=input.default,
+                                                  limits=[input.min, input.max],
+                                                  type=getattr(input.type, '__name__', None),
+                                                  units=input.units)
+                    childparam.sigValueChanged.connect(lambda param, value: self.setParameterValue(name, value))
+                    children.append(childparam)
+            self._param = Parameter(name=getattr(self, 'name', self.__class__.__name__), children=children,
+                                    type='group')
 
-        from pyqtgraph.parametertree.Parameter import Parameter, PARAM_TYPES
-        children = []
-        for name, input in self.inputs.items():
-            if getattr(input.type, '__name__') in PARAM_TYPES:
-                childparam = Parameter.create(name=name,
-                                              value=getattr(input, 'value', input.default),
-                                              default=input.default,
-                                              limits=[input.min, input.max],
-                                              type=getattr(input.type, '__name__', None),
-                                              units=input.units)
-                childparam.sigValueChanged.connect(lambda param, value: self.setParameterValue(name, value))
-                children.append(childparam)
-        _param = Parameter(name=getattr(self, 'name', self.__class__.__name__), children=children, type='group')
-
-        _param.sigValueChanged.connect(self.setParameterValue)
-        return _param
+            self._param.sigValueChanged.connect(self.setParameterValue)
+        return self._param
 
     def setParameterValue(self, name, value):
         self.inputs[name].value = value
@@ -88,6 +88,32 @@ class ProcessingPlugin(IPlugin):
     def clearConnections(self):
         for input in self.inputs.values():
             input.map_inputs = []
+
+    def __reduce__(self):
+        return _ProcessingPluginRetriever(), (self.__class__.__name__, self.__dict__)
+
+
+class _ProcessingPluginRetriever(object):
+    """
+    When called with the containing class as the first argument,
+    and the name of the nested class as the second argument,
+    returns an instance of the nested class.
+    """
+
+    def __call__(self, pluginname, internaldata):
+        from xicam.plugins import manager as pluginmanager
+
+        # if pluginmanager hasn't collected plugins yet, then do it
+        if not pluginmanager.loadcomplete: pluginmanager.collectPlugins()
+
+        # look for the plugin matching the saved name and re-instance it
+        for plugin in pluginmanager.getPluginsOfCategory('ProcessingPlugin'):
+            if plugin.plugin_object.__name__ == pluginname:
+                p = plugin.plugin_object()
+                p.__dict__ = internaldata
+                return p
+
+        raise ValueError(f'No plugin found with name {pluginname}')
 
 
 def EZProcessingPlugin(method):

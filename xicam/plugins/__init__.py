@@ -53,6 +53,7 @@ class XicamPluginManager(PluginManager):
         self.setPluginPlaces(
             [os.getcwd(), str(Path(__file__).parent.parent), user_plugin_dir, site_plugin_dir,
              venvs.current_environment])
+        self.loadcomplete = False
 
     def collectPlugins(self):
         """
@@ -79,6 +80,7 @@ class XicamPluginManager(PluginManager):
         self.instanciateLatePlugins()
         for observer in observers:
             observer.pluginsChanged()
+        self.loadcomplete = True
 
     def instanciateLatePlugins(self):
         if qt_is_safe:
