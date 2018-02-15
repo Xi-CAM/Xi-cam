@@ -121,7 +121,7 @@ def notifyMessage(*args, timeout=8000, title='', level: int = INFO):
         trayicon.showMessage(''.join(args), title, icon, timeout)  # TODO: check if title and message are swapped?
 
 
-def showMessage(*args, timeout=0, **kwargs):
+def showMessage(*args, timeout=5, **kwargs):
     """
     Same as logMessage, but displays to the subscribed statusbar with a timeout.
 
