@@ -48,7 +48,8 @@ class WorkflowWidget(QWidget):
         addfunctionmenu = QToolButton()
         functionmenu = QMenu()
         for plugin in pluginmanager.getPluginsOfCategory('ProcessingPlugin'):
-            functionmenu.addAction(plugin.name, partial(self.view.model().workflow.addProcess, plugin.plugin_object()))
+            functionmenu.addAction(plugin.name, partial(self.view.model().workflow.addProcess, plugin.plugin_object(),
+                                                        autoconnectall=True))
         addfunctionmenu.setMenu(functionmenu)
         addfunctionmenu.setIcon(QIcon(path('icons/addfunction.png')))
         addfunctionmenu.setText('Add Function')
@@ -92,8 +93,10 @@ class LinearWorkflowView(QTableView):
 
     def selectionChanged(self, selected, deselected):
         if self.selectedIndexes():
-            process = self.model().workflow.processes[self.selectedIndexes()[0].row()]
+            process = self.model().workflow._processes[self.selectedIndexes()[0].row()]
             self.sigShowParameter.emit(process.parameter)
+        for child in self.children():
+            if hasattr(child, 'repaint'): child.repaint()
 
 
 class WorkflowModel(QAbstractTableModel):
@@ -101,21 +104,21 @@ class WorkflowModel(QAbstractTableModel):
         self.workflow = workflow
         super(WorkflowModel, self).__init__()
 
-        self.dataChanged.connect(print)
 
         self.workflow.attach(partial(self.layoutChanged.emit))
 
     def mimeTypes(self):
-        return ['text/xml']
+        return ['text/plain']
 
     def mimeData(self, indexes):
         mimedata = QMimeData()
-        mimedata.setData('text/xml', pickle.dumps((indexes[0].row(), self.workflow.processes[indexes[0].row()])))
+        mimedata.setText(str(indexes[0].row()))
         return mimedata
 
     def dropMimeData(self, data, action, row, column, parent):
-        srcindex, process = pickle.loads(data.data('text/xml'))
-        self.workflow.removeProcess(index=srcindex)
+        srcindex = int(data.text())
+        process = self.workflow._processes[srcindex]
+        self.workflow.removeProcess(process)
         self.workflow.insertProcess(parent.row(), process)
         self.workflow.autoConnectAll()
         return True
@@ -130,19 +133,19 @@ class WorkflowModel(QAbstractTableModel):
                Qt.ItemIsDragEnabled | Qt.ItemIsDropEnabled
 
     def rowCount(self, *args, **kwargs):
-        return len(self.workflow.processes)
+        return len(self.workflow._processes)
 
     def columnCount(self, *args, **kwargs):
         return 3
 
     def data(self, index, role):
-        process = self.workflow.processes[index.row()]
+        process = self.workflow._processes[index.row()]
         if not index.isValid():
             return None
         elif role != Qt.DisplayRole:
             return None
         elif index.column() == 0:
-            return partial(self.workflow.disableProcess, process)
+            return partial(self.workflow.toggleDisableProcess, process, autoconnectall=True)
         elif index.column() == 1:
             return getattr(process, 'name', process.__class__.__name__)
         elif index.column() == 2:
@@ -182,7 +185,11 @@ class DisableDelegate(QItemDelegate):
             button = QToolButton(self.parent())
             button.setText('i')
             button.setAutoRaise(True)
-            button.setIcon(QIcon(path('icons/up.png')))
+            icon = QIcon()
+            icon.addPixmap(QPixmap(path('icons/enable.png')), state=icon.Off)
+            icon.addPixmap(QPixmap(path('icons/disable.png')), state=icon.On)
+            button.setIcon(icon)
+            button.setCheckable(True)
             sp = QSizePolicy()
             sp.setWidthForHeight(True)
             button.setSizePolicy(sp)
