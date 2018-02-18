@@ -1,6 +1,8 @@
 from xicam.plugins import ProcessingPlugin
 from typing import Callable
 from .daskexecutor import DaskExecutor
+from collections import OrderedDict
+from xicam.core import msg
 # TODO: add debug flag that checks mutations by hashing inputs
 
 class WorkflowProcess():
@@ -14,18 +16,24 @@ class WorkflowProcess():
         self.node.__internal_data__ = self
 
     def __call__(self, args):
-
         if args is not None and len(args) > 0:
             for i in range(len(args)):
                 # self.node.inputs[self.named_args[i]].value = args[i][0].value
                 for key in args[i].keys():
                     if key in self.named_args:
+                        msg.logMessage(
+                            f'Setting input {self.node.__class__.__name__}:{self.named_args[key]} to output {args[i][key].value}',
+                            level=msg.DEBUG)
                         self.node.inputs[self.named_args[key]].value = args[i][key].value
+
+                        # TODO: map inputs to ith input of jth node; current only maps to jth node
 
         self.node.evaluate()
 
         return self.node.outputs
 
+    def __repr__(self):
+        return self.node.__class__.__name__
 
 class Workflow(object):
     def __init__(self, name, processes=None):
@@ -45,12 +53,12 @@ class Workflow(object):
 
         is_dep_task = []
 
-        for node in self._processes:
+        for node in self.processes:
             for input in node.inputs.keys():
                 for im in node.inputs[input].map_inputs:
                     is_dep_task.append(im[1].parent)
 
-        end_tasks = list(self._processes).copy()
+        end_tasks = list(self.processes).copy()
 
         for dep_task in is_dep_task:
             if dep_task in end_tasks:
@@ -72,25 +80,25 @@ class Workflow(object):
 
         mapped_node.append(node)
 
-        args = set()
+        args = OrderedDict()
         named_args = {}
 
         for inp in node.inputs.keys():
             for input_map in node.inputs[inp].map_inputs:
                 self.generateGraph(dsk, input_map[1].parent, mapped_node)
-                args.add(input_map[1].parent.id)
+                args[input_map[1].parent.id] = None
                 # named_args.append({input_map[1].name: input_map[0]})  # TODO test to make sure output is in input
                 named_args[input_map[1].name] = input_map[0]
 
         workflow = WorkflowProcess(node, named_args)
-        dsk[node.id] = tuple([workflow, list(args)])
+        dsk[node.id] = tuple([workflow, list(reversed(args.keys()))])
 
     def convertGraph(self):
         """
         process from end tasks and into all dependent ones
         """
 
-        for (i, node) in enumerate(self._processes):
+        for (i, node) in enumerate(self.processes):
             node.id = str(i)
 
         end_tasks = self.findEndTasks()
@@ -103,7 +111,7 @@ class Workflow(object):
 
         return graph, [i.id for i in end_tasks]
 
-    def addProcess(self, process: ProcessingPlugin, autoconnect: bool = False):
+    def addProcess(self, process: ProcessingPlugin, autoconnectall: bool = False):
         """
         Adds a Process as a child.
         Parameters
@@ -115,11 +123,12 @@ class Workflow(object):
         """
         self._processes.append(process)
         self.update()
-        # TODO: Add autoconnect functionality
+        if autoconnectall: self.autoConnectAll()
 
-    def insertProcess(self, index: int, process: ProcessingPlugin, autoconnect: bool = False):
+    def insertProcess(self, index: int, process: ProcessingPlugin, autoconnectall: bool = False):
         self._processes.insert(index, process)
         self.update()
+        if autoconnectall: self.autoConnectAll()
 
     def removeProcess(self, process: ProcessingPlugin = None, index=None, autoconnectall=False):
         if not process: process = self._processes[index]
@@ -154,8 +163,9 @@ class Workflow(object):
                                         matchness = 2
                 if bestmatch:
                     bestmatch.connect(input)
-                    print(
-                        f'connected {bestmatch.parent.__class__.__name__}:{bestmatch.name} to {input.parent.__class__.__name__}:{input.name}')
+                    msg.logMessage(
+                        f'connected {bestmatch.parent.__class__.__name__}:{bestmatch.name} to {input.parent.__class__.__name__}:{input.name}',
+                        level=msg.DEBUG)
 
                     # # for each output of given process
                     # for output in process.outputs.values():
@@ -183,12 +193,14 @@ class Workflow(object):
         for process in self.processes:
             process.clearConnections()
 
-    def disableProcess(self, process):
-        pass  # TODO: allow processes to be disabled
+    def toggleDisableProcess(self, process, autoconnectall=False):
+        process.disabled = not process.disabled
+        process.clearConnections()
+        if autoconnectall: self.autoConnectAll()
 
     @property
     def processes(self):
-        return self._processes
+        return [process for process in self._processes if not process.disabled]
 
     @processes.setter
     def processes(self, processes):
