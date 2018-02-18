@@ -66,10 +66,11 @@ class QThreadFuture(QObject):
         self.done = False
         self.exception = None
         try:
-            self._result = self.method(*self.args, **self.kwargs)
-            self.running = False
-            if not isinstance(self._result, tuple): self._result = (self._result,)
-            if self.callback_slot: invoke_in_main_thread(self.callback_slot, *self._result)
+            for self._result in self._run(*args, **kwargs):
+                if not isinstance(self._result, tuple): self._result = (self._result,)
+                if self.callback_slot: invoke_in_main_thread(self.callback_slot, *self._result)
+                self.running = False
+
         except Exception as ex:
             self.exception = ex
             self.sigExcept.emit(ex)
@@ -82,6 +83,9 @@ class QThreadFuture(QObject):
             self.done = True
             self.sigFinished.emit()
 
+    def _run(self, *args, **kwargs):
+        yield self.method(*self.args, **self.kwargs)
+
     def result(self):
         while not self.done and not self.exception:
             time.sleep(100)
@@ -91,6 +95,11 @@ class QThreadFuture(QObject):
     def cancel(self):
         self.thread.terminate()
         self.cancelled = True
+
+
+class QThreadFutureIterator(QThreadFuture):
+    def _run(self, *args, **kwargs):
+        yield from self.method(*self.args, **self.kwargs)
 
 
 class InvokeEvent(QEvent):
