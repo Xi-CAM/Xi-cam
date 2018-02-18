@@ -89,7 +89,6 @@ class XicamMainWindow(QMainWindow):
         defaultstage['left'].sigPreview.connect(defaultstage['lefttop'].preview_header)
 
     def open(self, header):
-        print(header)
         self.currentGUIPlugin.plugin_object.appendHeader(header)
 
     def showSettings(self):
@@ -188,6 +187,12 @@ class XicamMainWindow(QMainWindow):
         elif isinstance(stage[position], type):
             raise TypeError(
                 f'A type is not acceptable value for stages. You must instance this class: {stage[position]}, {position}')
+
+    def mousePressEvent(self, event):
+        focused_widget = QApplication.focusWidget()
+        if isinstance(focused_widget, QSpinBox):
+            focused_widget.clearFocus()
+        super(XicamMainWindow, self).mousePressEvent(event)
 
 
 class pluginModeWidget(QToolBar):
