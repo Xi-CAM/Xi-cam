@@ -1,8 +1,11 @@
 from xicam.plugins import ProcessingPlugin
 from typing import Callable
-from .daskexecutor import DaskExecutor
+from .camlinkexecutor import CamLinkExecutor
+from .localexecutor import LocalExecutor
 from collections import OrderedDict
 from xicam.core import msg
+
+
 # TODO: add debug flag that checks mutations by hashing inputs
 
 class WorkflowProcess():
@@ -26,14 +29,13 @@ class WorkflowProcess():
                             level=msg.DEBUG)
                         self.node.inputs[self.named_args[key]].value = args[i][key].value
 
-                        # TODO: map inputs to ith input of jth node; current only maps to jth node
-
         self.node.evaluate()
 
         return self.node.outputs
 
     def __repr__(self):
         return self.node.__class__.__name__
+
 
 class Workflow(object):
     def __init__(self, name, processes=None):
@@ -241,7 +243,7 @@ class Workflow(object):
         if not self.staged:
             self.stage(connection)
 
-        return DaskExecutor().execute(self)
+        return LocalExecutor().execute(self)
 
     def validate(self):
         """
