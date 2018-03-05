@@ -32,3 +32,11 @@ def test_IProcessingPlugin():
     assert t1.inputs['a'].name == 'a'
     assert t1.outputs['c'].name == 'c'
     assert t1.outputs['c'].value == 3
+
+
+def test_EZProcessingPlugin():
+    from xicam.plugins import EZProcessingPlugin
+    import numpy as np
+
+    ArrayRotate = EZProcessingPlugin(np.rot90)
+    assert ArrayRotate()
