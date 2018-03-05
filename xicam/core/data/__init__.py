@@ -384,7 +384,7 @@ class NonDBHeader(object):
         #                             fields=fields, fill=fill)
 
         for ev in self.eventdocs:
-            if not set(fields).isdisjoint(set(ev['data'].keys())):
+            if not set(fields).isdisjoint(set(ev['data'].keys())) or not fields:
                 yield ev
 
     def data(self, field, stream_name='primary', fill=True):
@@ -421,8 +421,12 @@ import numpy as np
 
 class DocMetaArray(object):
     def __init__(self, header: NonDBHeader, field=None):
-        self.events = list(header.events(fields=[field]))
-        if not field: field = list(self.events[0].keys())[0]
+        if not field:
+            fields = []
+        else:
+            fields = [field]
+        self.events = list(header.events(fields=fields))
+        if not field: field = list(self.events[0]['data'].keys())[0]
         self.field = field
         firstslice = self.slice(0)
         self.dtype = firstslice.dtype
@@ -449,7 +453,6 @@ class DocMetaArray(object):
             rmax = item[0].stop if item[0].stop is not None else self.shape[0]
             rstep = item[0].step if item[0].step is not None else 1
             r = range(rmin, rmax, rstep)
-
             return np.array([self.slice(i)[item[1:]] for i in r])
         return self.slice(item)
 
