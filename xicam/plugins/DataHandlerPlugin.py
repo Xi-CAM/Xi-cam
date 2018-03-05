@@ -54,7 +54,7 @@ class DataHandlerPlugin(IPlugin):
         metadata = cls.parseTXTFile(paths[0])
         metadata.update(cls.parseDataFile(paths[0]))
 
-        metadata = dict([(key, metadata[key]) for key in getattr(cls, 'descriptor_keys', [])])
+        metadata = dict([(key, metadata.get(key, None)) for key in getattr(cls, 'descriptor_keys', [])])
         yield descriptor_doc(start_uid, descriptor_uid, metadata=metadata)
 
     @classmethod
