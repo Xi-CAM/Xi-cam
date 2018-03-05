@@ -1,5 +1,4 @@
 from . import GUIPlugin, GUILayout
-import pyqtgraph as pg
 from pyqtgraph.parametertree import Parameter, ParameterTree
 from qtpy.QtWidgets import *
 from qtpy.QtGui import *
@@ -7,8 +6,8 @@ from qtpy.QtGui import *
 
 class _EZPlugin(GUIPlugin):
     def __init__(self, name, toolbuttons=None, parameters=None, appendheadertest=None,
-                 centerwidget=pg.ImageView,
-                 bottomwidget=pg.PlotWidget):
+                 centerwidget=None,
+                 bottomwidget=None):
         self.name = name
 
         self.centerwidget = centerwidget() if callable(centerwidget) else centerwidget
@@ -48,8 +47,11 @@ class _EZPlugin(GUIPlugin):
 
 
 def EZPlugin(name='TestPlugin', toolbuttons=None, parameters=None, appendheadertest=None,
-             centerwidget=pg.ImageView,
-             bottomwidget=pg.PlotWidget):
+             centerwidget=None,
+             bottomwidget=None):
+    import pyqtgraph as pg
+    if centerwidget is None: centerwidget = pg.ImageView
+    if bottomwidget is None: bottomwidget = pg.PlotWidget
     return type(name, (_EZPlugin,), {'__init__': lambda self: _EZPlugin.__init__(self, name, toolbuttons, parameters,
                                                                                  appendheadertest, centerwidget,
                                                                                  bottomwidget),
