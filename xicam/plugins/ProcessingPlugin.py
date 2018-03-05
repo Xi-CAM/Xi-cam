@@ -1,5 +1,7 @@
 from yapsy.IPlugin import IPlugin
 import inspect
+from xicam.core import msg
+from distributed.protocol.serialize import serialize
 
 
 # TODO allow outputs/inputs to connect
@@ -7,13 +9,27 @@ import inspect
 class ProcessingPlugin(IPlugin):
     isSingleton = False
 
-    def __init__(self):
+    def __new__(cls, *args, **kwargs):
+        instance = super(ProcessingPlugin, cls).__new__(cls)
+        instance.__init__(*args, **kwargs)
+        for name, param in cls.__dict__.items():
+            if isinstance(param, (Input, Output)):
+                param.name = instance.inverted_vars[param]
+                clone = param.__class__()
+                clone.__dict__ = param.__dict__.copy()
+                clone.parent = instance
+                instance.inputs[param.name] = clone
+                setattr(instance, param.name, clone)
+        return instance
+
+    def __init__(self, *args, **kwargs):
         super(ProcessingPlugin, self).__init__()
-        self._clone_descriptors()
-        self._nameparameters()
         self._param = None
         self.__internal_data__ = None
         self.disabled = False
+        self._inputs = getattr(self, '_inputs', None)
+        self._outputs = getattr(self, '_outputs', None)
+        self._inverted_vars = None
 
     def evaluate(self):
         raise NotImplementedError
@@ -30,38 +46,24 @@ class ProcessingPlugin(IPlugin):
                 self.inputs[k].value = v
         return self._getresult()
 
-    def _clone_descriptors(self):
-        for name, param in self.__class__.__dict__.items():
-            if isinstance(param, (Input, Output)):
-                param.name_from_instance(self)
-                param.clone_to_instance(self)
-
-
-                # for name, param in self.__dict__.items():
-                #     if isinstance(param, (Input, Output)):
-                #         param.name_from_instance(self)
-
-    def _nameparameters(self):
-        for name, param in self.__class__.__dict__.items():
-            if isinstance(param, (Input, Output)):
-                if not param.name:
-                    param.name = name
-
     @property
     def inputs(self):
-        return {name: param for name, param in self.__dict__.items() if isinstance(param, Input)}
-
-    @property
-    def inverted_inputs(self):
-        return {param: name for name, param in self.__class__.__dict__.items() if isinstance(param, Input)}
+        if not self._inputs:
+            self._inputs = {name: param for name, param in self.__dict__.items() if isinstance(param, Input)}
+        return self._inputs
 
     @property
     def outputs(self):
-        return {name: param for name, param in self.__dict__.items() if isinstance(param, Output)}
+        if not self._outputs:
+            self._outputs = {name: param for name, param in self.__dict__.items() if isinstance(param, Output)}
+        return self._outputs
 
     @property
-    def inverted_outputs(self):
-        return {param: name for name, param in self.__class__.__dict__.items() if isinstance(param, Output)}
+    def inverted_vars(self):
+        if not self._inverted_vars:
+            self._inverted_vars = {param: name for name, param in self.__class__.__dict__.items() if
+                                   isinstance(param, (Input, Output))}
+        return self._inverted_vars
 
     @property
     def parameter(self):
@@ -85,7 +87,10 @@ class ProcessingPlugin(IPlugin):
         return self._param
 
     def setParameterValue(self, name, value):
-        self.inputs[name].value = value
+        if value is not None:
+            self.inputs[name].value = value
+        else:
+            self.inputs[name].value = self.inputs[name].default
 
     def clearConnections(self):
         for input in self.inputs.values():
@@ -121,17 +126,36 @@ class _ProcessingPluginRetriever(object):
 
 
 def EZProcessingPlugin(method):
-    def __init__(self, method):
-        self.method = method
-        argspec = inspect.getfullargspec(method)
-        self.inputs = [Input(name=argname) for argname in argspec.args + argspec.varargs + argspec.keywords]
-        self.outputs = [Output(name='result')]
-        super(EZProcessingPlugin, self).__init__()
+    def __new__(cls, *args, **kwargs):
+        instance = ProcessingPlugin.__new__(cls)
+        return instance
+
+    def __init__(self):
+        ProcessingPlugin.__init__(self)
 
     def evaluate(self):
         self.method(*[i.value for i in self.inputs])
 
-    return type(method.__name__, (ProcessingPlugin,), {'__init__': __init__, 'evaluate': evaluate})
+    argspec = inspect.getfullargspec(method)
+    allargs = argspec.args
+    if argspec.varargs: allargs += argspec.varargs
+    if argspec.kwonlyargs: allargs += argspec.kwonlyargs
+
+    _inputs = {argname: Input(name=argname) for argname in allargs}
+    _outputs = {'result': Output(name='result')}
+
+    attrs = {'__new__': __new__,
+             '__init__': __init__,
+             'evaluate': evaluate,
+             'method': method,
+             '_outputs': _inputs,
+             '_inputs': _outputs,
+             '_inverted_vars': None,
+             }
+    attrs.update(_inputs)
+    attrs.update(_outputs)
+
+    return type(method.__name__, (ProcessingPlugin,), attrs)
 
 
 class Var(object):
@@ -171,62 +195,25 @@ class Input(Var):
         self.type = type
         if limits: self.min, self.max = limits
 
-    def clone_to_instance(self, instance):
-        clone = self.__class__(self.name, self.description, self.default, self.type, self.units, self.min, self.max)
-        clone.parent = instance
-        instance.inputs[self.name] = clone
-        setattr(instance, self.name, clone)
-        return clone
-
-    def name_from_instance(self, instance):
-        self.name = instance.inverted_inputs[self]
-
-        # def __get__(self, instance, owner):
-        #     self.name_from_instance(instance)
-        #     return self.clone_to_instance(instance)
-
-        # def __set__(self, instance, value):
-        #     self.clone_to_instance(instance).value = value
-
     def __setattr__(self, name, value):
-        import pickle
         if name == "value":
             try:
-                pickle.dumps(value)
+                serialize(value)
             except:
-                print("cannot pickle", name, value)
+                msg.logMessage(f"Value '{value}'on input '{name}' could not be cloudpickled.", level=msg.WARNING)
             super().__setattr__(name, value)
         else:
             super().__setattr__(name, value)
 
+
 class Output(Var):
-    def __init__(self, name='', description='', type=None, units=None):
+    def __init__(self, name='', description='', type=None, units=None, *args, **kwargs):
         super().__init__()
         self.name = name
         self.description = description
         self.units = units
         self.value = None
         self.type = type
-
-    def clone_to_instance(self, instance):
-        clone = self.__class__(self.name, self.description, self.type, self.units)
-        clone.parent = instance
-        instance.outputs[self.name] = clone
-        setattr(instance, self.name, clone)
-        return clone
-
-    def name_from_instance(self, instance):
-        self.name = instance.inverted_outputs[self]
-
-        # def __get__(self, instance, owner):
-        #     self.name_from_instance(instance)
-        #     return self.clone_to_instance(instance)
-        #
-        # def __set__(self, instance, value):
-        #     instance._output_values[self] = value
-        #
-        # def __delete__(self, instance):
-        #     del instance._output_values[self]
 
 
 class InOut(Input, Output):
