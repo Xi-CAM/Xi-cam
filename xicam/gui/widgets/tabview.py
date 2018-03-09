@@ -1,6 +1,8 @@
 from qtpy.QtWidgets import *
 from qtpy.QtGui import *
 from qtpy.QtCore import *
+from typing import List
+from functools import partial
 
 
 class TabView(QTabWidget):
@@ -39,6 +41,21 @@ class TabView(QTabWidget):
     def closeTab(self, i):
         self.removeTab(i)
         self.model.removeRow(i)
+
+
+class TabViewSynchronizer(QObject):
+    def __init__(self, tabviews: List[TabView]):
+        super(TabViewSynchronizer, self).__init__()
+        self.tabviews = tabviews
+        for tabview in tabviews:
+            tabview.currentChanged.connect(partial(self.sync, sourcetabview=tabview))
+            tabview.tabCloseRequested.connect(partial(self.sync, sourcetabview=tabview))
+
+    def sync(self, index, sourcetabview):
+        for tabview in self.tabviews:
+            if tabview is sourcetabview: continue
+            tabview.setCurrentIndex(index)
+            tabview.dataChanged(None, None)
 
 
 class ContextMenuTabBar(QTabBar):
