@@ -2,7 +2,7 @@ from yapsy.IPlugin import IPlugin
 import inspect
 from xicam.core import msg
 from distributed.protocol.serialize import serialize
-
+from functools import partial
 
 # TODO allow outputs/inputs to connect
 
@@ -30,6 +30,8 @@ class ProcessingPlugin(IPlugin):
         self._inputs = getattr(self, '_inputs', None)
         self._outputs = getattr(self, '_outputs', None)
         self._inverted_vars = None
+        self.name = getattr(self, 'name', self.__class__.__name__)
+        self._workflow = None
 
     def evaluate(self):
         raise NotImplementedError
@@ -78,7 +80,7 @@ class ProcessingPlugin(IPlugin):
                                                   limits=[input.min, input.max],
                                                   type=getattr(input.type, '__name__', None),
                                                   units=input.units)
-                    childparam.sigValueChanged.connect(lambda param, value: self.setParameterValue(name, value))
+                    childparam.sigValueChanged.connect(partial(self.setParameterValue, name))
                     children.append(childparam)
             self._param = Parameter(name=getattr(self, 'name', self.__class__.__name__), children=children,
                                     type='group')
@@ -86,11 +88,13 @@ class ProcessingPlugin(IPlugin):
             self._param.sigValueChanged.connect(self.setParameterValue)
         return self._param
 
-    def setParameterValue(self, name, value):
+    def setParameterValue(self, name, param, value):
         if value is not None:
             self.inputs[name].value = value
         else:
             self.inputs[name].value = self.inputs[name].default
+
+        self._workflow.update()
 
     def clearConnections(self):
         for input in self.inputs.values():
@@ -189,10 +193,10 @@ class Input(Var):
         self.description = description
         self.default = default
         self.units = units
-        self.value = default
         self.min = min
         self.max = max
         self.type = type
+        self.value = default
         if limits: self.min, self.max = limits
 
     def __setattr__(self, name, value):
