@@ -1,9 +1,10 @@
 from xicam.plugins import ProcessingPlugin
-from typing import Callable
+from typing import Callable, List
 from .camlinkexecutor import CamLinkExecutor
 from .localexecutor import LocalExecutor
 from collections import OrderedDict
 from xicam.core import msg
+from xicam.gui.threads import QThreadFuture
 
 
 # TODO: add debug flag that checks mutations by hashing inputs
@@ -124,16 +125,19 @@ class Workflow(object):
             If True, connects Outputs of the previously added Process to the Inputs of process, matching names and types
         """
         self._processes.append(process)
+        process._workflow = self
         self.update()
         if autoconnectall: self.autoConnectAll()
 
     def insertProcess(self, index: int, process: ProcessingPlugin, autoconnectall: bool = False):
         self._processes.insert(index, process)
+        process._workflow = self
         self.update()
         if autoconnectall: self.autoConnectAll()
 
     def removeProcess(self, process: ProcessingPlugin = None, index=None, autoconnectall=False):
         if not process: process = self._processes[index]
+        process._workflow = None
         self._processes.remove(process)
         if autoconnectall: self.autoConnectAll()
         self.update()
@@ -201,18 +205,18 @@ class Workflow(object):
         if autoconnectall: self.autoConnectAll()
 
     @property
-    def processes(self):
+    def processes(self) -> List[ProcessingPlugin]:
         return [process for process in self._processes if not process.disabled]
 
     @processes.setter
     def processes(self, processes):
-        self._processes = processes
-        self.update()
+        for process in self._processes:
+            process._workflow = None
 
-    def connect(self, input, output):
-        # Connect any two of the following: Input, Output, Signal, Slot
-        # TODO: Allow connecting Process Inputs/Outputs or Signals/Slots
-        pass
+        self._processes = processes
+        for process in processes:
+            process._workflow = self
+        self.update()
 
     def stage(self, connection):
         """
@@ -229,7 +233,8 @@ class Workflow(object):
         # TODO: check if data is accessible from compute resource; if not -> copy data to compute resource
         # TODO: use cam-link to mirror installation of plugin packages
 
-    def execute(self, connection):
+    def execute(self, connection, callback_slot=None, finished_slot=None, except_slot=None, default_exhandle=True,
+                lock=None, fill_kwargs=True, **kwargs):
         """
         Execute this workflow on the specified host. Connection will be a Connection object (WIP) keeping a connection
         to a compute resource, include connection.hostname, connection.username...
@@ -237,13 +242,32 @@ class Workflow(object):
         Returns
         -------
         QThreadFuture
-            A concurrent.futures-like qthread to monitor status. Returns True if successful
+            A concurrent.futures-like qthread to monitor status. The future's callback_slot receives the result.
 
         """
         if not self.staged:
             self.stage(connection)
 
-        return LocalExecutor().execute(self)
+        if fill_kwargs:
+            self.fillKwargs(**kwargs)
+
+        future = QThreadFuture(LocalExecutor().execute, self,
+                               callback_slot=callback_slot,
+                               finished_slot=finished_slot,
+                               default_exhandle=default_exhandle,
+                               lock=lock)
+        future.start()
+        return future
+
+    def fillKwargs(self, **kwargs):
+        """
+        Fills in all empty inputs with names matching keys in kwargs.
+        """
+        for process in self.processes:
+            for key, input in process.inputs.items():
+                if not input.map_inputs and key in kwargs:
+                    input.value = kwargs[key]
+
 
     def validate(self):
         """
