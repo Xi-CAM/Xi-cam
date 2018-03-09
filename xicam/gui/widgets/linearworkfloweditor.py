@@ -18,6 +18,8 @@ from functools import partial
 
 
 class WorkflowEditor(QSplitter):
+    sigWorkflowChanged = Signal(object)
+
     def __init__(self, workflow: Workflow):
         super(WorkflowEditor, self).__init__()
         self.setOrientation(Qt.Vertical)
@@ -30,6 +32,8 @@ class WorkflowEditor(QSplitter):
 
         self.workflowview.sigShowParameter.connect(
             lambda parameter: self.processeditor.setParameters(parameter, showTop=False))
+
+        workflow.attach(partial(self.sigWorkflowChanged.emit, workflow))
 
 
 class WorkflowProcessEditor(ParameterTree):
