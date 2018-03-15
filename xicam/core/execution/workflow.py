@@ -234,7 +234,7 @@ class Workflow(object):
         # TODO: use cam-link to mirror installation of plugin packages
 
     def execute(self, connection, callback_slot=None, finished_slot=None, except_slot=None, default_exhandle=True,
-                lock=None, fill_kwargs=True, **kwargs):
+                lock=None, fill_kwargs=True, threadkey=None, **kwargs):
         """
         Execute this workflow on the specified host. Connection will be a Connection object (WIP) keeping a connection
         to a compute resource, include connection.hostname, connection.username...
@@ -255,7 +255,8 @@ class Workflow(object):
                                callback_slot=callback_slot,
                                finished_slot=finished_slot,
                                default_exhandle=default_exhandle,
-                               lock=lock)
+                               lock=lock,
+                               threadkey=threadkey)
         future.start()
         return future
 
