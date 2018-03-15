@@ -3,7 +3,7 @@ from qtpy.QtCore import *
 from qtpy.QtGui import *
 from qtpy.QtWidgets import *
 from xicam.core.execution.workflow import Workflow
-from pyqtgraph.parametertree import ParameterTree
+from pyqtgraph.parametertree import ParameterTree, Parameter
 from xicam.gui.static import path
 from xicam.plugins import manager as pluginmanager
 from functools import partial
@@ -52,7 +52,7 @@ class WorkflowWidget(QWidget):
         addfunctionmenu = QToolButton()
         functionmenu = QMenu()
         for plugin in pluginmanager.getPluginsOfCategory('ProcessingPlugin'):
-            functionmenu.addAction(plugin.name, partial(self.view.model().workflow.addProcess, plugin.plugin_object(),
+            functionmenu.addAction(plugin.name, partial(self.addProcess, plugin.plugin_object,
                                                         autoconnectall=True))
         addfunctionmenu.setMenu(functionmenu)
         addfunctionmenu.setIcon(QIcon(path('icons/addfunction.png')))
@@ -70,6 +70,10 @@ class WorkflowWidget(QWidget):
         v.setContentsMargins(0, 0, 0, 0)
         self.setLayout(v)
 
+    def addProcess(self, process, autoconnectall=True):
+        self.view.model().workflow.addProcess(process(), autoconnectall)
+        print('selected new row:', self.view.model().rowCount() - 1)
+        self.view.setCurrentIndex(self.view.model().index(self.view.model().rowCount() - 1, 0))
 
 class LinearWorkflowView(QTableView):
     sigShowParameter = Signal(object)
@@ -80,6 +84,7 @@ class LinearWorkflowView(QTableView):
         self.setItemDelegateForColumn(2, DeleteDelegate(self))
 
         self.setModel(workflowmodel)
+        workflowmodel.workflow.attach(self.selectionChanged)
 
         self.horizontalHeader().close()
         # self.horizontalHeader().setStretchLastSection(True)
@@ -95,10 +100,12 @@ class LinearWorkflowView(QTableView):
         self.setSelectionMode(QAbstractItemView.SingleSelection)
         self.setSelectionBehavior(QAbstractItemView.SelectRows)
 
-    def selectionChanged(self, selected, deselected):
-        if self.selectedIndexes():
+    def selectionChanged(self, selected=None, deselected=None):
+        if self.selectedIndexes() and self.selectedIndexes()[0].row() < self.model().rowCount():
             process = self.model().workflow._processes[self.selectedIndexes()[0].row()]
             self.sigShowParameter.emit(process.parameter)
+        else:
+            self.sigShowParameter.emit(Parameter(name='empty'))
         for child in self.children():
             if hasattr(child, 'repaint'): child.repaint()
 
@@ -169,7 +176,7 @@ class DeleteDelegate(QItemDelegate):
         if not self._parent.indexWidget(index):
             button = QToolButton(self.parent(), )
             button.setAutoRaise(True)
-            button.setText('x')
+            button.setText('Delete Operation')
             button.setIcon(QIcon(path('icons/trash.png')))
             sp = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
             sp.setWidthForHeight(True)
