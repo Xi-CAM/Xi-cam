@@ -36,8 +36,15 @@ class QThreadFuture(QObject):
     sigExcept = Signal(Exception)
 
     def __init__(self, method, *args, callback_slot=None, finished_slot=None, except_slot=None, default_exhandle=True,
-                 lock=None, **kwargs):
+                 lock=None, threadkey: str = None, **kwargs):
         super(QThreadFuture, self).__init__()
+
+        # Auto-Kill other threads with same threadkey
+        if threadkey:
+            for thread in manager.threads:
+                if thread.threadkey == threadkey:
+                    thread.cancel()
+        self.threadkey = threadkey
 
         self.callback_slot = callback_slot
         # if callback_slot: self.sigCallback.connect(callback_slot)
@@ -114,11 +121,16 @@ class InvokeEvent(QEvent):
 
 class Invoker(QObject):
     def event(self, event):
-        if hasattr(event.fn, 'signal'):  # check if invoking a signal or a callable
-            event.fn.emit(*event.args, *event.kwargs.values())
-        else:
-            event.fn(*event.args, **event.kwargs)
-        return True
+        try:
+            if hasattr(event.fn, 'signal'):  # check if invoking a signal or a callable
+                event.fn.emit(*event.args, *event.kwargs.values())
+            else:
+                event.fn(*event.args, **event.kwargs)
+            return True
+        except Exception as ex:
+            msg.logMessage('QThreadFuture callback could not be invoked.', level=msg.ERROR)
+            msg.logError(ex)
+        return False
 
 
 _invoker = Invoker()
