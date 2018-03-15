@@ -47,10 +47,10 @@ class XicamMainWindow(QMainWindow):
         pluginmanager.collectPlugins()
 
         # Setup center/toolbar/statusbar/progressbar
-        pluginmodewidget = pluginModeWidget()
-        pluginmodewidget.sigSetStage.connect(self.setStage)
-        pluginmodewidget.sigSetGUIPlugin.connect(self.setGUIPlugin)
-        self.addToolBar(pluginmodewidget)
+        self.pluginmodewidget = pluginModeWidget()
+        self.pluginmodewidget.sigSetStage.connect(self.setStage)
+        self.pluginmodewidget.sigSetGUIPlugin.connect(self.setGUIPlugin)
+        self.addToolBar(self.pluginmodewidget)
         self.setStatusBar(QStatusBar(self))
         msg.progressbar = QProgressBar(self)
         msg.progressbar.hide()
