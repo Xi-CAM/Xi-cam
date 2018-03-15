@@ -82,6 +82,7 @@ class ProcessingPlugin(IPlugin):
                                                   units=input.units)
                     childparam.sigValueChanged.connect(partial(self.setParameterValue, name))
                     children.append(childparam)
+                    input._param = childparam
             self._param = Parameter(name=getattr(self, 'name', self.__class__.__name__), children=children,
                                     type='group')
 
@@ -208,6 +209,21 @@ class Input(Var):
             super().__setattr__(name, value)
         else:
             super().__setattr__(name, value)
+
+    @property
+    def value(self):
+        return self._value
+
+    @value.setter
+    def value(self, v):
+        self._value = v
+        if hasattr(self, '_param') and self._param:
+            self._param.setValue(v)
+
+    def __reduce__(self):
+        d = self.__dict__.copy()
+        if '_param' in d: del d['_param']
+        return _ProcessingPluginRetriever(), (self.__class__.__name__, d)
 
 
 class Output(Var):
