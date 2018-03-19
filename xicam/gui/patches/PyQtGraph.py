@@ -33,7 +33,7 @@ class ImageParameterItem(WidgetParameterItem):
 
         w = ImageView()
         w.value = lambda: w.image
-        w.setValue = w.setImage
+        w.setValue = lambda image: w.setImage(np.squeeze(image))
         w.sigChanged = None
 
         self.hideWidget = False
