@@ -59,13 +59,17 @@ class QThreadFuture(QObject):
         self.done = False
         self.exception = None
         self.purge = False
+        self.thread = None
 
         manager.append(self)
 
     def start(self):
-        self.thread = QThread()
-        self.thread.run = partial(self.run, *self.args, **self.kwargs)
-        self.thread.start()
+        if not self.thread:
+            self.thread = QThread()
+            self.thread.run = partial(self.run, *self.args, **self.kwargs)
+            self.thread.start()
+        else:
+            raise ValueError('Thread could not be started; it is already running.')
 
     def run(self, *args, **kwargs):
         self.cancelled = False
