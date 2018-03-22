@@ -13,12 +13,19 @@ class ProcessingPlugin(IPlugin):
         instance = super(ProcessingPlugin, cls).__new__(cls)
         instance.__init__(*args, **kwargs)
         for name, param in cls.__dict__.items():
-            if isinstance(param, (Input, Output)):
+            if isinstance(param, (Input)):
                 param.name = instance.inverted_vars[param]
                 clone = param.__class__()
                 clone.__dict__ = param.__dict__.copy()
                 clone.parent = instance
                 instance.inputs[param.name] = clone
+                setattr(instance, param.name, clone)
+            if isinstance(param, (Output)):
+                param.name = instance.inverted_vars[param]
+                clone = param.__class__()
+                clone.__dict__ = param.__dict__.copy()
+                clone.parent = instance
+                instance.outputs[param.name] = clone
                 setattr(instance, param.name, clone)
         return instance
 
