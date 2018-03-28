@@ -15,7 +15,7 @@ deps = ['databroker', 'pathlib', 'qtpy', 'yapsy', 'astropy', 'signalslot', 'nump
 # These bits don't get collected automatically when packaging:
 loosebits = ['numpy.core._methods', "numpy.lib.recfunctions"]
 
-if sys.argv[1] in ['build', 'bdist_rpm', 'build_exe']:
+if sys.argv[1] in ['bdist_rpm', 'build_exe']:
     from cx_Freeze import setup, Executable
     import opcode, typing
     import os
@@ -126,7 +126,7 @@ else:
                     'namespace package containing xicam.core, xicam.plugins, and xicam.gui. ',
 
         # The project's main homepage.
-        url='https://github.com/ronpandolfi/Xi-cam',
+        url='https://github.com/lbl-camera/Xi-cam',
 
         # Author details
         author='Ronald J Pandolfi',
@@ -172,7 +172,7 @@ else:
         # your project is installed. For an analysis of "install_requires" vs pip's
         # requirements files see:
         # https://packaging.python.org/en/latest/requirements.html
-        install_requires=deps + ['xicam.core', 'xicam.plugins', 'xicam.gui'],
+        install_requires=['xicam.core', 'xicam.plugins', 'xicam.gui'],
 
         setup_requires=[],
 
