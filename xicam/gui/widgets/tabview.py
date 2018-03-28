@@ -12,11 +12,13 @@ class TabView(QTabWidget):
 
         self.setWidgetClass(widgetcls)
         self.model = None
+        self.selectionmodel = None
         if model: self.setModel(model)
         self.field = field
 
     def setModel(self, model: QStandardItemModel):
         self.model = model
+        self.selectionmodel = TabItemSelectionModel(self)
         model.dataChanged.connect(self.dataChanged)
         self.tabCloseRequested.connect(self.closeTab)
 
@@ -89,3 +91,12 @@ class ContextMenuTabBar(QTabBar):
         if self._rightclickedtab != -1:
             if event.button() == Qt.RightButton:
                 self.contextMenu.popup(self.mapToGlobal(event.pos()))
+
+
+class TabItemSelectionModel(QItemSelectionModel):
+    def __init__(self, tabview: TabView):
+        super(TabItemSelectionModel, self).__init__(tabview.model)
+        self.tabview = tabview
+
+    def currentIndex(self):
+        return self.tabview.currentIndex()
