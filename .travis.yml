@@ -32,7 +32,7 @@ script:
 - python setup.py sdist
 - python setup.py bdist_egg
 - python setup.py build_exe
-- twine upload dist/*
+#- twine upload dist/*
 after_success:
 - pip install codecov --upgrade
 - bash <(curl -s https://codecov.io/bash)
