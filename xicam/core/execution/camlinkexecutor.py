@@ -4,7 +4,11 @@ from dask.diagnostics import visualize
 import dask.threaded
 from xicam.core import msg
 from appdirs import user_config_dir
-from camlink.services import graph as task_graph
+
+try:
+    from camlink.services import graph as task_graph
+except ImportError:
+    print('CAMLINK is not installed; functionally coming soon™...')
 import distributed
 from .daskexecutor import DaskExecutor
 
