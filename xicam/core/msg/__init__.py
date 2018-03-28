@@ -213,10 +213,14 @@ def logError(exception: Exception, value=None, tb=None, **kwargs):
     Logs an exception with traceback. All uncaught exceptions get hooked here
 
     """
+
     if not value: value = exception
     if not tb: tb = exception.__traceback__
     kwargs['level'] = ERROR
-    logMessage('\n', *traceback.format_exception(exception, value, tb), **kwargs)
+    try:
+        logMessage('\n', *traceback.format_exception(exception, value, tb), **kwargs)
+    except AttributeError:
+        logMessage('\n', *traceback.format_exception_only(exception, value), **kwargs)
 
 
 import sys
