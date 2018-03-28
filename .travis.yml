@@ -8,11 +8,7 @@ sudo: false
 cache:
   apt: true
   pip: true
-  directories:
-# Attempt to save virtualenv between builds; might not be working
-#  - /home/travis/virtualenv/python2.7.9/lib/python2.7/site-packages
-#  - /home/travis/virtualenv/python2.7_with_system_site_packages/local/lib/python.7/site-packages
-#  - /usr/lib/python2.7/dist-packages
+  directories: 
 addons:
   apt:
     packages:
@@ -25,13 +21,11 @@ install:
 - pip install git+https://github.com/lbl-camera/Xi-cam.gui.git
 - pip install .
 script:
-- pip install pylint
-# always returns exit code 0; Write the errors but not cause failure
-- "pylint xicam --errors-only || :"
+- pip install pylint twine wheel
+- 'pylint xicam --errors-only || :'
 - pip install coverage
-#- coverage run xicam/test.py
-- "sh -e /etc/init.d/xvfb start" # start xvfb server to buffer gui
-- sleep 3 # give xvfb some time to start
+- sh -e /etc/init.d/xvfb start
+- sleep 3
 - pytest .
 - python setup.py install
 - python setup.py bdist_wheel
@@ -42,4 +36,9 @@ script:
 after_success:
 - pip install codecov --upgrade
 - bash <(curl -s https://codecov.io/bash)
-
+deploy:
+  provider: pypi
+  user: "ronpandolfi"
+  password:
+    secure: EZ8GJrbgZRl8BlJ5QLWO81g6ainnR4l6QRAsYOXCAWqU0Qi4BZwWKpbSlIkf4TJRgOqEVa26WGltK22kbX30FrIpn9UEtd8GCisz2CzT4p6DMX7WgtdKawuVu4M/c70FC7AMGoIWVKlE2aW5rwBHxhmm9uskqUnek2EvX6ZmWG8wuWbnv7ugUkSsAYSxe3xS+oH1MpEB1RjXP7Ur2C67qsmv9XX7qzu4iqsa8t24P5UasWliPQ3aV6a1UtNm5OlBLnmCJmPpWCSKdv/RKUE0BtViKn+FPumsXCo8VZmUbUZMnlCUdCO242llVdBZLpIRPLKx9FGyI9i00kS5XrSpYt1YbvoqT3sHUDkDKhiS4sDUCpMyVanX+aEqKtJqI9m+wuLJQsIsYwvPvKYE+UTtJAoD/qaHKVXcYP6cWUrZ0YlTIBAcSeUGrWq8BX4QyJJ3UxyURD0NF+tfEzmc2piyfzSJMWPLVchw3B/xNYhUoZcxPZgtXR1QpzDvNpKERIsbW8RCZStw/fBScLgWL3rOlmejBPolOdVXyIqHCr1DLsOpm3N4VLGQ3pnvoGWyqGGS61XTxVJQOJTjCs4nMZECqwlYb2SHkpOZ21wCKjl//fY/UhyaZzhpm9Cze/d4009hO6JRwEyRu/LCl7b9QYteyPpkNqvIEx3+A0ht4KTlvos=
+  distributions: "sdist bdist_wheel bdist_egg"
