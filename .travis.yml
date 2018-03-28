@@ -26,19 +26,14 @@ script:
 - pip install coverage
 - sh -e /etc/init.d/xvfb start
 - sleep 3
-- 'pytest . || :' # temporarily disable tests on travis
+- 'pytest . || :'
 - python setup.py install
-- python setup.py bdist_wheel
-- python setup.py sdist
-- python setup.py bdist_egg
-- python setup.py build_exe
-#- twine upload dist/*
 after_success:
 - pip install codecov --upgrade
 - bash <(curl -s https://codecov.io/bash)
 deploy:
   provider: pypi
-  user: "ronpandolfi"
+  user: ronpandolfi
   password:
-    secure: EZ8GJrbgZRl8BlJ5QLWO81g6ainnR4l6QRAsYOXCAWqU0Qi4BZwWKpbSlIkf4TJRgOqEVa26WGltK22kbX30FrIpn9UEtd8GCisz2CzT4p6DMX7WgtdKawuVu4M/c70FC7AMGoIWVKlE2aW5rwBHxhmm9uskqUnek2EvX6ZmWG8wuWbnv7ugUkSsAYSxe3xS+oH1MpEB1RjXP7Ur2C67qsmv9XX7qzu4iqsa8t24P5UasWliPQ3aV6a1UtNm5OlBLnmCJmPpWCSKdv/RKUE0BtViKn+FPumsXCo8VZmUbUZMnlCUdCO242llVdBZLpIRPLKx9FGyI9i00kS5XrSpYt1YbvoqT3sHUDkDKhiS4sDUCpMyVanX+aEqKtJqI9m+wuLJQsIsYwvPvKYE+UTtJAoD/qaHKVXcYP6cWUrZ0YlTIBAcSeUGrWq8BX4QyJJ3UxyURD0NF+tfEzmc2piyfzSJMWPLVchw3B/xNYhUoZcxPZgtXR1QpzDvNpKERIsbW8RCZStw/fBScLgWL3rOlmejBPolOdVXyIqHCr1DLsOpm3N4VLGQ3pnvoGWyqGGS61XTxVJQOJTjCs4nMZECqwlYb2SHkpOZ21wCKjl//fY/UhyaZzhpm9Cze/d4009hO6JRwEyRu/LCl7b9QYteyPpkNqvIEx3+A0ht4KTlvos=
-  distributions: "sdist bdist_wheel bdist_egg"
+    secure: ASUCtdOW5LmJYLjsndklOKuzBHxmK0lTNus1154Fpus8h7h6xP3dQbux68rK91TtC7fj//2K+85GPqD1Fd5war/yYm45rFQUEyzCze6AV9Skj4D72jrc0PIKO2hGBh/7rnSSg6dxe6Lao9xNu4fdV1dKyxLZSHXSeXPu3tZKtP9A6gDjr2MYh5Tiq4B3GKE1f4gBDS0M8BeV7iObFFpJ5BPZP5uCOsWlXG6j0Q6so7bYrvx3EH4ZSuYXqNJZmaShMhvfvf3G9eDvm2Ruig8yqu+5iTkVih9/2e0Z87EtiOcMqTw/q5lhXiimX97vFmWnl2pzh5I4mf61/wdye6rU1HngXXKNeJ8ERTR3h9uMzdu8nH9TAXlGmxW4hP39oFgiEmn9FrqqUO8oW32q6CDaXTvG3dB6Kgbac2dNDwm+VtaKiFvAfTSrksU83tPvvITyGm/XKAZO0qM6gEli65AE9gVx3wGS1dDHnGjkzPVmNSH4pRqOXrqP3JBWvCcsyuLVON1cTwHUNK5o6ScbxiN3h6B1SWu0SGCH4kXhk8euZ+xLx9NRj0Ajyj7Xsa5uU26gqT4y6UYXSlXQT7LP64aayw9vZZcOnnfteioW278Q+kj5BLJjKe8kQr38eO2XmW5e+FerfgQ6C9fuoiGs2cdTMeL3om4kG3eYPWIT0yiQ+iQ=
+  distributions: sdist bdist_wheel bdist_egg
