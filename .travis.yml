@@ -1,0 +1,35 @@
+language: python
+python:
+- '3.6'
+branches:
+  only:
+  - master
+sudo: false
+cache:
+  apt: true
+  pip: true
+  directories: 
+addons:
+  apt:
+    packages:
+    - qtbase5-dev
+install:
+- pip install coveralls pytest
+- pip install .
+script:
+- pip install pylint twine wheel
+- 'pylint xicam --errors-only || :'
+- pip install coverage
+- sh -e /etc/init.d/xvfb start
+- sleep 3
+- 'pytest . || :'
+- python setup.py install
+after_success:
+- pip install codecov --upgrade
+- bash <(curl -s https://codecov.io/bash)
+deploy:
+  provider: pypi
+  user: ronpandolfi
+  password:
+    secure: JAEXdO+sSo1j7NMhqIfBEOplUYnlB9siZDAVl+4qCxgcTmBxO6TnMtXR2nNNwIlZm148w8NfcctP885x6GYexfG5aHqEDoyjpgoqyj5EFHW8tiQpqjBBURWC3hXAuSVL2/2FhMCDKmyRM7xWLMFiBCQqJmrJ21xOfgCpcfo5//qbsyu17zTY82wH3R58dSF0b8ljyj1WMgCaoqJ2WHT/eQgm/StF/n6FxtC2cJscb1UqEE/TXlhUGIyb+q9igFNvgD3VGepd4sgHgJ1V5XIyFCtfuO0ke+MfSHU5dmuiQEyEX+8Zy2ZdQtqT6piY1ZPuxgV1UtvarjVoOzIRbDQz07UJNeQBadxJXdbs2T67PBAxoPrFEdqBa5xdRt1TYTvo7wY6BBxQE0zImCji115jGQ+/p49pY+vzCRZz+A5kuYEcX5I7TCZHDlHrIrUJfYF+3DH5oxjBeDhWgwTOeblPs7swNsBaWSRmRLZhGoMHdaGdcVuqHj4PaN/+yb7At7SHtcsUjYD6/HbKN9AxbRBhtHQj8DOupun2KtPSXPGBSYXnTIgxokuo44lSZlzp2aRSDiESashmWU169UOkF0ERD1ZHjKs6i/pWas/Xth+Ok7hpKy4ha+NJFmhHFI1mgZKwEgNckHcHnjbIr7JKXHP2IrAA2xWrTTMskLtjPMGGHFE=
+  distributions: sdist bdist_wheel bdist_egg
