@@ -34,7 +34,8 @@ setup(
     long_description=long_description,
 
     # The project's main homepage.
-    url='https://github.com/ronpandolfi/Xi-cam',
+    url='https://github.com/lbl-camera/Xi-cam.core'
+    download_url = 'https://github.com/lbl-camera/Xi-cam.core/archive/v2.0.1-alpha.tar.gz'
 
     # Author details
     author='Ronald J Pandolfi',
