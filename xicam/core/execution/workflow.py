@@ -48,25 +48,24 @@ class Workflow(object):
             self._processes.extend(processes)
         self.staged = False
 
+        self.lastresult = []
+
     def findEndTasks(self):
         """
         find tasks at the end of the graph and work up
         check inputs and remove dependency nodes, what is left is unique ones
         """
 
-        is_dep_task = []
+        dependent_tasks = set()
 
-        for node in self.processes:
-            for input in node.inputs.keys():
-                for im in node.inputs[input].map_inputs:
-                    is_dep_task.append(im[1].parent)
+        for process in self.processes:
+            for input in process.inputs.values():
+                for _, mapped_output in input.map_inputs:
+                    dependent_tasks.add(mapped_output.parent)
 
-        end_tasks = list(self.processes).copy()
+        end_tasks = set(self.processes) - dependent_tasks
 
-        for dep_task in is_dep_task:
-            if dep_task in end_tasks:
-                end_tasks.remove(dep_task)
-
+        msg.logMessage('End tasks:', *[task.name for task in end_tasks], msg.DEBUG)
         return end_tasks
 
     def generateGraph(self, dsk, node, mapped_node):
@@ -203,6 +202,7 @@ class Workflow(object):
         process.disabled = not process.disabled
         process.clearConnections()
         if autoconnectall: self.autoConnectAll()
+        self.update()
 
     @property
     def processes(self) -> List[ProcessingPlugin]:
