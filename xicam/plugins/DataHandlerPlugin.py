@@ -43,7 +43,7 @@ class DataHandlerPlugin(IPlugin):
         for path in paths:
             metadata = cls.parseTXTFile(path)
             metadata.update(cls.parseDataFile(path))
-            yield embedded_local_event_doc(descriptor_uid, 'pilatus2M_image', cls, (path,), metadata=metadata)
+            yield embedded_local_event_doc(descriptor_uid, 'primary', cls, (path,), metadata=metadata)
 
     @staticmethod
     def getDescriptorUIDs(paths):
@@ -105,7 +105,7 @@ def event_doc(data_uid: str, descriptor_uid: str, metadata: dict = None):
     metadata.update({'descriptor': descriptor_uid,
                      'time': datetime.datetime.now().strftime('%a %b %d %H:%M:%S %Y'),
                      'uid': str(uuid.uuid4()),
-                     'data': {'pilatus2M_image': data_uid}})
+                     'data': {'primary': data_uid}})
     return metadata
 
 
