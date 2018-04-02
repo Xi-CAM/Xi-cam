@@ -6,13 +6,14 @@ from functools import partial
 
 
 class TabView(QTabWidget):
-    def __init__(self, model=None, widgetcls=None, field=None):
+    def __init__(self, model=None, widgetcls=None, field=None, **kwargs):
         super(TabView, self).__init__()
         self.setTabBar(ContextMenuTabBar())
+        self.kwargs = kwargs
 
         self.setWidgetClass(widgetcls)
         self.model = None
-        self.selectionmodel = None
+        self.selectionmodel = None  # type: TabItemSelectionModel
         if model: self.setModel(model)
         self.field = field
 
@@ -32,13 +33,17 @@ class TabView(QTabWidget):
                 if self.widget(i).header == self.model.item(i).header:
                     continue
             self.setCurrentIndex(
-                self.insertTab(i, self.widgetcls(self.model.item(i).header, self.field), self.model.item(i).text()))
+                self.insertTab(i, self.widgetcls(self.model.item(i).header, self.field, **self.kwargs),
+                               self.model.item(i).text()))
 
         for i in reversed(range(self.model.rowCount(), self.count())):
             self.removeTab(i)
 
     def setWidgetClass(self, cls):
         self.widgetcls = cls
+
+    def currentHeader(self):
+        return self.model.item(self.currentIndex())
 
     def closeTab(self, i):
         self.removeTab(i)
