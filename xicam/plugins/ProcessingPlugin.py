@@ -33,7 +33,7 @@ class ProcessingPlugin(IPlugin):
                 clone = param.__class__()
                 clone.__dict__ = param.__dict__.copy()
                 clone.parent = instance
-                instance.outputs[param.name] = clone
+                instance.inputs[param.name] = clone
                 setattr(instance, param.name, clone)
         return instance
 
@@ -88,7 +88,7 @@ class ProcessingPlugin(IPlugin):
             from pyqtgraph.parametertree.Parameter import Parameter, PARAM_TYPES
             children = []
             for name, input in self.inputs.items():
-                if getattr(input.type, '__name__') in PARAM_TYPES:
+                if getattr(input.type, '__name__', None) in PARAM_TYPES:
                     childparam = Parameter.create(name=name,
                                                   value=getattr(input, 'value', input.default),
                                                   default=input.default,
