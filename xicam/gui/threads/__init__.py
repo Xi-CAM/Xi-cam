@@ -99,12 +99,13 @@ class QThreadFuture(QObject):
 
     def result(self):
         while not self.done and not self.exception:
-            time.sleep(100)
+            time.sleep(.1)
         if self.exception: return self.exception
-        return self.result
+        return self._result
 
     def cancel(self):
-        self.thread.terminate()
+        self.thread.quit()
+        self.thread.wait()
         self.cancelled = True
 
 
