@@ -2,10 +2,15 @@ import pathlib
 
 import sys, os
 import virtualenv
-from appdirs import user_config_dir, site_config_dir
+from appdirs import user_config_dir, site_config_dir, user_cache_dir
 import subprocess
+import platform
 
-user_venv_dir = user_config_dir('xicam/venvs')
+op_sys = platform.system()
+if op_sys == 'Darwin':  # User config dir incompatible with venv on darwin (space in path name conflicts)
+    user_venv_dir = user_cache_dir('xicam/venvs')
+else:
+    user_venv_dir = user_config_dir('xicam/venvs')
 site_venv_dir = site_config_dir('xicam/venvs')
 
 venvs = {}
@@ -36,7 +41,8 @@ def create_environment(name: str):
         else:
             python = sys.executable
 
-        subprocess.Popen([python, virtualenv.__file__, venvpath], env=env)
+        p = subprocess.Popen([python, virtualenv.__file__, venvpath], env=env)
+        p.wait()
 
 
 
@@ -67,5 +73,6 @@ def use_environment(name):
 # TODO: create default environment if it doesn't exist
 # TODO: find all venvs; populate the venvs global
 create_environment("default")
+os.sync()
 use_environment("default")
 current_environment = str(pathlib.Path(user_venv_dir, "default"))
