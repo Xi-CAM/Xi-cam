@@ -9,6 +9,7 @@ Usage: pip install -e .
 # NOTE: Requires cx_freeze==6.0.b1 for linux builds
 
 import sys
+import versioneer
 
 deps = ['databroker', 'pathlib', 'qtpy', 'yapsy', 'astropy', 'signalslot', 'numpy', 'appdirs', 'qdarkstyle', 'qtmodern']
 
@@ -105,7 +106,8 @@ if sys.argv[1] in ['bdist_rpm', 'build_exe']:
     ]
 
     setup(name='Xi-cam',
-          version='2.1.1',
+          version=versioneer.get_version(),
+          cmdclass=versioneer.get_cmdclass(),
           description='The CAMERA platform for '
                       'synchrotron data management, visualization, and reduction.',
           options=dict(build_exe=buildOptions),
@@ -120,7 +122,8 @@ else:
         # Versions should comply with PEP440.  For a discussion on single-sourcing
         # the version across setup.py and the project code, see
         # https://packaging.python.org/en/latest/single_source_version.html
-        version='2.1.1',
+        version=versioneer.get_version(),
+        cmdclass=versioneer.get_cmdclass(),
 
         description='The CAMERA platform for synchrotron data management, visualization, and reduction. This is a '
                     'namespace package containing xicam.core, xicam.plugins, and xicam.gui. ',
