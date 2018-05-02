@@ -36,7 +36,7 @@ class QThreadFuture(QObject):
     sigExcept = Signal(Exception)
 
     def __init__(self, method, *args, callback_slot=None, finished_slot=None, except_slot=None, default_exhandle=True,
-                 lock=None, threadkey: str = None, **kwargs):
+                 lock=None, threadkey: str = None, showBusy=True, **kwargs):
         super(QThreadFuture, self).__init__()
 
         # Auto-Kill other threads with same threadkey
@@ -60,6 +60,7 @@ class QThreadFuture(QObject):
         self.exception = None
         self.purge = False
         self.thread = None
+        self.showBusy = showBusy
 
         manager.append(self)
 
@@ -76,6 +77,7 @@ class QThreadFuture(QObject):
         self.running = True
         self.done = False
         self.exception = None
+        if self.showBusy: invoke_in_main_thread(msg.showBusy)
         try:
             for self._result in self._run(*args, **kwargs):
                 if not isinstance(self._result, tuple): self._result = (self._result,)
@@ -86,13 +88,15 @@ class QThreadFuture(QObject):
             self.exception = ex
             self.sigExcept.emit(ex)
             msg.logMessage(f'Error in thread: '
-                           f'Method: {self.__repr__}\n'
+                           f'Method: {self.method.__name__}\n'
                            f'Args: {self.args}\n'
                            f'Kwargs: {self.kwargs}', level=msg.ERROR)
             msg.logError(ex)
         else:
             self.done = True
             self.sigFinished.emit()
+        finally:
+            invoke_in_main_thread(msg.showReady)
 
     def _run(self, *args, **kwargs):
         yield self.method(*self.args, **self.kwargs)
