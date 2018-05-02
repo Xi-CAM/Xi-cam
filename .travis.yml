@@ -21,7 +21,7 @@ install:
 - pip install git+https://github.com/lbl-camera/Xi-cam.gui.git
 - pip install .
 script:
-- pip install pylint twine wheel
+- pip install pylint
 - 'pylint xicam --errors-only || :'
 - pip install coverage
 - sh -e /etc/init.d/xvfb start
