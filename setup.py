@@ -10,6 +10,7 @@ from codecs import open
 from os import path
 
 from setuptools import setup
+import versioneer
 
 # Single-source the version
 with open(path.join(path.dirname(__file__), 'VERSION')) as version_file:
@@ -26,7 +27,8 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version=version,
+    version=versioneer.get_version(),
+    cmdclass=versioneer.get_cmdclass(),
 
     description='The CAMERA platform for synchrotron data management, visualization, and reduction. The xicam.gui '
                 'package contains all gui code of the Xi-cam platform, as part of the xicam namespace package. For the '
