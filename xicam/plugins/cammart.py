@@ -11,8 +11,12 @@ import subprocess
 from . import manager
 from . import venvs
 
-user_package_registry = user_config_dir('xicam/packages.yml')
-site_package_registry = site_config_dir('xicam/packages.yml')
+op_sys = platform.system()
+if op_sys == 'Darwin':  # User config dir incompatible with venv on darwin (space in path name conflicts)
+    user_venv_dir = user_cache_dir('xicam/venvs')
+else:
+    user_venv_dir = user_config_dir('xicam/venvs')
+site_venv_dir = site_config_dir('xicam/venvs')
 
 def install(name: str):
     """
