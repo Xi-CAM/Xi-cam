@@ -1,8 +1,9 @@
 import sys
 import os
+import platform
 from pathlib import Path
 
-from appdirs import user_config_dir, site_config_dir
+from appdirs import user_config_dir, site_config_dir, user_cache_dir
 from yapsy import PluginInfo
 from yapsy.PluginManager import PluginManager
 
@@ -17,7 +18,11 @@ from .venvs import observers as venvsobservers
 from .DataResourcePlugin import DataResourcePlugin
 from .EZPlugin import _EZPlugin, EZPlugin
 
-user_plugin_dir = user_config_dir('xicam/plugins')
+op_sys = platform.system()
+if op_sys == 'Darwin':  # User config dir incompatible with venv on darwin (space in path name conflicts)
+    user_plugin_dir = user_cache_dir('xicam/plugins')
+else:
+    user_plugin_dir = user_config_dir('xicam/plugins')
 site_plugin_dir = site_config_dir('xicam/plugins')
 
 # Observers will be notified when active plugins changes
