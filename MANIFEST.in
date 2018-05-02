@@ -1,0 +1,2 @@
+include versioneer.py
+include xicam/core/_version.py

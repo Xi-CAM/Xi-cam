@@ -8,7 +8,7 @@ Usage: pip install -e .
 
 from codecs import open
 from os import path
-
+import versioneer
 from setuptools import setup
 
 # Single-source the version
@@ -26,7 +26,8 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version=version,
+    version=versioneer.get_version(),
+    cmdclass=versioneer.get_cmdclass(),
 
     description='The CAMERA platform for synchrotron data management, visualization, and reduction. The xicam.core '
                 'package contains all backend code of the Xi-cam platform, as part of the xicam namespace package. For '
