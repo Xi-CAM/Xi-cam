@@ -17,7 +17,7 @@ install:
 - pip install coveralls pytest
 - pip install .
 script:
-- pip install pylint twine wheel
+- pip install pylint
 - 'pylint xicam --errors-only || :'
 - pip install coverage
 - sh -e /etc/init.d/xvfb start
