@@ -136,3 +136,8 @@ manager = XicamPluginManager()
 # # Loop over each "Visualization" plugin
 # for pluginInfo in manager.getPluginsOfCategory("Visualization"):
 #     pluginInfo.plugin_object.doSomething(...)
+
+from ._version import get_versions
+
+__version__ = get_versions()['version']
+del get_versions
