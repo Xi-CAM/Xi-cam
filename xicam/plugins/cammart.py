@@ -14,10 +14,10 @@ from . import venvs
 
 op_sys = platform.system()
 if op_sys == 'Darwin':  # User config dir incompatible with venv on darwin (space in path name conflicts)
-    user_package_registry = user_cache_dir('xicam/packages.yml')
+    user_package_registry = os.path.join(user_cache_dir(appname='xicam'),'packages.yml')
 else:
-    user_package_registry = user_config_dir('xicam/packages.yml')
-site_package_registry = site_config_dir('xicam/packages.yml')
+    user_package_registry = os.path.join(user_config_dir(appname='xicam'),'packages.yml')
+site_package_registry = os.path.join(site_config_dir(appname='xicam'),'packages.yml')
 
 def install(name: str):
     """
@@ -75,7 +75,11 @@ def uninstall(name: str):
 
 def pippath():
     # Get absolute path to pip, to avoid system PATH sending to the wrong one
-    return os.path.join(venvs.current_environment, 'bin', 'pip')
+    if platform.system() == 'Windows':
+        bindir = 'Scripts'
+    else:
+        bindir = 'bin'
+    return os.path.join(venvs.current_environment, bindir, 'pip')
 
 class pkg_registry(collections.MutableMapping):
     def __init__(self):

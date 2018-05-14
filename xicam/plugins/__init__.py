@@ -21,10 +21,10 @@ from yapsy.PluginManager import NormalizePluginNameForModuleName, imp, log
 
 op_sys = platform.system()
 if op_sys == 'Darwin':  # User config dir incompatible with venv on darwin (space in path name conflicts)
-    user_plugin_dir = user_cache_dir('xicam/plugins')
+    user_plugin_dir = os.path.join(user_cache_dir(appname='xicam'),'plugins')
 else:
-    user_plugin_dir = user_config_dir('xicam/plugins')
-site_plugin_dir = site_config_dir('xicam/plugins')
+    user_plugin_dir = os.path.join(user_config_dir(appname='xicam'),'plugins')
+site_plugin_dir = os.path.join(site_config_dir(appname='xicam'),'plugins')
 
 # Observers will be notified when active plugins changes
 observers = []
