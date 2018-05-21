@@ -4,7 +4,7 @@ from .camlinkexecutor import CamLinkExecutor
 from .localexecutor import LocalExecutor
 from collections import OrderedDict
 from xicam.core import msg
-from xicam.gui.threads import QThreadFuture
+from xicam.gui.threads import QThreadFuture, QThreadFutureIterator
 
 
 # TODO: add debug flag that checks mutations by hashing inputs
@@ -257,6 +257,40 @@ class Workflow(object):
                                default_exhandle=default_exhandle,
                                lock=lock,
                                threadkey=threadkey)
+        future.start()
+        return future
+
+    def execute_all(self, connection, callback_slot=None, finished_slot=None, except_slot=None, default_exhandle=True,
+                    lock=None, fill_kwargs=True, threadkey=None, **kwargs):
+        """
+        Execute this workflow on the specified host. Connection will be a Connection object (WIP) keeping a connection
+        to a compute resource, include connection.hostname, connection.username...
+
+        Each kwargs is expected to be an iterable of the same length; these values will be iterated over, zipped, and
+        executed through the workflow.
+
+        Returns
+        -------
+        QThreadFuture
+            A concurrent.futures-like qthread to monitor status. The future's callback_slot receives the result.
+
+        """
+        if not self.staged:
+            self.stage(connection)
+
+        def executeiterator(workflow):
+            for kwargvalues in zip(*kwargs.values()):
+                zipkwargs = dict(zip(kwargs.keys(), kwargvalues))
+                if fill_kwargs:
+                    self.fillKwargs(**zipkwargs)
+                yield LocalExecutor().execute(workflow)
+
+        future = QThreadFutureIterator(executeiterator, self,
+                                       callback_slot=callback_slot,
+                                       finished_slot=finished_slot,
+                                       default_exhandle=default_exhandle,
+                                       lock=lock,
+                                       threadkey=threadkey)
         future.start()
         return future
 

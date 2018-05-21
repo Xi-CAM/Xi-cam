@@ -22,6 +22,7 @@ can be displayed in the main Xi-cam window using showProgress and showMessage.
 statusbar = None
 progressbar = None
 
+logging.getLogger("edfimage").setLevel(logging.ERROR)
 stdch = logging.StreamHandler(sys.stdout)
 
 # Log levels constants
