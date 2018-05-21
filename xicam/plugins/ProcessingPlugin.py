@@ -3,6 +3,7 @@ import inspect
 from xicam.core import msg
 from distributed.protocol.serialize import serialize
 from functools import partial
+import numpy as np
 
 # TODO allow outputs/inputs to connect
 
@@ -92,12 +93,22 @@ class ProcessingPlugin(IPlugin):
                     childparam = Parameter.create(name=name,
                                                   value=getattr(input, 'value', input.default),
                                                   default=input.default,
-                                                  limits=[input.min, input.max],
+                                                  limits=input.limits,
                                                   type=getattr(input.type, '__name__', None),
                                                   units=input.units)
                     childparam.sigValueChanged.connect(partial(self.setParameterValue, name))
                     children.append(childparam)
                     input._param = childparam
+                elif getattr(input.type, '__name__', None) == 'Enum':
+                    childparam = Parameter.create(name=name,
+                                                  value=getattr(input, 'value', input.default) or '---',
+                                                  values=input.limits or ['---'],
+                                                  default=input.default,
+                                                  type='list')
+                    childparam.sigValueChanged.connect(partial(self.setParameterValue, name))
+                    children.append(childparam)
+                    input._param = childparam
+
             self._param = Parameter(name=getattr(self, 'name', self.__class__.__name__), children=children,
                                     type='group')
 
@@ -209,11 +220,26 @@ class Input(Var):
         self.description = description
         self.default = default
         self.units = units
-        self.min = min
-        self.max = max
+        self._limits = limits
         self.type = type
         self.value = default
-        if limits: self.min, self.max = limits
+        if min and max:
+            self._limits = (min, max)
+
+    @property
+    def min(self):
+        return self.limits[0]
+
+    @property
+    def max(self):
+        return self.limits[1]
+
+    @property
+    def limits(self):
+        if self._limits is None: return -np.inf, np.inf
+        if len(self._limits) == 2:
+            return self._limits[0] or -np.inf, self._limits[1] or np.inf
+        return self._limits
 
     def __setattr__(self, name, value):
         if name == "value":
