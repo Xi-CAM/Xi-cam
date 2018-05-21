@@ -25,11 +25,16 @@ script:
 - 'pytest . || :'
 - python setup.py install
 after_success:
-- pip install codecov --upgrade
-- bash <(curl -s https://codecov.io/bash)
+  - cd /home/travis/build/lbl-camera/Xi-cam
+  - pip install codecov --upgrade  # add coverage integration service
+  - codecov
+  - pip install coveralls --upgrade  # add another coverage integration service
+  - coveralls
 deploy:
   provider: pypi
   user: ronpandolfi
   password:
     secure: VxD8aCIUk2K9mJeZBqiz1G4MBFHW1UKrjVXsUvvbP26H3m0IeZp7ZLQ5kOswgSwI6FFah4wCtnTuQIIPQ7AXM6b/mmAju5MstT0W0Ey4wHM0GKkSCjNyU3pjM9hwRe8eJtnTeGn+W7Y/iVzD7RSWQidDe/sGikDyLGH+xJze2cjeGF6siIvE88nrafoUb5ratuOj/TzFGAvZd+T+3+Dt/HPGcDgsd1SbWFqeRMXxy8Qb9cNbPUbJmw5onf815Jq19sA1vmHg8LxVLHhWmKmyKdSAMyKo24IB1W2Ea2Hcm8ULuDgYu1N8/ZOMs6Cf6wTKyWFZdopEXumpoX4zewkqk9aDPJrt6CNyULc2k5QvRfqtm40oAg8Ht5p3gJop9ggPZuieWwMCeCt0skOWAAGMAr1vgcPcPqO6deazXCF1LT+stz6DLQqdQQ4nDYrqyoxRn0xa5yzUzFSJ6SKKcLy/YstYWjqxMvp+W+OVMGJ6Uslk94GNp8+kbsm6k4toKSKv9EBcbGiEv1IHYiY2KsW5Hd3Q4NthY60BXBOhETsVoNE79XMtn/qntEFRGwe22Qvf24O8OWCWJAKz6QPIREbqvX/fa/iZ+3FFv01LUpnRlS52ZfNJ4HCN2x3DoFA5iIYioBrRLSWSEbdNoPrcIeABDChmaeiOWDDwVKBKd7oTS0s=
   distributions: sdist bdist_wheel bdist_egg
+  on:
+    tags: true
