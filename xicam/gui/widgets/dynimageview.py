@@ -15,6 +15,9 @@ class DynImageView(ImageView):
         # Don't invert Y axis
         self.view.invertY(False)
 
+        # Setup late signal
+        self.sigTimeChangeFinished = self.timeLine.sigPositionChangeFinished
+
     def quickMinMax(self, data):
         """
         Estimate the min/max values of *data* by subsampling. MODIFIED TO USE THE 99TH PERCENTILE instead of max.
