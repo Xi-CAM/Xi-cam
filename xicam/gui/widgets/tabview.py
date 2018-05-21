@@ -6,7 +6,19 @@ from functools import partial
 
 
 class TabView(QTabWidget):
-    def __init__(self, model=None, widgetcls=None, field=None, **kwargs):
+    def __init__(self, model=None, widgetcls=None, field=None, bindings: List[tuple] = [], **kwargs):
+        """
+
+        Parameters
+        ----------
+        model
+        widgetcls
+        field
+        bindings
+            A list of tuples with pairs of bindings, s.t. the first item is the name of the attribute on widget cls holding a
+            signal (to be mirrored across each new widget), and the second is the the receiver.
+        kwargs
+        """
         super(TabView, self).__init__()
         self.setTabBar(ContextMenuTabBar())
         self.kwargs = kwargs
@@ -16,6 +28,7 @@ class TabView(QTabWidget):
         self.selectionmodel = None  # type: TabItemSelectionModel
         if model: self.setModel(model)
         self.field = field
+        self.bindings = bindings
 
     def setModel(self, model: QStandardItemModel):
         self.model = model
@@ -32,9 +45,13 @@ class TabView(QTabWidget):
             if self.widget(i):
                 if self.widget(i).header == self.model.item(i).header:
                     continue
+            newwidget = self.widgetcls(self.model.item(i).header, self.field, **self.kwargs)
             self.setCurrentIndex(
-                self.insertTab(i, self.widgetcls(self.model.item(i).header, self.field, **self.kwargs),
+                self.insertTab(i, newwidget,
                                self.model.item(i).text()))
+            for name, receiver in self.bindings:
+                signal = getattr(newwidget, name)
+                signal.connect(receiver)
 
         for i in reversed(range(self.model.rowCount(), self.count())):
             self.removeTab(i)
