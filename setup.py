@@ -11,7 +11,8 @@ Usage: pip install -e .
 import sys
 import versioneer
 
-deps = ['databroker', 'pathlib', 'qtpy', 'yapsy', 'astropy', 'signalslot', 'numpy', 'appdirs', 'qdarkstyle', 'qtmodern']
+deps = ['databroker', 'PyQt5==5.9.2' 'pathlib', 'qtpy', 'yapsy', 'astropy', 'signalslot', 'numpy', 'appdirs',
+        'qdarkstyle', 'qtmodern']
 
 # These bits don't get collected automatically when packaging:
 loosebits = ['numpy.core._methods', "numpy.lib.recfunctions"]
