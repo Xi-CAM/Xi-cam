@@ -3,6 +3,7 @@ from functools import partial
 from xicam.core import msg
 
 from qtpy.QtCore import *
+from qtpy.QtWidgets import *
 
 
 class ThreadManager(QObject):
@@ -30,13 +31,14 @@ class ThreadManager(QObject):
 manager = ThreadManager()
 
 
-class QThreadFuture(QObject):
+# justification for subclassing qthread: https://woboq.com/blog/qthread-you-were-not-doing-so-wrong.html
+class QThreadFuture(QThread):
     sigCallback = Signal()
     sigFinished = Signal()
     sigExcept = Signal(Exception)
 
     def __init__(self, method, *args, callback_slot=None, finished_slot=None, except_slot=None, default_exhandle=True,
-                 lock=None, threadkey: str = None, showBusy=True, **kwargs):
+                 lock=None, threadkey: str = None, showBusy=True, priority=QThread.InheritPriority, **kwargs):
         super(QThreadFuture, self).__init__()
 
         # Auto-Kill other threads with same threadkey
@@ -50,6 +52,7 @@ class QThreadFuture(QObject):
         # if callback_slot: self.sigCallback.connect(callback_slot)
         if finished_slot: self.sigFinished.connect(finished_slot)
         if except_slot: self.sigExcept.connect(except_slot)
+        QApplication.instance().aboutToQuit.connect(self.quit)
         self.method = method
         self.args = args
         self.kwargs = kwargs
@@ -60,17 +63,15 @@ class QThreadFuture(QObject):
         self.exception = None
         self.purge = False
         self.thread = None
+        self.priority = priority
         self.showBusy = showBusy
 
         manager.append(self)
 
     def start(self):
-        if not self.thread:
-            self.thread = QThread()
-            self.thread.run = partial(self.run, *self.args, **self.kwargs)
-            self.thread.start()
-        else:
+        if self.running:
             raise ValueError('Thread could not be started; it is already running.')
+        super(QThreadFuture, self).start(self.priority)
 
     def run(self, *args, **kwargs):
         self.cancelled = False
@@ -108,8 +109,8 @@ class QThreadFuture(QObject):
         return self._result
 
     def cancel(self):
-        self.thread.quit()
-        self.thread.wait()
+        self.quit()
+        self.wait()
         self.cancelled = True
 
 
