@@ -40,14 +40,14 @@ class DataBrowser(QWidget):
         self.browserview.sigOpen.connect(self.sigOpen)
         self.browserview.sigPreview.connect(self.sigPreview)
         self.browserview.sigOpenExternally.connect(self.openExternally)
-        self.browserview.sigConfigChanged.connect(self.pushConfigtoURI)
+        self.browserview.sigURIChanged.connect(self.uri_to_text)
         self.toolbar = QToolBar()
         self.toolbar.addAction(QIcon(QPixmap(str(path('icons/up.png')))), 'Move up directory', self.moveUp)
         # self.toolbar.addAction(QIcon(QPixmap(str(path('icons/filter.png')))), 'Filter')
         self.toolbar.addAction(QIcon(QPixmap(str(path('icons/refresh.png')))), 'Refresh', self.hardRefreshURI)
         self.toolbar.setToolButtonStyle(Qt.ToolButtonIconOnly)
         self.URILineEdit = SearchLineEdit('',clearable=False)
-        self.pushConfigtoURI()
+        self.uri_to_text()
 
         hbox.addWidget(self.toolbar)
         hbox.addWidget(self.URILineEdit)
@@ -61,43 +61,27 @@ class DataBrowser(QWidget):
 
         self.hardRefreshURI()
 
-    def pushURItoConfig(self):
+    def text_to_uri(self):
         uri = parse.urlparse(self.URILineEdit.text())
-        config = self.browserview.model.config
-        config['scheme'] = uri.scheme
-        config['host'] = uri.netloc
-        config['path'] = uri.path
-        config['query'] = uri.query
-        config['fragment'] = uri.fragment
-        config['params'] = uri.params
-        config['user'] = uri.username
-        config['port'] = uri.port
-        config['password'] = uri.password
-        print('config:', config)
-        return config
+        self.browserview.model.uri = uri
+        print('uri:', uri)
+        return uri
 
-    def pushConfigtoURI(self):
-        config = self.browserview.model.config
-        uri = parse.ParseResult(scheme=config.get('scheme',''),
-                                netloc=config.get('host',''),
-                                path=config.get('path',''),
-                                params=config.get('params',''),
-                                query=config.get('query',''),
-                                fragment=config.get('fragment',''))
-        uri = parse.urlunparse(uri)
-        self.URILineEdit.setText(uri)
-        return config
+    def uri_to_text(self):
+        uri = self.browserview.model.uri
+        text = parse.urlunparse(uri)
+        self.URILineEdit.setText(text)
+        return text
 
 
     def hardRefreshURI(self, *_, **__):
-        self.pushURItoConfig()
+        self.text_to_uri()
         self.browserview.refresh()
 
     def moveUp(self):
-        config = self.pushURItoConfig()
-        config['path'] = str(Path(config['path']).parent)
+        self.browserview.model.uri = parse.urlparse(str(Path(self.URILineEdit.text()).parent))
         self.browserview.refresh()
-        self.pushConfigtoURI()
+        self.uri_to_text()
 
     def openExternally(self, uri):
         webbrowser.open(uri)
@@ -206,7 +190,7 @@ class DataResourceTree(QTreeView, DataResourceView):
     sigOpenPath = Signal(str)
     sigOpenExternally = Signal(str)
     sigPreview = Signal(NonDBHeader)
-    sigConfigChanged = Signal()
+    sigURIChanged = Signal()
 
     def __init__(self, *args):
         super(DataResourceTree, self).__init__(*args)
@@ -221,7 +205,7 @@ class DataResourceList(QListView, DataResourceView):
     sigOpenPath = Signal(str)
     sigOpenExternally = Signal(str)
     sigPreview = Signal(NonDBHeader)
-    sigConfigChanged = Signal()
+    sigURIChanged = Signal()
 
     def refresh(self):
         self.model.refresh()
@@ -240,7 +224,7 @@ class LocalFileSystemTree(DataResourceTree):
             if os.path.isdir(path):
                 self.model.path = path
                 self.setRootIndex(indexes[0])
-                self.sigConfigChanged.emit()
+                self.sigURIChanged.emit()
                 return
         self.sigOpen.emit(self.model.getHeader(indexes))
 

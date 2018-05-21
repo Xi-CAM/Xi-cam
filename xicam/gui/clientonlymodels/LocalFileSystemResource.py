@@ -1,6 +1,7 @@
 from xicam.plugins import DataResourcePlugin
 import sys, os
 from xicam.core.data import load_header
+from urllib import parse
 
 if 'qtpy' in sys.modules:
     from qtpy.QtWidgets import *
@@ -12,10 +13,10 @@ if 'qtpy' in sys.modules:
         def __init__(self):
             super(LocalFileSystemResourcePlugin, self).__init__()
 
-            self.config = {'path': QSettings().value('lastlocaldir', os.getcwd())}
+            self.uri = parse.urlparse(QSettings().value('lastlocaldir', os.getcwd()))
             self.setResolveSymlinks(True)
 
-            self.setRootPath(self.config['path'])
+            self.setRootPath(parse.urlunparse(self.uri))
 
         def setRootPath(self, path):
             if os.path.isdir(path):
@@ -28,7 +29,7 @@ if 'qtpy' in sys.modules:
             root = QDir(root)
             super(LocalFileSystemResourcePlugin, self).setRootPath(root.absolutePath())
             self.setNameFilters([filter])
-            self.config['path'] = path
+            self.uri = parse.urlparse(path)
             QSettings().setValue('lastlocaldir', path)
 
         @property
@@ -40,7 +41,7 @@ if 'qtpy' in sys.modules:
             self.setRootPath(value)
 
         def refresh(self):
-            self.setRootPath(self.config['path'])
+            self.setRootPath(parse.urlunparse(self.uri))
 
         def getHeader(self, indexes):
             uris = [self.filePath(index) for index in indexes]
