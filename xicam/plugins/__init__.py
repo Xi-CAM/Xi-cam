@@ -16,6 +16,7 @@ from .DataResourcePlugin import DataResourcePlugin
 from .WidgetPlugin import QWidgetPlugin
 from .venvs import observers as venvsobservers
 from .DataResourcePlugin import DataResourcePlugin
+from .FittableModelPlugin import Fittable1DModelPlugin
 from .EZPlugin import _EZPlugin, EZPlugin
 from yapsy.PluginManager import NormalizePluginNameForModuleName, imp, log
 
@@ -53,7 +54,8 @@ class XicamPluginManager(PluginManager):
             categoriesfilter.update({'GUIPlugin': GUIPlugin,
                                      'WidgetPlugin': QWidgetPlugin,
                                      'SettingsPlugin': SettingsPlugin,
-                                     'EZPlugin': _EZPlugin})
+                                     'EZPlugin': _EZPlugin,
+                                     'Fittable1DModelPlugin': Fittable1DModelPlugin})
 
         self.setCategoriesFilter(categoriesfilter)
         self.setPluginPlaces(
@@ -73,13 +75,16 @@ class XicamPluginManager(PluginManager):
         self.locatePlugins()
 
         # Prevent loading two plugins with the same name
-        candidatesset = {c[2].name:c for c in self._candidates}.values()
+        candidatedict = {c[2].name: c[2] for c in self._candidates}
+        candidatesset = candidatedict.values()
 
         for plugin in self._candidates:
             if plugin[2] not in candidatesset:
-                msg.logMessage(f'Possible duplicate plugin name "{plugin[2].name}"',level=msg.WARNING)
+                msg.logMessage(f'Possible duplicate plugin name "{plugin[2].name}" at {plugin[2].path}',
+                               level=msg.WARNING)
+                msg.logMessage(f'Possibly shadowed by {candidatedict[plugin[2].name].path}', level=msg.WARNING)
 
-        self._candidates=candidatesset
+        # self._candidates=candidatesset
 
         self.loadPlugins(callback=self.showLoading)
 
