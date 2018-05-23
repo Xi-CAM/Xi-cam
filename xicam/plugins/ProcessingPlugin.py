@@ -241,6 +241,10 @@ class Input(Var):
             return self._limits[0] or -np.inf, self._limits[1] or np.inf
         return self._limits
 
+    @limits.setter
+    def limits(self, value):
+        self._limits = value
+
     def __setattr__(self, name, value):
         if name == "value":
             try:
