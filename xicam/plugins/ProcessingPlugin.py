@@ -272,14 +272,14 @@ class Input(Var):
 
 
 class Output(Var):
-    def __init__(self, name='', description='', type=None, units=None, *args, **kwargs):
+    def __init__(self, name='', description='', type=None, units=None, hints=None, *args, **kwargs):
         super().__init__()
         self.name = name
         self.description = description
         self.units = units
         self.value = None
         self.type = type
-
+        self.hints = hints or {}
 
 class InOut(Input, Output):
     pass
