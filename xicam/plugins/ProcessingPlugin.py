@@ -4,6 +4,7 @@ from xicam.core import msg
 from distributed.protocol.serialize import serialize
 from functools import partial
 import numpy as np
+from typing import List
 
 # TODO allow outputs/inputs to connect
 
@@ -48,6 +49,8 @@ class ProcessingPlugin(IPlugin):
         self._inverted_vars = None
         self.name = getattr(self, 'name', self.__class__.__name__)
         self._workflow = None
+        if not hasattr(self, 'hints'): self.hints = []
+        for hint in self.hints: hint.parent = self
 
     def evaluate(self):
         raise NotImplementedError
@@ -272,14 +275,13 @@ class Input(Var):
 
 
 class Output(Var):
-    def __init__(self, name='', description='', type=None, units=None, hints=None, *args, **kwargs):
+    def __init__(self, name='', description='', type=None, units=None, *args, **kwargs):
         super().__init__()
         self.name = name
         self.description = description
         self.units = units
         self.value = None
         self.type = type
-        self.hints = hints or {}
 
 class InOut(Input, Output):
     pass

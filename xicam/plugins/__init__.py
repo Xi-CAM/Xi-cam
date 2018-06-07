@@ -18,6 +18,7 @@ from .venvs import observers as venvsobservers
 from .DataResourcePlugin import DataResourcePlugin
 from .FittableModelPlugin import Fittable1DModelPlugin
 from .EZPlugin import _EZPlugin, EZPlugin
+from .hint import PlotHint, Hint
 from yapsy.PluginManager import NormalizePluginNameForModuleName, imp, log
 
 op_sys = platform.system()
