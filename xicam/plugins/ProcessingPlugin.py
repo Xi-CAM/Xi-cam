@@ -133,6 +133,7 @@ class ProcessingPlugin(IPlugin):
     def __reduce__(self):
         d = self.__dict__.copy()
         if '_param' in d: del d['_param']
+        if '_workflow' in d: del d['_workflow']
         return _ProcessingPluginRetriever(), (self.__class__.__name__, d)
 
 
@@ -268,10 +269,6 @@ class Input(Var):
         if hasattr(self, '_param') and self._param:
             self._param.setValue(v)
 
-    def __reduce__(self):
-        d = self.__dict__.copy()
-        if '_param' in d: del d['_param']
-        return _ProcessingPluginRetriever(), (self.__class__.__name__, d)
 
 
 class Output(Var):
@@ -285,3 +282,4 @@ class Output(Var):
 
 class InOut(Input, Output):
     pass
+
