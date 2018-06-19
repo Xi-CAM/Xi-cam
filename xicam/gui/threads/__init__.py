@@ -89,7 +89,7 @@ class QThreadFuture(QThread):
             self.exception = ex
             self.sigExcept.emit(ex)
             msg.logMessage(f'Error in thread: '
-                           f'Method: {self.method.__name__}\n'
+                           f'Method: {getattr(self.method, "__name__", "UNKNOWN")}\n'
                            f'Args: {self.args}\n'
                            f'Kwargs: {self.kwargs}', level=msg.ERROR)
             msg.logError(ex)
