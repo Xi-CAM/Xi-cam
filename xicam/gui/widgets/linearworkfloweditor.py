@@ -31,10 +31,20 @@ class WorkflowEditor(QSplitter):
         self.addWidget(WorkflowWidget(self.workflowview))
 
         self.workflowview.sigShowParameter.connect(
-            lambda parameter: self.processeditor.setParameters(parameter, showTop=False))
+            lambda parameter: self.setParameters(parameter))
 
         workflow.attach(partial(self.sigWorkflowChanged.emit, workflow))
 
+    def setParameters(self, parameter: Parameter):
+
+        parameter.blockSignals(True)
+        for child in parameter.children():
+            child.blockSignals(True)
+        self.processeditor.setParameters(parameter, showTop=False)
+        QApplication.processEvents()
+        parameter.blockSignals(False)
+        for child in parameter.children():
+            child.blockSignals(False)
 
 class WorkflowProcessEditor(ParameterTree):
     pass

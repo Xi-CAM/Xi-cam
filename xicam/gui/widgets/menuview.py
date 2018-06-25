@@ -544,7 +544,7 @@ class MenuView(QtWidgets.QMenu):
     @staticmethod
     def _checkconvertfunc(data):
         checkedstate = int(data) if data is not None else 0
-        return checkedstate == QtCore.Qt.Checked
+        return checkedstate != QtCore.Qt.Unchecked
 
 
 class SetDataArgs(object):
