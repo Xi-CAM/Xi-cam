@@ -57,6 +57,7 @@ def use_environment(name):
     """
 
     activate_script=pathlib.Path(user_venv_dir, name, "bin", "activate_this.py")
+    print('Using venv in:', activate_script)
     if not activate_script.is_file():
         activate_script = pathlib.Path(user_venv_dir, name, "Scripts", "activate_this.py")
     if not activate_script.is_file():
