@@ -20,6 +20,7 @@ from .FittableModelPlugin import Fittable1DModelPlugin
 from .EZPlugin import _EZPlugin, EZPlugin
 from .hint import PlotHint, Hint
 from yapsy.PluginManager import NormalizePluginNameForModuleName, imp, log
+import xicam
 
 op_sys = platform.system()
 if op_sys == 'Darwin':  # User config dir incompatible with venv on darwin (space in path name conflicts)
@@ -48,6 +49,7 @@ class XicamPluginManager(PluginManager):
         categoriesfilter = {'DataHandlerPlugin': DataHandlerPlugin,
                             'DataResourcePlugin': DataResourcePlugin,
                             'ProcessingPlugin': ProcessingPlugin,
+                            'Fittable1DModelPlugin': Fittable1DModelPlugin,
                             }
 
         # If xicam.gui is not loaded (running headless), don't load GUIPlugins or WidgetPlugins
@@ -61,7 +63,7 @@ class XicamPluginManager(PluginManager):
         self.setCategoriesFilter(categoriesfilter)
         self.setPluginPlaces(
             [os.getcwd(), str(Path(__file__).parent.parent), user_plugin_dir, site_plugin_dir,
-             venvs.current_environment])
+             venvs.current_environment] + list(xicam.__path__))
         self.loadcomplete = False
 
     def collectPlugins(self):
