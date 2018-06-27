@@ -98,8 +98,12 @@ class ProcessingPlugin(IPlugin):
                                                   default=input.default,
                                                   limits=input.limits,
                                                   type=getattr(input.type, '__name__', None),
-                                                  units=input.units)
+                                                  units=input.units,
+                                                  fixed=input.fixed,
+                                                  fixable=input.fixable)
                     childparam.sigValueChanged.connect(partial(self.setParameterValue, name))
+                    if input.fixable:
+                        childparam.sigFixToggled.connect(input.setFixed)
                     children.append(childparam)
                     input._param = childparam
                 elif getattr(input.type, '__name__', None) == 'Enum':
@@ -130,10 +134,15 @@ class ProcessingPlugin(IPlugin):
         for input in self.inputs.values():
             input.map_inputs = []
 
+    def detach(self):
+        pass
+
     def __reduce__(self):
         d = self.__dict__.copy()
-        if '_param' in d: del d['_param']
-        if '_workflow' in d: del d['_workflow']
+        print('reduction:', d)
+        blacklist = ['_param', '_workflow', 'parameter']
+        for key in blacklist:
+            if key in d: del d[key]
         return _ProcessingPluginRetriever(), (self.__class__.__name__, d)
 
 
@@ -157,7 +166,9 @@ class _ProcessingPluginRetriever(object):
                 p.__dict__ = internaldata
                 return p
 
-        raise ValueError(f'No plugin found with name {pluginname}')
+        pluginlist = '\n\t'.join(
+            [plugin.plugin_object.__name__ for plugin in pluginmanager.getPluginsOfCategory('ProcessingPlugin')])
+        raise ValueError(f'No plugin found with name {pluginname} in list of plugins:{pluginlist}')
 
 
 def EZProcessingPlugin(method):
@@ -218,15 +229,18 @@ class Var(object):
 
 
 class Input(Var):
-    def __init__(self, name='', description='', default=None, type=None, units=None, min=None, max=None, limits=None):
-        super().__init__()
+    def __init__(self, name='', description='', default=None, type=None, units=None, min=None, max=None, limits=None,
+                 fixed=False, fixable=False):
+        self.fixed = fixed
+        super(Input, self).__init__()
         self.name = name
         self.description = description
         self.default = default
         self.units = units
         self._limits = limits
         self.type = type
-        self.value = default
+        self._value = default
+        self.fixable = fixable
         if min and max:
             self._limits = (min, max)
 
@@ -267,7 +281,12 @@ class Input(Var):
     def value(self, v):
         self._value = v
         if hasattr(self, '_param') and self._param:
+            self._param.blockSignals(True)
             self._param.setValue(v)
+            self._param.blockSignals(False)
+
+    def setFixed(self, fixed):
+        self.fixed = fixed
 
 
 
