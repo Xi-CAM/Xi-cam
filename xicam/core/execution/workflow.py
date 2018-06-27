@@ -3,7 +3,7 @@ from typing import Callable, List
 from .camlinkexecutor import CamLinkExecutor
 from .localexecutor import LocalExecutor
 from collections import OrderedDict
-from xicam.core import msg
+from xicam.core import msg, execution
 from xicam.gui.threads import QThreadFuture, QThreadFutureIterator
 
 
@@ -25,9 +25,9 @@ class WorkflowProcess():
                 # self.node.inputs[self.named_args[i]].value = args[i][0].value
                 for key in args[i].keys():
                     if key in self.named_args:
-                        msg.logMessage(
-                            f'Setting input {self.node.__class__.__name__}:{self.named_args[key]} to output {args[i][key].value}',
-                            level=msg.DEBUG)
+                        # msg.logMessage(
+                        #     f'Setting input {self.node.__class__.__name__}:{self.named_args[key]} to output {args[i][key].value}',
+                        #     level=msg.DEBUG)
                         self.node.inputs[self.named_args[key]].value = args[i][key].value
 
         self.node.evaluate()
@@ -41,7 +41,7 @@ class WorkflowProcess():
 class Workflow(object):
     def __init__(self, name, processes=None):
         self._processes = []
-        self._observers = []
+        self._observers = set()
         self.name = name
 
         if processes:
@@ -125,8 +125,8 @@ class Workflow(object):
         """
         self._processes.append(process)
         process._workflow = self
-        self.update()
         if autoconnectall: self.autoConnectAll()
+        self.update()
 
     def insertProcess(self, index: int, process: ProcessingPlugin, autoconnectall: bool = False):
         self._processes.insert(index, process)
@@ -136,8 +136,9 @@ class Workflow(object):
 
     def removeProcess(self, process: ProcessingPlugin = None, index=None, autoconnectall=False):
         if not process: process = self._processes[index]
-        process._workflow = None
         self._processes.remove(process)
+        process.detach()
+        process._workflow = None
         if autoconnectall: self.autoConnectAll()
         self.update()
 
@@ -251,7 +252,7 @@ class Workflow(object):
         if fill_kwargs:
             self.fillKwargs(**kwargs)
 
-        future = QThreadFuture(LocalExecutor().execute, self,
+        future = QThreadFuture(execution.executor.execute, self,
                                callback_slot=callback_slot,
                                finished_slot=finished_slot,
                                default_exhandle=default_exhandle,
@@ -283,7 +284,7 @@ class Workflow(object):
                 zipkwargs = dict(zip(kwargs.keys(), kwargvalues))
                 if fill_kwargs:
                     self.fillKwargs(**zipkwargs)
-                yield LocalExecutor().execute(workflow)
+                yield execution.executor.execute(workflow)
 
         future = QThreadFutureIterator(executeiterator, self,
                                        callback_slot=callback_slot,
@@ -321,10 +322,11 @@ class Workflow(object):
         return True
 
     def attach(self, observer: Callable):
-        self._observers.append(observer)
+        self._observers.add(observer)
 
     def detach(self, observer: Callable):
-        self._observers.remove(observer)
+        if observer in self._observers:
+            self._observers.remove(observer)
 
     def update(self):
         for observer in self._observers:
