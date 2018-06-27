@@ -3,7 +3,12 @@ This patch module adds color gradients like matplotlib's viridis etc. to PyQtGra
 '''
 from pyqtgraph.graphicsItems import GradientEditorItem
 from collections import OrderedDict
-from qtpy.QtWidgets import QTreeWidgetItem
+from qtpy.QtWidgets import QTreeWidgetItem, QWidget, QPushButton, QCheckBox
+from qtpy.QtGui import QIcon
+from qtpy.QtCore import Signal
+from xicam.gui.static import path
+
+from pyqtgraph.parametertree.parameterTypes import WidgetParameterItem
 
 GradientEditorItem.__dict__['Gradients'] = OrderedDict([
     ('thermal', {'ticks': [(0.3333, (185, 0, 0, 255)), (0.6666, (255, 220, 0, 255)), (1, (255, 255, 255, 255)), (0, (0, 0, 0, 255))], 'mode': 'rgb'}),
@@ -21,7 +26,9 @@ GradientEditorItem.__dict__['Gradients'] = OrderedDict([
 ])
 
 from pyqtgraph.parametertree import Parameter, ParameterItem, registerParameterType
-from pyqtgraph.parametertree.parameterTypes import WidgetParameterItem
+from pyqtgraph.parametertree import parameterTypes
+from pyqtgraph.widgets.SpinBox import SpinBox
+from pyqtgraph.widgets.ColorButton import ColorButton
 from pyqtgraph import ImageView
 import numpy as np
 
@@ -88,3 +95,50 @@ class ImageParameter(Parameter):
 
 
 registerParameterType('ndarray', ImageParameter, override=True)
+
+
+class FixableWidgetParameterItem(parameterTypes.WidgetParameterItem):
+    def __init__(self, param, depth):
+        super(FixableWidgetParameterItem, self).__init__(param, depth)
+        if param.opts.get('fixable'):
+            self.fixbutton = QPushButton()
+            self.fixbutton.setFixedWidth(20)
+            self.fixbutton.setFixedHeight(20)
+            self.fixbutton.setCheckable(True)
+            self.fixbutton.setChecked(param.opts['fixed'])
+            self.fixbutton.toggled.connect(param.sigFixToggled)
+            self.fixbutton.toggled.connect(lambda fixed: param.setOpts(fixed=fixed))
+            # self.fixbutton.toggled.connect(lambda fixed: self.widgetValueChanged())
+
+            self.fixbutton.setIcon(QIcon(path('icons/anchor.png')))
+            self.layoutWidget.layout().addWidget(self.fixbutton)
+
+    def optsChanged(self, param, opts):
+        """Called when any options are changed that are not
+        name, value, default, or limits"""
+        # print "opts changed:", opts
+        ParameterItem.optsChanged(self, param, opts)
+
+        if 'readonly' in opts:
+            self.updateDefaultBtn()
+            if isinstance(self.widget, (QCheckBox, ColorButton)):
+                self.widget.setEnabled(not opts['readonly'])
+
+        ## If widget is a SpinBox, pass options straight through
+        if isinstance(self.widget, SpinBox):
+            if 'units' in opts and 'suffix' not in opts:
+                opts['suffix'] = opts['units']
+            try:  # patch passes silently for 'fixed'
+                self.widget.setOpts(**opts)
+            except TypeError:
+                pass
+            self.updateDisplayLabel()
+
+
+class FixableSimpleParameter(parameterTypes.SimpleParameter):
+    itemClass = FixableWidgetParameterItem
+    sigFixToggled = Signal(bool)
+
+
+registerParameterType('int', FixableSimpleParameter, override=True)
+registerParameterType('float', FixableSimpleParameter, override=True)
