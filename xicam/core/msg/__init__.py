@@ -16,14 +16,16 @@ can be displayed in the main Xi-cam window using showProgress and showMessage.
 # TODO: Add icons in GUI reflection
 
 
-
-
 # GUI widgets are registered into these slots to display messages/progress
 statusbar = None
 progressbar = None
 
-logging.getLogger("edfimage").setLevel(logging.ERROR)
-stdch = logging.StreamHandler(sys.stdout)
+blacklist = ['fabio.edfimage', 'ipykernel.inprocess.ipkernel', 'pyFAI.azimuthalIntegrator', 'traitlets',
+             'fabio.openimage', 'fabio.fabioutils', 'PyQt5.uic.uiparser']
+
+for modname in blacklist:
+    logging.getLogger(modname).setLevel(logging.ERROR)
+stdch = logging.StreamHandler()
 
 # Log levels constants
 DEBUG = logging.DEBUG  # 10
