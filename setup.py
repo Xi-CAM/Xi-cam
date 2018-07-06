@@ -11,10 +11,6 @@ from os import path
 import versioneer
 from setuptools import setup
 
-# Single-source the version
-with open(path.join(path.dirname(__file__), 'VERSION')) as version_file:
-    version = version_file.read().strip()
-
 # Set the long_description from the README
 here = path.abspath(path.dirname(__file__))
 with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
