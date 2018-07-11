@@ -8,9 +8,12 @@ import yaml
 from appdirs import user_config_dir, site_config_dir, user_cache_dir
 import platform
 import subprocess
+from pip._internal import main as pipmain
 
 from . import manager
 from . import venvs
+
+from distutils.sysconfig import get_python_lib
 
 op_sys = platform.system()
 if op_sys == 'Darwin':  # User config dir incompatible with venv on darwin (space in path name conflicts)
@@ -41,11 +44,13 @@ def install(name: str):
 
     failure = True
 
+    print('Installing to:', get_python_lib())
+
     # Install from the uri
     if uri.scheme == 'pipgit':  # Clones a git repo and installs with pip
-        failure = subprocess.Popen([pippath(), 'install', 'git+https://' + ''.join(uri[1:])]).wait()
+        failure = pipmain(['install', f'--target={get_python_lib()}', 'git+https://' + ''.join(uri[1:])])
     elif uri.scheme == 'pip':
-        failure = subprocess.Popen([pippath(), 'install', ''.join(uri[1:])]).wait()
+        failure = pipmain(['install', f'--target={get_python_lib()}', ''.join(uri[1:])])
     elif uri.scheme == 'conda':
         raise NotImplementedError
 
@@ -60,7 +65,7 @@ def uninstall(name: str):
     if name in pkg_registry:
         scheme = pkg_registry[name]
         if scheme in ['pipgit', 'pip']:
-            failure = subprocess.Popen([pippath(), 'uninstall', '-y', name]).returncode
+            failure = pipmain(['uninstall', '-y', name])
         elif scheme == 'conda':
             raise NotImplementedError
     else:
@@ -71,15 +76,6 @@ def uninstall(name: str):
         del pkg_registry[name]
 
     return not failure
-
-
-def pippath():
-    # Get absolute path to pip, to avoid system PATH sending to the wrong one
-    if platform.system() == 'Windows':
-        bindir = 'Scripts'
-    else:
-        bindir = 'bin'
-    return os.path.join(venvs.current_environment, bindir, 'pip')
 
 class pkg_registry(collections.MutableMapping):
     def __init__(self):
