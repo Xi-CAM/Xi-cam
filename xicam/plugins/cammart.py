@@ -13,7 +13,6 @@ from pip._internal import main as pipmain
 from . import manager
 from . import venvs
 
-from distutils.sysconfig import get_python_lib
 
 op_sys = platform.system()
 if op_sys == 'Darwin':  # User config dir incompatible with venv on darwin (space in path name conflicts)
@@ -44,13 +43,13 @@ def install(name: str):
 
     failure = True
 
-    print('Installing to:', get_python_lib())
+    print('Installing to:', venvs.current_environment)
 
     # Install from the uri
     if uri.scheme == 'pipgit':  # Clones a git repo and installs with pip
-        failure = pipmain(['install', f'--target={get_python_lib()}', 'git+https://' + ''.join(uri[1:])])
+        failure = pipmain(['install', f'--target={venvs.current_environment}', 'git+https://' + ''.join(uri[1:])])
     elif uri.scheme == 'pip':
-        failure = pipmain(['install', f'--target={get_python_lib()}', ''.join(uri[1:])])
+        failure = pipmain(['install', f'--target={venvs.current_environment}', ''.join(uri[1:])])
     elif uri.scheme == 'conda':
         raise NotImplementedError
 

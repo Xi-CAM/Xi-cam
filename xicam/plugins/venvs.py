@@ -24,44 +24,38 @@ execfile = lambda filename, globals=None, locals=None: exec(open(filename).read(
 
 def create_environment(name: str):
     """
-    Create a new virtual environment in the user_venv_dir with name name.
+    Create a new sandbox environment in the user_venv_dir with name name.
 
     Parameters
     ----------
     name : str
-        Name of virtual envirnoment to create.
+        Name of sandbox environment to create.
     """
-    venvpath = str(pathlib.Path(user_venv_dir, name))
 
-    if not os.path.isdir(venvpath):
-        env = os.environ.copy()
-        if not 'python' in os.path.basename(sys.executable):
-            python = os.path.join(os.path.dirname(sys.executable), 'python')
-            env['VIRTUALENV_INTERPRETER_RUNNING'] = 'true'
-        else:
-            python = sys.executable
-
-        venv.EnvBuilder(with_pip=True).create(venvpath)
-
+    envpath = pathlib.Path(user_venv_dir, name)
+    if envpath.is_dir():
+        return
+        # raise ValueError('Environment already exists.')
+    os.makedirs(str(envpath))
 
 
 def use_environment(name):
     """
-    Activate the virtual environment with name name in user_venv_dir
+    Activate the sandbox environment with name name in user_venv_dir
 
     Parameters
     ----------
     name : str
-        Name of virtual environment to activate
+        Name of sandbox environment to activate
     """
     path = pathlib.Path(user_venv_dir, name)
     if not path.is_dir():
-        raise ValueError(f"Virtual environment '{name}' could not be found.")
+        raise ValueError(f"Sandbox environment '{name}' could not be found.")
 
-    activate_script = str(path)
-    activate_this(activate_script)
     global current_environment
-    current_environment = str(pathlib.Path(user_venv_dir, name))
+    current_environment = str(path)
+    activate_this(current_environment)
+
     for observer in observers:
         observer.venvChanged()
 
