@@ -86,6 +86,7 @@ class XicamPluginManager(PluginManager):
                 msg.logMessage(f'Possible duplicate plugin name "{plugin[2].name}" at {plugin[2].path}',
                                level=msg.WARNING)
                 msg.logMessage(f'Possibly shadowed by {candidatedict[plugin[2].name].path}', level=msg.WARNING)
+                self._candidates.remove(plugin)
 
         # self._candidates=candidatesset
 
