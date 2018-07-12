@@ -1,0 +1,30 @@
+environment:
+
+  matrix:
+
+    - PYTHON: "C:\\Python34"
+
+
+install:
+
+  - "%PYTHON%\\python.exe -m pip install --upgrade pip"
+  - "%PYTHON%\\python.exe -m pip install cx_freeze"
+  - git clone http://www.github.com/lbl-camera/Xi-cam
+  - pip install Xi-cam/
+#  - build.bat
+
+
+build: off
+
+# artifacts:
+#   - path: gajim_built\Gajim.exe
+#   - name: MyApp
+
+#on_finish:
+
+
+
+#on_success:
+#  You can use this step to upload your artifacts to a public website.
+#  See Appveyor's documentation for more details. Or you can simply
+#  access your wheels from the Appveyor "artifacts" tab for your build.
