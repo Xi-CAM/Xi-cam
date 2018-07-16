@@ -18,10 +18,10 @@ install:
   - git clone http://www.github.com/lbl-camera/Xi-cam.core
   - git clone http://www.github.com/lbl-camera/Xi-cam.plugins
   - git clone http://www.github.com/lbl-camera/Xi-cam.gui
-  - pip install Xi-cam/
   - pip install Xi-cam.core/
   - pip install Xi-cam.plugins/
   - pip install Xi-cam.gui/
+  - pip install Xi-cam/
 #  - build.bat
   - pyinstaller Xi-cam/Xi-cam.spec
 
