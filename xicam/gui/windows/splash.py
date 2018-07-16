@@ -63,10 +63,11 @@ class XicamSplashScreen(QSplashScreen):
         self.timer.stop()
         self.execlaunch()
 
-    def showEvent(self, event):
+    def show(self):
         """
         Start the animation when shown
         """
+        super(XicamSplashScreen, self).show()
         self.movie.start()
 
     def paintFrame(self):
