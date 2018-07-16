@@ -62,12 +62,6 @@ def use_environment(name):
 
 def activate_this(path):
     # Below copied and modified from the activate_this.py module of virtualenv, which is missing form venv
-    """By using execfile(this_file, dict(__file__=this_file)) you will
-    activate this virtualenv environment.
-    This can be used when you must use an existing Python interpreter, not
-    the virtualenv bin/python
-    """
-
     old_os_path = os.environ.get('PATH', '')
     os.environ['PATH'] = os.path.dirname(os.path.abspath(path)) + os.pathsep + old_os_path
     base = os.path.dirname(os.path.dirname(os.path.abspath(path)))
@@ -76,8 +70,10 @@ def activate_this(path):
     else:
         site_packages = os.path.join(base, 'lib', 'python%s' % sys.version[:3], 'site-packages')
     prev_sys_path = list(sys.path)
-    import site
-    site.addsitedir(site_packages)
+    if not getattr(sys, 'frozen', False):  # site missing addsitedir when frozen
+        import site
+        site.addsitedir(site_packages)
+
     sys.real_prefix = sys.prefix
     sys.prefix = base
     # Move the added items to the front of the path:

@@ -24,10 +24,10 @@ import xicam
 
 op_sys = platform.system()
 if op_sys == 'Darwin':  # User config dir incompatible with venv on darwin (space in path name conflicts)
-    user_plugin_dir = os.path.join(user_cache_dir(appname='xicam'),'plugins')
+    user_plugin_dir = os.path.join(user_cache_dir(appname='xicam'), 'plugins')
 else:
-    user_plugin_dir = os.path.join(user_config_dir(appname='xicam'),'plugins')
-site_plugin_dir = os.path.join(site_config_dir(appname='xicam'),'plugins')
+    user_plugin_dir = os.path.join(user_config_dir(appname='xicam'), 'plugins')
+site_plugin_dir = os.path.join(site_config_dir(appname='xicam'), 'plugins')
 
 # Observers will be notified when active plugins changes
 observers = []
@@ -66,7 +66,7 @@ class XicamPluginManager(PluginManager):
              venvs.current_environment] + list(xicam.__path__))
         self.loadcomplete = False
 
-    def collectPlugins(self):
+    def collectPlugins(self, paths=None):
         """
         Walk through the plugins' places and look for plugins.  Then
         for each plugin candidate look for its category, load it and
@@ -74,6 +74,10 @@ class XicamPluginManager(PluginManager):
 
         Overloaded to add callback.
         """
+        if paths:
+            self.setPluginPlaces(
+                [os.getcwd(), str(Path(__file__).parent.parent), user_plugin_dir, site_plugin_dir,
+                 venvs.current_environment] + list(xicam.__path__) + paths)
 
         self.locatePlugins()
 
@@ -87,6 +91,9 @@ class XicamPluginManager(PluginManager):
                                level=msg.WARNING)
                 msg.logMessage(f'Possibly shadowed by {candidatedict[plugin[2].name].path}', level=msg.WARNING)
                 self._candidates.remove(plugin)
+
+        msg.logMessage('Candidates:')
+        for candidate in self._candidates: msg.logMessage(candidate)
 
         # self._candidates=candidatesset
 
