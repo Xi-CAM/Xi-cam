@@ -19,9 +19,10 @@ can be displayed in the main Xi-cam window using showProgress and showMessage.
 # GUI widgets are registered into these slots to display messages/progress
 statusbar = None
 progressbar = None
+logging.basicConfig(filename='out.log', level=logging.DEBUG)
 
 blacklist = ['fabio.edfimage', 'ipykernel.inprocess.ipkernel', 'pyFAI.azimuthalIntegrator', 'traitlets',
-             'fabio.openimage', 'fabio.fabioutils', 'PyQt5.uic.uiparser']
+             'fabio.openimage', 'fabio.fabioutils', 'PyQt5.uic.uiparser', 'yapsy']
 
 for modname in blacklist:
     logging.getLogger(modname).setLevel(logging.ERROR)
