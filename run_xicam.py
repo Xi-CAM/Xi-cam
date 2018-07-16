@@ -1,7 +1,11 @@
 import sys
 import os
 
-print('HERE:', sys.argv)
+import trace
+
+
+
+print('args:', sys.argv)
 print('path:', sys.path)
 if sys.argv[0].endswith('Xi-cam'):
     root = os.path.dirname(sys.argv[0])
@@ -38,4 +42,10 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    if '-v' in sys.argv:
+        tracer = trace.Trace(count=False, trace=True)
+        tracer.run('main()')
+    else:
+        main()
+
+# TODO: check entry log when running entry point
