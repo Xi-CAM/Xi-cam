@@ -9,6 +9,7 @@ qapp = QtWidgets.QApplication([])
 from xicam.plugins import manager as pluginmanager
 import xicam.plugins, xicam.core, xicam.gui
 import qtmodern
+import pip
 
 block_cipher = None
 
@@ -26,6 +27,10 @@ datas_dst.append('astropy')
 # qtmodern has lots of data files; including source
 datas_src.append(qtmodern.__path__[0])
 datas_dst.append('qtmodern')
+
+# pip needs its certs
+datas_src.append(pip.__path__[0])
+datas_dst.append('pip')
 
 pluginmanager.collectPlugins(paths=[xicam.core.__path__[0],xicam.plugins.__path__[0],xicam.gui.__path__[0]])
 plugins = pluginmanager.getAllPlugins()
@@ -55,11 +60,13 @@ a = Analysis(['run_xicam.py'],
                             'requests',
                             'qdarkstyle',
                             'xicam.core.execution',
-                            'xicam.plugins.cammart'
+                            'xicam.plugins.cammart',
+                            'xicam.gui.widgets.dynimageview',
+                            'compileall'
                             ],
              hookspath=[],
              runtime_hooks=[],
-             excludes=['astropy', 'qtmodern'],  # included in data
+             excludes=['astropy', 'qtmodern', 'pip'],  # included in data
              win_no_prefer_redirects=False,
              win_private_assemblies=False,
              cipher=block_cipher)
