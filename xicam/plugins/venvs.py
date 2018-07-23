@@ -36,7 +36,7 @@ def create_environment(name: str):
     if envpath.is_dir():
         return
         # raise ValueError('Environment already exists.')
-    os.makedirs(str(envpath))
+    venv.create(envpath, with_pip=True)
 
 
 def use_environment(name):
