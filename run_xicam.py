@@ -19,6 +19,7 @@ if '.zip/' in os.__file__:
     zip_ref.extractall(os.path.dirname(os.path.dirname(os.__file__)))
     zip_ref.close()
 
+os.environ['QT_API'] = 'pyqt5'
 import qtpy
 from qtpy.QtWidgets import *
 from qtpy.QtCore import *

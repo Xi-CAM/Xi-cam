@@ -10,6 +10,7 @@ from xicam.plugins import manager as pluginmanager
 import xicam.plugins, xicam.core, xicam.gui
 import qtmodern
 import pip
+import PyQt5
 
 block_cipher = None
 
@@ -31,6 +32,10 @@ datas_dst.append('qtmodern')
 # pip needs its certs
 datas_src.append(pip.__path__[0])
 datas_dst.append('pip')
+
+# PyQt5 needs its binaries
+datas_src.append(PyQt5.__path__[0])
+datas_dst.append('PyQt5')
 
 pluginmanager.collectPlugins(paths=[xicam.core.__path__[0],xicam.plugins.__path__[0],xicam.gui.__path__[0]])
 plugins = pluginmanager.getAllPlugins()
@@ -62,11 +67,11 @@ a = Analysis(['run_xicam.py'],
                             'xicam.core.execution',
                             'xicam.plugins.cammart',
                             'xicam.gui.widgets.dynimageview',
-                            'compileall'
+                            'compileall',
                             ],
              hookspath=[],
              runtime_hooks=[],
-             excludes=['astropy', 'qtmodern', 'pip'],  # included in data
+             excludes=['astropy', 'qtmodern', 'pip', 'PyQt5'],  # included in data
              win_no_prefer_redirects=False,
              win_private_assemblies=False,
              cipher=block_cipher)
