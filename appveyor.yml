@@ -27,6 +27,7 @@ install:
   - pip install Xi-cam.plugins/
   - pip install Xi-cam.gui/
   - pip install Xi-cam/
+  - pip list
 #  - build.bat
   - pyinstaller Xi-cam/Xi-cam.spec
 
