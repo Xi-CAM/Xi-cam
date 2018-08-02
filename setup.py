@@ -18,7 +18,7 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
 
 import os
-if 'APPVEYOR' in os.environ and os.environ['APPVERYOR']:
+if 'APPVEYOR' in os.environ and os.environ['APPVEYOR']:
     pyqt=['PyQt5']
 else:
     pyqt=[]
