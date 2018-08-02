@@ -17,6 +17,12 @@ here = path.abspath(path.dirname(__file__))
 with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
 
+import os
+if 'APPVEYOR' in os.environ and os.environ['APPVERYOR']:
+    pyqt=['PyQt5']
+else:
+    pyqt=[]
+
 setup(
     name='xicam.gui',
 
@@ -79,7 +85,7 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['qtpy', 'pyqt5==5.9.2', 'pathlib', 'pyqtgraph', 'qdarkstyle', 'qtmodern'],
+    install_requires=['qtpy', 'pathlib', 'pyqtgraph', 'qdarkstyle', 'qtmodern']+pyqt,
 
     setup_requires=[],
 
