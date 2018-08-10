@@ -61,9 +61,10 @@ class XicamPluginManager(PluginManager):
                                      'Fittable1DModelPlugin': Fittable1DModelPlugin})
 
         self.setCategoriesFilter(categoriesfilter)
-        self.setPluginPlaces(
-            [os.getcwd(), str(Path(__file__).parent.parent), user_plugin_dir, site_plugin_dir,
-             venvs.current_environment] + list(xicam.__path__))
+        plugindirs = [os.getcwd(), str(Path(__file__).parent.parent), user_plugin_dir, site_plugin_dir,
+             venvs.current_environment] + list(xicam.__path__)
+        self.setPluginPlaces(plugindirs)
+        msg.logMessage('plugindirectories:', *plugindirs)
         self.loadcomplete = False
 
     def collectPlugins(self, paths=None):
@@ -85,7 +86,7 @@ class XicamPluginManager(PluginManager):
         candidatedict = {c[2].name: c[2] for c in self._candidates}
         candidatesset = candidatedict.values()
 
-        for plugin in self._candidates:
+        for plugin in reversed(self._candidates):
             if plugin[2] not in candidatesset:
                 msg.logMessage(f'Possible duplicate plugin name "{plugin[2].name}" at {plugin[2].path}',
                                level=msg.WARNING)
