@@ -8,7 +8,10 @@ import yaml
 from appdirs import user_config_dir, site_config_dir, user_cache_dir
 import platform
 import subprocess
-from pip._internal import main as pipmain
+try:
+    from pip._internal import main as pipmain
+except ModuleNotFoundError:
+    from pip import main as pipmain
 
 from . import manager
 from . import venvs
