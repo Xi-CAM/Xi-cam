@@ -84,12 +84,12 @@ class ConfigDialog(QDialog):
         self.createIcons()
 
     def restore(self):
-        try:
-            for pluginInfo in pluginmanager.getPluginsOfCategory('SettingsPlugin'):
+        for pluginInfo in pluginmanager.getPluginsOfCategory('SettingsPlugin'):
+            try:
                 pluginInfo.plugin_object.restore(QSettings().value(pluginInfo.name))
-        except (AttributeError, TypeError, SystemError):
-            # No settings saved
-            pass
+            except (AttributeError, TypeError, SystemError):
+                # No settings saved
+                pass
         self.apply()
 
     def ok(self):

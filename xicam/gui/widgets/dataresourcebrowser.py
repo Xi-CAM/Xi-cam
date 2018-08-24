@@ -3,9 +3,10 @@ from qtpy.QtCore import *
 from qtpy.QtGui import *
 from ..clientonlymodels.LocalFileSystemResource import LocalFileSystemResourcePlugin
 from xicam.gui.static import path
-from xicam.core.data import NonDBHeader
+from xicam.core.data import NonDBHeader, load_header
 from xicam.plugins import manager as pluginmanager
 from xicam.plugins.DataResourcePlugin import DataSourceListModel
+from xicam.gui import threads
 from .searchlineedit import SearchLineEdit
 from urllib import parse
 from pathlib import Path
@@ -63,12 +64,12 @@ class DataBrowser(QWidget):
 
     def text_to_uri(self):
         uri = parse.urlparse(self.URILineEdit.text())
-        self.browserview.model.uri = uri
+        self.browserview.model().uri = uri
         print('uri:', uri)
         return uri
 
     def uri_to_text(self):
-        uri = self.browserview.model.uri
+        uri = self.browserview.model().uri
         text = parse.urlunparse(uri)
         self.URILineEdit.setText(text)
         return text
@@ -79,7 +80,7 @@ class DataBrowser(QWidget):
         self.browserview.refresh()
 
     def moveUp(self):
-        self.browserview.model.uri = parse.urlparse(str(Path(self.URILineEdit.text()).parent))
+        self.browserview.model().uri = parse.urlparse(str(Path(self.URILineEdit.text()).parent))
         self.browserview.refresh()
         self.uri_to_text()
 
@@ -149,14 +150,16 @@ class BrowserTabBar(ContextMenuTabBar):
         self.menu.popup(pos)
 
     def _addBrowser(self, plugin):
-        self.sigAddBrowser.emit(DataBrowser(DataResourceList(DataSourceListModel(plugin.plugin_object))), plugin.name)
+        datasource = plugin.plugin_object()
+        self.sigAddBrowser.emit(DataBrowser(DataResourceList(DataSourceListModel(datasource))),
+                                datasource.config['host'])
 
 
 class DataResourceView(QObject):
-    def __init__(self, model):
+    def __init__(self, model: QAbstractItemModel):
         super(DataResourceView, self).__init__()
-        self.model = model
-        self.setModel(self.model)
+        self._model = model  # type: QAbstractItemModel
+        self.setModel(self._model)
         self.doubleClicked.connect(self.open)
         self.setSelectionMode(self.ExtendedSelection)
         self.setSelectionBehavior(self.SelectRows)
@@ -196,8 +199,8 @@ class DataResourceTree(QTreeView, DataResourceView):
         super(DataResourceTree, self).__init__(*args)
 
     def refresh(self):
-        self.model.refresh()
-        self.setRootIndex(self.model.index(self.model.path))
+        self.model().refresh()
+        self.setRootIndex(self.model().index(self.model().path))
 
 
 class DataResourceList(QListView, DataResourceView):
@@ -208,36 +211,47 @@ class DataResourceList(QListView, DataResourceView):
     sigURIChanged = Signal()
 
     def refresh(self):
-        self.model.refresh()
+        self.model().refresh()
+
+    @threads.method()
+    def open(self, _):
+        indexes = self.selectionModel().selectedRows()
+        if len(indexes) == 1:
+            path = os.path.join(self.model().config['path'], self.model().data(indexes[0], Qt.DisplayRole).value())
+            if self.model().isdir(indexes[0]):
+                self.model().config['path'] = path
+                self.sigURIChanged.emit()
+                return
+        uris = [self.model().pull(index) for index in indexes]
+        self.sigOpen.emit(load_header(uris=uris))
 
 
 class LocalFileSystemTree(DataResourceTree):
 
     def __init__(self):
-        self.model = LocalFileSystemResourcePlugin()
-        super(LocalFileSystemTree, self).__init__(self.model)
+        super(LocalFileSystemTree, self).__init__(LocalFileSystemResourcePlugin())
 
     def open(self, _):
         indexes = self.selectionModel().selectedRows()
         if len(indexes)==1:
-            path = self.model.filePath(indexes[0])
+            path = self.model().filePath(indexes[0])
             if os.path.isdir(path):
-                self.model.path = path
+                self.model().path = path
                 self.setRootIndex(indexes[0])
                 self.sigURIChanged.emit()
                 return
-        self.sigOpen.emit(self.model.getHeader(indexes))
+        self.sigOpen.emit(self.model().getHeader(indexes))
 
     def currentChanged(self, current, previous):
         if current.isValid():
-            self.sigPreview.emit(self.model.getHeader([current]))
+            self.sigPreview.emit(self.model().getHeader([current]))
 
 
 
     def openExternally(self, uri:str):
         indexes = self.selectionModel().selectedRows()
         for index in indexes:
-            self.sigOpenExternally.emit(self.model.filePath(index))
+            self.sigOpenExternally.emit(self.model().filePath(index))
 
 
 class DataResourceBrowser(QWidget):
