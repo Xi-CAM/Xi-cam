@@ -1,5 +1,5 @@
 import time
-from functools import partial
+from functools import partial, wraps
 from xicam.core import msg
 
 from qtpy.QtCore import *
@@ -150,3 +150,42 @@ def invoke_in_main_thread(fn, *args, **kwargs):
     # print 'attempt invoke:',fn,args,kwargs
     QCoreApplication.postEvent(_invoker,
                                InvokeEvent(fn, *args, **kwargs))
+
+
+def method(callback_slot=None, finished_slot=None, except_slot=None, default_exhandle=True, lock=None,
+           threadkey: str = None, showBusy=True, priority=QThread.InheritPriority, ):
+    """
+    Decorator for functions/methods to run as RunnableMethods on background QT threads
+    Use it as any python decorator to decorate a function with @decorator syntax or at runtime:
+    decorated_method = threads.method(callback_slot, ...)(method_to_decorate)
+    then simply run it: decorated_method(*args, **kwargs)
+    Parameters
+    ----------
+    callback_slot : function
+        Function/method to run on a background thread
+    finished_slot : QtCore.Slot
+        Slot to call with the return value of the function
+    except_slot : QtCore.Slot
+        Function object (qt slot), slot to receive exception type, instance and traceback object
+    default_exhandle : bool
+        Flag to use the default exception handle slot. If false it will not be called
+    lock : mutex/semaphore
+        Simple lock if multiple access needs to be prevented
+    Returns
+    -------
+    wrap_runnable_method : function
+        Decorated function/method
+    """
+
+    def wrap_runnable_method(func):
+        @wraps(func)
+        def _runnable_method(*args, **kwargs):
+            future = QThreadFuture(func, *args,
+                                   callback_slot=callback_slot, finished_slot=finished_slot,
+                                   except_slot=except_slot, default_exhandle=default_exhandle, lock=lock,
+                                   threadkey=threadkey, showBusy=showBusy, priority=priority, **kwargs)
+            future.start()
+
+        return _runnable_method
+
+    return wrap_runnable_method
