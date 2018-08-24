@@ -13,6 +13,9 @@ class Fittable1DModelPlugin(Fittable1DModel, IPlugin):
 
     """
 
+    def __init__(self, *args, **kwargs):
+        super(Fittable1DModelPlugin, self).__init__(*args, **kwargs)
+
     @staticmethod
     def evaluate(x, *args, **kwargs):
         raise NotImplementedError
