@@ -4,14 +4,15 @@ from qtpy.QtGui import *
 from qtpy.QtWidgets import *
 from xicam.gui.static import path
 from xicam.gui.widgets.searchlineedit import SearchLineEdit
+from copy import deepcopy
 
-from xicam.plugins import SettingsPlugin
+from xicam.plugins import SettingsPlugin, manager
 from xicam.plugins import cammart
 
 
 class ConnectionSettingsPlugin(SettingsPlugin):
     """
-    A built-in settings plugin to configure installed packages
+    A built-in settings plugin to configure connections to other hosts
     """
     name = 'Connections'
 
@@ -20,155 +21,189 @@ class ConnectionSettingsPlugin(SettingsPlugin):
         self.widget = QWidget()
         self.widget.setLayout(QHBoxLayout())
         self.listview = QListView()
-        self.packagesmodel = QStandardItemModel()
-        self.listview.setModel(self.packagesmodel)
+        self.connectionsmodel = QSettings().value('credentials') or QStandardItemModel()
+        self.listview.setModel(self.connectionsmodel)
 
         self.plugintoolbar = QToolBar()
         self.plugintoolbar.setOrientation(Qt.Vertical)
         self.plugintoolbar.addAction(QIcon(str(path('icons/plus.png'))),
                                      'Add plugin',
-                                     self.addplugin)
+                                     self.add_credential)
         self.plugintoolbar.addAction(QIcon(str(path('icons/minus.png'))),
                                      'Remove plugin',
-                                     self.removeplugin)
+                                     self.remove_credential)
         self.widget.layout().addWidget(self.listview)
         self.widget.layout().addWidget(self.plugintoolbar)
-        super(ConnectionSettingsPlugin, self).__init__(QIcon(str(path('icons/box.png'))),
-                                                    self.name,
-                                                    self.widget)
+        super(ConnectionSettingsPlugin, self).__init__(QIcon(str(path('icons/server.png'))),
+                                                       self.name,
+                                                       self.widget)
+        self.restore(QSettings().value('Connections'))
 
-        # Refresh packages list
-        self.refresh()
-
-    def refresh(self):
-        """
-        Refresh the list of packages by updating the model
-        """
-        self.packagesmodel.clear()
-        for name, scheme in cammart.pkg_registry.items():
-            self.packagesmodel.appendRow(QStandardItem(name))
-
-    def addplugin(self):
+    def add_credential(self):
         """
         Open the CamMart install dialog
         """
-        self._dialog = CamMartInstallDialog()
+        self._dialog = CredentialDialog()
+        self._dialog.sigAddCredential.connect(self._add_credential)
         self._dialog.exec_()
-        self.refresh()
 
-    def removeplugin(self):
+    def remove_credential(self):
         """
-        Uninstalls a plugin
+        Removes a credential
         """
         if self.listview.selectedIndexes():
-            cammart.uninstall(self.packagesmodel.itemFromIndex(self.listview.selectedIndexes()[0]).text())
-            self.refresh()
+            self.connectionsmodel.removeRow(self.listview.selectedIndexes()[0].row())
 
-    def save(self):  # This class has no settings to save, it is driven by the packages list
-        return None  # self.parameter.saveState()
+    def _add_credential(self, name: str, credential: dict):
+        item = QStandardItem(name)
+        item.credential = credential
+        item.name = name
+        self.connectionsmodel.appendRow(item)
+        self.connectionsmodel.dataChanged.emit(item.index(), item.index())
+
+    def save(self):
+        credentials = deepcopy(self.credentials)
+        for name, credential in credentials.items():
+            if credential.get('savepassword', False):
+                credential['password'] = None
+        return credentials
 
     def restore(self, state):
-        pass  # self.parameter.restoreState(state)
+        self.connectionsmodel.clear()
+        for name, credential in state.items():
+            item = QStandardItem(name)
+            item.credential = credential
+            item.name = name
+            self.connectionsmodel.appendRow(item)
+        self.listview.reset()
+
+    @property
+    def credentials(self):
+        return {self.connectionsmodel.item(i).name: self.connectionsmodel.item(i).credential for i in
+                range(self.connectionsmodel.rowCount())}
 
 
-repositories = ['cam.lbl.gov:5000']
+class CredentialDialog(QDialog):
+    sigAddCredential = Signal(str, dict)
+    sigConnect = Signal(dict)
 
-
-class CamMartInstallDialog(QDialog):
-    def __init__(self):
-        super(CamMartInstallDialog, self).__init__()
+    def __init__(self, addmode=True):
+        super(CredentialDialog, self).__init__()
 
         # Set size and position
-        self.setGeometry(0, 0, 800, 500)
+        # self.setGeometry(0, 0, 800, 500)
         frameGm = self.frameGeometry()
         screen = QApplication.desktop().screenNumber(QApplication.desktop().cursor().pos())
         centerPoint = QApplication.desktop().screenGeometry(screen).center()
         frameGm.moveCenter(centerPoint)
         self.move(frameGm.topLeft())
 
-        # Setup ListView
-        self.packagesWidget = QListView()
-        self.packagesWidget.setMovement(QListView.Static)
-        self.packagesWidget.setSelectionMode(QAbstractItemView.SingleSelection)
-
-        # Setup Model
-        self.packagesModel = QStandardItemModel()
-        self.packagesWidget.setModel(self.packagesModel)
-        self.packageInfoWidget = PackageInfoWidget(self.packagesWidget)
-        self.packagesWidget.selectionModel().currentChanged.connect(self.packageInfoWidget.refresh)
+        # Setup fields
+        self.host = QLineEdit()
+        self.profiles = QComboBox()
+        self.profiles.addItem('New...')
+        self.profilename = QLineEdit()
+        self.username = QLineEdit()
+        self.password = QLineEdit()
+        self.password.setEchoMode(QLineEdit.Password)
+        self.savepassword = QCheckBox('Save Password')
+        self.rememberprofile = QCheckBox('Remember Profile')
 
         # Setup dialog buttons
-        self.installButton = QPushButton("&Install Package")
-        self.manageButton = QPushButton("&Manage Repositories")
-        self.installButton.clicked.connect(self.install)
-        self.manageButton.clicked.connect(self.manage)
+        self.addButton = QPushButton("&Add")
+        self.connectButton = QPushButton("C&onnect")
+        self.cancelButton = QPushButton("&Cancel")
+        self.addButton.clicked.connect(self.add)
+        self.connectButton.clicked.connect(self.connect)
+        self.cancelButton.clicked.connect(self.close)
+        self.profiles.currentTextChanged.connect(self.loadProfile)
         self.buttonboxWidget = QDialogButtonBox()
-        self.buttonboxWidget.addButton(self.installButton, QDialogButtonBox.ActionRole)
-        self.buttonboxWidget.addButton(self.manageButton, QDialogButtonBox.ActionRole)
+        if addmode:
+            self.buttonboxWidget.addButton(self.addButton, QDialogButtonBox.AcceptRole)
+        else:
+            self.buttonboxWidget.addButton(self.connectButton, QDialogButtonBox.AcceptRole)
 
-        # Setup splitter layout
-        splitter = QSplitter()
-        splitter.addWidget(self.packagesWidget)
-        splitter.addWidget(self.packageInfoWidget)
-
-        # Setup search box
-        self.searchbox = SearchLineEdit()
+        self.buttonboxWidget.addButton(self.cancelButton, QDialogButtonBox.RejectRole)
 
         # Compose main layout
-        mainLayout = QVBoxLayout()
-        mainLayout.addWidget(self.searchbox)
-        mainLayout.addWidget(splitter)
-        mainLayout.addSpacing(12)
-        mainLayout.addWidget(self.buttonboxWidget)
+        mainLayout = QFormLayout()
+        if not addmode:
+            mainLayout.addRow('Profile', self.profiles)
+        mainLayout.addRow('Profile', self.profilename)
+        mainLayout.addRow('Host', self.host)
+        mainLayout.addRow('Username', self.username)
+        mainLayout.addRow('Password', self.password)
+        mainLayout.addRow(self.savepassword)
+        if not addmode:
+            mainLayout.addRow(self.rememberprofile)
+        mainLayout.addRow(self.buttonboxWidget)
+
+        # Populate profiles
+        for name, credential in manager.getPluginByName('Connections',
+                                                        'SettingsPlugin').plugin_object.credentials.items():
+            self.profiles.addItem(name)
+
         self.setLayout(mainLayout)
-        self.setWindowTitle("Install Packages...")
+        self.setWindowTitle("Add Connection...")
 
         # Set modality
         self.setModal(True)
 
-        # Load packages into view
-        self.refresh()
+    def loadProfile(self):
+        profilename = self.profiles.currentText()
+        if profilename == 'New...':
+            self.username.setEnabled(True)
+            self.password.setEnabled(True)
+            self.host.setEnabled(True)
+            self.savepassword.setEnabled(True)
+            self.rememberprofile.setVisible(True)
+        else:
+            credential = manager.getPluginByName('Connections', 'SettingsPlugin').plugin_object.credentials[profilename]
+            self.username.setText(credential['username'])
+            self.host.setText(credential['host'])
+            self.password.setText(credential['password'])
+            self.savepassword.setChecked(credential['savepassword'])
+            self.profilename.setText(profilename)
+            self.username.setEnabled(False)
+            self.password.setEnabled(False)
+            self.host.setEnabled(False)
+            self.savepassword.setEnabled(False)
+            self.rememberprofile.setVisible(False)
 
-    def refresh(self):  # TODO: display dialog when query fails (no connection)
-        # Clear model
-        self.packagesModel.clear()
+    def add(self):
+        self.sigAddCredential.emit(
+            self.profilename.text(),
+            {'host': self.host.text(),
+             'username': self.username.text(),
+             'password': self.password.text(),
+             'savepassword': False})
+        self.accept()
 
-        # For each repo
-        for repo in repositories:
-            # TODO: check behavior for >25 items (pagesize)
-            # For each package
-            for packageinfo in eval(requests.get(f'http://{repo}/pluginpackages').content)["_items"]:
-                # Add an item to the model
-                item = QStandardItem(packageinfo['name'])
-                item.info = packageinfo
-                self.packagesModel.appendRow(item)
-
-    def install(self):
-        # Install the selected package using cammart
-        cammart.install(self.packagesModel.itemFromIndex(self.packagesWidget.selectedIndexes()[0]).text())
-
-    def manage(self):
-        pass
+    def connect(self):
+        if self.rememberprofile.isChecked():
+            self.add()
+        self.sigConnect.emit(
+            {'host': self.host.text(),
+             'username': self.username.text(),
+             'password': self.password.text(),
+             'savepassword': False})
+        self.accept()  # Segfault?
 
 
-class PackageInfoWidget(QTextEdit):
-    def __init__(self, view):
-        super(PackageInfoWidget, self).__init__()
+class ConnectDelegate(QItemDelegate):
+    def __init__(self, parent):
+        super(ConnectDelegate, self).__init__(parent)
+        self._parent = parent
 
-        self.view = view
+    def paint(self, painter, option, index):
+        if not self._parent.indexWidget(index):
+            button = QToolButton(self.parent(), )
+            button.setAutoRaise(True)
+            button.setText('Delete Operation')
+            button.setIcon(QIcon(path('icons/trash.png')))
+            sp = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+            sp.setWidthForHeight(True)
+            button.setSizePolicy(sp)
+            button.clicked.connect(index.data())
 
-    def refresh(self, current, previous):
-        # Get info of current package from the model's item
-        info = self.view.model().itemFromIndex(current).info
-
-        # Display info
-        self.setText(
-            f"""
-            <h1>{info['name']}</h1>
-            <p>{info['documentation'].get('description')}</p>
-            <p>Version: {info['documentation'].get('version')}</p>
-            <p>Authors: {", ".join(info['documentation'].get('authors'))}</p>
-            <p>Publication: {info['documentation'].get('publication')}</p>
-            <p>Reference: {info['documentation'].get('reference')}</p>
-            <p>Keywords: {", ".join(info['documentation'].get('keywords'))}</p>
-            """)
+            self._parent.setIndexWidget(index, button)
