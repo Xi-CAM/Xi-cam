@@ -4,6 +4,7 @@ viewTypes = ["ListView", "TreeView", ""]
 
 
 class DataResourcePlugin(IPlugin):
+    isSingleton = False
     def __init__(self, flags: dict = None, **config):
         """
         Config keys should follow RFC 3986 URI format:
@@ -17,6 +18,7 @@ class DataResourcePlugin(IPlugin):
         self.model = None
         self.config = config
         self.flags = flags if flags else {'isFlat': True, 'canPush': False}
+        # self.uri=''
 
     def pushData(self, *args, **kwargs):
         raise NotImplementedError
@@ -72,6 +74,20 @@ try:
         @property
         def config(self):
             return self.dataresource.config
+
+        @property
+        def uri(self):
+            return self.dataresource.uri
+
+        @uri.setter
+        def uri(self, value):
+            self.dataresource.uri = value
+
+        def __getattr__(self, attr):  ## implicitly wrap methods from leftViewer
+            if hasattr(self.dataresource, attr):
+                m = getattr(self.dataresource, attr)
+                return m
+            raise NameError(attr)
 
 
 except ImportError:
