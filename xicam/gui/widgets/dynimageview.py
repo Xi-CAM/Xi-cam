@@ -14,6 +14,8 @@ class DynImageView(ImageView):
 
         # Don't invert Y axis
         self.view.invertY(False)
+        self.imageItem.setOpts(axisOrder='row-major')
+
 
         # Setup late signal
         self.sigTimeChangeFinished = self.timeLine.sigPositionChangeFinished
@@ -32,3 +34,4 @@ class DynImageView(ImageView):
                                            autoHistogramRange)
         if len(img.shape) > 2 and img.shape[0] == 1:
             self.ui.roiPlot.hide()
+
