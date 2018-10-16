@@ -28,15 +28,17 @@ if qtpy.API_NAME == 'PyQt5' and 'PySide' in sys.modules: del sys.modules['PySide
 
 QCoreApplication.setOrganizationName("Camera")
 QCoreApplication.setApplicationName("Xi-cam")
-try:
-    QSettings().allKeys()
-except Exception:
-    QSettings().allKeys()
 
 def main():
+    import pydm
+    # app = QApplication([])
+    # app = pydm.PyDMApplication()
     app = QApplication([])
 
     from xicam.gui.windows import splash
+
+    if '-v' in sys.argv:
+        QErrorMessage.qtHandler()
 
     splash = splash.XicamSplashScreen()
     app.exec_()
