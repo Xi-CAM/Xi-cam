@@ -48,7 +48,7 @@ class XicamSplashScreen(QSplashScreen):
         self.raise_()
         self.activateWindow()
         QApplication.instance().setActiveWindow(self)
-        if '--quicksplash' in sys.argv:
+        if '--nosplash' in sys.argv:
             self.execlaunch()
         else:
             # Setup timed triggers for launching the QMainWindow
