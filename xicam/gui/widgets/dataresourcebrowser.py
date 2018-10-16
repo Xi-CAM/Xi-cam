@@ -4,7 +4,7 @@ from qtpy.QtGui import *
 from ..clientonlymodels.LocalFileSystemResource import LocalFileSystemResourcePlugin
 from xicam.gui.static import path
 from xicam.core.data import NonDBHeader, load_header
-from xicam.plugins import manager as pluginmanager
+
 from xicam.plugins.DataResourcePlugin import DataSourceListModel
 from xicam.gui import threads
 from .searchlineedit import SearchLineEdit
@@ -142,6 +142,7 @@ class BrowserTabBar(ContextMenuTabBar):
         self.menu = QMenu()
         # Add all resource plugins
         self.actions = {}
+        from xicam.plugins import manager as pluginmanager
         for plugin in pluginmanager.getPluginsOfCategory('DataResourcePlugin'):
             self.actions[plugin.name] = QAction(plugin.name)
             self.actions[plugin.name].triggered.connect(partial(self._addBrowser, plugin))
@@ -151,7 +152,7 @@ class BrowserTabBar(ContextMenuTabBar):
 
     def _addBrowser(self, plugin):
         datasource = plugin.plugin_object()
-        self.sigAddBrowser.emit(DataBrowser(DataResourceList(DataSourceListModel(datasource))),
+        self.sigAddBrowser.emit(datasource.controller(datasource.view(datasource.model(datasource))),
                                 datasource.config['host'])
 
 
