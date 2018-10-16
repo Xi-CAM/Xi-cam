@@ -1,12 +1,21 @@
 import time
 from functools import partial, wraps
 from xicam.core import msg
-
+import logging
 from qtpy.QtCore import *
 from qtpy.QtWidgets import *
 
+log = msg.logMessage
+log_error = msg.logError
+show_busy = msg.showBusy
+show_ready = msg.showReady
+
 
 class ThreadManager(QObject):
+    """
+    A global thread manager that holds on to threads with 'keepalive'
+    """
+    # TODO: convert to QStandardItemModel
     sigStateChanged = Signal()
 
     def __init__(self):
@@ -26,19 +35,24 @@ class ThreadManager(QObject):
 
     def append(self, thread):
         self._threads.append(thread)
+        self.sigStateChanged.emit()
 
 
 manager = ThreadManager()
 
 
-# justification for subclassing qthread: https://woboq.com/blog/qthread-you-were-not-doing-so-wrong.html
+# Justification for subclassing qthread: https://woboq.com/blog/qthread-you-were-not-doing-so-wrong.html
 class QThreadFuture(QThread):
+    """
+    A future-like QThread, with many conveniences.
+    """
     sigCallback = Signal()
     sigFinished = Signal()
     sigExcept = Signal(Exception)
 
     def __init__(self, method, *args, callback_slot=None, finished_slot=None, except_slot=None, default_exhandle=True,
-                 lock=None, threadkey: str = None, showBusy=True, priority=QThread.InheritPriority, **kwargs):
+                 lock=None, threadkey: str = None, showBusy=True, keepalive=True, priority=QThread.InheritPriority,
+                 **kwargs):
         super(QThreadFuture, self).__init__()
 
         # Auto-Kill other threads with same threadkey
@@ -66,19 +80,26 @@ class QThreadFuture(QThread):
         self.priority = priority
         self.showBusy = showBusy
 
-        manager.append(self)
+        if keepalive:
+            manager.append(self)
 
     def start(self):
+        """
+        Starts the thread
+        """
         if self.running:
             raise ValueError('Thread could not be started; it is already running.')
         super(QThreadFuture, self).start(self.priority)
 
     def run(self, *args, **kwargs):
+        """
+        Do not call this from the main thread; you're probably looking for start()
+        """
         self.cancelled = False
         self.running = True
         self.done = False
         self.exception = None
-        if self.showBusy: invoke_in_main_thread(msg.showBusy)
+        if self.showBusy: invoke_in_main_thread(show_busy)
         try:
             for self._result in self._run(*args, **kwargs):
                 if not isinstance(self._result, tuple): self._result = (self._result,)
@@ -88,18 +109,18 @@ class QThreadFuture(QThread):
         except Exception as ex:
             self.exception = ex
             self.sigExcept.emit(ex)
-            msg.logMessage(f'Error in thread: '
+            log(f'Error in thread: '
                            f'Method: {getattr(self.method, "__name__", "UNKNOWN")}\n'
                            f'Args: {self.args}\n'
-                           f'Kwargs: {self.kwargs}', level=msg.ERROR)
-            msg.logError(ex)
+                f'Kwargs: {self.kwargs}', level=logging.ERROR)
+            log_error(ex)
         else:
             self.done = True
             self.sigFinished.emit()
         finally:
-            invoke_in_main_thread(msg.showReady)
+            invoke_in_main_thread(show_ready)
 
-    def _run(self, *args, **kwargs):
+    def _run(self, *args, **kwargs):  # Used to generalize to QThreadFutureIterator
         yield self.method(*self.args, **self.kwargs)
 
     def result(self):
@@ -115,13 +136,18 @@ class QThreadFuture(QThread):
 
 
 class QThreadFutureIterator(QThreadFuture):
+    """
+    Same as QThreadFuture, but emits to the callback_slot for every yielded value of a generator
+    """
     def _run(self, *args, **kwargs):
         yield from self.method(*self.args, **self.kwargs)
 
 
 class InvokeEvent(QEvent):
+    """
+    Generic callable containing QEvent
+    """
     EVENT_TYPE = QEvent.Type(QEvent.registerEventType())
-
     def __init__(self, fn, *args, **kwargs):
         QEvent.__init__(self, InvokeEvent.EVENT_TYPE)
         self.fn = fn
@@ -138,8 +164,8 @@ class Invoker(QObject):
                 event.fn(*event.args, **event.kwargs)
             return True
         except Exception as ex:
-            msg.logMessage('QThreadFuture callback could not be invoked.', level=msg.ERROR)
-            msg.logError(ex)
+            log('QThreadFuture callback could not be invoked.', level=logging.ERROR)
+            log_error(ex)
         return False
 
 
@@ -147,13 +173,15 @@ _invoker = Invoker()
 
 
 def invoke_in_main_thread(fn, *args, **kwargs):
-    # print 'attempt invoke:',fn,args,kwargs
+    """
+    Invoke a callable in the main thread. Use this for making callbacks to the gui where signals are inconvenient.
+    """
     QCoreApplication.postEvent(_invoker,
                                InvokeEvent(fn, *args, **kwargs))
 
 
 def method(callback_slot=None, finished_slot=None, except_slot=None, default_exhandle=True, lock=None,
-           threadkey: str = None, showBusy=True, priority=QThread.InheritPriority, ):
+           threadkey: str = None, showBusy=True, priority=QThread.InheritPriority, keepalive=True, ):
     """
     Decorator for functions/methods to run as RunnableMethods on background QT threads
     Use it as any python decorator to decorate a function with @decorator syntax or at runtime:
@@ -183,7 +211,8 @@ def method(callback_slot=None, finished_slot=None, except_slot=None, default_exh
             future = QThreadFuture(func, *args,
                                    callback_slot=callback_slot, finished_slot=finished_slot,
                                    except_slot=except_slot, default_exhandle=default_exhandle, lock=lock,
-                                   threadkey=threadkey, showBusy=showBusy, priority=priority, **kwargs)
+                                   threadkey=threadkey, showBusy=showBusy, priority=priority, keepalive=keepalive,
+                                   **kwargs)
             future.start()
 
         return _runnable_method
