@@ -1,10 +1,53 @@
 from yapsy.IPlugin import IPlugin
-
 viewTypes = ["ListView", "TreeView", ""]
+
+try:
+    from qtpy.QtCore import *
+
+
+    class DataSourceListModel(QAbstractListModel):
+
+        def __init__(self, dataresource):
+            super(DataSourceListModel, self).__init__()
+            self.dataresource = dataresource
+            self.dataresource.model = self
+            self.rowCount = dataresource.rowCount
+            self.data = dataresource.data
+            self.columnCount = dataresource.columnCount
+            self.refresh = dataresource.refresh
+
+        @property
+        def config(self):
+            return self.dataresource.config
+
+        @property
+        def uri(self):
+            return self.dataresource.uri
+
+        @uri.setter
+        def uri(self, value):
+            self.dataresource.uri = value
+
+        def __getattr__(self, attr):  ## implicitly wrap methods from leftViewer
+            if hasattr(self.dataresource, attr):
+                m = getattr(self.dataresource, attr)
+                return m
+            raise NameError(attr)
+
+
+except ImportError:
+    # TODO: how should this be handled?
+    pass
 
 
 class DataResourcePlugin(IPlugin):
+    from xicam.gui.widgets.dataresourcebrowser import DataResourceList, DataBrowser
+    model = DataSourceListModel
+    view = DataResourceList
+    controller = DataBrowser
+
     isSingleton = False
+
     def __init__(self, flags: dict = None, **config):
         """
         Config keys should follow RFC 3986 URI format:
@@ -15,7 +58,7 @@ class DataResourcePlugin(IPlugin):
         model assigns itself to self.model
         """
         super(DataResourcePlugin, self).__init__()
-        self.model = None
+        # self.model = None
         self.config = config
         self.flags = flags if flags else {'isFlat': True, 'canPush': False}
         # self.uri=''
@@ -54,42 +97,3 @@ class DataResourcePlugin(IPlugin):
     def refresh(self): pass
 
     # TODO: convenience properties for each config
-
-
-try:
-    from qtpy.QtCore import *
-
-
-    class DataSourceListModel(QAbstractListModel):
-
-        def __init__(self, dataresource: DataResourcePlugin):
-            super(DataSourceListModel, self).__init__()
-            self.dataresource = dataresource
-            self.dataresource.model = self
-            self.rowCount = dataresource.rowCount
-            self.data = dataresource.data
-            self.columnCount = dataresource.columnCount
-            self.refresh = dataresource.refresh
-
-        @property
-        def config(self):
-            return self.dataresource.config
-
-        @property
-        def uri(self):
-            return self.dataresource.uri
-
-        @uri.setter
-        def uri(self, value):
-            self.dataresource.uri = value
-
-        def __getattr__(self, attr):  ## implicitly wrap methods from leftViewer
-            if hasattr(self.dataresource, attr):
-                m = getattr(self.dataresource, attr)
-                return m
-            raise NameError(attr)
-
-
-except ImportError:
-    # TODO: how should this be handled?
-    pass
