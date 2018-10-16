@@ -2,7 +2,6 @@ from pathlib import Path
 from typing import Union, List
 
 from databroker.utils import ALL
-from databroker._core import Header
 from warnings import warn
 
 
@@ -442,7 +441,9 @@ class DocMetaArray(object):
         return self._max
 
     def slice(self, i):
-        arr = self.events[i]['data'][self.field].asarray()
+        arr = self.events[i]['data'][self.field]
+        if hasattr(arr, 'asarray'):
+            arr = arr.asarray()
         self._min = arr.min()
         self._max = arr.max()
         return arr
