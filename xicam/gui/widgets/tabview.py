@@ -15,8 +15,8 @@ class TabView(QTabWidget):
         widgetcls
         field
         bindings
-            A list of tuples with pairs of bindings, s.t. the first item is the name of the attribute on widget cls holding a
-            signal (to be mirrored across each new widget), and the second is the the receiver.
+            A list of tuples with pairs of bindings, s.t. the one item is the name of the attribute on widget cls holding a
+            signal (to be mirrored across each new widget), and the second is the receiver.
         kwargs
         """
         super(TabView, self).__init__()
@@ -49,9 +49,12 @@ class TabView(QTabWidget):
             self.setCurrentIndex(
                 self.insertTab(i, newwidget,
                                self.model.item(i).text()))
-            for name, receiver in self.bindings:
-                signal = getattr(newwidget, name)
-                signal.connect(receiver)
+            for sender, receiver in self.bindings:
+                if isinstance(sender, str):
+                    sender = getattr(newwidget, sender)
+                if isinstance(receiver, str):
+                    receiver = getattr(newwidget, receiver)
+                sender.connect(receiver)
 
         for i in reversed(range(self.model.rowCount(), self.count())):
             self.removeTab(i)
