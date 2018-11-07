@@ -8,6 +8,7 @@ from yapsy import PluginInfo
 
 from xicam.plugins import manager as pluginmanager
 from xicam.plugins import observers as pluginobservers
+from xicam.gui.widgets.debugmenubar import DebuggableMenuBar
 from xicam.core import msg
 from ..widgets import defaultstage
 from .settings import ConfigDialog
@@ -61,7 +62,8 @@ class XicamMainWindow(QMainWindow):
         # To avoid this, a QStackedWidget is used for the central widget.
 
         # Setup menubar
-        menubar = self.menuBar()
+        menubar = DebuggableMenuBar()
+        self.setMenuBar(menubar)
         file = QMenu('&File', parent=menubar)
         menubar.addMenu(file)
         file.addAction('Se&ttings', self.showSettings, shortcut=QKeySequence(Qt.CTRL + Qt.ALT + Qt.Key_S))
