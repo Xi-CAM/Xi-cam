@@ -6,7 +6,8 @@ from functools import partial
 
 
 class TabView(QTabWidget):
-    def __init__(self, model=None, widgetcls=None, field=None, bindings: List[tuple] = [], **kwargs):
+    def __init__(self, headermodel: QStandardItemModel = None, selectionmodel: QItemSelectionModel = None,
+                 widgetcls=None, field=None, bindings: List[tuple] = [], **kwargs):
         """
 
         Parameters
@@ -24,31 +25,41 @@ class TabView(QTabWidget):
         self.kwargs = kwargs
 
         self.setWidgetClass(widgetcls)
-        self.model = None
-        self.selectionmodel = None  # type: TabItemSelectionModel
-        if model: self.setModel(model)
+        self.headermodel = None
+        self.selectionmodel = None
+        if selectionmodel: self.setSelectionModel(selectionmodel)  # type: TabItemSelectionModel
+
+        if headermodel: self.setHeaderModel(headermodel)
         self.field = field
         self.bindings = bindings
 
-    def setModel(self, model: QStandardItemModel):
-        self.model = model
-        self.selectionmodel = TabItemSelectionModel(self)
-        model.dataChanged.connect(self.dataChanged)
-        self.tabCloseRequested.connect(self.closeTab)
-
         self.setTabsClosable(True)
         self.setDocumentMode(True)
+        self.tabCloseRequested.connect(self.closeTab)
+
+    def setHeaderModel(self, model: QStandardItemModel):
+        self.headermodel = model
+        if not self.selectionmodel:
+            self.selectionmodel = TabItemSelectionModel(self)
+        model.dataChanged.connect(self.dataChanged)
+
+    def setSelectionModel(self, model: QItemSelectionModel):
+        self.selectionmodel = model
+        self.selectionmodel.currentChanged.connect(lambda current, previous: self.setCurrentIndex(current.row()))
+        self.currentChanged.connect(
+            lambda i: self.selectionmodel.setCurrentIndex(self.headermodel.index(i, 0), QItemSelectionModel.Rows))
+
 
     def dataChanged(self, start, end):
-        for i in range(self.model.rowCount()):
+        for i in range(self.headermodel.rowCount()):
 
             if self.widget(i):
-                if self.widget(i).header == self.model.item(i).header:
+                if self.widget(i).header == self.headermodel.item(i).header:
                     continue
-            newwidget = self.widgetcls(self.model.item(i).header, self.field, **self.kwargs)
+            newwidget = self.widgetcls(self.headermodel.item(i).header, self.field, **self.kwargs)
             self.setCurrentIndex(
                 self.insertTab(i, newwidget,
-                               self.model.item(i).text()))
+                               self.headermodel.item(i).text()))
             for sender, receiver in self.bindings:
                 if isinstance(sender, str):
                     sender = getattr(newwidget, sender)
@@ -56,18 +67,18 @@ class TabView(QTabWidget):
                     receiver = getattr(newwidget, receiver)
                 sender.connect(receiver)
 
-        for i in reversed(range(self.model.rowCount(), self.count())):
+        for i in reversed(range(self.headermodel.rowCount(), self.count())):
             self.removeTab(i)
 
     def setWidgetClass(self, cls):
         self.widgetcls = cls
 
     def currentHeader(self):
-        return self.model.item(self.currentIndex())
+        return self.headermodel.item(self.currentIndex())
 
     def closeTab(self, i):
         self.removeTab(i)
-        self.model.removeRow(i)
+        self.headermodel.removeRow(i)
 
 
 class TabViewSynchronizer(QObject):
@@ -120,7 +131,7 @@ class ContextMenuTabBar(QTabBar):
 
 class TabItemSelectionModel(QItemSelectionModel):
     def __init__(self, tabview: TabView):
-        super(TabItemSelectionModel, self).__init__(tabview.model)
+        super(TabItemSelectionModel, self).__init__(tabview.headermodel)
         self.tabview = tabview
 
     def currentIndex(self):
