@@ -28,10 +28,8 @@ class DynImageView(ImageView):
             data = data[len(data) // 2]
         return np.nanmin(data), np.nanpercentile(data, 99)
 
-    def setImage(self, img, autoRange=True, autoLevels=True, levels=None, axes=None, xvals=None, pos=None, scale=None,
-                 transform=None, autoHistogramRange=True):
-        super(DynImageView, self).setImage(img, autoRange, autoLevels, levels, axes, xvals, pos, scale, transform,
-                                           autoHistogramRange)
+    def setImage(self, img, **kwargs):
+        super(DynImageView, self).setImage(img, **kwargs)
         if len(img.shape) > 2 and img.shape[0] == 1:
             self.ui.roiPlot.hide()
 

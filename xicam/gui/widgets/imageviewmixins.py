@@ -1,18 +1,40 @@
 from functools import WRAPPER_ASSIGNMENTS
 from pyqtgraph import ImageView, InfiniteLine, mkPen, ScatterPlotItem
+from qtpy.QtGui import QTransform, QPolygonF
 from qtpy.QtWidgets import QLabel, QErrorMessage, QSizePolicy, QPushButton
-from qtpy.QtCore import Qt, Signal, Slot, QSize
+from qtpy.QtCore import Qt, Signal, Slot, QSize, QPointF
 import numpy as np
 from pyFAI.geometry import Geometry
 from xicam.gui.widgets.elidedlabel import ElidedLabel
+from xicam.core import msg
 
 
 # NOTE: PyQt widget mixins have pitfalls; note #2 here: http://trevorius.com/scrapbook/python/pyqt-multiple-inheritance/
 
+# NOTE: PyFAI geometry position vector is: x = up
+#                                          y = right
+#                                          z = beam
+
+# TODO: Add notification when qgrid is very wrong
+
+def q_from_angles(phi, alpha, wavelength):
+    r = 2 * np.pi / wavelength
+    qx = r * np.sin(phi) * np.cos(alpha)
+    qy = r * np.cos(phi) * np.sin(alpha)
+    qz = r * (np.cos(phi) * np.cos(alpha) - 1)
+
+    return qx, qy, qz
+
+
+def alpha(x, y, z):
+    return np.arctan2(y, z)
+
+
+def phi(x, y, z):
+    return np.arctan2(x, z)
+
 
 class QSpace(ImageView):
-    sigGeometryChanged = Signal()
-
     def __init__(self, *args, geometry: Geometry = None, **kwargs):
         super(QSpace, self).__init__(*args, **kwargs)
 
@@ -22,19 +44,85 @@ class QSpace(ImageView):
         if callable(geometry):
             geometry = geometry()
         self._geometry = geometry
-        self.sigGeometryChanged.emit()
+        self.setTransform()
+
+    def setTransform(self):
+        if self._geometry:
+            shape = self._geometry.detector.max_shape
+            z, y, x = self._geometry.calc_pos_zyx(*[np.array([0])] * 3)
+            bottomleftpos = np.array([x, y, z]).flatten()
+
+            z, y, x = self._geometry.calc_pos_zyx(np.array([0]), np.array([0]), np.array([shape[1]]))
+            bottomrightpos = np.array([x, y, z]).flatten()
+            #
+            z, y, x = self._geometry.calc_pos_zyx(np.array([0]), np.array([shape[0]]), np.array([shape[1]]))
+            toprightpos = np.array([x, y, z]).flatten()
+            #
+            z, y, x = self._geometry.calc_pos_zyx(np.array([0]), np.array([shape[0]]), np.array([0]))
+            topleftpos = np.array([x, y, z]).flatten()
+
+            # qbottomleft = q_from_angles(phi(*bottomleftpos), alpha(*bottomleftpos), self._geometry.wavelength)
+            # qbottomright = q_from_angles(phi(*bottomrightpos), alpha(*bottomrightpos), self._geometry.wavelength)
+            # qtopright = q_from_angles(phi(*toprightpos), alpha(*toprightpos), self._geometry.wavelength)
+            # qtopleft = q_from_angles(phi(*topleftpos), alpha(*topleftpos), self._geometry.wavelength)
+
+            qbottomleft = bottomleftpos * 1e10
+            qbottomright = bottomrightpos * 1e10
+            qtopright = toprightpos * 1e10
+            qtopleft = topleftpos * 1e10
+
+            # Build Quads
+            quad1 = QPolygonF()
+            quad1.append(QPointF(0, shape[0]))
+            quad1.append(QPointF(shape[1], shape[0]))
+            quad1.append(QPointF(shape[1], 0))
+            quad1.append(QPointF(0, 0))
+
+            quad2 = QPolygonF()
+            quad2.append(QPointF(*qbottomleft[:2]) * 1e-10)
+            quad2.append(QPointF(*qbottomright[:2]) * 1e-10)
+            quad2.append(QPointF(*qtopright[:2]) * 1e-10)
+            quad2.append(QPointF(*qtopleft[:2]) * 1e-10)
+
+            # What did I build?
+            msg.logMessage('qbottomleft:', np.array(qbottomleft[:2]) * 1e-10)
+            msg.logMessage('qbottomright:', np.array(qbottomright[:2]) * 1e-10)
+            msg.logMessage('qtopright:', np.array(qtopright[:2]) * 1e-10)
+            msg.logMessage('qtopleft:', np.array(qtopleft[:2]) * 1e-10)
+
+            transform = QTransform()
+            QTransform.quadToQuad(quad1, quad2, transform)
+
+            # # Invert Y axis (correct data dimensioning)
+            # transform = QTransform()
+            #
+            # # Translate to Q-space
+            # transform.translate(qtopleft[0]*1e-10, qtopleft[2]*1e-10)
+            #
+            # # Scale to Q-space
+            # # transform.scale(1, -1)
+            # transform.scale(((qbottomright[0]-qbottomleft[0])*1e-10)/shape[1],
+            #                           ((qtopleft[2] - qbottomleft[2]) * 1e-10)/shape[0])
+
+            # # Translate to Q-space
+            # transform.translate(qbottomleft[0]*1e-10, (qbottomleft[2]+qtopright[2]-qbottomleft[2])*1e-10)
+
+            self.imageItem.setTransform(transform)
+
+    def setImage(self, *args, **kwargs):
+        super(QSpace, self).setImage(*args, **kwargs)
+        self.setTransform()
 
 
 class CenterMarker(QSpace):
-    sigGeometryChanged = Signal()
 
     def __init__(self, *args, **kwargs):
-        super(CenterMarker, self).__init__(*args, **kwargs)
-
         self.centerplot = ScatterPlotItem(brush='r')
         self.centerplot.setZValue(100)
+
+        super(CenterMarker, self).__init__(*args, **kwargs)
+
         self.addItem(self.centerplot)
-        self.sigGeometryChanged.connect(self.drawCenter)
         self.drawCenter()
 
     def drawCenter(self):
@@ -43,9 +131,13 @@ class CenterMarker(QSpace):
         except (TypeError, AttributeError):
             pass
         else:
-            x = fit2d['centerX']
-            y = fit2d['centerY']
+            x = 0  # fit2d['centerX']
+            y = 0  # fit2d['centerY']
             self.centerplot.setData(x=[x], y=[y])
+
+    def setGeometry(self, geometry: Geometry):
+        super(CenterMarker, self).setGeometry(geometry)
+        self.drawCenter()
 
 
 class Crosshair(ImageView):
