@@ -1,5 +1,5 @@
 from functools import WRAPPER_ASSIGNMENTS
-from pyqtgraph import ImageView, InfiniteLine, mkPen, ScatterPlotItem
+from pyqtgraph import ImageView, InfiniteLine, mkPen, ScatterPlotItem, ImageItem, PlotItem
 from qtpy.QtGui import QTransform, QPolygonF
 from qtpy.QtWidgets import QLabel, QErrorMessage, QSizePolicy, QPushButton
 from qtpy.QtCore import Qt, Signal, Slot, QSize, QPointF
@@ -36,6 +36,14 @@ def phi(x, y, z):
 
 class QSpace(ImageView):
     def __init__(self, *args, geometry: Geometry = None, **kwargs):
+        self._transform = QTransform
+
+        # Add q axes
+        self.axesItem = PlotItem()
+        self.axesItem.axes['left']['item'].setZValue(10)
+        self.axesItem.axes['top']['item'].setZValue(10)
+        if 'view' not in kwargs: kwargs['view'] = self.axesItem
+
         super(QSpace, self).__init__(*args, **kwargs)
 
         self.setGeometry(geometry)
@@ -47,29 +55,41 @@ class QSpace(ImageView):
         self.setTransform()
 
     def setTransform(self):
-        if self._geometry:
-            shape = self._geometry.detector.max_shape
-            z, y, x = self._geometry.calc_pos_zyx(*[np.array([0])] * 3)
-            bottomleftpos = np.array([x, y, z]).flatten()
+        if self.imageItem.image is not None:
+            shape = self.imageItem.image.shape
+            qbottomright = np.array([shape[1], 0])
+            qtopright = np.array([shape[1], shape[0]])
+            qtopleft = np.array([0, shape[0]])
+            qbottomleft = np.array([0, 0])
+            self.axesItem.setLabel('bottom', u'x (px)')  # , units='s')
+            self.axesItem.setLabel('left', u'z (px)')
 
-            z, y, x = self._geometry.calc_pos_zyx(np.array([0]), np.array([0]), np.array([shape[1]]))
-            bottomrightpos = np.array([x, y, z]).flatten()
-            #
-            z, y, x = self._geometry.calc_pos_zyx(np.array([0]), np.array([shape[0]]), np.array([shape[1]]))
-            toprightpos = np.array([x, y, z]).flatten()
-            #
-            z, y, x = self._geometry.calc_pos_zyx(np.array([0]), np.array([shape[0]]), np.array([0]))
-            topleftpos = np.array([x, y, z]).flatten()
+            if self._geometry:
+                self.axesItem.setLabel('bottom', u'q (Å⁻¹)')  # , units='s')
+                self.axesItem.setLabel('left', u'q (Å⁻¹)')
 
-            # qbottomleft = q_from_angles(phi(*bottomleftpos), alpha(*bottomleftpos), self._geometry.wavelength)
-            # qbottomright = q_from_angles(phi(*bottomrightpos), alpha(*bottomrightpos), self._geometry.wavelength)
-            # qtopright = q_from_angles(phi(*toprightpos), alpha(*toprightpos), self._geometry.wavelength)
-            # qtopleft = q_from_angles(phi(*topleftpos), alpha(*topleftpos), self._geometry.wavelength)
+                shape = self._geometry.detector.max_shape
+                z, y, x = self._geometry.calc_pos_zyx(*[np.array([0])] * 3)
+                topleftpos = np.array([x, y, z]).flatten()
 
-            qbottomleft = bottomleftpos * 1e10
-            qbottomright = bottomrightpos * 1e10
-            qtopright = toprightpos * 1e10
-            qtopleft = topleftpos * 1e10
+                z, y, x = self._geometry.calc_pos_zyx(np.array([0]), np.array([0]), np.array([shape[1]]))
+                toprightpos = np.array([x, y, z]).flatten()
+                #
+                z, y, x = self._geometry.calc_pos_zyx(np.array([0]), np.array([shape[0]]), np.array([shape[1]]))
+                bottomrightpos = np.array([x, y, z]).flatten()
+                #
+                z, y, x = self._geometry.calc_pos_zyx(np.array([0]), np.array([shape[0]]), np.array([0]))
+                bottomleftpos = np.array([x, y, z]).flatten()
+
+                # qbottomleft = q_from_angles(phi(*bottomleftpos), alpha(*bottomleftpos), self._geometry.wavelength)
+                # qbottomright = q_from_angles(phi(*bottomrightpos), alpha(*bottomrightpos), self._geometry.wavelength)
+                # qtopright = q_from_angles(phi(*toprightpos), alpha(*toprightpos), self._geometry.wavelength)
+                # qtopleft = q_from_angles(phi(*topleftpos), alpha(*topleftpos), self._geometry.wavelength)
+
+                qbottomleft = np.array(bottomleftpos[:2]) * np.array([1, -1])
+                qbottomright = np.array(bottomrightpos[:2]) * np.array([1, -1])
+                qtopright = np.array(toprightpos[:2]) * np.array([1, -1])
+                qtopleft = np.array(topleftpos[:2]) * np.array([1, -1])
 
             # Build Quads
             quad1 = QPolygonF()
@@ -79,16 +99,16 @@ class QSpace(ImageView):
             quad1.append(QPointF(0, 0))
 
             quad2 = QPolygonF()
-            quad2.append(QPointF(*qbottomleft[:2]) * 1e-10)
-            quad2.append(QPointF(*qbottomright[:2]) * 1e-10)
-            quad2.append(QPointF(*qtopright[:2]) * 1e-10)
-            quad2.append(QPointF(*qtopleft[:2]) * 1e-10)
+            quad2.append(QPointF(*qbottomleft))
+            quad2.append(QPointF(*qbottomright))
+            quad2.append(QPointF(*qtopright))
+            quad2.append(QPointF(*qtopleft))
 
             # What did I build?
-            msg.logMessage('qbottomleft:', np.array(qbottomleft[:2]) * 1e-10)
-            msg.logMessage('qbottomright:', np.array(qbottomright[:2]) * 1e-10)
-            msg.logMessage('qtopright:', np.array(qtopright[:2]) * 1e-10)
-            msg.logMessage('qtopleft:', np.array(qtopleft[:2]) * 1e-10)
+            msg.logMessage('qbottomleft:', np.array(qbottomleft[:2]))
+            msg.logMessage('qbottomright:', np.array(qbottomright[:2]))
+            msg.logMessage('qtopright:', np.array(qtopright[:2]))
+            msg.logMessage('qtopleft:', np.array(qtopleft[:2]))
 
             transform = QTransform()
             QTransform.quadToQuad(quad1, quad2, transform)
@@ -107,7 +127,10 @@ class QSpace(ImageView):
             # # Translate to Q-space
             # transform.translate(qbottomleft[0]*1e-10, (qbottomleft[2]+qtopright[2]-qbottomleft[2])*1e-10)
 
-            self.imageItem.setTransform(transform)
+            for item in self.view.items:
+                if isinstance(item, ImageItem):
+                    item.setTransform(transform)
+            self._transform = transform
 
     def setImage(self, *args, **kwargs):
         super(QSpace, self).setImage(*args, **kwargs)
@@ -159,7 +182,8 @@ class Crosshair(ImageView):
         if self.view.getViewBox().sceneBoundingRect().contains(pos):
             mousePoint = self.view.getViewBox().mapSceneToView(pos)
             x, y = mousePoint.x(), mousePoint.y()
-            if self.imageItem.boundingRect().contains(mousePoint):  # within bounds
+
+            if self.imageItem.mapRectToView(self.imageItem.boundingRect()).contains(mousePoint):  # within bounds
                 self._vline.setPos(x)
                 self._hline.setPos(y)
                 self._hline.setVisible(True)
@@ -193,18 +217,23 @@ class QCoordinates(ImageView):
         if self.view.sceneBoundingRect().contains(pos):
             mousePoint = self.view.getViewBox().mapSceneToView(pos)
             x, y = mousePoint.x(), mousePoint.y()
-            if self.imageItem.boundingRect().contains(mousePoint):  # within bounds
+            if self.imageItem.mapRectToView(self.imageItem.boundingRect()).contains(mousePoint):  # within bounds
                 # angstrom=QChar(0x00B5)
+                pxpos = self.imageItem.mapFromView(QPointF(x, y))
+                try:
+                    I = self.imageItem.image[int(pxpos.y()), int(pxpos.x())]
+                except IndexError:
+                    I = 0
                 self._coordslabel.setText(f"<div style='font-size: 12pt;background-color:#111111; "
                                           f"text-overflow: ellipsis; width:100%;'>"
-                                          f"x={0:0.1f}, "
-                                          f"<span style=''>y={0:0.1f}</span>, "
-                                          f"<span style=''>I={0:0.0f}</span>, "
+                                          f"x={pxpos.x():0.1f}, "
+                                          f"<span style=''>y={pxpos.y():0.1f}</span>, "
+                                          f"<span style=''>I={I:0.0f}</span>, "
                                           f"q={np.sqrt(x**2+y**2):0.3f} \u212B\u207B\u00B9, "
                                           f"q<sub>z</sub>={y:0.3f} \u212B\u207B\u00B9, "
                                           f"q<sub>\u2225</sub>={x:0.3f} \u212B\u207B\u00B9, "
-                                          f"d={0:0.3f} nm, "
-                                          f"\u03B8={np.arctan2(y,x):.2f}</div>")
+                                          f"d={2*np.pi/np.sqrt(x**2+y**2)*10:0.3f} nm, "
+                                          f"\u03B8={np.deg2rad(np.arctan2(y,x)):.2f}&#176;</div>")
                 # if self.plotwidget is not None:  # for timeline
                 #     self.plotwidget.movPosLine(self.getq(x, y),
                 #                                self.getq(x, y, mode='parallel'),
