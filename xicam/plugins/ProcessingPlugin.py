@@ -206,6 +206,7 @@ def EZProcessingPlugin(method):
 
 class Var(object):
     def __init__(self):
+        self.value = None
         self.workflow = None
         self.parent = None
         self.conn_type = None  # input or output
@@ -268,6 +269,7 @@ class Input(Var):
             try:
                 serialize(value)
             except:
+                # TODO: narrow except
                 msg.logMessage(f"Value '{value}'on input '{name}' could not be cloudpickled.", level=msg.WARNING)
             super().__setattr__(name, value)
         else:
@@ -296,7 +298,6 @@ class Output(Var):
         self.name = name
         self.description = description
         self.units = units
-        self.value = None
         self.type = type
 
 class InOut(Input, Output):
