@@ -30,7 +30,7 @@ QCoreApplication.setOrganizationName("Camera")
 QCoreApplication.setApplicationName("Xi-cam")
 
 def main():
-    import pydm
+    # import pydm
     # app = QApplication([])
     # app = pydm.PyDMApplication()
     app = QApplication([])
