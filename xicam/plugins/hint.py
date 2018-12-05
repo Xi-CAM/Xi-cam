@@ -1,4 +1,4 @@
-from .ProcessingPlugin import Var
+from .ProcessingPlugin import Var, Input
 from typing import List
 
 
@@ -48,7 +48,25 @@ class VerticalROI(Hint):
         from pyqtgraph import LinearRegionItem
         canvas = canvases['imageview']
         if callable(canvas): canvas = canvas()
-        canvases['imageview'].addItem(LinearRegionItem([self.min.value, self.max.value], **self.kwargs))
+        canvas.addItem(LinearRegionItem([self.min.value, self.max.value], **self.kwargs))
+
+
+class ButtonHint(Hint):
+    def __init__(self, activated: Var, iconpath):
+        super(ButtonHint, self).__init__()
+        self.activated = activated
+        self.iconpath = iconpath
+
+    def visualize(self, canvas, **canvases):
+        from qtpy.QtWidgets import QToolButton
+        from qtpy.QtGui import QIcon
+        canvas = canvases['toolbar']  # type:QToolBar
+        if callable(canvas): canvas = canvas()
+        button = QToolButton()
+        button.setIcon(QIcon(self.iconpath))
+        button.setCheckable(True)
+        button.toggled.connect(lambda state: setattr(self.activated, 'value', state))
+        canvas.addWidget(button)
 
 
 class CoPlotHint(Hint):
