@@ -6,16 +6,15 @@ from xicam.plugins import SettingsPlugin
 
 
 class VenvsSettingsPlugin(SettingsPlugin):
-    name = 'Virtual Environments'
 
     def __init__(self):
         self.widget = QLabel('test')
         super(VenvsSettingsPlugin, self).__init__(QIcon(str(path('icons/python.png'))),
-                                                  self.name,
+                                                  'Virtual Environments',
                                                   self.widget)
 
-    def save(self):
+    def toState(self):
         return None  # self.parameter.saveState()
 
-    def restore(self, state):
+    def fromState(self, state):
         pass  # self.parameter.restoreState(state)

@@ -14,7 +14,6 @@ class ConnectionSettingsPlugin(SettingsPlugin):
     """
     A built-in settings plugin to configure connections to other hosts
     """
-    name = 'Connections'
 
     def __init__(self):
         # Setup UI
@@ -35,9 +34,9 @@ class ConnectionSettingsPlugin(SettingsPlugin):
         self.widget.layout().addWidget(self.listview)
         self.widget.layout().addWidget(self.plugintoolbar)
         super(ConnectionSettingsPlugin, self).__init__(QIcon(str(path('icons/server.png'))),
-                                                       self.name,
+                                                       'Connections',
                                                        self.widget)
-        self.restore(QSettings().value('Connections'))
+        self.fromState(QSettings().value('Connections'))
 
     def add_credential(self):
         """
@@ -61,14 +60,14 @@ class ConnectionSettingsPlugin(SettingsPlugin):
         self.connectionsmodel.appendRow(item)
         self.connectionsmodel.dataChanged.emit(item.index(), item.index())
 
-    def save(self):
+    def toState(self):
         credentials = deepcopy(self.credentials)
         for name, credential in credentials.items():
             if credential.get('savepassword', False):
                 credential['password'] = None
         return credentials
 
-    def restore(self, state):
+    def fromState(self, state):
         self.connectionsmodel.clear()
         for name, credential in state.items():
             item = QStandardItem(name)

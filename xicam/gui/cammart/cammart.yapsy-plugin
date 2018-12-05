@@ -1,5 +1,5 @@
 [Core]
-Name = cammart
+Name = Plugins
 Module = __init__.py
 
 [Documentation]

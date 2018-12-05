@@ -8,7 +8,7 @@ from xicam.gui.static import path
 import pyqtgraph as pg
 from xicam import plugins
 
-from xicam.plugins import SettingsPlugin
+from xicam.plugins import ParameterSettingsPlugin
 
 
 def setDefault():
@@ -36,26 +36,24 @@ def setPlotDefault():
     pass
 
 
-if plugins.qt_is_safe:
-    AppearanceSettingsPlugin = SettingsPlugin.fromParameter(QIcon(str(path('icons/colors.png'))),
-                                                        'Appearance',
-                                                        [dict(name='Theme',
-                                                              values=OrderedDict([('Default', setDefault),
-                                                                                  ('QDarkStyle', setDark),
-                                                                                  ('QtModern', setModern),
-                                                                                  ('UglyGreen', setUglyGreen)]),
-                                                              type='list'),
-                                                         dict(name='Plot Theme (requires restart)',
-                                                              values=OrderedDict([('Default (Dark)', setPlotDefault),
-                                                                                  ('Publication (White)',
-                                                                                   setPlotWhite)]),
-                                                              type='list')]
-                                                        )
+class AppearanceSettingsPlugin(ParameterSettingsPlugin):
+    def __init__(self):
+        super(AppearanceSettingsPlugin, self).__init__(QIcon(str(path('icons/colors.png'))),
+                                                       'Appearance',
+                                                       [dict(name='Theme',
+                                                             values=OrderedDict([('Default', setDefault),
+                                                                                 ('QDarkStyle', setDark),
+                                                                                 ('QtModern', setModern),
+                                                                                 ('UglyGreen', setUglyGreen)]),
+                                                             type='list'),
+                                                        dict(name='Plot Theme (requires restart)',
+                                                             values=OrderedDict([('Default (Dark)', setPlotDefault),
+                                                                                 ('Publication (White)',
+                                                                                  setPlotWhite)]),
+                                                             type='list')]
+                                                       )
 
 
     def apply(self):
-        self.parameter['Theme']()
-        self.parameter['Plot Theme (requires restart)']()
-
-
-    AppearanceSettingsPlugin.apply = apply
+        self['Theme']()
+        self['Plot Theme (requires restart)']()

@@ -13,7 +13,6 @@ class CamMartSettingsPlugin(SettingsPlugin):
     """
     A built-in settings plugin to configure installed packages
     """
-    name = 'Plugins'
 
     def __init__(self):
         # Setup UI
@@ -34,7 +33,7 @@ class CamMartSettingsPlugin(SettingsPlugin):
         self.widget.layout().addWidget(self.listview)
         self.widget.layout().addWidget(self.plugintoolbar)
         super(CamMartSettingsPlugin, self).__init__(QIcon(str(path('icons/box.png'))),
-                                                    self.name,
+                                                    'Plugins',
                                                     self.widget)
 
         # Refresh packages list
@@ -64,10 +63,10 @@ class CamMartSettingsPlugin(SettingsPlugin):
             cammart.uninstall(self.packagesmodel.itemFromIndex(self.listview.selectedIndexes()[0]).text())
             self.refresh()
 
-    def save(self):  # This class has no settings to save, it is driven by the packages list
+    def toState(self):  # This class has no settings to save, it is driven by the packages list
         return None  # self.parameter.saveState()
 
-    def restore(self, state):
+    def fromState(self, state):
         pass  # self.parameter.restoreState(state)
 
 
