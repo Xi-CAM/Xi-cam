@@ -1,8 +1,8 @@
 from typing import List
-from qtpy.QtCore import QObject
+from qtpy.QtCore import QObject, QSettings
 from yapsy.IPlugin import IPlugin
 from xicam import plugins
-
+from pyqtgraph.parametertree import Parameter, ParameterTree
 
 class SettingsPlugin(QObject, IPlugin):
     def __new__(cls, *args, **kwargs):
@@ -12,28 +12,52 @@ class SettingsPlugin(QObject, IPlugin):
     def __init__(self, icon, name, widget):
         super(SettingsPlugin, self).__init__()
         self.icon = icon
-        self.name = name
-        self.widget = widget
+        self._name = name
+        self._widget = widget
 
-    @staticmethod
-    def fromParameter(icon, name: str, paramdicts: List[dict]):
-        if not plugins.qt_is_safe: return None
-        from pyqtgraph.parametertree import Parameter, ParameterTree
-        widget = ParameterTree()
-        parameter = Parameter(name=name, type='group', children=paramdicts)
-        widget.setParameters(parameter, showTop=False)
+    @property
+    def widget(self):
+        return self._widget
 
-        def __init__(self):
-            SettingsPlugin.__init__(self, icon, name, widget)
+    @widget.setter
+    def widget(self, widget):
+        self._widget = widget
 
-        return type(name + 'SettingsPlugin', (SettingsPlugin,), {'__init__': __init__, 'parameter': parameter})
+    def name(self):
+        return self._name
 
     def apply(self):
-        raise NotImplementedError
+        ...
+
+    def toState(self):
+        self.apply()
+        ...
+
+    def fromState(self, state):
+        ...
 
     def save(self):
-        self.apply()
-        return self.parameter.saveState(filter='user')
+        QSettings().setValue(self.name(), self.toState())
 
-    def restore(self, state):
-        self.parameter.restoreState(state, addChildren=False, removeChildren=False)
+
+class ParameterSettingsPlugin(Parameter, SettingsPlugin):
+
+    def __init__(self, icon, name: str, paramdicts: List[dict]):
+        SettingsPlugin.__init__(self, icon, name, None)
+        Parameter.__init__(self, name=name, type='group', children=paramdicts)
+
+    @property
+    def widget(self):
+        widget = ParameterTree()
+        widget.setParameters(self, showTop=False)
+        return widget
+
+    def apply(self):
+        pass
+
+    def toState(self):
+        self.apply()
+        return self.saveState(filter='user')
+
+    def fromState(self, state):
+        self.restoreState(state, addChildren=False, removeChildren=False)
