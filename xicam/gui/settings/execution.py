@@ -10,27 +10,26 @@ from xicam import plugins
 from xicam.core.execution import localexecutor, daskexecutor, camlinkexecutor
 from xicam.core import execution
 
-from xicam.plugins import SettingsPlugin
+from xicam.plugins import ParameterSettingsPlugin
 
-if plugins.qt_is_safe:
-    AppearanceSettingsPlugin = SettingsPlugin.fromParameter(QIcon(str(path('icons/cpu.png'))),
-                                                            'Execution',
-                                                            [dict(name='Executor',
-                                                                  values=OrderedDict([('Local Threaded',
-                                                                                       localexecutor.LocalExecutor()),
-                                                                                      ('Local Service',
-                                                                                       daskexecutor.DaskExecutor()),
-                                                                                      ('Cam-link', None), ]),
-                                                                  value='Local Threaded',
-                                                                  type='list'),
-                                                             ]
-                                                            )
 
-    execution.executor = AppearanceSettingsPlugin.parameter['Executor']
+class ExecutionSettingsPlugin(ParameterSettingsPlugin):
+    def __init__(self):
+        super(ExecutionSettingsPlugin, self).__init__(QIcon(str(path('icons/cpu.png'))),
+                                                      'Execution',
+                                                      [dict(name='Executor',
+                                                            values=OrderedDict([('Local Threaded',
+                                                                                 localexecutor.LocalExecutor()),
+                                                                                ('Local Service',
+                                                                                 daskexecutor.DaskExecutor()),
+                                                                                ('Cam-link', None), ]),
+                                                            value='Local Threaded',
+                                                            type='list'),
+                                                       ]
+                                                      )
+
+        execution.executor = self['Executor']
 
 
     def apply(self):
-        execution.executor = self.parameter['Executor']
-
-
-    AppearanceSettingsPlugin.apply = apply
+        execution.executor = self['Executor']

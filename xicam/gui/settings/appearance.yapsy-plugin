@@ -1,5 +1,5 @@
 [Core]
-Name = appearance
+Name = Appearance
 Module = appearance.py
 
 [Documentation]

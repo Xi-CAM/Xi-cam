@@ -66,7 +66,7 @@ class ConfigDialog(QDialog):
 
     def createIcons(self):
         for pluginInfo in pluginmanager.getPluginsOfCategory('SettingsPlugin'):
-            item = QStandardItem(pluginInfo.plugin_object.icon, pluginInfo.plugin_object.name)
+            item = QStandardItem(pluginInfo.plugin_object.icon, pluginInfo.plugin_object.name())
             item.widget = pluginInfo.plugin_object.widget
             item.setTextAlignment(Qt.AlignHCenter)
             item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
@@ -86,8 +86,8 @@ class ConfigDialog(QDialog):
     def restore(self):
         for pluginInfo in pluginmanager.getPluginsOfCategory('SettingsPlugin'):
             try:
-                pluginInfo.plugin_object.restore(QSettings().value(pluginInfo.name))
-            except (AttributeError, TypeError, SystemError):
+                pluginInfo.plugin_object.fromState(QSettings().value(pluginInfo.name))
+            except (AttributeError, TypeError, SystemError, KeyError):
                 # No settings saved
                 pass
         self.apply()
@@ -99,7 +99,7 @@ class ConfigDialog(QDialog):
 
     def apply(self):
         for pluginInfo in pluginmanager.getPluginsOfCategory('SettingsPlugin'):
-            QSettings().setValue(pluginInfo.name, pluginInfo.plugin_object.save())
+            pluginInfo.plugin_object.save()
 
     def close(self):
         self._empty()
