@@ -122,7 +122,7 @@ def notifyMessage(*args, timeout=8000, title='', level: int = INFO):
         if level in [ERROR, CRITICAL]: icon = trayicon.Critical
         if icon is None: raise ValueError('Invalid message level.')
         trayicon.show()
-        trayicon.showMessage(''.join(args), title, icon, timeout)  # TODO: check if title and message are swapped?
+        trayicon.showMessage(title, ''.join(args), icon, timeout)  # TODO: check if title and message are swapped?
 
 
 def showMessage(*args, timeout=5, **kwargs):
