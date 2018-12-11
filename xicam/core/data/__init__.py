@@ -468,17 +468,24 @@ class DocMetaArray(object):
 
 
 class lazyfield(object):
-    def __init__(self, handler, *args, **kwargs):
-        self.handler = handler
-        self.args = args
-        self.kwargs = kwargs
+    def __init__(self, handler_cls, resource_path, resource_kwargs):
+        self.handler_cls = handler_cls
+        self.resource_path = resource_path
+        self.resource_kwargs = resource_kwargs
+        self._handler = None
         super(lazyfield, self).__init__()
+
+    @property
+    def handler(self):
+        if not self._handler:
+            self._handler = self.handler_cls(*self.resource_path)
+        return self._handler
 
     def implements(self, t):
         if t == 'MetaArray': return True
 
     def asarray(self):
-        return self.handler()(*self.args, **self.kwargs)
+        return self.handler(**self.resource_kwargs)
 
 # TODO: Eliminate lazyfield and use only handler in doc?
 
