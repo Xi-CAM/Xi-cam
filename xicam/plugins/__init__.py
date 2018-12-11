@@ -11,14 +11,14 @@ from xicam.core import msg
 from .DataHandlerPlugin import DataHandlerPlugin
 from .GUIPlugin import GUIPlugin, GUILayout
 from .ProcessingPlugin import ProcessingPlugin, EZProcessingPlugin, Input, Output, InOut
-from .SettingsPlugin import SettingsPlugin
+from .SettingsPlugin import SettingsPlugin, ParameterSettingsPlugin
 from .DataResourcePlugin import DataResourcePlugin
 from .WidgetPlugin import QWidgetPlugin
 from .venvs import observers as venvsobservers
 from .DataResourcePlugin import DataResourcePlugin
 from .FittableModelPlugin import Fittable1DModelPlugin
 from .EZPlugin import _EZPlugin, EZPlugin
-from .hint import PlotHint, Hint
+from .hints import PlotHint, Hint
 from yapsy.PluginManager import NormalizePluginNameForModuleName, imp, log
 import xicam
 
@@ -112,7 +112,8 @@ class XicamPluginManager(PluginManager):
                     try:
                         plugin_info.plugin_object = plugin_info.plugin_object()  # Force late singleton-ing of GUIPlugins
                     except Exception as ex:
-                        msg.notifyMessage(f'The "{plugin_info.name}" plugin could not be loaded. {repr(ex)}',
+                        msg.notifyMessage(repr(ex),
+                                          title=f'The "{plugin_info.name}" plugin could not be loaded.',
                                           level=msg.CRITICAL)
                         msg.logError(ex)
 
@@ -193,9 +194,12 @@ class XicamPluginManager(PluginManager):
                     with open(candidate_filepath + ".py", "r") as plugin_file:
                         candidate_module = imp.load_module(plugin_module_name, plugin_file,
                                                            candidate_filepath + ".py", ("py", "r", imp.PY_SOURCE))
-            except Exception:
+            except Exception as ex:
                 exc_info = sys.exc_info()
                 log.error("Unable to import plugin: %s" % candidate_filepath, exc_info=exc_info)
+                msg.notifyMessage(repr(ex),
+                                  title=f'The "{plugin_info.name}" plugin could not be loaded.',
+                                  level=msg.CRITICAL)
                 plugin_info.error = exc_info
                 processed_plugins.append(plugin_info)
                 continue
