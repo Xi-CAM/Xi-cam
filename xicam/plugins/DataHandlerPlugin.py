@@ -112,14 +112,13 @@ def event_doc(data_uid: str, descriptor_uid: str, metadata: dict = None):
 def embedded_local_event_doc(descriptor_uid: str,
                              field: str,
                              handler: type,
-                             handler_args: tuple = None,
-                             handler_kwargs: dict = None,
+                             resource_path: tuple = None,
+                             resource_kwargs: dict = None,
                              metadata: dict = None):
-    if not handler_args: handler_args = tuple()
-    if not handler_kwargs: handler_kwargs = {}
+    if not resource_kwargs: resource_kwargs = {}
     if not metadata: metadata = {}
 
-    datafield = {field:lazyfield(handler, *handler_args, **handler_kwargs)}
+    datafield = {field: lazyfield(handler, resource_path, resource_kwargs)}
     metadata.update(FillableDict({'descriptor': descriptor_uid,
                                   'time': datetime.datetime.now(),
                                   'uid': str(uuid.uuid4()),
