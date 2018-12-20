@@ -331,3 +331,16 @@ class Workflow(object):
     def update(self):
         for observer in self._observers:
             observer()
+
+    @property
+    def hints(self):
+        hints = []
+        for process in self._processes:
+            hints.extend(process.hints)
+        return hints
+
+    def visualize(self, canvas, **canvases):
+        canvasinstances = {name: canvas() if callable(canvas) else canvas for name, canvas in canvases.items()}
+        for process in self._processes:
+            for hint in process.hints:
+                hint.visualize(canvas, **canvasinstances)
