@@ -39,7 +39,7 @@ class DataHandlerPlugin(IPlugin):
 
     @classmethod
     def getEventDocs(cls, paths, descriptor_uid):
-        shape = cls()(paths[0]).shape  # Assumes each frame has same shape
+        shape = cls(paths[0])().shape  # Assumes each frame has same shape
         for path in paths:
             metadata = cls.parseTXTFile(path)
             metadata.update(cls.parseDataFile(path))
