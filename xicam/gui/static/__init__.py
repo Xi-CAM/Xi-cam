@@ -2,7 +2,7 @@ import pathlib
 import sys
 
 
-def path(item):
+def path(item: str):
     if getattr(sys,'frozen',False):
         return item
     else:
