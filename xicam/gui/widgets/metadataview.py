@@ -3,8 +3,13 @@ from pyqtgraph.parametertree.parameterTypes import (SimpleParameter,
                                                     GroupParameter)
 from collections import deque
 from qtpy.QtGui import (QStandardItem, QStandardItemModel)
-from qtpy.QtCore import QItemSelectionModel
+from qtpy.QtCore import QItemSelectionModel, Signal
 import sys
+import uuid
+
+# TODO: set parameters to not editable?
+
+# TODO: map list to groupparameter
 
 # TODO: suggest integration of type mapping into pyqtgraph
 typemap = {int: 'int',
@@ -17,47 +22,24 @@ typemap = {int: 'int',
 reservedkeys = []
 
 
-class MetadataView(ParameterTree):
-    def __init__(self, headermodel: QStandardItemModel,
-                 selectionmodel: QItemSelectionModel,
-                 *args, **kwargs):
-        super(MetadataView, self).__init__(*args, **kwargs)
-        self.headermodel = headermodel
-        self.selectionmodel = selectionmodel
-        self.selectionmodel.selectionChanged.connect(self.update)
+class MetadataWidget(ParameterTree):
 
-        self._seen = set()
-        self._last_uid = None
-        self.update()
+    def insert(self, doctype, document, groups):
+        if doctype == 'start':
+            for group in groups.values():
+                group.clearChildren()
 
-    def update(self):
-        index = self.selectionmodel.currentIndex()
-        if not index.isValid():
-            return
-        header = self.headermodel.itemFromIndex(index).header
-        groups = header.groups
-        param = header.param
-
-        for doctype, document in header.stream():
-            if document['uid'] in self._seen:
-                continue
-            self._seen.add(document['uid'])
-            try:
-                new_children = MetadataView._from_dict(document)
-            except Exception:
-                print(f'failed to make children or {doctype}')
+        try:
+            new_children = MetadataView._from_dict(document)
+        except Exception:
+            print(f'failed to make children or {doctype}')
+        else:
+            # TODO: add responsive design to uid display
             groups[doctype].addChildren([
                 GroupParameter(name=document['uid'][:6],
                                value=None,
                                type=None,
                                children=new_children)])
-        if header.uid != self._last_uid:
-            self._last_uid = header.uid
-            try:
-                self.setParameters(param)
-            except AttributeError:
-                # there seems to be a race condition here?!
-                self.setParameters(param)
 
     @staticmethod
     def _from_dict(metadata: dict):
@@ -92,12 +74,71 @@ class MetadataView(ParameterTree):
         return metadata
 
 
+class MetadataView(MetadataWidget):
+    sigUpdate = Signal()
+
+    def __init__(self, headermodel: QStandardItemModel,
+                 selectionmodel: QItemSelectionModel,
+                 *args, **kwargs):
+        super(MetadataView, self).__init__(*args, **kwargs)
+        self._seen = set()
+        self._last_uid = None
+        self._thread_id = 'MetadataView' + str(uuid.uuid4())
+        self.headermodel = headermodel
+        self.selectionmodel = selectionmodel
+        self.selectionmodel.selectionChanged.connect(self.update)
+        self.sigUpdate.connect(self.update)
+        self.update()
+
+    def update(self):
+        index = self.selectionmodel.currentIndex()
+        if not index.isValid():
+            return
+
+        header = self.headermodel.itemFromIndex(index).header
+
+        if header.uid != self._last_uid:
+            self._seen = set()
+
+        param = header.param
+        groups = param.groups
+
+        # TODO: make compatible with actively streaming header
+
+        # filter out documents already emitted in the stream
+        for doctype, document in header.stream():
+            if document['uid'] in self._seen:
+                continue
+
+            self._seen.add(document['uid'])
+            self.insert(doctype, document, groups)
+
+        if header.uid != self._last_uid:
+            self._last_uid = header.uid
+            # try:
+            self.setParameters(param, showTop=False)
+        # except AttributeError:
+        #     # there seems to be a race condition here?!
+        # Is there? I don't see any...
+        #     self.setParameters(param, showTop=False)
+
+
+class HeaderParameter(GroupParameter):
+    def __init__(self, *args, **kwargs):
+        super(HeaderParameter, self).__init__(*args, **kwargs)
+
+        self.groups = {'start': GroupParameter(name='start', title='Start'),
+                       'descriptor': GroupParameter(name='descriptor', title='Descriptors'),
+                       'event': GroupParameter(name='event', title='Events'),
+                       'stop': GroupParameter(name='stop', title='Stop')}
+        self.addChildren(self.groups.values())
+
+
 class HeaderBuffer:
-    def __init__(self, groups, param, uid):
-        self.groups = groups
-        self.param = param
+    def __init__(self, uid, param: GroupParameter):
         self.uid = uid
         self.buf = deque()
+        self.param = param
 
     def stream(self, *args):
         yield from self.buf
@@ -107,38 +148,29 @@ class MDVConusumer(MetadataView):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._buffers = {}
+        self._descriptor_map = {}
 
     def doc_consumer(self, name, doc):
-
         if name == 'start':
             uid = doc['uid']
-            groups = {'start': GroupParameter(name='Start'),
-                      'descriptor': GroupParameter(name='Descriptors'),
-                      'event': GroupParameter(name='Events'),
-                      'stop': GroupParameter(name='Stop')}
-            param = GroupParameter(name='Metadata',
-                                   children=groups.values())
-            hb = self._buffers[uid] = HeaderBuffer(groups, param, uid)
-            hb.buf.append((name, doc))
             item = QStandardItem(doc['uid'])
-
-            item.header = hb
+            item.header = self._buffers[uid] = HeaderBuffer(uid, HeaderParameter(name='uid'))
             self.headermodel.appendRow(item)
             self.selectionmodel.setCurrentIndex(
                 self.headermodel.indexFromItem(item),
                 QItemSelectionModel.ClearAndSelect)
         elif name == 'descriptor':
-            hb = self._buffers[doc['run_start']]
-            self._buffers[doc['uid']] = hb
-            hb.buf.append((name, doc))
+            uid = self._descriptor_map[doc['uid']] = doc['run_start']
         elif name == 'event':
-            hb = self._buffers[doc['descriptor']]
-            hb.buf.append((name, doc))
+            uid = self._descriptor_map[doc['descriptor']]
         elif name == 'stop':
-            hb = self._buffers[doc['run_start']]
-            hb.buf.append((name, doc))
+            uid = doc['run_start']
+        else:
+            raise ValueError
 
-        self.update()
+        buffer = self._buffers[uid].buf  # type: deque
+        buffer.append((name, doc))
+        self.sigUpdate.emit()
 
     def show_row_n(self, n):
         item = self.headermodel.item(n)
@@ -151,6 +183,9 @@ class MDVConusumer(MetadataView):
 
 
 if __name__ == '__main__':
+    import os
+
+    os.environ['OPHYD_CONTROL_LAYER'] = 'caproto'
     from qtpy import QtWidgets
     from qtpy import QtCore
     from qtpy import QtGui
@@ -162,6 +197,7 @@ if __name__ == '__main__':
     import matplotlib
 
     matplotlib.interactive(True)
+
 
     class MDVWithButtons(QtWidgets.QWidget):
         def __init__(self, mdv, *args, **kwargs):
@@ -187,6 +223,7 @@ if __name__ == '__main__':
         def doc_consumer(self, name, doc):
             self.mdv.doc_consumer(name, doc)
             self.spinner.setRange(0, self.mdv.headermodel.rowCount() - 1)
+
 
     app = QtWidgets.QApplication.instance()
     if app is None:
