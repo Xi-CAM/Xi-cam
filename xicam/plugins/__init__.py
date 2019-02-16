@@ -75,10 +75,9 @@ class XicamPluginManager(PluginManager):
 
         Overloaded to add callback.
         """
-        if paths:
-            self.setPluginPlaces(
-                [os.getcwd(), str(Path(__file__).parent.parent), user_plugin_dir, site_plugin_dir,
-                 venvs.current_environment] + list(xicam.__path__) + paths)
+        self.setPluginPlaces(
+            [os.getcwd(), str(Path(__file__).parent.parent), user_plugin_dir, site_plugin_dir,
+             venvs.current_environment] + list(xicam.__path__) + (paths or []))
 
         self.locatePlugins()
 

@@ -167,7 +167,11 @@ def activate_this(path):
     sys.path[:0] = new_sys_path
 
 
+current_environment = ''
+
 # TODO: find all venvs; populate the venvs global
-create_environment("default")
-use_environment("default")
-current_environment = str(pathlib.Path(user_venv_dir, "default"))
+def initialize_venv():
+    global current_environment
+    create_environment("default")
+    use_environment("default")
+    current_environment = str(pathlib.Path(user_venv_dir, "default"))
