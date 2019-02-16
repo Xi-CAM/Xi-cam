@@ -8,6 +8,7 @@ from yapsy import PluginInfo
 
 from xicam.plugins import manager as pluginmanager
 from xicam.plugins import observers as pluginobservers
+from xicam.plugins import venvs
 from xicam.gui.widgets.debugmenubar import DebuggableMenuBar
 from xicam.core import msg
 from ..widgets import defaultstage
@@ -41,8 +42,11 @@ class XicamMainWindow(QMainWindow):
         # Setup appearance
         self.setWindowTitle('Xi-cam')
 
-        # Load plugins
-        pluginmanager.collectPlugins()
+        # Initilize venv
+        venvs.initialize_venv()
+
+        # Load plugins (THIS IS NOW CALLED IMPLICITLY THROUGH initialize_venv()
+        # pluginmanager.collectPlugins()
 
         # Restore Settings
         ConfigDialog().restore()
