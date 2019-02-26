@@ -2,7 +2,8 @@ from typing import List
 from qtpy.QtCore import QObject, QSettings
 from yapsy.IPlugin import IPlugin
 from xicam import plugins
-from pyqtgraph.parametertree import Parameter, ParameterTree
+from pyqtgraph.parametertree import ParameterTree
+from pyqtgraph.parametertree.parameterTypes import GroupParameter
 
 class SettingsPlugin(QObject, IPlugin):
     def __new__(cls, *args, **kwargs):
@@ -40,11 +41,11 @@ class SettingsPlugin(QObject, IPlugin):
         QSettings().setValue(self.name(), self.toState())
 
 
-class ParameterSettingsPlugin(Parameter, SettingsPlugin):
+class ParameterSettingsPlugin(GroupParameter, SettingsPlugin):
 
-    def __init__(self, icon, name: str, paramdicts: List[dict]):
+    def __init__(self, icon, name: str, paramdicts: List[dict], **kwargs):
         SettingsPlugin.__init__(self, icon, name, None)
-        Parameter.__init__(self, name=name, type='group', children=paramdicts)
+        GroupParameter.__init__(self, name=name, type='group', children=paramdicts, **kwargs)
 
     @property
     def widget(self):
