@@ -98,7 +98,11 @@ class EnvBuilder(venv.EnvBuilder):
 
         # Install the bundled software
         import pip
-        pip.main(args)
+        try:
+            pip.main(args)
+        except AttributeError:
+            from pip._internal import main
+            main(args)
 
         # Restore sys.path
         sys.path=oldpath
