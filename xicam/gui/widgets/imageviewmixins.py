@@ -2,11 +2,13 @@ from functools import WRAPPER_ASSIGNMENTS
 from pyqtgraph import ImageView, InfiniteLine, mkPen, ScatterPlotItem, ImageItem, PlotItem
 from qtpy.QtGui import QTransform, QPolygonF
 from qtpy.QtWidgets import QLabel, QErrorMessage, QSizePolicy, QPushButton
-from qtpy.QtCore import Qt, Signal, Slot, QSize, QPointF
+from qtpy.QtCore import Qt, Signal, Slot, QSize, QPointF, QRectF
 import numpy as np
 from pyFAI.geometry import Geometry
 from xicam.gui.widgets.elidedlabel import ElidedLabel
+from xicam.gui.widgets.ROI import BetterPolyLineROI
 from xicam.core import msg
+import enum
 
 
 # NOTE: PyQt widget mixins have pitfalls; note #2 here: http://trevorius.com/scrapbook/python/pyqt-multiple-inheritance/
@@ -23,7 +25,7 @@ def q_from_angles(phi, alpha, wavelength):
     qy = r * np.cos(phi) * np.sin(alpha)
     qz = r * (np.cos(phi) * np.cos(alpha) - 1)
 
-    return qx, qy, qz
+    return np.array([qx, qy, qz])
 
 
 def alpha(x, y, z):
@@ -34,9 +36,16 @@ def phi(x, y, z):
     return np.arctan2(x, z)
 
 
+class DisplayMode(enum.Enum):
+    raw = enum.auto
+    cake = enum.auto
+    remesh = enum.auto
+
+
 class QSpace(ImageView):
     def __init__(self, *args, geometry: Geometry = None, **kwargs):
-        self._transform = QTransform
+        self._transform = QTransform()
+        self.displaymode = DisplayMode.raw
 
         # Add q axes
         self.axesItem = PlotItem()
@@ -54,6 +63,10 @@ class QSpace(ImageView):
         self._geometry = geometry
         self.setTransform()
 
+    def setDisplayMode(self, mode):
+        self.displaymode = mode
+        self.setTransform()
+
     def setTransform(self):
         if self.imageItem.image is not None:
             shape = self.imageItem.image.shape
@@ -65,31 +78,39 @@ class QSpace(ImageView):
             self.axesItem.setLabel('left', u'z (px)')
 
             if self._geometry:
-                self.axesItem.setLabel('bottom', u'q (Å⁻¹)')  # , units='s')
-                self.axesItem.setLabel('left', u'q (Å⁻¹)')
+                # TODO: move to the hint system
+                if self.displaymode == DisplayMode.remesh:
+                    from camsaxs import remesh_bbox
 
-                shape = self._geometry.detector.max_shape
-                z, y, x = self._geometry.calc_pos_zyx(*[np.array([0])] * 3)
-                topleftpos = np.array([x, y, z]).flatten()
+                    self.axesItem.setLabel('bottom', u'q (Å⁻¹)')  # , units='s')
+                    self.axesItem.setLabel('left', u'q (Å⁻¹)')
 
-                z, y, x = self._geometry.calc_pos_zyx(np.array([0]), np.array([0]), np.array([shape[1]]))
-                toprightpos = np.array([x, y, z]).flatten()
-                #
-                z, y, x = self._geometry.calc_pos_zyx(np.array([0]), np.array([shape[0]]), np.array([shape[1]]))
-                bottomrightpos = np.array([x, y, z]).flatten()
-                #
-                z, y, x = self._geometry.calc_pos_zyx(np.array([0]), np.array([shape[0]]), np.array([0]))
-                bottomleftpos = np.array([x, y, z]).flatten()
+                    shape = self._geometry.detector.max_shape
+                    z, y, x = self._geometry.calc_pos_zyx(*[np.array([0])] * 3)
+                    topleftpos = np.array([x, y, z]).flatten()
 
-                # qbottomleft = q_from_angles(phi(*bottomleftpos), alpha(*bottomleftpos), self._geometry.wavelength)
-                # qbottomright = q_from_angles(phi(*bottomrightpos), alpha(*bottomrightpos), self._geometry.wavelength)
-                # qtopright = q_from_angles(phi(*toprightpos), alpha(*toprightpos), self._geometry.wavelength)
-                # qtopleft = q_from_angles(phi(*topleftpos), alpha(*topleftpos), self._geometry.wavelength)
+                    z, y, x = self._geometry.calc_pos_zyx(np.array([0]), np.array([0]), np.array([shape[1]]))
+                    toprightpos = np.array([x, y, z]).flatten()
+                    #
+                    z, y, x = self._geometry.calc_pos_zyx(np.array([0]), np.array([shape[0]]), np.array([shape[1]]))
+                    bottomrightpos = np.array([x, y, z]).flatten()
+                    #
+                    z, y, x = self._geometry.calc_pos_zyx(np.array([0]), np.array([shape[0]]), np.array([0]))
+                    bottomleftpos = np.array([x, y, z]).flatten()
 
-                qbottomleft = np.array(bottomleftpos[:2]) * np.array([1, -1])
-                qbottomright = np.array(bottomrightpos[:2]) * np.array([1, -1])
-                qtopright = np.array(toprightpos[:2]) * np.array([1, -1])
-                qtopleft = np.array(topleftpos[:2]) * np.array([1, -1])
+                    qbottomleft = q_from_angles(phi(*bottomleftpos), alpha(*bottomleftpos),
+                                                self._geometry.wavelength) * 1e-10 * np.array([1, -1, 1])
+                    qbottomright = q_from_angles(phi(*bottomrightpos), alpha(*bottomrightpos),
+                                                 self._geometry.wavelength) * 1e-10 * np.array([1, -1, 1])
+                    qtopright = q_from_angles(phi(*toprightpos), alpha(*toprightpos),
+                                              self._geometry.wavelength) * 1e-10 * np.array([1, -1, 1])
+                    qtopleft = q_from_angles(phi(*topleftpos), alpha(*topleftpos),
+                                             self._geometry.wavelength) * 1e-10 * np.array([1, -1, 1])
+
+                    # qbottomleft = np.array(bottomleftpos[:2]) * np.array([1, -1])
+                    # qbottomright = np.array(bottomrightpos[:2]) * np.array([1, -1])
+                    # qtopright = np.array(toprightpos[:2]) * np.array([1, -1])
+                    # qtopleft = np.array(topleftpos[:2]) * np.array([1, -1])
 
             # Build Quads
             quad1 = QPolygonF()
@@ -99,10 +120,10 @@ class QSpace(ImageView):
             quad1.append(QPointF(0, 0))
 
             quad2 = QPolygonF()
-            quad2.append(QPointF(*qbottomleft))
-            quad2.append(QPointF(*qbottomright))
-            quad2.append(QPointF(*qtopright))
-            quad2.append(QPointF(*qtopleft))
+            quad2.append(QPointF(*qbottomleft[:2]))
+            quad2.append(QPointF(*qbottomright[:2]))
+            quad2.append(QPointF(*qtopright[:2]))
+            quad2.append(QPointF(*qtopleft[:2]))
 
             # What did I build?
             msg.logMessage('qbottomleft:', np.array(qbottomleft[:2]))
@@ -276,3 +297,15 @@ class BetterButtons(ImageView):
         self.ui.menuBtn.setParent(None)
         # self.ui.gridLayout.addWidget(self.ui.menuBtn, 1, 1, 1, 1)
         self.ui.gridLayout.addWidget(self.ui.graphicsView, 0, 0, 2, 1)
+
+
+class PolygonROI(ImageView):
+    def __init__(self, *args, **kwargs):
+        super(PolygonROI, self).__init__(*args, **kwargs)
+        rect = self.imageItem.boundingRect()  # type: QRectF
+        positions = [(rect.bottomLeft().x(), rect.bottomLeft().y()),
+                     (rect.bottomRight().x(), rect.bottomRight().y()),
+                     (rect.topRight().x(), rect.topRight().y()),
+                     (rect.topLeft().x(), rect.topLeft().y())]
+        self._roiItem = BetterPolyLineROI(positions=positions, closed=True)
+        self.addItem(self._roiItem)

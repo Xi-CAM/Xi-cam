@@ -218,3 +218,46 @@ def method(callback_slot=None, finished_slot=None, except_slot=None, default_exh
         return _runnable_method
 
     return wrap_runnable_method
+
+
+def iterator(callback_slot=None, finished_slot=None, interrupt_signal=None, except_slot=None, lock=None,
+             threadkey: str = None, showBusy=True, priority=QThread.InheritPriority, keepalive=True):
+    """
+    Decorator for iterators/generators to run as RunnableIterators on background QT threads
+    Use it as any python decorator to decorate a function with @decorator syntax or at runtime:
+    decorated_iterator = threads.iterator(callback_slot, ...)(iterator_to_decorate).
+    then simply run it: decorated_iterator(*args, **kwargs)
+
+    Parameters
+    ----------
+    callback_slot : function
+        Function/method to run on a background thread
+    finished_slot : QtCore.Slot
+        Slot to call with the return value of the function
+    interrupt_signal : QtCore.Signal
+        Signal to break out of iterator loop prematurely
+    except_slot : QtCore.Slot
+        Function object (qt slot), slot to receive exception type, instance and traceback object
+    lock : mutex/semaphore
+        Simple lock if multiple access needs to be prevented
+
+    Returns
+    -------
+    wrap_runnable_iterator : function
+        Decorated iterator/generator
+    """
+
+    def wrap_runnable_method(func):
+        @wraps(func)
+        def _runnable_method(*args, **kwargs):
+            future = QThreadFutureIterator(func, *args,
+                                           callback_slot=callback_slot, finished_slot=finished_slot,
+                                           except_slot=except_slot, default_exhandle=default_exhandle, lock=lock,
+                                           threadkey=threadkey, showBusy=showBusy, priority=priority,
+                                           keepalive=keepalive,
+                                           **kwargs)
+            future.start()
+
+        return _runnable_method
+
+    return wrap_runnable_method
