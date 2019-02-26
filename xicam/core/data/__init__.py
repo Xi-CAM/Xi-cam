@@ -449,7 +449,7 @@ class DocMetaArray(object):
         return arr
 
     def __getitem__(self, item: Union[List[slice], int]):
-        if isinstance(item, list) and len(item)>1:
+        if isinstance(item, list) or isinstance(item, tuple) and len(item)>1:
             rmin = item[0].start if item[0].start is not None else 0
             rmax = item[0].stop if item[0].stop is not None else self.shape[0]
             rstep = item[0].step if item[0].step is not None else 1
@@ -458,9 +458,12 @@ class DocMetaArray(object):
         return self.slice(item)
 
     def transpose(self,ax):
-        if ax != [0,1,2]:
-            raise ValueError('A DocMetaArray cannot actually be transposed; the transpose method is provided for '
-                             'compatibility with pyqtgraph''s ImageView')
+        # if ax != [0,1,2]:
+        #     raise ValueError('A DocMetaArray cannot actually be transposed; the transpose method is provided for '
+        #                      'compatibility with pyqtgraph''s ImageView')
+        return self
+
+    def view(self, _):
         return self
 
     def __len__(self):
