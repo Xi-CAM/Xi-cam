@@ -248,7 +248,7 @@ class QCoordinates(ImageView):
                 self._coordslabel.setText(f"<div style='font-size: 12pt;background-color:#111111; "
                                           f"text-overflow: ellipsis; width:100%;'>"
                                           f"x={pxpos.x():0.1f}, "
-                                          f"<span style=''>y={pxpos.y():0.1f}</span>, "
+                                          f"<span style=''>y={self.imageItem.image.shape[0]-pxpos.y():0.1f}</span>, "
                                           f"<span style=''>I={I:0.0f}</span>, "
                                           f"q={np.sqrt(x**2+y**2):0.3f} \u212B\u207B\u00B9, "
                                           f"q<sub>z</sub>={y:0.3f} \u212B\u207B\u00B9, "
