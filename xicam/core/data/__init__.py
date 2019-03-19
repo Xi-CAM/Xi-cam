@@ -57,6 +57,7 @@ class NonDBHeader(object):
         self.descriptordocs = descriptors
         self.eventdocs = events
         self.stopdoc = stop
+        self.uid = start['uid']
 
     def __getitem__(self, k):
         try:
@@ -244,10 +245,12 @@ class NonDBHeader(object):
         >>> for name, doc in h.headers():
         ...     # do something
         """
-        yield self.start
-        yield self.descriptors
-        yield self.events
-        yield self.stop
+        yield 'start', self.startdoc
+        for doc in self.descriptors:
+            yield 'descriptor', doc
+        for doc in self.eventdocs:
+            yield 'event', doc
+        yield 'stop', self.stopdoc
 
     def stream(self, *args, **kwargs):
         warn("The 'stream' method been renamed to 'documents'. The old name "
@@ -465,6 +468,8 @@ class DocMetaArray(object):
 
     def __len__(self):
         return self.len
+
+    # TODO: Add asarray
 
 
 class lazyfield(object):
