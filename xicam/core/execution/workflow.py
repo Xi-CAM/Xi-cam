@@ -1,10 +1,8 @@
 from xicam.plugins import ProcessingPlugin
 from typing import Callable, List
-from .camlinkexecutor import CamLinkExecutor
-from .localexecutor import LocalExecutor
 from collections import OrderedDict
 from xicam.core import msg, execution
-from xicam.gui.threads import QThreadFuture, QThreadFutureIterator
+from xicam.core.threads import QThreadFuture, QThreadFutureIterator
 
 
 # TODO: add debug flag that checks mutations by hashing inputs
