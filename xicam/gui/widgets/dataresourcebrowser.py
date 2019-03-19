@@ -203,7 +203,6 @@ class DataResourceTree(QTreeView, DataResourceView):
         self.model().refresh()
         self.setRootIndex(self.model().index(self.model().path))
 
-
 class DataResourceList(QListView, DataResourceView):
     sigOpen = Signal(NonDBHeader)
     sigOpenPath = Signal(str)
@@ -232,7 +231,7 @@ class LocalFileSystemTree(DataResourceTree):
     def __init__(self):
         super(LocalFileSystemTree, self).__init__(LocalFileSystemResourcePlugin())
 
-    def open(self, _):
+    def open(self, _=None):
         indexes = self.selectionModel().selectedRows()
         if len(indexes)==1:
             path = self.model().filePath(indexes[0])
@@ -247,7 +246,13 @@ class LocalFileSystemTree(DataResourceTree):
         if current.isValid():
             self.sigPreview.emit(self.model().getHeader([current]))
 
+        self.scrollTo(current)
 
+    def keyPressEvent(self, event: QKeyEvent):
+        super(LocalFileSystemTree, self).keyPressEvent(event)
+        if event.key() in [Qt.Key_Enter, Qt.Key_Return]:
+            event.accept()
+            self.open()
 
     def openExternally(self, uri:str):
         indexes = self.selectionModel().selectedRows()
