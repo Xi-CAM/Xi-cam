@@ -6,6 +6,9 @@ from qtpy.QtGui import (QStandardItem, QStandardItemModel)
 from qtpy.QtCore import QItemSelectionModel, Signal
 import sys
 import uuid
+import datetime
+import numpy as np
+import warnings
 
 # TODO: set parameters to not editable?
 
@@ -16,7 +19,10 @@ typemap = {int: 'int',
            float: 'float',
            str: 'str',
            dict: 'group',
-           type(None): None
+           type(None): None,
+           datetime.datetime: 'str',
+           np.float: 'float',
+           np.int: 'int'
            }
 
 reservedkeys = []
@@ -58,7 +64,7 @@ class MetadataWidget(ParameterTree):
                                          type=typemap[type(value)],
                                          children=subchildren))
             except KeyError:
-                print(f'failed on {value}: {type(value)}')
+                warnings.warn(f'Failed to display a {type(value)}: {value}')
                 children.append(paramcls(name=key,
                                          value=repr(value),
                                          type=typemap[str],
@@ -86,7 +92,7 @@ class MetadataView(MetadataWidget):
         self._thread_id = 'MetadataView' + str(uuid.uuid4())
         self.headermodel = headermodel
         self.selectionmodel = selectionmodel
-        self.selectionmodel.selectionChanged.connect(self.update)
+        self.selectionmodel.currentChanged.connect(self.update)
         self.sigUpdate.connect(self.update)
         self.update()
 
@@ -99,6 +105,9 @@ class MetadataView(MetadataWidget):
 
         if header.uid != self._last_uid:
             self._seen = set()
+
+        if not isinstance(header, HeaderBuffer):
+            header = HeaderBuffer(header.uid, HeaderParameter(name=header.uid), docs=header.documents())
 
         param = header.param
         groups = param.groups
@@ -117,10 +126,6 @@ class MetadataView(MetadataWidget):
             self._last_uid = header.uid
             # try:
             self.setParameters(param, showTop=False)
-        # except AttributeError:
-        #     # there seems to be a race condition here?!
-        # Is there? I don't see any...
-        #     self.setParameters(param, showTop=False)
 
 
 class HeaderParameter(GroupParameter):
@@ -135,10 +140,13 @@ class HeaderParameter(GroupParameter):
 
 
 class HeaderBuffer:
-    def __init__(self, uid, param: GroupParameter):
+    def __init__(self, uid, param: GroupParameter, docs=None):
         self.uid = uid
         self.buf = deque()
         self.param = param
+
+        for name, doc in docs:
+            self.buf.append((name, doc))
 
     def stream(self, *args):
         yield from self.buf
