@@ -49,7 +49,8 @@ class XicamMainWindow(QMainWindow):
         # pluginmanager.collectPlugins()
 
         # Restore Settings
-        ConfigDialog().restore()
+        self._configdialog = ConfigDialog()
+        self._configdialog.restore()
 
         # Setup center/toolbar/statusbar/progressbar
         self.pluginmodewidget = pluginModeWidget()
@@ -98,7 +99,6 @@ class XicamMainWindow(QMainWindow):
         self.currentGUIPlugin.plugin_object.appendHeader(header)
 
     def showSettings(self):
-        self._configdialog = ConfigDialog()
         self._configdialog.show()
 
     @Slot(int)
@@ -277,12 +277,13 @@ class pluginModeWidget(QToolBar):
         if len(self.parent().currentGUIPlugin.plugin_object.stages) > 1:
             names = self.parent().currentGUIPlugin.plugin_object.stages.keys()
             self.fadeOut(callback=partial(self.mkButtons, names=names, callback=self.sigSetStage.emit,
-                                          parent=self.parent().currentGUIPlugin.name))
+                                          parent=self.parent().currentGUIPlugin.plugin_object.name))
 
     def showGUIPlugins(self):
         plugins = pluginmanager.getPluginsOfCategory('GUIPlugin')
         # TODO: test deactivated plugins
-        names = [plugin.name for plugin in plugins if hasattr(plugin, 'is_activated') and (plugin.is_activated or True)]
+        names = [plugin.plugin_object.name for plugin in plugins if
+                 getattr(plugin, 'is_activated', True) or True]  # TODO: add plugin deactivation
         self.fadeOut(callback=partial(self.mkButtons, names=names, callback=self.showStages), distance=20)
 
     def mkButtons(self, names, callback, parent=None):
