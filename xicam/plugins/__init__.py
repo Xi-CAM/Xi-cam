@@ -23,6 +23,10 @@ from .hints import PlotHint, Hint
 from yapsy.PluginManager import NormalizePluginNameForModuleName, imp, log
 import xicam
 import importlib.util
+from collections import deque
+from contextlib import contextmanager
+from timeit import default_timer
+from xicam.core import threads
 
 op_sys = platform.system()
 if op_sys == 'Darwin':  # User config dir incompatible with venv on darwin (space in path name conflicts)
@@ -40,6 +44,15 @@ if 'qtpy' in sys.modules:
 
     if QApplication.instance():
         qt_is_safe = True
+
+
+@contextmanager
+def load_timer():
+    start = default_timer()
+    elapser = lambda: default_timer() - start
+    yield lambda: elapser()
+    end = default_timer()
+    elapser = lambda: end - start
 
 
 class XicamPluginManager(PluginManager):
@@ -64,11 +77,39 @@ class XicamPluginManager(PluginManager):
                                      'Fittable1DModelPlugin': Fittable1DModelPlugin})
 
         self.setCategoriesFilter(categoriesfilter)
-        plugindirs = [os.getcwd(), str(Path(__file__).parent.parent), user_plugin_dir, site_plugin_dir,
-             venvs.current_environment] + list(xicam.__path__)
-        self.setPluginPlaces(plugindirs)
-        msg.logMessage('plugindirectories:', *plugindirs)
-        self.loadcomplete = False
+
+        # Places to look for plugins
+        self.plugindirs = [user_plugin_dir,
+                           site_plugin_dir,
+                           venvs.current_environment] \
+                          + list(xicam.__path__)
+        self.setPluginPlaces(self.plugindirs)
+        msg.logMessage('plugindirectories:', *self.plugindirs)
+
+        # Loader thread
+        self.loadthread = None
+        self.loadqueue = deque()
+
+    def loading_except_slot(self, ex):
+        msg.logError(ex)
+        raise NameError(f'No plugin named {name} is in the queue or plugin manager.')
+
+    def getPluginByName(self, name, category="Default", timeout=5):
+        plugin = super(XicamPluginManager, self).getPluginByName(name, category)
+        if plugin: return plugin
+
+        # if queueing
+        if len(self.loadqueue):
+            for load_item in list(self.loadqueue):
+                if load_item[2].name == name:
+                    self.loadqueue.remove(load_item)  # remove the item from the top-level queue
+                    self.load_plugin(*load_item)  # and load it immediately
+                    break
+
+            msg.logMessage(f'Immediately loading {load_item[2].name}.', level=msg.INFO)
+            plugin = super(XicamPluginManager, self).getPluginByName(name, category)
+        return plugin
+
 
     def collectPlugins(self, paths=None):
         """
@@ -78,9 +119,7 @@ class XicamPluginManager(PluginManager):
 
         Overloaded to add callback.
         """
-        self.setPluginPlaces(
-            [os.getcwd(), str(Path(__file__).parent.parent), user_plugin_dir, site_plugin_dir,
-             venvs.current_environment] + list(xicam.__path__) + (paths or []))
+        self.setPluginPlaces(self.plugindirs + (paths or []))
 
         self.locatePlugins()
 
@@ -98,14 +137,11 @@ class XicamPluginManager(PluginManager):
         msg.logMessage('Candidates:')
         for candidate in self._candidates: msg.logMessage(candidate)
 
-        # self._candidates=candidatesset
-
         self.loadPlugins(callback=self.showLoading)
 
         self.instanciateLatePlugins()
         for observer in observers:
             observer.pluginsChanged()
-        self.loadcomplete = True
 
     def instanciateLatePlugins(self):
         if qt_is_safe:
@@ -149,6 +185,7 @@ class XicamPluginManager(PluginManager):
         """
         return {plugin.name: plugin for plugin in self.getPluginsOfCategory(item)}
 
+    @threads.method()
     def loadPlugins(self, callback=None):
         """
         Load the candidate plugins that have been identified through a
@@ -164,63 +201,81 @@ class XicamPluginManager(PluginManager):
         if not hasattr(self, '_candidates'):
             raise ValueError("locatePlugins must be called before loadPlugins")
 
-        processed_plugins = []
-        for candidate_infofile, candidate_filepath, plugin_info in self._candidates:
-            # make sure to attribute a unique module name to the one
-            # that is about to be loaded
-            plugin_module_name_template = NormalizePluginNameForModuleName(
-                "yapsy_loaded_plugin_" + plugin_info.name) + "_%d"
-            for plugin_name_suffix in range(len(sys.modules)):
-                plugin_module_name = plugin_module_name_template % plugin_name_suffix
-                if plugin_module_name not in sys.modules:
-                    break
+        self.processed_plugins = []
 
-            # tolerance on the presence (or not) of the py extensions
-            if candidate_filepath.endswith(".py"):
-                candidate_filepath = candidate_filepath[:-3]
+        self.loadqueue.extend(self._candidates)
+
+        for candidate_infofile, candidate_filepath, plugin_info in iter(self.loadqueue.popleft, (None, None, None)):
             # if a callback exists, call it before attempting to load
             # the plugin so that a message can be displayed to the
             # user
             if callback is not None:
                 callback(plugin_info)
-            # cover the case when the __init__ of a package has been
-            # explicitly indicated
-            if "__init__" in os.path.basename(candidate_filepath):
-                candidate_filepath = os.path.dirname(candidate_filepath)
-            try:
-                # use imp to correctly load the plugin as a module
-                from importlib._bootstrap_external import _POPULATE
 
-                submodule_search_locations = os.path.dirname(plugin_info.path) if plugin_info.path.endswith(
-                    "__init__.py") else _POPULATE
+            self.load_plugin(candidate_infofile=candidate_infofile, candidate_filepath=candidate_filepath,
+                             plugin_info=plugin_info)
 
-                spec = importlib.util.spec_from_file_location(plugin_info.name, plugin_info.path,
-                                                              submodule_search_locations=submodule_search_locations)
-                candidate_module = importlib.util.module_from_spec(spec)
-                spec.loader.exec_module(candidate_module)
+            for observer in observers:  # TODO: put this on a timer system
+                threads.invoke_in_main_thread(observer.pluginsChanged)
 
-            except Exception as ex:
-                exc_info = sys.exc_info()
-                log.error("Unable to import plugin: %s" % candidate_filepath, exc_info=exc_info)
-                msg.notifyMessage(repr(ex),
-                                  title=f'The "{plugin_info.name}" plugin could not be loaded.',
-                                  level=msg.CRITICAL)
-                plugin_info.error = exc_info
-                processed_plugins.append(plugin_info)
-                continue
-            processed_plugins.append(plugin_info)
-            if "__init__" in os.path.basename(candidate_filepath):
-                sys.path.remove(plugin_info.path)
-            # now try to find and initialise the first subclass of the correct plugin interface
+            if not len(self.loadqueue):
+                break
+        # Remove candidates list since we don't need them any more and
+        # don't need to take up the space
+        delattr(self, '_candidates')
+        return self.processed_plugins
 
-            #### ADDED BY RP
+    def load_plugin(self, candidate_infofile, candidate_filepath, plugin_info):
+        msg.logMessage(f'Threaded loading {plugin_info.name} plugin.', level=msg.INFO)
+        # make sure to attribute a unique module name to the one
+        # that is about to be loaded
+        plugin_module_name_template = NormalizePluginNameForModuleName(  # why?
+            "yapsy_loaded_plugin_" + plugin_info.name) + "_%d"
 
-            dirlist = dir(candidate_module)
-            if hasattr(candidate_module, '__plugin_exports__'):
-                dirlist = candidate_module.__plugin_exports__
-            ####
+        # make a uniquely numbered module name; again, why?
+        for plugin_name_suffix in range(len(sys.modules)):
+            plugin_module_name = plugin_module_name_template % plugin_name_suffix
+            if plugin_module_name not in sys.modules:
+                break
 
-            for element in (getattr(candidate_module, name) for name in dirlist):
+        try:
+            # use imp to correctly load the plugin as a module
+            from importlib._bootstrap_external import _POPULATE
+
+            submodule_search_locations = os.path.dirname(plugin_info.path) if plugin_info.path.endswith(
+                "__init__.py") else _POPULATE
+
+            spec = importlib.util.spec_from_file_location(plugin_info.name, plugin_info.path,
+                                                          submodule_search_locations=submodule_search_locations)
+            candidate_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(candidate_module)
+
+        except Exception as ex:
+            exc_info = sys.exc_info()
+            log.error("Unable to import plugin: %s" % plugin_info.path, exc_info=exc_info)
+            msg.notifyMessage(repr(ex),
+                              title=f'The "{plugin_info.name}" plugin could not be loaded.',
+                              level=msg.CRITICAL)
+            plugin_info.error = exc_info
+            self.processed_plugins.append(plugin_info)
+            return
+        self.processed_plugins.append(plugin_info)
+
+        if "__init__" in os.path.basename(plugin_info.name):  # is this necessary?
+            print('Yes, it is?')
+            sys.path.remove(plugin_info.path)
+        # now try to find and initialise the first subclass of the correct plugin interface
+
+        #### ADDED BY RP
+
+        dirlist = dir(candidate_module)
+        if hasattr(candidate_module, '__plugin_exports__'):
+            dirlist = candidate_module.__plugin_exports__
+        ####
+
+        with load_timer() as elapsed:  # cm for load timing
+
+            for element in (getattr(candidate_module, name) for name in dirlist):  # add filtering?
                 plugin_info_reference = None
                 for category_name in self.categories_interfaces:
                     try:
@@ -233,21 +288,21 @@ class XicamPluginManager(PluginManager):
                             # we found a new plugin: initialise it and search for the next one
                             if not plugin_info_reference:
                                 try:
-                                    plugin_info.plugin_object = self.instanciateElement(element)
+                                    plugin_info.plugin_object = self.instanciateElement(
+                                        element)  # shouldn't there be a break ?
                                     plugin_info_reference = plugin_info
                                 except Exception:
                                     exc_info = sys.exc_info()
-                                    log.error("Unable to create plugin object: %s" % candidate_filepath,
+                                    log.error("Unable to create plugin object: %s" % plugin_info.path,
                                               exc_info=exc_info)
                                     plugin_info.error = exc_info
                                     break  # If it didn't work once it wont again
                             plugin_info.categories.append(current_category)
                             self.category_mapping[current_category].append(plugin_info_reference)
                             self._category_file_mapping[current_category].append(candidate_infofile)
-        # Remove candidates list since we don't need them any more and
-        # don't need to take up the space
-        delattr(self, '_candidates')
-        return processed_plugins
+                            msg.logMessage(f'{int(elapsed()*1000)} ms elapsed while loading {plugin_info.name}',
+                                           level=msg.INFO)
+                            break  # ?
 
 
 # Setup plugin manager
