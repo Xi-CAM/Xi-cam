@@ -56,7 +56,8 @@ class XicamPluginManager(PluginManager):
 
         # If xicam.gui is not loaded (running headless), don't load GUIPlugins or WidgetPlugins
         if qt_is_safe:
-            categoriesfilter.update({'GUIPlugin': GUIPlugin,
+            categoriesfilter.update({'ControllerPlugin': ControllerPlugin,
+                                     'GUIPlugin': GUIPlugin,
                                      'WidgetPlugin': QWidgetPlugin,
                                      'SettingsPlugin': SettingsPlugin,
                                      'EZPlugin': _EZPlugin,
