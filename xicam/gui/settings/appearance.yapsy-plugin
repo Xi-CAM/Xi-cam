@@ -1,5 +1,5 @@
 [Core]
-Name = Appearance
+Name = xicam.gui.settings.appearance
 Module = appearance.py
 
 [Documentation]
