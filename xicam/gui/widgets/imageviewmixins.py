@@ -309,3 +309,7 @@ class PolygonROI(ImageView):
                      (rect.topLeft().x(), rect.topLeft().y())]
         self._roiItem = BetterPolyLineROI(positions=positions, closed=True)
         self.addItem(self._roiItem)
+
+    def poly_mask(self, shape=None, ):
+        if not shape: shape = self.imageItem.image.shape
+        return self._roiItem.renderShapeMask(*shape)
