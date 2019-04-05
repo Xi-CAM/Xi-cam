@@ -104,7 +104,7 @@ class QThreadFuture(QThread):
             for self._result in self._run(*args, **kwargs):
                 if not isinstance(self._result, tuple): self._result = (self._result,)
                 if self.callback_slot: invoke_in_main_thread(self.callback_slot, *self._result)
-                self.running = False
+            self.running = False
 
         except Exception as ex:
             self.exception = ex
