@@ -234,7 +234,7 @@ class Workflow(object):
         # TODO: check if data is accessible from compute resource; if not -> copy data to compute resource
         # TODO: use cam-link to mirror installation of plugin packages
 
-    def execute(self, connection, callback_slot=None, finished_slot=None, except_slot=None, default_exhandle=True,
+    def execute(self, connection=None, callback_slot=None, finished_slot=None, except_slot=None, default_exhandle=True,
                 lock=None, fill_kwargs=True, threadkey=None, **kwargs):
         """
         Execute this workflow on the specified host. Connection will be a Connection object (WIP) keeping a connection
