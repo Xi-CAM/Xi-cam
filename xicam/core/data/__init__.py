@@ -57,7 +57,7 @@ class NonDBHeader(object):
         self.descriptordocs = descriptors
         self.eventdocs = events
         self.stopdoc = stop
-        self.uid = start['uid']
+        self.uid = start.get('uid', None)
 
     def __getitem__(self, k):
         try:
@@ -420,11 +420,14 @@ class NonDBHeader(object):
 
 from functools import lru_cache
 import numpy as np
+from xicam.core import msg
 
 class DocMetaArray(object):
     def __init__(self, header: NonDBHeader, field=None):
         if not field:
-            fields = []
+            fields = list(header.fields())
+            if len(fields) > 1:
+                raise ValueError('Unspecified field for document stream with >1 field')
         else:
             fields = [field]
         self.events = list(header.events(fields=fields))
