@@ -13,6 +13,7 @@ from .GUIPlugin import GUIPlugin, GUILayout
 from .ProcessingPlugin import ProcessingPlugin, EZProcessingPlugin, Input, Output, InOut
 from .SettingsPlugin import SettingsPlugin, ParameterSettingsPlugin
 from .DataResourcePlugin import DataResourcePlugin
+from .ControllerPlugin import ControllerPlugin
 from .WidgetPlugin import QWidgetPlugin
 from .venvs import observers as venvsobservers
 from .DataResourcePlugin import DataResourcePlugin
@@ -21,6 +22,7 @@ from .EZPlugin import _EZPlugin, EZPlugin
 from .hints import PlotHint, Hint
 from yapsy.PluginManager import NormalizePluginNameForModuleName, imp, log
 import xicam
+import importlib.util
 
 op_sys = platform.system()
 if op_sys == 'Darwin':  # User config dir incompatible with venv on darwin (space in path name conflicts)
@@ -181,18 +183,21 @@ class XicamPluginManager(PluginManager):
             if callback is not None:
                 callback(plugin_info)
             # cover the case when the __init__ of a package has been
-            # explicitely indicated
+            # explicitly indicated
             if "__init__" in os.path.basename(candidate_filepath):
                 candidate_filepath = os.path.dirname(candidate_filepath)
             try:
                 # use imp to correctly load the plugin as a module
-                if os.path.isdir(candidate_filepath):
-                    candidate_module = imp.load_module(plugin_module_name, None, candidate_filepath,
-                                                       ("py", "r", imp.PKG_DIRECTORY))
-                else:
-                    with open(candidate_filepath + ".py", "r") as plugin_file:
-                        candidate_module = imp.load_module(plugin_module_name, plugin_file,
-                                                           candidate_filepath + ".py", ("py", "r", imp.PY_SOURCE))
+                from importlib._bootstrap_external import _POPULATE
+
+                submodule_search_locations = os.path.dirname(plugin_info.path) if plugin_info.path.endswith(
+                    "__init__.py") else _POPULATE
+
+                spec = importlib.util.spec_from_file_location(plugin_info.name, plugin_info.path,
+                                                              submodule_search_locations=submodule_search_locations)
+                candidate_module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(candidate_module)
+
             except Exception as ex:
                 exc_info = sys.exc_info()
                 log.error("Unable to import plugin: %s" % candidate_filepath, exc_info=exc_info)
