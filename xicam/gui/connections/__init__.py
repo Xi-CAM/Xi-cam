@@ -20,7 +20,7 @@ class ConnectionSettingsPlugin(SettingsPlugin):
         self.widget = QWidget()
         self.widget.setLayout(QHBoxLayout())
         self.listview = QListView()
-        self.connectionsmodel = QSettings().value('credentials') or QStandardItemModel()
+        self.connectionsmodel = QStandardItemModel()
         self.listview.setModel(self.connectionsmodel)
 
         self.plugintoolbar = QToolBar()
@@ -36,7 +36,6 @@ class ConnectionSettingsPlugin(SettingsPlugin):
         super(ConnectionSettingsPlugin, self).__init__(QIcon(str(path('icons/server.png'))),
                                                        'Connections',
                                                        self.widget)
-        self.fromState(QSettings().value('Connections'))
 
     def add_credential(self):
         """
