@@ -4,6 +4,7 @@ from yapsy.IPlugin import IPlugin
 from xicam import plugins
 from pyqtgraph.parametertree import ParameterTree
 from pyqtgraph.parametertree.parameterTypes import GroupParameter
+import cloudpickle as pickle
 
 class SettingsPlugin(QObject, IPlugin):
     def __new__(cls, *args, **kwargs):
@@ -38,7 +39,10 @@ class SettingsPlugin(QObject, IPlugin):
         ...
 
     def save(self):
-        QSettings().setValue(self.name(), self.toState())
+        QSettings().setValue(self.name(), pickle.dumps(self.toState()))
+
+    def restore(self):
+        self.fromState(pickle.loads(QSettings().value(self.name())))
 
 
 class ParameterSettingsPlugin(GroupParameter, SettingsPlugin):
