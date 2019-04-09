@@ -4,6 +4,8 @@ import sys
 import time
 from typing import Any
 import traceback
+import threading
+
 
 """
 This module provides application-wide logging tools. Unhandled exceptions are hooked into the log. Messages and progress
@@ -100,7 +102,7 @@ hideProgress = hideBusy
 
 def notifyMessage(*args, timeout=8000, title='', level: int = INFO):
     """
-    Same as logMessage, but displays to the subscribed statusbar with a timeout.
+    Same as logMessage, but displays to the subscribed notification system with a timeout.
 
     Parameters
     ----------
@@ -122,7 +124,9 @@ def notifyMessage(*args, timeout=8000, title='', level: int = INFO):
         if level in [ERROR, CRITICAL]: icon = trayicon.Critical
         if icon is None: raise ValueError('Invalid message level.')
         trayicon.show()
-        trayicon.showMessage(title, ''.join(args), icon, timeout)  # TODO: check if title and message are swapped?
+        from .. import threads  # must be a late import
+        threads.invoke_in_main_thread(trayicon.showMessage, title, ''.join(args), icon, timeout)
+        # trayicon.showMessage(title, ''.join(args), icon, timeout)  # TODO: check if title and message are swapped?
 
 
 def showMessage(*args, timeout=5, **kwargs):
@@ -196,7 +200,7 @@ def logMessage(*args: Any, level: int = INFO, loggername: str = None, timestamp:
     levelname = levels[level]
 
     # LOG IT!
-    logger.log(level, f'{timestamp} - {loggername} - {levelname} - {s}')
+    logger.log(level, f'{timestamp} - {loggername} - {levelname} - {threading.get_ident()} - {s}')
 
     # Also, print message to stdout
     # try:
