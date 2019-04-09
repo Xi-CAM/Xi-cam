@@ -5,8 +5,7 @@ from ..clientonlymodels.LocalFileSystemResource import LocalFileSystemResourcePl
 from xicam.gui.static import path
 from xicam.core.data import NonDBHeader, load_header
 
-from xicam.plugins.DataResourcePlugin import DataSourceListModel
-from xicam.gui import threads
+from xicam.core import threads
 from .searchlineedit import SearchLineEdit
 from urllib import parse
 from pathlib import Path
