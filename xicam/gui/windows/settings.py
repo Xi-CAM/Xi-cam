@@ -11,6 +11,7 @@ from qtpy.QtGui import *
 from qtpy.QtWidgets import *
 
 from xicam.plugins import manager as pluginmanager
+from xicam.core import msg
 
 
 class ConfigDialog(QDialog):
@@ -61,6 +62,8 @@ class ConfigDialog(QDialog):
         # Set modality
         self.setModal(True)
 
+        self.lastwidget = None
+
         self.createIcons()
         self.restore()
 
@@ -73,12 +76,19 @@ class ConfigDialog(QDialog):
             item.setSizeHint(QSize(136, 80))
             self.contentsModel.appendRow(item)
 
+    def show(self):
+        if self.lastwidget:
+            self.pagesWidget.addWidget(self.lastwidget)
+            self.pagesWidget.setCurrentWidget(self.lastwidget)
+        super(ConfigDialog, self).show()
+
     def changePage(self, current, previous):
         if not current:
             current = previous
         current = self.contentsModel.itemFromIndex(current)
         self.pagesWidget.addWidget(current.widget)
         self.pagesWidget.setCurrentWidget(current.widget)
+        self.lastwidget = current.widget
 
     def pluginsChanged(self):
         self.createIcons()
@@ -86,10 +96,12 @@ class ConfigDialog(QDialog):
     def restore(self):
         for pluginInfo in pluginmanager.getPluginsOfCategory('SettingsPlugin'):
             try:
-                pluginInfo.plugin_object.fromState(QSettings().value(pluginInfo.name))
-            except (AttributeError, TypeError, SystemError, KeyError):
+                pluginInfo.plugin_object.restore()
+            except (AttributeError, TypeError, SystemError, KeyError, ModuleNotFoundError) as ex:
                 # No settings saved
-                pass
+                msg.logError(ex)
+                msg.logMessage(f'Could not restore settings for {pluginInfo.name} plugin; re-initializing settings...',
+                               level=msg.WARNING)
         self.apply()
 
     def ok(self):
