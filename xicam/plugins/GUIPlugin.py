@@ -12,7 +12,6 @@ class GUIPlugin(IPlugin):
     GUIPlugins are left uninstanciated until all plugins are loaded so that all dependent widgets are loaded before
     the UI is setup. They DO become singletons.
     '''
-    isSingleton = False
 
     def __init__(self):
         super(GUIPlugin, self).__init__()

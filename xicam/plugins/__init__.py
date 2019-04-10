@@ -107,9 +107,13 @@ class XicamPluginManager(PluginManager):
                     break
 
             msg.logMessage(f'Immediately loading {load_item[2].name}.', level=msg.INFO)
-            plugin = super(XicamPluginManager, self).getPluginByName(name, category)
+            while not plugin:  # todo: add timeout
+                plugin = super(XicamPluginManager, self).getPluginByName(name, category)
         return plugin
 
+    def getPluginsOfCategory(self, category_name):
+        plugins = super(XicamPluginManager, self).getPluginsOfCategory(category_name)
+        return [plugin for plugin in plugins if plugin.plugin_object]
 
     def collectPlugins(self, paths=None):
         """
@@ -139,7 +143,6 @@ class XicamPluginManager(PluginManager):
 
         self.loadPlugins(callback=self.showLoading)
 
-        self.instanciateLatePlugins()
         for observer in observers:
             observer.pluginsChanged()
 
@@ -155,14 +158,16 @@ class XicamPluginManager(PluginManager):
                                           level=msg.CRITICAL)
                         msg.logError(ex)
 
-    def instanciateElement(self, element):
+    def instanciatePlugin(self, plugin_info, element):
         '''
         The default behavior is that each plugin is instanciated at load time; the class is thrown away.
         Add the isSingleton = False attribute to your plugin class to prevent this behavior!
         '''
+        plugin_info.plugin_object = element
+
         if getattr(element, 'isSingleton', True):
-            return element()
-        return element
+            plugin_info.plugin_object = element()
+
 
     def showLoading(self, plugininfo: PluginInfo):
         # Indicate loading status
@@ -276,7 +281,7 @@ class XicamPluginManager(PluginManager):
         with load_timer() as elapsed:  # cm for load timing
 
             for element in (getattr(candidate_module, name) for name in dirlist):  # add filtering?
-                plugin_info_reference = None
+                target_plugin_info = None
                 for category_name in self.categories_interfaces:
                     try:
                         is_correct_subclass = issubclass(element, self.categories_interfaces[category_name])
@@ -286,23 +291,24 @@ class XicamPluginManager(PluginManager):
                         current_category = category_name
                         if candidate_infofile not in self._category_file_mapping[current_category]:
                             # we found a new plugin: initialise it and search for the next one
-                            if not plugin_info_reference:
-                                try:
-                                    plugin_info.plugin_object = self.instanciateElement(
-                                        element)  # shouldn't there be a break ?
-                                    plugin_info_reference = plugin_info
-                                except Exception:
-                                    exc_info = sys.exc_info()
-                                    log.error("Unable to create plugin object: %s" % plugin_info.path,
-                                              exc_info=exc_info)
-                                    plugin_info.error = exc_info
-                                    break  # If it didn't work once it wont again
-                            plugin_info.categories.append(current_category)
-                            self.category_mapping[current_category].append(plugin_info_reference)
-                            self._category_file_mapping[current_category].append(candidate_infofile)
-                            msg.logMessage(f'{int(elapsed()*1000)} ms elapsed while loading {plugin_info.name}',
-                                           level=msg.INFO)
-                            break  # ?
+                            try:
+
+                                threads.invoke_in_main_thread(self.instanciatePlugin, plugin_info, element)
+
+
+                            except Exception:
+                                exc_info = sys.exc_info()
+                                log.error("Unable to create plugin object: %s" % plugin_info.path,
+                                          exc_info=exc_info)
+                                plugin_info.error = exc_info
+                                break  # If it didn't work once it wont again
+                            else:
+                                plugin_info.categories.append(current_category)
+                                self.category_mapping[current_category].append(plugin_info)
+                                self._category_file_mapping[current_category].append(candidate_infofile)
+                                msg.logMessage(f'{int(elapsed()*1000)} ms elapsed while loading {plugin_info.name}',
+                                               level=msg.INFO)
+                                break  # ?
 
 
 # Setup plugin manager
