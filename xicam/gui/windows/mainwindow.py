@@ -227,7 +227,7 @@ class pluginModeWidget(QToolBar):
         self.pluginsChanged()
 
     def pluginsChanged(self):
-        self.showGUIPlugins()
+        self.showGUIPlugins(distance=0)
 
     def fadeOut(self, callback, distance=-20):
         duration = 200
@@ -279,12 +279,13 @@ class pluginModeWidget(QToolBar):
             self.fadeOut(callback=partial(self.mkButtons, names=names, callback=self.sigSetStage.emit,
                                           parent=self.parent().currentGUIPlugin.plugin_object.name))
 
-    def showGUIPlugins(self):
+    def showGUIPlugins(self, distance=20):
         plugins = pluginmanager.getPluginsOfCategory('GUIPlugin')
         # TODO: test deactivated plugins
         names = [plugin.plugin_object.name for plugin in plugins if
                  getattr(plugin, 'is_activated', True) or True]  # TODO: add plugin deactivation
-        self.fadeOut(callback=partial(self.mkButtons, names=names, callback=self.showStages), distance=20)
+        self.fadeOut(callback=partial(self.mkButtons, names=names, callback=self.showStages), distance=distance)
+
 
     def mkButtons(self, names, callback, parent=None):
         # Remove+delete previous children
