@@ -4,6 +4,7 @@ from xicam.core import msg
 import logging
 from qtpy.QtCore import *
 from qtpy.QtWidgets import *
+import threading
 
 log = msg.logMessage
 log_error = msg.logError
@@ -179,12 +180,19 @@ class Invoker(QObject):
 _invoker = Invoker()
 
 
-def invoke_in_main_thread(fn, *args, **kwargs):
+def invoke_in_main_thread(fn, *args, force_event=False, **kwargs):
     """
     Invoke a callable in the main thread. Use this for making callbacks to the gui where signals are inconvenient.
     """
-    QCoreApplication.postEvent(_invoker,
-                               InvokeEvent(fn, *args, **kwargs))
+    if not force_event and is_main_thread():
+        # we're already in the main thread; just do it!
+        fn(*args, **kwargs)
+    else:
+        QCoreApplication.postEvent(_invoker, InvokeEvent(fn, *args, **kwargs))
+
+
+def is_main_thread():
+    return threading.current_thread() is threading.main_thread()
 
 
 def method(callback_slot=None, finished_slot=None, except_slot=None, default_exhandle=True, lock=None,
