@@ -286,7 +286,6 @@ class pluginModeWidget(QToolBar):
                  getattr(plugin, 'is_activated', True) or True]  # TODO: add plugin deactivation
         self.fadeOut(callback=partial(self.mkButtons, names=names, callback=self.showStages), distance=distance)
 
-
     def mkButtons(self, names, callback, parent=None):
         # Remove+delete previous children
         layout = self.layout()
