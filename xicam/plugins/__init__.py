@@ -174,11 +174,17 @@ class XicamPluginManager(PluginManager):
         '''
         msg.logMessage(f'Instanciating {plugin_info.name} plugin object.')
 
-        if getattr(element, 'isSingleton', True):
-            plugin_info.plugin_object = element()
-        else:
-            plugin_info.plugin_object = element
+        with load_timer() as elapsed:
+            if getattr(element, 'isSingleton', True):
+                plugin_info.plugin_object = element()
+            else:
+                plugin_info.plugin_object = element
 
+        msg.logMessage(f'{int(elapsed()*1000)} ms elapsed while instanciating {plugin_info.name}',
+                       level=msg.INFO)
+
+        for observer in observers:  # TODO: put this on a timer system
+            threads.invoke_in_main_thread(observer.pluginsChanged)
 
     def showLoading(self, plugininfo: PluginInfo):
         # Indicate loading status
@@ -221,6 +227,8 @@ class XicamPluginManager(PluginManager):
 
         self.loadqueue.extend(self._candidates)
 
+        initial_len = len(self.loadqueue)
+
         for candidate_infofile, candidate_filepath, plugin_info in iter(self.loadqueue.popleft, (None, None, None)):
             # if a callback exists, call it before attempting to load
             # the plugin so that a message can be displayed to the
@@ -231,8 +239,7 @@ class XicamPluginManager(PluginManager):
             self.load_plugin(candidate_infofile=candidate_infofile, candidate_filepath=candidate_filepath,
                              plugin_info=plugin_info)
 
-            for observer in observers:  # TODO: put this on a timer system
-                threads.invoke_in_main_thread(observer.pluginsChanged)
+            msg.showProgress(initial_len - len(self.loadqueue), maxval=initial_len)
 
             if not len(self.loadqueue):
                 break
