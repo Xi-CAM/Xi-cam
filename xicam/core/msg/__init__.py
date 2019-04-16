@@ -81,9 +81,10 @@ def showProgress(value: int, minval: int = 0, maxval: int = 100):
 
     """
     if progressbar:
-        progressbar.show()
-        progressbar.setRange(minval, maxval)
-        progressbar.setValue(value)
+        from .. import threads  # must be a late import
+        threads.invoke_in_main_thread(progressbar.show)
+        threads.invoke_in_main_thread(progressbar.setRange, minval, maxval)
+        threads.invoke_in_main_thread(progressbar.setValue, value)
 
 
 def showBusy():
@@ -92,8 +93,9 @@ def showBusy():
 
     """
     if progressbar:
-        progressbar.show()
-        progressbar.setRange(0, 0)
+        from .. import threads  # must be a late import
+        threads.invoke_in_main_thread(progressbar.show)
+        threads.invoke_in_main_thread(progressbar.setRange, 0, 0)
 
 
 def hideBusy():
