@@ -27,6 +27,7 @@ from collections import deque
 from contextlib import contextmanager
 from timeit import default_timer
 from xicam.core import threads
+import time
 
 op_sys = platform.system()
 if op_sys == 'Darwin':  # User config dir incompatible with venv on darwin (space in path name conflicts)
@@ -96,18 +97,28 @@ class XicamPluginManager(PluginManager):
 
     def getPluginByName(self, name, category="Default", timeout=5):
         plugin = super(XicamPluginManager, self).getPluginByName(name, category)
-        if plugin: return plugin
+
+        if plugin:
+            while not plugin.plugin_object:
+                # the plugin was loaded, but the instanciation event hasn't fired yet
+                if threads.is_main_thread():
+                    QApplication.processEvents()
+                else:
+                    time.sleep(.01)
+            return plugin
 
         # if queueing
         if len(self.loadqueue):
             for load_item in list(self.loadqueue):
                 if load_item[2].name == name:
                     self.loadqueue.remove(load_item)  # remove the item from the top-level queue
+                    msg.logMessage(f'Immediately loading {load_item[2].name}.', level=msg.INFO)
                     self.load_plugin(*load_item)  # and load it immediately
                     break
 
-            msg.logMessage(f'Immediately loading {load_item[2].name}.', level=msg.INFO)
-            while not plugin:  # todo: add timeout
+            # Run a wait loop until the plugin element is instanciated by main thread
+            while (not plugin) or (not plugin.plugin_object):  # todo: add timeout
+                time.sleep(.01)
                 plugin = super(XicamPluginManager, self).getPluginByName(name, category)
         return plugin
 
@@ -146,23 +157,13 @@ class XicamPluginManager(PluginManager):
         for observer in observers:
             observer.pluginsChanged()
 
-    def instanciateLatePlugins(self):
-        if qt_is_safe:
-            for plugin_info in self.getPluginsOfCategory('GUIPlugin'):
-                if callable(plugin_info.plugin_object):
-                    try:
-                        plugin_info.plugin_object = plugin_info.plugin_object()  # Force late singleton-ing of GUIPlugins
-                    except Exception as ex:
-                        msg.notifyMessage(repr(ex),
-                                          title=f'The "{plugin_info.name}" plugin could not be loaded.',
-                                          level=msg.CRITICAL)
-                        msg.logError(ex)
-
     def instanciatePlugin(self, plugin_info, element):
         '''
         The default behavior is that each plugin is instanciated at load time; the class is thrown away.
         Add the isSingleton = False attribute to your plugin class to prevent this behavior!
         '''
+        msg.logMessage(f'Instanciating {plugin_info.name} plugin object.')
+
         plugin_info.plugin_object = element
 
         if getattr(element, 'isSingleton', True):
@@ -231,7 +232,9 @@ class XicamPluginManager(PluginManager):
         return self.processed_plugins
 
     def load_plugin(self, candidate_infofile, candidate_filepath, plugin_info):
-        msg.logMessage(f'Threaded loading {plugin_info.name} plugin.', level=msg.INFO)
+        msg.logMessage(
+            f'Loading {plugin_info.name} plugin in {"main" if threads.is_main_thread() else "background"} thread.',
+            level=msg.INFO)
         # make sure to attribute a unique module name to the one
         # that is about to be loaded
         plugin_module_name_template = NormalizePluginNameForModuleName(  # why?
@@ -308,7 +311,7 @@ class XicamPluginManager(PluginManager):
                                 self._category_file_mapping[current_category].append(candidate_infofile)
                                 msg.logMessage(f'{int(elapsed()*1000)} ms elapsed while loading {plugin_info.name}',
                                                level=msg.INFO)
-                                break  # ?
+                                return  # ?
 
 
 # Setup plugin manager
