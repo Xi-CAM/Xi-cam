@@ -99,12 +99,15 @@ class XicamPluginManager(PluginManager):
         plugin = super(XicamPluginManager, self).getPluginByName(name, category)
 
         if plugin:
-            while not plugin.plugin_object:
-                # the plugin was loaded, but the instanciation event hasn't fired yet
-                if threads.is_main_thread():
-                    QApplication.processEvents()
-                else:
-                    time.sleep(.01)
+            with load_timer() as elapsed:
+                while not plugin.plugin_object:
+                    # the plugin was loaded, but the instanciation event hasn't fired yet
+                    if threads.is_main_thread():
+                        QApplication.processEvents()
+                    else:
+                        time.sleep(.01)
+                    if elapsed() > timeout:
+                        raise TimeoutError(f'Plugin named {name} waited too long to instanciate')
             return plugin
 
         # if queueing
@@ -117,9 +120,16 @@ class XicamPluginManager(PluginManager):
                     break
 
             # Run a wait loop until the plugin element is instanciated by main thread
-            while (not plugin) or (not plugin.plugin_object):  # todo: add timeout
-                time.sleep(.01)
-                plugin = super(XicamPluginManager, self).getPluginByName(name, category)
+            with load_timer() as elapsed:
+                while (not plugin) or (not plugin.plugin_object):
+                    plugin = super(XicamPluginManager, self).getPluginByName(name, category)
+                    if threads.is_main_thread():
+                        QApplication.processEvents()
+                    else:
+                        time.sleep(.01)
+                    if elapsed() > timeout:
+                        raise TimeoutError(f'Plugin named {name} waited too long to instanciate')
+
         return plugin
 
     def getPluginsOfCategory(self, category_name):
@@ -164,10 +174,10 @@ class XicamPluginManager(PluginManager):
         '''
         msg.logMessage(f'Instanciating {plugin_info.name} plugin object.')
 
-        plugin_info.plugin_object = element
-
         if getattr(element, 'isSingleton', True):
             plugin_info.plugin_object = element()
+        else:
+            plugin_info.plugin_object = element
 
 
     def showLoading(self, plugininfo: PluginInfo):
