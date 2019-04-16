@@ -5,6 +5,7 @@ import time
 from typing import Any
 import traceback
 import threading
+from collections import defaultdict
 
 
 """
@@ -54,6 +55,16 @@ if 'qtpy' in sys.modules:
 
         trayicon = QSystemTrayIcon(QIcon(QPixmap(str(path('icons/xicam.gif')))))  # TODO: better icon
 
+_thread_count = 0
+
+
+def _increment_thread():
+    global _thread_count
+    _thread_count += 1
+    return _thread_count
+
+
+threadIds = defaultdict(_increment_thread)
 
 def showProgress(value: int, minval: int = 0, maxval: int = 100):
     """
@@ -151,7 +162,6 @@ def showMessage(*args, timeout=5, **kwargs):
 
     logMessage(*args, **kwargs)
 
-
 def logMessage(*args: Any, level: int = INFO, loggername: str = None, timestamp: str = None,
                suppressreprint: bool = False):
     """
@@ -199,15 +209,19 @@ def logMessage(*args: Any, level: int = INFO, loggername: str = None, timestamp:
     # Lookup levelname from level
     levelname = levels[level]
 
+    if threading.current_thread() is threading.main_thread():
+        thread = "M"
+    else:
+        thread = str(threadIds[threading.get_ident()])
+
     # LOG IT!
-    logger.log(level, f'{timestamp} - {loggername} - {levelname} - {threading.get_ident()} - {s}')
+    logger.log(level, f'{timestamp} - {loggername} - {levelname} - {thread} - {s}')
 
     # Also, print message to stdout
     # try:
     #     if not suppressreprint: print(f'{timestamp} - {loggername} - {levelname} - {s}')
     # except UnicodeEncodeError:
     #     print('A unicode string could not be written to console. Some logging will not be displayed.')
-
 
 def clearMessage():
     """
