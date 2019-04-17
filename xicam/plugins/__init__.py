@@ -175,10 +175,18 @@ class XicamPluginManager(PluginManager):
         msg.logMessage(f'Instanciating {plugin_info.name} plugin object.')
 
         with load_timer() as elapsed:
-            if getattr(element, 'isSingleton', True):
-                plugin_info.plugin_object = element()
-            else:
-                plugin_info.plugin_object = element
+            try:
+                if getattr(element, 'isSingleton', True):
+                    plugin_info.plugin_object = element()
+                else:
+                    plugin_info.plugin_object = element
+            except Exception as ex:
+                exc_info = sys.exc_info()
+                log.error("Unable to instanciate plugin: %s" % plugin_info.path, exc_info=exc_info)
+                msg.notifyMessage(repr(ex),
+                                  title=f'An error occured while starting the "{plugin_info.name}" plugin.',
+                                  level=msg.CRITICAL)
+                plugin_info.error = exc_info
 
         msg.logMessage(f'{int(elapsed()*1000)} ms elapsed while instanciating {plugin_info.name}',
                        level=msg.INFO)
