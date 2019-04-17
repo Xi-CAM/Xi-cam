@@ -37,10 +37,10 @@ class WorkflowProcess():
 
 
 class Workflow(object):
-    def __init__(self, name, processes=None):
+    def __init__(self, name='', processes=None):
         self._processes = []
         self._observers = set()
-        self.name = name
+        if name: self.name = name
 
         if processes:
             self._processes.extend(processes)
