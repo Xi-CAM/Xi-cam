@@ -1,0 +1,9 @@
+bluesky
+event-model >=1.9.0a3
+intake-bluesky
+mongobox
+ophyd
+pyqt5
+qtpy
+suitcase-mongo
+tornado<5  # pinned for bluesky
