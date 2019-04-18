@@ -427,7 +427,10 @@ class DocMetaArray(object):
         if not field:
             fields = list(header.fields())
             if len(fields) > 1:
-                raise ValueError('Unspecified field for document stream with >1 field')
+                msg.logError(
+                    ValueError('Unspecified field for document stream with >1 field. Potentially unexpected behavior.'))
+                field = next(iter(header.eventdocs[0]['data'].keys()))
+
         else:
             fields = [field]
         self.events = list(header.events(fields=fields))
