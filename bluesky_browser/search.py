@@ -10,6 +10,7 @@ from qtpy.QtGui import QStandardItemModel, QStandardItem
 from qtpy.QtWidgets import (
     QApplication,
     QCalendarWidget,
+    QComboBox,
     QDateTimeEdit,
     QHBoxLayout,
     QLabel,
@@ -35,11 +36,17 @@ class SearchState:
         self.search_result_row = search_result_row
         self.catalog_selection_model = CatalogSelectionModel()
         self.search_results_model = SearchResultsModel(self)
+        self.list_subcatalogs()
+        _, self.selected_catalog = next(iter(self.catalog.items()))
 
     def list_subcatalogs(self):
         self.catalog_selection_model.clear()
         for name, entry in self.catalog.items():
             self.catalog_selection_model.appendRow(QStandardItem(str(name)))
+
+    def set_selected_catalog(self, item):
+        (_, self.selected_catalog), = itertools.islice(self.catalog.items(), item, item + 1)
+        self.search()
 
     def search(self):
         self.search_results_model.clear()
@@ -49,7 +56,7 @@ class SearchState:
         if self.search_results_model.until is not None:
             query['time']['$lt'] = self.search_results_model.until
         query.update(**self.search_results_model.custom_query)
-        results = self.catalog.search(query)
+        results = self.selected_catalog.search(query)
         log.debug('Query %r -> %d results', query, len(results))
         for uid, entry in itertools.islice(results.items(), MAX_SEARCH_RESULTS):
             row = []
@@ -129,6 +136,13 @@ class SearchInputWidget(QWidget):
         self.setLayout(layout)
 
 
+class CatalogSelectionWidget(QComboBox):
+    """
+    List of subcatalogs
+    """
+    ...
+
+
 class SearchResultsWidget(QTableView):
     """
     Table of search results
@@ -149,10 +163,12 @@ class SearchWidget(QWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        self.catalog_selection_widget = CatalogSelectionWidget()
         self.search_input_widget = SearchInputWidget()
         self.search_results_widget = SearchResultsWidget()
 
         layout = QVBoxLayout()
+        layout.addWidget(self.catalog_selection_widget)
         layout.addWidget(self.search_input_widget)
         layout.addWidget(self.search_results_widget)
         self.setLayout(layout)

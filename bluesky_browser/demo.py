@@ -12,9 +12,10 @@ import intake_bluesky.jsonl  # noqa; to force intake registration
 
 
 def generate_example_data(data_path):
+    data_path = Path(data_path)
 
     def factory(name, doc):
-        serializer = Serializer(str(data_path))
+        serializer = Serializer(data_path / 'abc')
         serializer('start', doc)
         return [serializer], []
 
@@ -24,25 +25,43 @@ def generate_example_data(data_path):
     RE(count([det]))
     RE(count([det], 5))
     RE(scan([det], motor, -1, 1, 7))
-    
-    catalog_filepath = Path(data_path) / 'catalog.yml'
+
+    def factory(name, doc):
+        serializer = Serializer(data_path / 'xyz')
+        serializer('start', doc)
+        return [serializer], []
+
+    RE = RunEngine()
+    rr = RunRouter([factory])
+    RE.subscribe(rr)
+    RE(count([det], 3))
+
+    catalog_filepath = data_path / 'catalog.yml'
     with open(catalog_filepath, 'w') as file:
         file.write(f'''
 plugins:
   source:
     - module: intake_bluesky
 sources:
+  abc:
+    description: Some imaginary beamline
+    driver: intake_bluesky.jsonl.BlueskyJSONLCatalog
+    container: catalog
+    args:
+      paths: {Path(data_path) / 'abc' / '*.jsonl'}
+      handler_registry:
+        NPY_SEQ: ophyd.sim.NumpySeqHandler
+    metadata:
+      beamline: "00-ID"
   xyz:
     description: Some imaginary beamline
     driver: intake_bluesky.jsonl.BlueskyJSONLCatalog
     container: catalog
     args:
-      paths: {Path(data_path) / '*.jsonl'}
+      paths: {Path(data_path) / 'xyz' / '*.jsonl'}
       handler_registry:
         NPY_SEQ: ophyd.sim.NumpySeqHandler
     metadata:
-      beamline: "00-ID"
+      beamline: "99-ID"
 ''')
-    with open(catalog_filepath) as file:
-        file.read()
     return str(catalog_filepath)

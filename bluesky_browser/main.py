@@ -57,6 +57,8 @@ class Application(QApplication):
             search_state.search_results_model)
         central_widget.search_widget.search_input_widget.search_bar.textChanged.connect(
             search_state.search_results_model.on_search_text_changed)
+        central_widget.search_widget.catalog_selection_widget.setModel(
+            search_state.catalog_selection_model)
         central_widget.search_widget.search_input_widget.until_widget.dateTimeChanged.connect(
             search_state.search_results_model.on_until_time_changed)
         central_widget.search_widget.search_input_widget.until_widget.setDateTime(
@@ -65,11 +67,15 @@ class Application(QApplication):
             search_state.search_results_model.on_since_time_changed)
         central_widget.search_widget.search_input_widget.since_widget.setDateTime(
             QDateTime.fromSecsSinceEpoch(now - ONE_WEEK))
+        central_widget.search_widget.catalog_selection_widget.currentIndexChanged.connect(
+            search_state.set_selected_catalog)
         central_widget.search_widget.search_results_widget.selectionModel().selectionChanged.connect(print)
 
 
 def run(catalog_uri):
-    """Start the application."""
+    """
+    Start the application with some defaults, until we get config sorted out.
+    """
     import logging
     log = logging.getLogger('bluesky_browser')
     handler = logging.StreamHandler()
@@ -78,7 +84,7 @@ def run(catalog_uri):
     log.setLevel('DEBUG')
 
     from intake import Catalog
-    catalog = Catalog(catalog_uri)['xyz']()
+    catalog = Catalog(catalog_uri)
 
     def search_result_row(entry):
         return {'Unique ID': entry.metadata['start']['uid'][:8],
@@ -106,9 +112,12 @@ def main():
 
 
 class _DemoAction(argparse.Action):
-    # a special action that allows the usage --version to override
-    # any 'required args' requirements, the same way that --help does
+    """
+    A special action that generates example data and launches the app.
 
+    This overrides the parser's required arguments the same way that --help
+    does, so that the user does not have to pass in a catalog in this case.
+    """
     def __init__(self,
                  option_strings,
                  dest=argparse.SUPPRESS,
