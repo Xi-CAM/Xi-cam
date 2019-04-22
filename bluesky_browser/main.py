@@ -1,5 +1,7 @@
+import argparse
 import sys
 import time
+from . import __version__
 
 from qtpy.QtCore import QDateTime, Qt
 from qtpy.QtWidgets import (
@@ -66,7 +68,7 @@ class Application(QApplication):
         central_widget.search_widget.search_results_widget.selectionModel().selectionChanged.connect(print)
 
 
-def main():
+def run(catalog_uri):
     """Start the application."""
     import logging
     log = logging.getLogger('bluesky_browser')
@@ -76,7 +78,7 @@ def main():
     log.setLevel('DEBUG')
 
     from intake import Catalog
-    catalog = Catalog('intake://localhost:5000')['xyz']()
+    catalog = Catalog(catalog_uri)['xyz']()
 
     def search_result_row(entry):
         return {'Unique ID': entry.metadata['start']['uid'][:8],
@@ -89,6 +91,43 @@ def main():
 
     app.main_window.show()
     sys.exit(app.exec_())
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Prototype bluesky data browser',
+                                     epilog=f'version {__version__}')
+    parser.register('action', 'demo', _DemoAction)
+    parser.add_argument('catalog', type=str)
+    parser.add_argument('--demo', action='demo',
+                        default=argparse.SUPPRESS,
+                        help="Launch the app with example data.")
+    args = parser.parse_args()
+    run(args.catalog_uri)
+
+
+class _DemoAction(argparse.Action):
+    # a special action that allows the usage --version to override
+    # any 'required args' requirements, the same way that --help does
+
+    def __init__(self,
+                 option_strings,
+                 dest=argparse.SUPPRESS,
+                 default=argparse.SUPPRESS,
+                 help=None):
+        super().__init__(
+            option_strings=option_strings,
+            dest=dest,
+            default=default,
+            nargs=0,
+            help=help)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        from .demo import generate_example_data
+        from tempfile import TemporaryDirectory
+        with TemporaryDirectory() as directory:
+            catalog_filepath = generate_example_data(directory)
+            run(catalog_filepath)
+            parser.exit()
 
 
 if __name__ == '__main__':

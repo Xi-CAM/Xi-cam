@@ -19,7 +19,6 @@ from qtpy.QtWidgets import (
     QWidget,
     QTableView,
     )
-import intake_bluesky.mongo_normalized  # noqa; to force intake registration
 
 
 MAX_SEARCH_RESULTS = 100
