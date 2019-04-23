@@ -1,10 +1,11 @@
 from event_model import RunRouter, unpack_event_page
 from qtpy.QtGui import QStandardItemModel, QStandardItem
 from qtpy.QtWidgets import (
-    QWidget,
     QTableView,
     QTabWidget,
     )
+
+from .header_tree import HeaderTreeWidget
 
 
 class Container(QTabWidget):
@@ -25,9 +26,10 @@ class Container(QTabWidget):
                     viewer.run_router(name, doc)
                 self.addTab(viewer, uid[:8])
                 self._runs.append(uid)
-        # Show the last entry in the list.
-        index = self._runs.index(uid)
-        self.setCurrentIndex(index)
+        if entries:
+            # Show the last entry in the list.
+            index = self._runs.index(uid)
+            self.setCurrentIndex(index)
 
     def close_tab(self, index):
         self._runs.pop(index)
@@ -40,6 +42,10 @@ class Viewer(QTabWidget):
         self.run_router = RunRouter([self.factory])
 
     def factory(self, name, start_doc):
+        header_tree_widget = HeaderTreeWidget()
+        header_tree_widget('start', start_doc)
+        self.addTab(header_tree_widget, 'Header')
+
         def subfactory(name, descriptor_doc):
             if descriptor_doc.get('name') == 'baseline':
                 baseline_widget = BaselineWidget()
@@ -49,7 +55,7 @@ class Viewer(QTabWidget):
                 return [baseline_model]
             else:
                 return []
-        return [], [subfactory]
+        return [], [subfactory, header_tree_widget]
 
 
 class BaselineModel(QStandardItemModel):
