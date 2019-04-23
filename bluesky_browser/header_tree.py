@@ -67,6 +67,7 @@ class HeaderTreeWidget(QTreeWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setAlternatingRowColors(True)
+        self.setHeaderHidden(True)
 
     def __call__(self, name, doc):
         fill_item(self.invisibleRootItem(), {name: doc})
