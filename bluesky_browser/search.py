@@ -10,10 +10,12 @@ from qtpy.QtCore import QDateTime, QObject, Qt, Signal
 from qtpy.QtGui import QStandardItemModel, QStandardItem
 from qtpy.QtWidgets import (
     QApplication,
+    QPushButton,
     QCalendarWidget,
     QComboBox,
     QDateTimeEdit,
     QHBoxLayout,
+    QMessageBox,
     QLabel,
     QLineEdit,
     QMainWindow,
@@ -129,6 +131,13 @@ class SearchInputWidget(QWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.search_bar = QLineEdit()
+        search_bar_layout = QHBoxLayout()
+        search_bar_layout.addWidget(QLabel('Custom Query:'))
+        search_bar_layout.addWidget(self.search_bar)
+        mongo_query_help_button = QPushButton()
+        mongo_query_help_button.setText('?')
+        search_bar_layout.addWidget(mongo_query_help_button)
+        mongo_query_help_button.clicked.connect(self.show_mongo_query_help)
 
         self.since_widget = QDateTimeEdit()
         self.since_widget.setCalendarPopup(True)
@@ -145,17 +154,45 @@ class SearchInputWidget(QWidget):
         until_layout.addWidget(self.until_widget)
 
         layout = QVBoxLayout()
-        layout.addWidget(self.search_bar)
         layout.addLayout(since_layout)
         layout.addLayout(until_layout)
+        layout.addLayout(search_bar_layout)
         self.setLayout(layout)
 
+    def show_mongo_query_help(self):
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Information)
+        msg.setText("For advanced search capability, enter a valid Mongo query.")
+        msg.setInformativeText("""
+Examples:
 
-class CatalogSelectionWidget(QComboBox):
+{'plan_name': 'scan'}
+{'proposal': 1234},
+{'$and': ['proposal': 1234, 'sample_name': 'Ni']}
+""")
+        msg.setWindowTitle("Custom Mongo Query")
+        msg.setStandardButtons(QMessageBox.Ok)
+        msg.exec_()
+
+
+class CatalogList(QComboBox):
     """
     List of subcatalogs
     """
     ...
+
+
+class CatalogSelectionWidget(QWidget):
+    """
+    Input widget for selecting a subcatalog
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.catalog_list = CatalogList()
+        layout = QHBoxLayout()
+        layout.addWidget(QLabel("Catalog:"))
+        layout.addWidget(self.catalog_list)
+        self.setLayout(layout)
 
 
 class SearchResultsWidget(QTableView):

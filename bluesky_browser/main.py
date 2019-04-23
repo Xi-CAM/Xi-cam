@@ -57,7 +57,7 @@ class Application(QApplication):
             search_state.search_results_model)
         central_widget.search_widget.search_input_widget.search_bar.textChanged.connect(
             search_state.search_results_model.on_search_text_changed)
-        central_widget.search_widget.catalog_selection_widget.setModel(
+        central_widget.search_widget.catalog_selection_widget.catalog_list.setModel(
             search_state.catalog_selection_model)
         central_widget.search_widget.search_input_widget.until_widget.dateTimeChanged.connect(
             search_state.search_results_model.on_until_time_changed)
@@ -67,7 +67,7 @@ class Application(QApplication):
             search_state.search_results_model.on_since_time_changed)
         central_widget.search_widget.search_input_widget.since_widget.setDateTime(
             QDateTime.fromSecsSinceEpoch(now - ONE_WEEK))
-        central_widget.search_widget.catalog_selection_widget.currentIndexChanged.connect(
+        central_widget.search_widget.catalog_selection_widget.catalog_list.currentIndexChanged.connect(
             search_state.set_selected_catalog)
         central_widget.search_widget.search_results_widget.selectionModel().selectionChanged.connect(
             search_state.search_results_model.emit_selected_result_signal)
