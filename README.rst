@@ -19,6 +19,8 @@ Clone and install.
    cd bluesky-browser
    pip install -e .
 
+Run the demo.
+
 .. code-block:: bash
 
    bluesky-browser --demo
