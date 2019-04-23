@@ -36,19 +36,29 @@ class SearchState:
         self.search_result_row = search_result_row
         self.catalog_selection_model = CatalogSelectionModel()
         self.search_results_model = SearchResultsModel(self)
+        self._subcatalogs = []  # to support lookup by item's positional index
+        self._results = []  # to support lookup by item's positional index
         self.list_subcatalogs()
-        _, self.selected_catalog = next(iter(self.catalog.items()))
+        self.set_selected_catalog(0)
 
     def list_subcatalogs(self):
+        self._subcatalogs.clear()
         self.catalog_selection_model.clear()
-        for name, entry in self.catalog.items():
+        for name in self.catalog:
+            self._subcatalogs.append(name)
             self.catalog_selection_model.appendRow(QStandardItem(str(name)))
 
     def set_selected_catalog(self, item):
-        (_, self.selected_catalog), = itertools.islice(self.catalog.items(), item, item + 1)
+        name = self._subcatalogs[item]
+        self.selected_catalog = self.catalog[name]
         self.search()
 
+    def get_entry_by_item(item):
+        """Lookup entry by positional index in listing."""
+        return self._results[item]
+
     def search(self):
+        self._results.clear()
         self.search_results_model.clear()
         query = {'time': {}}
         if self.search_results_model.since is not None:
@@ -61,6 +71,7 @@ class SearchState:
         for uid, entry in itertools.islice(results.items(), MAX_SEARCH_RESULTS):
             row = []
             for text in self.search_result_row(entry).values():
+                self._results.append(entry)
                 item = QStandardItem(text or '')
                 row.append(item)
             self.search_results_model.appendRow(row)
