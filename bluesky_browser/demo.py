@@ -2,8 +2,9 @@ from pathlib import Path
 
 from suitcase.jsonl import Serializer
 from bluesky import RunEngine
-from ophyd.sim import det, motor
+from ophyd.sim import det, motor, motor1, motor2
 from bluesky.plans import scan, count
+from bluesky.preprocessors import SupplementalData
 from event_model import RunRouter
 import intake_bluesky.jsonl  # noqa; to force intake registration
 
@@ -17,6 +18,9 @@ def generate_example_data(data_path):
         return [serializer], []
 
     RE = RunEngine()
+    sd = SupplementalData()
+    RE.preprocessors.append(sd)
+    sd.baseline.extend([motor1, motor2])
     rr = RunRouter([factory])
     RE.subscribe(rr)
     RE(count([det]))
