@@ -26,7 +26,7 @@ class CentralWidget(QWidget):
 
         left_pane = QVBoxLayout()
         left_pane.addWidget(self.search_widget)
-        # left_pane.addWidget(self.summary_widget)
+        left_pane.addWidget(self.summary_widget)
 
         layout = QHBoxLayout()
         layout.addLayout(left_pane)
@@ -69,7 +69,9 @@ class Application(QApplication):
             QDateTime.fromSecsSinceEpoch(now - ONE_WEEK))
         central_widget.search_widget.catalog_selection_widget.currentIndexChanged.connect(
             search_state.set_selected_catalog)
-        central_widget.search_widget.search_results_widget.selectionModel().selectionChanged.connect(print)
+        central_widget.search_widget.search_results_widget.selectionModel().selectionChanged.connect(
+            search_state.search_results_model.emit_selected_result_signal)
+        search_state.search_results_model.selected_result_signal.connect(central_widget.summary_widget.set_entries)
 
 
 def run(catalog_uri):

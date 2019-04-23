@@ -5,7 +5,8 @@ import itertools
 import logging
 import time
 
-from qtpy.QtCore import QDateTime, Qt
+from intake.catalog.base import Catalog
+from qtpy.QtCore import QDateTime, QObject, Qt, Signal
 from qtpy.QtGui import QStandardItemModel, QStandardItem
 from qtpy.QtWidgets import (
     QApplication,
@@ -53,10 +54,6 @@ class SearchState:
         self.selected_catalog = self.catalog[name]
         self.search()
 
-    def get_entry_by_item(item):
-        """Lookup entry by positional index in listing."""
-        return self._results[item]
-
     def search(self):
         self._results.clear()
         self.search_results_model.clear()
@@ -70,8 +67,8 @@ class SearchState:
         log.debug('Query %r -> %d results', query, len(results))
         for uid, entry in itertools.islice(results.items(), MAX_SEARCH_RESULTS):
             row = []
+            self._results.append(entry)
             for text in self.search_result_row(entry).values():
-                self._results.append(entry)
                 item = QStandardItem(text or '')
                 row.append(item)
             self.search_results_model.appendRow(row)
@@ -95,12 +92,19 @@ class SearchResultsModel(QStandardItemModel):
     """
     Perform searches on a Catalog and model the results.
     """
+    selected_result_signal = Signal([list])
+
     def __init__(self, search_state, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.custom_query = {}
         self.search_state = search_state
         self.since = None
         self.until = None
+
+    def emit_selected_result_signal(self, selected, deselected):
+        rows = set(index.row() for index in selected.indexes())
+        self.selected_result_signal.emit(
+            [self.search_state._results[row] for row in rows])
 
     def on_search_text_changed(self, text):
         try:

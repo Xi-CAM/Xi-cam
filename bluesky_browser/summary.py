@@ -22,3 +22,12 @@ class SummaryWidget(QWidget):
         layout.addWidget(self.uid)
         layout.addWidget(self.streams)
         self.setLayout(layout)
+
+    def set_entries(self, entries):
+        if len(entries) != 1:
+            self.uid.setText('')
+            self.streams.setText('')
+            return
+        entry, = entries
+        self.uid.setText(entry.metadata['start']['uid'])
+        self.streams.setText('\n'.join(list(entry())))
