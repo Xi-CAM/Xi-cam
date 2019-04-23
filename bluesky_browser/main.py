@@ -12,6 +12,7 @@ from qtpy.QtWidgets import (
     QVBoxLayout)
 from .search import SearchWidget, SearchState
 from .summary import SummaryWidget
+from .viewer import Container
 
 
 class CentralWidget(QWidget):
@@ -23,13 +24,18 @@ class CentralWidget(QWidget):
 
         self.search_widget = SearchWidget()
         self.summary_widget = SummaryWidget()
+        self.container = Container()
 
         left_pane = QVBoxLayout()
         left_pane.addWidget(self.search_widget)
         left_pane.addWidget(self.summary_widget)
 
+        right_pane = QVBoxLayout()
+        right_pane.addWidget(self.container)
+
         layout = QHBoxLayout()
         layout.addLayout(left_pane)
+        layout.addLayout(right_pane)
         self.setLayout(layout)
 
 
@@ -72,6 +78,7 @@ class Application(QApplication):
         central_widget.search_widget.search_results_widget.selectionModel().selectionChanged.connect(
             search_state.search_results_model.emit_selected_result_signal)
         search_state.search_results_model.selected_result_signal.connect(central_widget.summary_widget.set_entries)
+        search_state.search_results_model.selected_result_signal.connect(central_widget.container.show_entries)
 
 
 def run(catalog_uri):
