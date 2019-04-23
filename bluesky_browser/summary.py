@@ -1,21 +1,14 @@
 from qtpy.QtWidgets import (
-    QApplication,
-    QCalendarWidget,
-    QDateTimeEdit,
-    QHBoxLayout,
     QLabel,
-    QLineEdit,
-    QMainWindow,
     QVBoxLayout,
     QWidget,
-    QTableView,
     )
 
 
 class SummaryWidget(QWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.uid = QLabel() 
+        self.uid = QLabel()
         self.streams = QLabel()
 
         layout = QVBoxLayout()

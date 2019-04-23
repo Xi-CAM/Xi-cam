@@ -3,32 +3,26 @@ Experimental Qt-based data browser for bluesky
 """
 import itertools
 import logging
-import time
 
-from intake.catalog.base import Catalog
-from qtpy.QtCore import QDateTime, QObject, Qt, Signal
+from qtpy.QtCore import Qt, Signal
 from qtpy.QtGui import QStandardItemModel, QStandardItem
 from qtpy.QtWidgets import (
-    QApplication,
     QPushButton,
-    QCalendarWidget,
     QComboBox,
     QDateTimeEdit,
     QHBoxLayout,
     QMessageBox,
     QLabel,
     QLineEdit,
-    QMainWindow,
     QVBoxLayout,
     QWidget,
     QTableView,
     )
 
 
-MAX_SEARCH_RESULTS = 100
-
-
+MAX_SEARCH_RESULTS = 100  # TODO Use fetchMore instead of a hard limit.
 log = logging.getLogger('bluesky_browser')
+
 
 class SearchState:
     """

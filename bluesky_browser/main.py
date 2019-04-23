@@ -3,7 +3,7 @@ import sys
 import time
 from . import __version__
 
-from qtpy.QtCore import QDateTime, Qt
+from qtpy.QtCore import QDateTime
 from qtpy.QtWidgets import (
     QApplication,
     QWidget,
