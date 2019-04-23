@@ -5,25 +5,23 @@ Bluesky Browser
 A library of Qt widgets for searching saved bluesky data and viewing document
 streams either live or from disk.
 
-This is a prototype and may be fully rewritten or abandoned.
+This is a prototype that may be fully rewritten, abandoned, or moved into other
+libraries.
 
 Launching the demo
 ==================
 
-Install requirements
+Clone and install.
 
 .. code-block:: python
 
-   pip install -r requirements.txt
-
-Generate example data and launch an intake server.
-
-.. code-block:: python
-
-   python serve_example_catalog.py
-
-Start the GUI.
+   git clone https://github.com/NSLS-II/bluesky-browser
+   cd bluesky-browser
+   pip install -e .
 
 .. code-block:: python
 
-   python bluesky_browser.py
+   bluesky-browser --demo
+
+The above generates example data in a temporary directory and launches a Qt
+application to browse that data.
