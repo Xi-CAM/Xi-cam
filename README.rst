@@ -13,13 +13,13 @@ Launching the demo
 
 Clone and install.
 
-.. code-block:: python
+.. code-block:: bash
 
    git clone https://github.com/NSLS-II/bluesky-browser
    cd bluesky-browser
    pip install -e .
 
-.. code-block:: python
+.. code-block:: bash
 
    bluesky-browser --demo
 
