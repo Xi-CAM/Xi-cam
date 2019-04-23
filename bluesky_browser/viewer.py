@@ -53,16 +53,19 @@ class Viewer(QTabWidget):
 
 
 class BaselineModel(QStandardItemModel):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setHorizontalHeaderLabels(['Before', 'After'])
+
     def __call__(self, name, doc):
         if name == 'event_page':
-            print('page', doc)
             for event in unpack_event_page(doc):
                 self.__call__('event', event)
         elif name == 'event':
-            print(doc['data'])
-            column = [QStandardItem(str(val)) for val in doc['data'].values()]
+            column = doc['seq_num'] - 1
+            for row, val in enumerate(val for _, val in sorted(doc['data'].items())):
+                self.setItem(row, column, QStandardItem(str(val)))
             self.setVerticalHeaderLabels(doc['data'].keys())
-            self.appendColumn(column)
 
 
 class BaselineWidget(QTableView):
