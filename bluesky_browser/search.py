@@ -116,10 +116,8 @@ class SearchResultsModel(QStandardItemModel):
 
     def on_search_text_changed(self, text):
         try:
-            print("dict({})".format(text))
             self.custom_query = dict(ast.literal_eval(text)) if text else {}
         except Exception as exc:
-            print(exc)
             self.valid_custom_query.emit(False)
         else:
             self.valid_custom_query.emit(True)
@@ -171,7 +169,6 @@ class SearchInputWidget(QWidget):
 
     def mark_custom_query(self, valid):
         "Indicate whether the current text is a parsable query."
-        print('received', valid)
         if valid:
             stylesheet = GOOD_TEXT_INPUT
         else:
