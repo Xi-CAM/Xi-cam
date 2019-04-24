@@ -103,7 +103,8 @@ def run(catalog_uri):
         return {'Unique ID': start['uid'][:8],
                 'Transient Scan ID': str(start.get('scan_id', '-')),
                 'Plan Name': start.get('plan_name', '-'),
-                'Time': datetime.fromtimestamp(start['time']).strftime('%Y-%m-%d %H:%M:%S')}
+                'Time': datetime.fromtimestamp(start['time']).strftime('%Y-%m-%d %H:%M:%S'),
+                'Exit Status': stop['exit_status']}
 
     app = Application([b'Bluesky Browser'],
                       catalog=catalog,
