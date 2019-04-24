@@ -117,7 +117,7 @@ class SearchResultsModel(QStandardItemModel):
     def on_search_text_changed(self, text):
         try:
             self.custom_query = dict(ast.literal_eval(text)) if text else {}
-        except Exception as exc:
+        except Exception:
             self.valid_custom_query.emit(False)
         else:
             self.valid_custom_query.emit(True)
