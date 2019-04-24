@@ -1,6 +1,7 @@
 """
 Experimental Qt-based data browser for bluesky
 """
+import ast
 import itertools
 import logging
 
@@ -22,6 +23,16 @@ from qtpy.QtWidgets import (
 
 MAX_SEARCH_RESULTS = 100  # TODO Use fetchMore instead of a hard limit.
 log = logging.getLogger('bluesky_browser')
+BAD_TEXT_INPUT = """
+QLineEdit {
+    background-color: rgb(255, 100, 100);
+}
+"""
+GOOD_TEXT_INPUT = """
+QLineEdit {
+    background-color: rgb(255, 255, 255);
+}
+"""
 
 
 class SearchState:
@@ -89,6 +100,7 @@ class SearchResultsModel(QStandardItemModel):
     Perform searches on a Catalog and model the results.
     """
     selected_result_signal = Signal([list])
+    valid_custom_query = Signal([bool])
 
     def __init__(self, search_state, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -104,10 +116,14 @@ class SearchResultsModel(QStandardItemModel):
 
     def on_search_text_changed(self, text):
         try:
-            self.custom_query = eval("dict({})".format(text))
-        except Exception:
-            return
-        self.search_state.search()
+            print("dict({})".format(text))
+            self.custom_query = dict(ast.literal_eval(text)) if text else {}
+        except Exception as exc:
+            print(exc)
+            self.valid_custom_query.emit(False)
+        else:
+            self.valid_custom_query.emit(True)
+            self.search_state.search()
 
     def on_since_time_changed(self, datetime):
         self.since = datetime.toSecsSinceEpoch()
@@ -153,7 +169,17 @@ class SearchInputWidget(QWidget):
         layout.addLayout(search_bar_layout)
         self.setLayout(layout)
 
+    def mark_custom_query(self, valid):
+        "Indicate whether the current text is a parsable query."
+        print('received', valid)
+        if valid:
+            stylesheet = GOOD_TEXT_INPUT
+        else:
+            stylesheet = BAD_TEXT_INPUT
+        self.search_bar.setStyleSheet(stylesheet)
+
     def show_mongo_query_help(self):
+        "Launch a Message Box with instructions for custom queries."
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Information)
         msg.setText("For advanced search capability, enter a valid Mongo query.")
