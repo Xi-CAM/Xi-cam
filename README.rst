@@ -35,7 +35,7 @@ new tab with a more detailed view.
 Roadmap
 =======
 
-* [ ] Add matplotlib figures to the viewer.
-* [ ] Add a way to run just the viewer part against live data (from RE).
-* [ ] Make the search inputs, search result row, summary viewer, and tab
-      factories configurable.
+*  Add matplotlib figures to the viewer.
+*  Add a way to run just the viewer part against live data (from RE).
+*  Make the search inputs, search result row, summary viewer, and tab
+   factories configurable.
