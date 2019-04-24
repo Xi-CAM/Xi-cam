@@ -37,6 +37,7 @@ class SummaryWidget(QWidget):
         entry, = entries
         self.uid = entry.metadata['start']['uid']
         self.uid_label.setText(self.uid[:8])
+        self.copy_uid_button.show()
         num_events = entry.metadata.get('stop', {}).get('num_events')
         if num_events:
             self.streams.setText(
