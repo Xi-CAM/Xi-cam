@@ -11,6 +11,9 @@ from qtpy.QtWidgets import (
 
 
 class FigureManager:
+    """
+    For a given Viewer, encasulate the matplotlib Figures and associated tabs.
+    """
     def __init__(self, add_tab):
         self.add_tab = add_tab
         self._figures = {}
@@ -42,18 +45,33 @@ class FigureManager:
 
     def __call__(self, name, start_doc):
         line_plot_manager = LinePlotManager(self)
-        line_plot_manager('start', start_doc)
-        return [RunRouter([line_plot_manager])], []
+        rr = RunRouter([line_plot_manager])
+        rr('start', start_doc)
+        return [rr], []
 
 
 class LinePlotManager:
+    """
+    Manage the line plots for one FigureManager.
+    """
     def __init__(self, fig_manager):
         self.fig_manager = fig_manager
 
     def __call__(self, name, start_doc):
-        line_plot_manager = LinePlotManager(self)
-        fig = self.fig_manager.get_figure('test')
-        fig.gca().plot([1,2,3])
+
+        def subfactory(name, descriptor_doc):
+            if descriptor_doc.get('name') == 'primary':
+
+                def func(event_page):
+                    return event_page['data']['motor'], event_page['data']['det']
+
+                fig = self.fig_manager.get_figure('test')
+                test_line = Line(func, ax=fig.gca())
+                test_line('start', start_doc)
+                return [test_line]
+            else:
+                return []
+        return [], [subfactory]
 
 
 class Line(DocumentRouter):
@@ -81,6 +99,7 @@ class Line(DocumentRouter):
     def __init__(self, func, *, legend_keys=('scan_id',), ax=None, **kwargs):
         self.func = func
         if ax is None:
+            import matplotlib.pyplot as plt
             _, ax = plt.subplots()
         self.ax = ax
         self.line, = ax.plot([], [], **kwargs)
