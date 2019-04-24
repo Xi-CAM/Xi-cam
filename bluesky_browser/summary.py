@@ -13,6 +13,7 @@ class SummaryWidget(QWidget):
         super().__init__(*args, **kwargs)
         self.uid_label = QLabel()
         self.copy_uid_button = QPushButton('Copy UID to Clipboard')
+        self.copy_uid_button.hide()
         self.copy_uid_button.clicked.connect(self._copy_uid)
         self.streams = QLabel()
 
