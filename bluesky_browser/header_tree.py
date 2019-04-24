@@ -85,7 +85,6 @@ class HeaderTreeFactory:
         header_tree_widget = HeaderTreeWidget()
         header_tree_widget('start', start_doc)
         self.add_tab(header_tree_widget, 'Header')
-        first = True  # state used to capture one copy of the 'stop' document
 
         def get_stop(name, doc):
             if name == 'stop':
@@ -93,11 +92,6 @@ class HeaderTreeFactory:
 
         def subfactory(name, descriptor_doc):
             header_tree_widget('descriptor', descriptor_doc)
-            nonlocal first
-            if first:
-                first = False
-                return [get_stop]
-            else:
-                return []
+            return []
 
-        return [], [subfactory]
+        return [get_stop], [subfactory]
