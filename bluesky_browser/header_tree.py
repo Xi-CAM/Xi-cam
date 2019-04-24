@@ -72,3 +72,30 @@ class HeaderTreeWidget(QTreeWidget):
     def __call__(self, name, doc):
         fill_item(self.invisibleRootItem(), {name: doc})
         return []
+
+
+class HeaderTreeFactory:
+    def __init__(self, add_tab):
+        self.add_tab = add_tab
+
+    def __call__(self, name, start_doc):
+        """
+        Make a HeaderTreeWidget and give it the start and descriptor and stop docs.
+        """
+        header_tree_widget = HeaderTreeWidget()
+        header_tree_widget('start', start_doc)
+        self.add_tab(header_tree_widget, 'Header')
+        first = False
+
+        def get_stop(name, doc):
+            if name == 'stop':
+                header_tree_widget('stop', doc)
+
+        def subfactory(name, descriptor_doc):
+            if first:
+                return [get_stop]
+            else:
+                return []
+
+        header_tree_widget('start', start_doc)
+        return [], [subfactory]
