@@ -1,4 +1,5 @@
 import argparse
+from datetime import datetime
 import sys
 import time
 from . import __version__
@@ -96,9 +97,12 @@ def run(catalog_uri):
     catalog = Catalog(catalog_uri)
 
     def search_result_row(entry):
-        return {'Unique ID': entry.metadata['start']['uid'][:8],
-                'Time': str(entry.metadata['start']['time']),
-                'Num. of Events': str(sum(entry.metadata['stop'].get('num_events', {}).values()))}
+        start = entry.metadata['start']
+        stop = entry.metadata['stop']
+        return {'Unique ID': start['uid'][:8],
+                'Transient Scan ID': str(start.get('scan_id', '-')),
+                'Plan Name': start.get('plan_name', '-'),
+                'Time': datetime.fromtimestamp(start['time']).strftime('%Y-%m-%d %H:%M:%S')}
 
     app = Application([b'Bluesky Browser'],
                       catalog=catalog,

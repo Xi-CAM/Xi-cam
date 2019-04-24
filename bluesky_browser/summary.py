@@ -37,4 +37,13 @@ class SummaryWidget(QWidget):
         entry, = entries
         self.uid = entry.metadata['start']['uid']
         self.uid_label.setText(self.uid[:8])
-        self.streams.setText('\n'.join(list(entry())))
+        num_events = entry.metadata.get('stop', {}).get('num_events')
+        if num_events:
+            self.streams.setText(
+                'Streams:\n' + ('\n'.join(f'{k} ({v} Events)' for k, v in num_events.items())))
+        else:
+            # Either the RunStop document has not been emitted yet or was never
+            # emitted due to critical failure or this is an old document stream
+            # from before 'num_events' was added to the schema. Get the list of
+            # stream names another way, and omit the Event count.
+            self.streams.setText('Streams:\n' + ('\n'.join(list(entry()))))
