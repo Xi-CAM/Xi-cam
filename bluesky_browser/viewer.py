@@ -3,6 +3,7 @@ from qtpy.QtWidgets import QTabWidget
 
 from .header_tree import HeaderTreeFactory
 from .baseline import BaselineFactory
+from .figures import FigureManager
 
 
 class Container(QTabWidget):
@@ -39,4 +40,5 @@ class Viewer(QTabWidget):
         self.run_router = RunRouter([
             BaselineFactory(self.addTab),
             HeaderTreeFactory(self.addTab),
+            FigureManager(self.addTab),
             ])
