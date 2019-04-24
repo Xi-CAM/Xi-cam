@@ -32,7 +32,7 @@ class FigureManager:
         canvas.setParent(tab)
         toolbar = NavigationToolbar(canvas, tab)
         tab_label = QLabel(name)
-        # tab_label.setMaximumHeight(20)
+        tab_label.setMaximumHeight(20)
 
         layout = QVBoxLayout()
         layout.addWidget(tab_label)
