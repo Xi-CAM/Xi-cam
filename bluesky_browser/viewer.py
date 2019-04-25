@@ -41,5 +41,5 @@ class ViewerInnerTabs(QTabWidget):
         self.run_router = RunRouter([
             BaselineFactory(self.addTab),
             HeaderTreeFactory(self.addTab),
-            FigureManager(self.addTab),
+            # FigureManager(self.addTab),
             ])
