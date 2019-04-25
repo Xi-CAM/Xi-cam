@@ -18,11 +18,17 @@ from .viewer import Container
 
 class CentralWidget(QWidget):
     """
-    Encapsulates all widgets
+    Encapsulates all widgets and models. Connect signals on __init__.
     """
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, catalog, search_result_row, **kwargs):
         super().__init__(*args, **kwargs)
 
+        # Define models.
+        search_state = SearchState(
+            catalog=catalog,
+            search_result_row=search_result_row)
+
+        # Define widgets.
         self.search_widget = SearchWidget()
         self.summary_widget = SummaryWidget()
         self.container = Container()
@@ -39,82 +45,33 @@ class CentralWidget(QWidget):
         layout.addLayout(right_pane)
         self.setLayout(layout)
 
-
-class Application(QApplication):
-    """
-    Encapsulates CentralWidget and all models. Connects signals on __init__.
-    """
-    def __init__(self, *args, catalog, search_result_row, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        # Define models.
-        search_state = SearchState(
-            catalog=catalog,
-            search_result_row=search_result_row)
-
-        # Set up central widget.
-        self.main_window = QMainWindow()
-        central_widget = CentralWidget()
-        self.main_window.setCentralWidget(central_widget)
-
         # Set models, connect signals, and set initial values.
         now = time.time()
         ONE_WEEK = 60 * 60 * 24 * 7
-        central_widget.search_widget.search_results_widget.setModel(
+        self.search_widget.search_results_widget.setModel(
             search_state.search_results_model)
-        central_widget.search_widget.search_input_widget.search_bar.textChanged.connect(
+        self.search_widget.search_input_widget.search_bar.textChanged.connect(
             search_state.search_results_model.on_search_text_changed)
-        central_widget.search_widget.catalog_selection_widget.catalog_list.setModel(
+        self.search_widget.catalog_selection_widget.catalog_list.setModel(
             search_state.catalog_selection_model)
-        central_widget.search_widget.search_input_widget.until_widget.dateTimeChanged.connect(
+        self.search_widget.search_input_widget.until_widget.dateTimeChanged.connect(
             search_state.search_results_model.on_until_time_changed)
-        central_widget.search_widget.search_input_widget.until_widget.setDateTime(
+        self.search_widget.search_input_widget.until_widget.setDateTime(
             QDateTime.fromSecsSinceEpoch(now + ONE_WEEK))
-        central_widget.search_widget.search_input_widget.since_widget.dateTimeChanged.connect(
+        self.search_widget.search_input_widget.since_widget.dateTimeChanged.connect(
             search_state.search_results_model.on_since_time_changed)
-        central_widget.search_widget.search_input_widget.since_widget.setDateTime(
+        self.search_widget.search_input_widget.since_widget.setDateTime(
             QDateTime.fromSecsSinceEpoch(now - ONE_WEEK))
-        central_widget.search_widget.catalog_selection_widget.catalog_list.currentIndexChanged.connect(
+        self.search_widget.catalog_selection_widget.catalog_list.currentIndexChanged.connect(
             search_state.set_selected_catalog)
-        central_widget.search_widget.search_results_widget.selectionModel().selectionChanged.connect(
+        self.search_widget.search_results_widget.selectionModel().selectionChanged.connect(
             search_state.search_results_model.emit_selected_result_signal)
         search_state.search_results_model.selected_result_signal.connect(
-            central_widget.summary_widget.set_entries)
+            self.summary_widget.set_entries)
         search_state.search_results_model.selected_result_signal.connect(
-            central_widget.container.show_entries)
+            self.container.show_entries)
         search_state.search_results_model.valid_custom_query.connect(
-            central_widget.search_widget.search_input_widget.mark_custom_query)
-
-
-def run(catalog_uri):
-    """
-    Start the application with some defaults, until we get config sorted out.
-    """
-    import logging
-    log = logging.getLogger('bluesky_browser')
-    handler = logging.StreamHandler()
-    handler.setLevel('DEBUG')
-    log.addHandler(handler)
-    log.setLevel('DEBUG')
-
-    from intake import Catalog
-    catalog = Catalog(catalog_uri)
-
-    def search_result_row(entry):
-        start = entry.metadata['start']
-        stop = entry.metadata['stop']
-        return {'Unique ID': start['uid'][:8],
-                'Transient Scan ID': str(start.get('scan_id', '-')),
-                'Plan Name': start.get('plan_name', '-'),
-                'Time': datetime.fromtimestamp(start['time']).strftime('%Y-%m-%d %H:%M:%S'),
-                'Exit Status': stop['exit_status']}
-
-    app = Application([b'Bluesky Browser'],
-                      catalog=catalog,
-                      search_result_row=search_result_row)
-
-    app.main_window.show()
-    sys.exit(app.exec_())
+            self.search_widget.search_input_widget.mark_custom_query)
 
 
 def main():
@@ -127,6 +84,38 @@ def main():
                         help="Launch the app with example data.")
     args = parser.parse_args()
     run(args.catalog_uri)
+
+
+def run(catalog_uri):
+    import logging
+    log = logging.getLogger('bluesky_browser')
+    handler = logging.StreamHandler()
+    handler.setLevel('DEBUG')
+    log.addHandler(handler)
+    log.setLevel('DEBUG')
+
+    from intake import Catalog
+    catalog = Catalog(catalog_uri)
+
+    # TODO Make search_result_row configurable.
+
+    def search_result_row(entry):
+        start = entry.metadata['start']
+        stop = entry.metadata['stop']
+        return {'Unique ID': start['uid'][:8],
+                'Transient Scan ID': str(start.get('scan_id', '-')),
+                'Plan Name': start.get('plan_name', '-'),
+                'Time': datetime.fromtimestamp(start['time']).strftime('%Y-%m-%d %H:%M:%S'),
+                'Exit Status': stop['exit_status']}
+
+    app = QApplication([b'Bluesky Browser'])
+    central_widget = CentralWidget(
+        catalog=catalog,
+        search_result_row=search_result_row)
+    app.main_window = QMainWindow()
+    app.main_window.setCentralWidget(central_widget)
+    app.main_window.show()
+    sys.exit(app.exec_())
 
 
 class _DemoAction(argparse.Action):
