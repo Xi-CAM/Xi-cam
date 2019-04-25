@@ -12,7 +12,7 @@ class MoveableTabWidget(QTabWidget):
         self.setAcceptDrops(True)
         self.tabBar().setMouseTracking(True)
         self.indexTab = None
-        self.setMovable(True) 
+        self.setMovable(True)
 
     def mouseMoveEvent(self, e):
         if e.buttons() != Qt.RightButton:
@@ -25,15 +25,15 @@ class MoveableTabWidget(QTabWidget):
         tabRect = tabBar.tabRect(self.indexTab)
 
         pixmap = QPixmap(tabRect.size())
-        tabBar.render(pixmap,QPoint(),QRegion(tabRect))
+        tabBar.render(pixmap, QPoint(), QRegion(tabRect))
         mimeData = QMimeData()
         drag = QDrag(tabBar)
         drag.setMimeData(mimeData)
         drag.setPixmap(pixmap)
         cursor = QCursor(Qt.OpenHandCursor)
         drag.setHotSpot(e.pos() - posInTab)
-        drag.setDragCursor(cursor.pixmap(),Qt.MoveAction)
-        dropAction = drag.exec_(Qt.MoveAction)
+        drag.setDragCursor(cursor.pixmap(), Qt.MoveAction)
+        drag.exec_(Qt.MoveAction)
 
     def dragEnterEvent(self, e):
         e.accept()
@@ -43,7 +43,7 @@ class MoveableTabWidget(QTabWidget):
         # print(self.indexOf(self.widget(self.indexTab)))
         self.parent().tab_index = self.indexOf(self.widget(self.indexTab))
 
-    def dragLeaveEvent(self,e):
+    def dragLeaveEvent(self, e):
         e.accept()
 
     def dropEvent(self, e):

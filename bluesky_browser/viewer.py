@@ -4,7 +4,7 @@ from qtpy.QtWidgets import QTabWidget
 from .header_tree import HeaderTreeFactory
 from .baseline import BaselineFactory
 from .figures import FigureManager
-from .utils import MoveableTabWidget, MoveableTabContainer
+from .utils import MoveableTabWidget
 
 
 class ViewerOuterTabs(MoveableTabWidget):
