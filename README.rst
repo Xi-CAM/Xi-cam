@@ -32,6 +32,20 @@ and "processed" data from the same instrument. The catalogs may be searched by
 date range or any custom Mongo query. Clicking on a search result pulls up a
 new tab with a more detailed view.
 
+Intended Scope
+==============
+
+* Search saved data from any intake-bluesky Catalog (backed by MongoDB or
+  JSONL or ....).
+* View and compare data from runs. Use "hints" as defaults to guide how to view
+  a given run, and let the user adjust from there.
+* Perform basic plot manipulations, not rising to the level of a full data
+  *analysis* GUI (e.g. no nonlinear curve-fitting) but enabling some
+  interactive tuning to provide a useful view of the data.
+* View live data streaming in from the RunEngine (via some message bus).
+* Be extensible, providing for the possibility of views that are specific to a
+  beamline or instrument.
+
 Roadmap
 =======
 
