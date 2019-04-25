@@ -4,9 +4,10 @@ from qtpy.QtWidgets import QTabWidget
 from .header_tree import HeaderTreeFactory
 from .baseline import BaselineFactory
 from .figures import FigureManager
+from .utils import MoveableTabWidget, MoveableTabContainer
 
 
-class Container(QTabWidget):
+class ViewerOuterTabs(MoveableTabWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setTabsClosable(True)
@@ -19,7 +20,7 @@ class Container(QTabWidget):
             uid = run_catalog.metadata['start']['uid']
             if uid not in self._runs:
                 # Add new Viewer tab.
-                viewer = Viewer()
+                viewer = ViewerInnerTabs()
                 for name, doc in run_catalog.read_canonical():
                     viewer.run_router(name, doc)
                 self.addTab(viewer, uid[:8])
@@ -34,7 +35,7 @@ class Container(QTabWidget):
         self.removeTab(index)
 
 
-class Viewer(QTabWidget):
+class ViewerInnerTabs(QTabWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.run_router = RunRouter([

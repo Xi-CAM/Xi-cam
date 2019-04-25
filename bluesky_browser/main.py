@@ -13,7 +13,8 @@ from qtpy.QtWidgets import (
     QVBoxLayout)
 from .search import SearchWidget, SearchState
 from .summary import SummaryWidget
-from .viewer import Container
+from .viewer import ViewerOuterTabs
+from .utils import MoveableTabContainer
 
 
 class CentralWidget(QWidget):
@@ -31,14 +32,21 @@ class CentralWidget(QWidget):
         # Define widgets.
         self.search_widget = SearchWidget()
         self.summary_widget = SummaryWidget()
-        self.container = Container()
 
         left_pane = QVBoxLayout()
         left_pane.addWidget(self.search_widget)
         left_pane.addWidget(self.summary_widget)
 
         right_pane = QVBoxLayout()
-        right_pane.addWidget(self.container)
+        container = MoveableTabContainer()
+        self.upper_viewer = ViewerOuterTabs(container)
+        self.lower_viewer = ViewerOuterTabs(container)
+
+        layout = QVBoxLayout()
+        layout.addWidget(self.upper_viewer)
+        layout.addWidget(self.lower_viewer)
+        container.setLayout(layout)
+        right_pane.addWidget(container)
 
         layout = QHBoxLayout()
         layout.addLayout(left_pane)
@@ -69,7 +77,7 @@ class CentralWidget(QWidget):
         search_state.search_results_model.selected_result_signal.connect(
             self.summary_widget.set_entries)
         search_state.search_results_model.selected_result_signal.connect(
-            self.container.show_entries)
+            self.upper_viewer.show_entries)
         search_state.search_results_model.valid_custom_query.connect(
             self.search_widget.search_input_widget.mark_custom_query)
 
