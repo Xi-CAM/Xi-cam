@@ -30,7 +30,8 @@ application to browse that data. It supposes there are two catalogs of data,
 `abc` and `xyz`, which could be from two instruments or perhaps "raw" data
 and "processed" data from the same instrument. The catalogs may be searched by
 date range or any custom Mongo query. Clicking on a search result pulls up a
-new tab with a more detailed view.
+new tab with a more detailed view. There are two viewing areas to facilitate
+comparing data. Right-click and drag a tab to move it between areas.
 
 Intended Scope
 ==============
