@@ -50,7 +50,13 @@ Intended Scope
 Roadmap
 =======
 
-*  Add matplotlib figures to the viewer.
-*  Add a way to run just the viewer part against live data (from RE).
-*  Make the search inputs, search result row, summary viewer, and tab
-   factories configurable.
+* Add heatmap (scalar vs 2D scan) and image stack viewer.
+* Enable user to change what is plotted interactively. (The hints becomes just
+  a *default*.)
+* Suport "overplotting" via right-click "Overplot on...".
+* Add a way to run just the viewer part against live data (from RE).
+* Add a "Summary" tab.
+* Add integration with suitcase for file export.
+* Make the search inputs, search result row, summary viewer, and tab
+  factories configurable.
+* Support "progressive search", iteratively refining search results.
