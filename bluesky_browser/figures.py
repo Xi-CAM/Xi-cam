@@ -31,7 +31,6 @@ class FigureManager:
         # Configuartion
         self.enabled = True
         self.exclude_streams = set()
-        self.omit_single_point_plot = True
 
     def get_figure(self, name, *args, **kwargs):
         try:
@@ -80,6 +79,8 @@ class LinePlotManager:
         self.dim_streams = set(stream for _, stream in self.dimensions)
         if len(self.dim_streams) > 1:
             raise NotImplementedError
+        # Configuration
+        self.omit_single_point_plot = True
 
     def __call__(self, name, start_doc):
         self.start_doc = start_doc
@@ -91,6 +92,8 @@ class LinePlotManager:
         callbacks = []
         dim_stream, = self.dim_streams  # TODO
         if descriptor_doc.get('name') == dim_stream:
+            if self.omit_single_point_plot and self.start_doc.get('num_points') == 1:
+                return []
             x_key, = self.dimensions[0][0]
             fields -= set([x_key])
             fig = self.fig_manager.get_figure('test', len(fields))
