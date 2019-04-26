@@ -9,6 +9,9 @@ from event_model import RunRouter
 import intake_bluesky.jsonl  # noqa; to force intake registration
 
 
+det.kind = 'hinted'
+
+
 def generate_example_data(data_path):
     data_path = Path(data_path)
 

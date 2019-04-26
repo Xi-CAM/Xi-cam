@@ -1,13 +1,19 @@
 from event_model import DocumentRouter, RunRouter
+import numpy
 from matplotlib.backends.backend_qt5agg import (
     FigureCanvasQTAgg as FigureCanvas,
     NavigationToolbar2QT as NavigationToolbar)
 from matplotlib.figure import Figure
+import matplotlib
+matplotlib.use('Qt5Agg')
+import matplotlib.pyplot as plt
 from qtpy.QtWidgets import (
     QLabel,
     QWidget,
     QVBoxLayout,
     )
+
+from .hints import hinted_fields, guess_dimensions
 
 
 class FigureManager:
@@ -17,16 +23,20 @@ class FigureManager:
     def __init__(self, add_tab):
         self.add_tab = add_tab
         self._figures = {}
+        # Configuartion
+        self.enabled = True
+        self.exclude_streams = set()
+        self.omit_single_point_plot = True
 
-    def get_figure(self, name):
+    def get_figure(self, name, *args, **kwargs):
         try:
             return self._figures[name]
         except KeyError:
-            return self._add_figure(name)
+            return self._add_figure(name, *args, **kwargs)
 
-    def _add_figure(self, name):
+    def _add_figure(self, name, *args, **kwargs):
         tab = QWidget()
-        fig = Figure((5.0, 4.0), dpi=100)
+        fig, _ = plt.subplots(*args, **kwargs)
         canvas = FigureCanvas(fig)
         canvas.setMinimumWidth(640)
         canvas.setParent(tab)
@@ -44,34 +54,67 @@ class FigureManager:
         return fig
 
     def __call__(self, name, start_doc):
-        line_plot_manager = LinePlotManager(self)
-        rr = RunRouter([line_plot_manager])
-        rr('start', start_doc)
-        return [rr], []
+        dimensions = start_doc.get('hints', {}).get('dimensions', guess_dimensions(start_doc))
+        if self.enabled:
+            line_plot_manager = LinePlotManager(self, dimensions)
+            rr = RunRouter([line_plot_manager])
+            rr('start', start_doc)
+            return [rr], []
 
 
 class LinePlotManager:
     """
     Manage the line plots for one FigureManager.
     """
-    def __init__(self, fig_manager):
+    def __init__(self, fig_manager, dimensions):
         self.fig_manager = fig_manager
+        self.start_doc = None
+        self.dimensions = dimensions
+        self.dim_streams = set(stream for _, stream in self.dimensions)
+        if len(self.dim_streams) > 1:
+            raise NotImplementedError
 
     def __call__(self, name, start_doc):
+        self.start_doc = start_doc
+        return [], [self.subfactory]
 
-        def subfactory(name, descriptor_doc):
-            if descriptor_doc.get('name') == 'primary':
+    def subfactory(self, name, descriptor_doc):
+        fields = hinted_fields(descriptor_doc)
+        print(f'hinted fields are {fields}')
+
+        callbacks = []
+        dim_stream, = self.dim_streams  # TODO
+        if descriptor_doc.get('name') == dim_stream:
+            x_key, = self.dimensions[0][0]
+            fig = self.fig_manager.get_figure('test', len(fields))
+            for y_key, ax in zip(fields, fig.axes):
+                dtype = descriptor_doc['data_keys'][y_key]['dtype']
+                if dtype not in ('number', 'integer'):
+                    warn("Omitting {} from plot because dtype is {}"
+                         "".format(y_key, dtype))
+                    continue
 
                 def func(event_page):
-                    return event_page['data']['motor'], event_page['data']['det']
+                    """
+                    Extract x points and y points to plot out of an EventPage.
 
-                fig = self.fig_manager.get_figure('test')
-                test_line = Line(func, ax=fig.gca())
-                test_line('start', start_doc)
-                return [test_line]
-            else:
-                return []
-        return [], [subfactory]
+                    This will be passed to LineWithPeaks.
+                    """
+                    print(f'plot {y_key} against {x_key}')
+                    y_data = event_page['data'][y_key]
+                    if x_key == 'time':
+                        t0 = self.start_doc['time']
+                        x_data = numpy.asarray(event_page['time']) - t0
+                    elif x_key == 'seq_num':
+                        x_data = event_page['seq_num']
+                    else:
+                        x_data = event_page['data'][x_key]
+                    return x_data, y_data
+
+                line = Line(func, ax=ax)
+                callbacks.append(line)
+        # TODO Plot other streams against time.
+        return callbacks
 
 
 class Line(DocumentRouter):
