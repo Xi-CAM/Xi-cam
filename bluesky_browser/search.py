@@ -11,6 +11,7 @@ from qtpy.QtWidgets import (
     QPushButton,
     QComboBox,
     QDateTimeEdit,
+    QHeaderView,
     QHBoxLayout,
     QMessageBox,
     QLabel,
@@ -223,6 +224,7 @@ class SearchResultsWidget(QTableView):
         self.setShowGrid(False)
         self.verticalHeader().setVisible(False)
         self.horizontalHeader().setDefaultAlignment(Qt.AlignHCenter)
+        self.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
 
 
 class SearchWidget(QWidget):
