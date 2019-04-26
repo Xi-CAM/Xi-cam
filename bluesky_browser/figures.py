@@ -1,3 +1,5 @@
+import logging
+
 from event_model import DocumentRouter, RunRouter
 import numpy
 from matplotlib.backends.backend_qt5agg import (
@@ -14,6 +16,9 @@ from qtpy.QtWidgets import (
     )
 
 from .hints import hinted_fields, guess_dimensions
+
+
+log = logging.getLogger('bluesky_browser')
 
 
 class FigureManager:
@@ -54,12 +59,14 @@ class FigureManager:
         return fig
 
     def __call__(self, name, start_doc):
+        if not self.enabled:
+            return
         dimensions = start_doc.get('hints', {}).get('dimensions', guess_dimensions(start_doc))
-        if self.enabled:
-            line_plot_manager = LinePlotManager(self, dimensions)
-            rr = RunRouter([line_plot_manager])
-            rr('start', start_doc)
-            return [rr], []
+        log.debug('dimensions: %s', dimensions)
+        line_plot_manager = LinePlotManager(self, dimensions)
+        rr = RunRouter([line_plot_manager])
+        rr('start', start_doc)
+        return [rr], []
 
 
 class LinePlotManager:
@@ -79,20 +86,22 @@ class LinePlotManager:
         return [], [self.subfactory]
 
     def subfactory(self, name, descriptor_doc):
-        fields = hinted_fields(descriptor_doc)
-        print(f'hinted fields are {fields}')
+        fields = set(hinted_fields(descriptor_doc))
 
         callbacks = []
         dim_stream, = self.dim_streams  # TODO
         if descriptor_doc.get('name') == dim_stream:
             x_key, = self.dimensions[0][0]
+            fields -= set([x_key])
             fig = self.fig_manager.get_figure('test', len(fields))
             for y_key, ax in zip(fields, fig.axes):
                 dtype = descriptor_doc['data_keys'][y_key]['dtype']
                 if dtype not in ('number', 'integer'):
-                    warn("Omitting {} from plot because dtype is {}"
-                         "".format(y_key, dtype))
+                    log.warn("Omitting %s from plot because dtype is %s",
+                             y_key, dtype)
                     continue
+
+                log.debug('plot %s against %s', y_key, x_key)
 
                 def func(event_page):
                     """
@@ -100,7 +109,6 @@ class LinePlotManager:
 
                     This will be passed to LineWithPeaks.
                     """
-                    print(f'plot {y_key} against {x_key}')
                     y_data = event_page['data'][y_key]
                     if x_key == 'time':
                         t0 = self.start_doc['time']
