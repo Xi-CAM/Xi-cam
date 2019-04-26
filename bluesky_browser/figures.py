@@ -96,7 +96,7 @@ class LinePlotManager:
                 return []
             x_key, = self.dimensions[0][0]
             fields -= set([x_key])
-            fig = self.fig_manager.get_figure('test', len(fields))
+            fig = self.fig_manager.get_figure('test', len(fields), sharex=True)
             for y_key, ax in zip(fields, fig.axes):
                 dtype = descriptor_doc['data_keys'][y_key]['dtype']
                 if dtype not in ('number', 'integer'):
@@ -106,7 +106,14 @@ class LinePlotManager:
 
                 log.debug('plot %s against %s', y_key, x_key)
 
-                def func(event_page):
+                ylabel = y_key
+                y_units = descriptor_doc['data_keys'][y_key].get('units')
+                ax.set_ylabel(y_key)
+                if y_units:
+                    ylabel += f' [{y_units}]'
+                # Set xlabel only on lowest axes, outside for loop below.
+
+                def func(event_page, y_key=y_key):
                     """
                     Extract x points and y points to plot out of an EventPage.
 
@@ -124,6 +131,21 @@ class LinePlotManager:
 
                 line = Line(func, ax=ax)
                 callbacks.append(line)
+
+            # Set the xlabel on the bottom-most axis.
+            if x_key == 'time':
+                xlabel = x_key
+                x_units = 's'
+            elif x_key == 'seq_num':
+                xlabel = 'sequence number'
+                x_units = None
+            else:
+                xlabel = x_key
+                x_units = descriptor_doc['data_keys'][x_key].get('units')
+            if x_units:
+                xlabel += f' [{x_units}]'
+            ax.set_xlabel(x_key)
+            fig.tight_layout()
         # TODO Plot other streams against time.
         return callbacks
 
