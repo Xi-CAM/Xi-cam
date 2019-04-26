@@ -32,20 +32,20 @@ class FigureManager:
         self.enabled = True
         self.exclude_streams = set()
 
-    def get_figure(self, name, *args, **kwargs):
+    def get_figure(self, key, label, *args, **kwargs):
         try:
-            return self._figures[name]
+            return self._figures[key]
         except KeyError:
-            return self._add_figure(name, *args, **kwargs)
+            return self._add_figure(key, label, *args, **kwargs)
 
-    def _add_figure(self, name, *args, **kwargs):
+    def _add_figure(self, key, label, *args, **kwargs):
         tab = QWidget()
         fig, _ = plt.subplots(*args, **kwargs)
         canvas = FigureCanvas(fig)
         canvas.setMinimumWidth(640)
         canvas.setParent(tab)
         toolbar = NavigationToolbar(canvas, tab)
-        tab_label = QLabel(name)
+        tab_label = QLabel(label)
         tab_label.setMaximumHeight(20)
 
         layout = QVBoxLayout()
@@ -53,8 +53,8 @@ class FigureManager:
         layout.addWidget(canvas)
         layout.addWidget(toolbar)
         tab.setLayout(layout)
-        self.add_tab(tab, name)
-        self._figures[name] = fig
+        self.add_tab(tab, label)
+        self._figures[key] = fig
         return fig
 
     def __call__(self, name, start_doc):
@@ -96,7 +96,8 @@ class LinePlotManager:
                 return []
             x_key, = self.dimensions[0][0]
             fields -= set([x_key])
-            fig = self.fig_manager.get_figure('test', len(fields), sharex=True)
+            figure_label = f'Scalars v {x_key}'
+            fig = self.fig_manager.get_figure(x_key, figure_label, len(fields), sharex=True)
             for y_key, ax in zip(fields, fig.axes):
                 dtype = descriptor_doc['data_keys'][y_key]['dtype']
                 if dtype not in ('number', 'integer'):
