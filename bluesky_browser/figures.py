@@ -133,20 +133,21 @@ class LinePlotManager:
                 line = Line(func, ax=ax)
                 callbacks.append(line)
 
-            # Set the xlabel on the bottom-most axis.
-            if x_key == 'time':
-                xlabel = x_key
-                x_units = 's'
-            elif x_key == 'seq_num':
-                xlabel = 'sequence number'
-                x_units = None
-            else:
-                xlabel = x_key
-                x_units = descriptor_doc['data_keys'][x_key].get('units')
-            if x_units:
-                xlabel += f' [{x_units}]'
-            ax.set_xlabel(x_key)
-            fig.tight_layout()
+            if fields:
+                # Set the xlabel on the bottom-most axis.
+                if x_key == 'time':
+                    xlabel = x_key
+                    x_units = 's'
+                elif x_key == 'seq_num':
+                    xlabel = 'sequence number'
+                    x_units = None
+                else:
+                    xlabel = x_key
+                    x_units = descriptor_doc['data_keys'][x_key].get('units')
+                if x_units:
+                    xlabel += f' [{x_units}]'
+                ax.set_xlabel(x_key)
+                fig.tight_layout()
         # TODO Plot other streams against time.
         return callbacks
 
