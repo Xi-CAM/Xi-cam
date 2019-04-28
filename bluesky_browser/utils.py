@@ -1,5 +1,3 @@
-import enum
-
 from PyQt5.QtGui import QCursor, QDrag, QPixmap, QRegion
 from PyQt5.QtWidgets import QWidget, QTabWidget
 from PyQt5.QtCore import Qt, QMimeData, QPoint
@@ -73,9 +71,3 @@ class MoveableTabContainer(QWidget):
         super().__init__(*args, **kwargs)
         self.tab_index = 0
         self.moveWidget = None  # not needed?
-
-
-class OverPlotState(enum.Enum):
-    off = enum.auto()
-    latest_live = enum.auto()
-    fixed = enum.auto()

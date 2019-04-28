@@ -1,16 +1,12 @@
 import argparse
 from datetime import datetime
-from functools import partial
 import sys
 import time
 from . import __version__
 
 from qtpy.QtCore import QDateTime
 from qtpy.QtWidgets import (
-    QAction,
-    QActionGroup,
     QApplication,
-    QInputDialog,
     QWidget,
     QMainWindow,
     QHBoxLayout,
@@ -18,14 +14,14 @@ from qtpy.QtWidgets import (
 from .search import SearchWidget, SearchState
 from .summary import SummaryWidget
 from .viewer import ViewerOuterTabs
-from .utils import MoveableTabContainer, OverPlotState
+from .utils import MoveableTabContainer
 
 
 class CentralWidget(QWidget):
     """
     Encapsulates all widgets and models. Connect signals on __init__.
     """
-    def __init__(self, *args, catalog, search_result_row, **kwargs):
+    def __init__(self, *args, catalog, search_result_row, menuBar, **kwargs):
         super().__init__(*args, **kwargs)
 
         # Define models.
@@ -43,8 +39,8 @@ class CentralWidget(QWidget):
 
         right_pane = QVBoxLayout()
         container = MoveableTabContainer()
-        self.upper_viewer = ViewerOuterTabs(container)
-        self.lower_viewer = ViewerOuterTabs(container)
+        self.upper_viewer = ViewerOuterTabs(container, menuBar=menuBar)
+        self.lower_viewer = ViewerOuterTabs(container, menuBar=None)  # TMP
 
         layout = QVBoxLayout()
         layout.addWidget(self.upper_viewer)
@@ -98,51 +94,6 @@ def main():
     run(args.catalog_uri)
 
 
-class MainWindow(QMainWindow):
-    def __init__(self, set_overplot_state, list_open_runs, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        overplot_group = QActionGroup(self)
-        off = QAction('&Off')
-        off.setStatusTip('Open a new viewer tab for each Run.')
-        latest_live = QAction('&Latest Live Tab')
-        latest_live.setStatusTip('Attempt to overplot on the most recent live Run.')
-        fixed = QAction('&Fixed Tab...')
-        fixed.setStatusTip('Attempt to overplot on a specific tab.')
-        overplot_group.addAction(off)
-        overplot_group.addAction(latest_live)
-        overplot_group.addAction(fixed)
-        for action in overplot_group.actions():
-            action.setCheckable(True)
-        overplot_group.setExclusive(True)
-        off.setChecked(True)
-
-        menubar = self.menuBar()
-        overplot_menu = menubar.addMenu('&Over-plotting')
-        overplot_menu.addActions(overplot_group.actions())
-
-
-
-        off.triggered.connect(partial(set_overplot_state, OverPlotState.off))
-        latest_live.triggered.connect(partial(set_overplot_state, OverPlotState.latest_live))
-        
-        def set_fixed_uid():
-            set_overplot_state(OverPlotState.fixed)
-            items = list_open_runs()
-            print(items)
-            item, ok = QInputDialog.getItem(self, "Select Run", "Run", items, 0, False)
-            if not ok:
-                # Abort and fallback to Off. Would be better to fall back to
-                # previous state (which could be latest_live) but it's not
-                # clear how to know what that state was.
-                off.setChecked(True)
-                return
-            set_overplot_state(OverPlotState.fixed)
-            print('fixed_uid', item)
-
-        fixed.triggered.connect(set_fixed_uid)
-
-
 def run(catalog_uri):
     import logging
     log = logging.getLogger('bluesky_browser')
@@ -166,12 +117,11 @@ def run(catalog_uri):
                 'Exit Status': stop['exit_status']}
 
     app = QApplication([b'Bluesky Browser'])
+    app.main_window = QMainWindow()
     central_widget = CentralWidget(
         catalog=catalog,
-        search_result_row=search_result_row)
-    app.main_window = MainWindow(
-        central_widget.upper_viewer.set_overplot_state,
-        central_widget.upper_viewer.list_open_runs)
+        search_result_row=search_result_row,
+        menuBar=app.main_window.menuBar)
     app.main_window.setCentralWidget(central_widget)
     app.main_window.show()
     sys.exit(app.exec_())
