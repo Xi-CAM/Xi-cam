@@ -1,10 +1,15 @@
+import logging
+
 from event_model import RunRouter
 from qtpy.QtWidgets import QTabWidget
 
 from .header_tree import HeaderTreeFactory
 from .baseline import BaselineFactory
 from .figures import FigureManager
-from .utils import MoveableTabWidget
+from .utils import MoveableTabWidget, OverPlotState
+
+
+log = logging.getLogger('bluesky_browser')
 
 
 class ViewerOuterTabs(MoveableTabWidget):
@@ -13,6 +18,10 @@ class ViewerOuterTabs(MoveableTabWidget):
         self.setTabsClosable(True)
         self.tabCloseRequested.connect(self.close_tab)
         self._runs = []
+        self._overplot = OverPlotState.off
+
+    def list_open_runs(self):
+        return tuple(self._runs)
 
     def show_entries(self, entries):
         for entry in entries:
@@ -29,6 +38,10 @@ class ViewerOuterTabs(MoveableTabWidget):
             # Show the last entry in the list.
             index = self._runs.index(uid)
             self.setCurrentIndex(index)
+
+    def set_overplot_state(self, state):
+        log.debug('Overplot state is %s', state)
+        self.overplot = state
 
     def close_tab(self, index):
         self._runs.pop(index)
