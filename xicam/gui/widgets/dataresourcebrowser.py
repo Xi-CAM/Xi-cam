@@ -143,16 +143,16 @@ class BrowserTabBar(ContextMenuTabBar):
         self.actions = {}
         from xicam.plugins import manager as pluginmanager
         for plugin in pluginmanager.getPluginsOfCategory('DataResourcePlugin'):
-            self.actions[plugin.name] = QAction(plugin.name)
-            self.actions[plugin.name].triggered.connect(partial(self._addBrowser, plugin))
-            self.menu.addAction(self.actions[plugin.name])
+            self.actions[plugin.plugin_object.name] = QAction(plugin.plugin_object.name)
+            self.actions[plugin.plugin_object.name].triggered.connect(partial(self._addBrowser, plugin))
+            self.menu.addAction(self.actions[plugin.plugin_object.name])
 
         self.menu.popup(pos)
 
     def _addBrowser(self, plugin):
         datasource = plugin.plugin_object()
         self.sigAddBrowser.emit(datasource.controller(datasource.view(datasource.model(datasource))),
-                                datasource.config['host'])
+                                datasource.name)
 
 
 class DataResourceView(QObject):
@@ -283,8 +283,6 @@ class DataResourceBrowser(QWidget):
         vbox.addWidget(self.browsertabwidget)
 
         self.setLayout(vbox)
-
-        self.sigOpen.connect(print)
 
     def closetab(self, i):
         if hasattr(self.browsertabwidget.widget(i), 'closable'):
