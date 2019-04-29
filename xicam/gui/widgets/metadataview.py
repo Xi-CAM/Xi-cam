@@ -1,7 +1,7 @@
 from pyqtgraph.parametertree import ParameterTree
 from pyqtgraph.parametertree.parameterTypes import (SimpleParameter,
                                                     GroupParameter)
-from collections import deque
+from collections import deque, OrderedDict, defaultdict
 from qtpy.QtGui import (QStandardItem, QStandardItemModel)
 from qtpy.QtCore import QItemSelectionModel, Signal
 import sys
@@ -9,17 +9,22 @@ import uuid
 import datetime
 import numpy as np
 import warnings
-
-# TODO: set parameters to not editable?
+from typing import Iterable, Sequence
+from xicam.core import msg
+from xicam.gui.patches.PyQtGraph import CounterGroupParameter, LazyGroupParameter
 
 # TODO: map list to groupparameter
 
 # TODO: suggest integration of type mapping into pyqtgraph
 typemap = {int: 'int',
            float: 'float',
+           np.float64: 'float',
            str: 'str',
            dict: 'group',
+           OrderedDict: 'group',
+           list: 'group',
            type(None): None,
+           tuple: 'group',
            datetime.datetime: 'str',
            np.float: 'float',
            np.int: 'int'
@@ -28,47 +33,63 @@ typemap = {int: 'int',
 reservedkeys = []
 
 
-class MetadataWidget(ParameterTree):
+class MetadataWidgetBase(ParameterTree):
+    def __init__(self, *args, **kwargs):
+        super(MetadataWidgetBase, self).__init__(*args, **kwargs)
+        LazyGroupParameter.itemClass.initialize_treewidget(self)
 
-    def insert(self, doctype, document, groups):
+    def insert(self, doctype: str, document, groups: dict):
         if doctype == 'start':
             for group in groups.values():
                 group.clearChildren()
 
         try:
-            new_children = MetadataView._from_dict(document)
-        except Exception:
-            print(f'failed to make children or {doctype}')
+            new_children = MetadataViewBase._from_dict(document)
+        except Exception as ex:
+            msg.logError(ex)
+            print(f'failed to make children for {doctype}')
         else:
             # TODO: add responsive design to uid display
-            groups[doctype].addChildren([
+            group = groups[doctype]
+            group.addChildren([
                 GroupParameter(name=document['uid'][:6],
                                value=None,
                                type=None,
-                               children=new_children)])
+                               children=new_children,
+                               expanded=False,
+                               readonly=True)])
+
 
     @staticmethod
-    def _from_dict(metadata: dict):
-        metadata = MetadataView._strip_reserved(metadata)
+    def _from_dict(metadata: Iterable):
+        if isinstance(metadata, Sequence):
+            metadata = OrderedDict(enumerate(metadata))
+
+        metadata = MetadataViewBase._strip_reserved(metadata)
         children = []
         for key, value in metadata.items():
             subchildren = []
             paramcls = SimpleParameter
             if typemap.get(type(value), None) == 'group':
-                subchildren = MetadataView._from_dict(value)
+                subchildren = MetadataViewBase._from_dict(value)
+                key = f'{str(key)} {type(value)}'
                 value = None
-                paramcls = GroupParameter
+                paramcls = LazyGroupParameter
             try:
-                children.append(paramcls(name=key,
+                children.append(paramcls(name=str(key),
                                          value=value,
                                          type=typemap[type(value)],
-                                         children=subchildren))
+                                         children=subchildren,
+                                         expanded=False,
+                                         readonly=True))
             except KeyError:
                 warnings.warn(f'Failed to display a {type(value)}: {value}')
-                children.append(paramcls(name=key,
+                children.append(paramcls(name=str(key),
                                          value=repr(value),
                                          type=typemap[str],
-                                         children=subchildren))
+                                         children=subchildren,
+                                         expanded=False,
+                                         readonly=True))
         return children
 
     @staticmethod
@@ -80,13 +101,31 @@ class MetadataWidget(ParameterTree):
         return metadata
 
 
-class MetadataView(MetadataWidget):
+class MetadataWidget(MetadataWidgetBase):
+    def __init__(self, *args, **kwargs):
+        super(MetadataWidget, self).__init__(*args, **kwargs)
+        self.header = None  # type: HeaderParameter
+        self.groups = dict()
+        self.reset()
+
+    def doc_consumer(self, name, doc):
+        if name == 'start':
+            self.header.setName(doc['uid'])
+        super(MetadataWidget, self).insert(name, doc, self.groups)
+
+    def reset(self):
+        self.header = HeaderParameter(name=' ')
+        self.groups = {group.name(): group for group in self.header.children()}
+        self.setParameters(self.header)
+
+
+class MetadataViewBase(MetadataWidgetBase):
     sigUpdate = Signal()
 
     def __init__(self, headermodel: QStandardItemModel,
                  selectionmodel: QItemSelectionModel,
                  *args, **kwargs):
-        super(MetadataView, self).__init__(*args, **kwargs)
+        super(MetadataViewBase, self).__init__(*args, **kwargs)
         self._seen = set()
         self._last_uid = None
         self._thread_id = 'MetadataView' + str(uuid.uuid4())
@@ -132,10 +171,10 @@ class HeaderParameter(GroupParameter):
     def __init__(self, *args, **kwargs):
         super(HeaderParameter, self).__init__(*args, **kwargs)
 
-        self.groups = {'start': GroupParameter(name='start', title='Start'),
-                       'descriptor': GroupParameter(name='descriptor', title='Descriptors'),
-                       'event': GroupParameter(name='event', title='Events'),
-                       'stop': GroupParameter(name='stop', title='Stop')}
+        self.groups = {'start': CounterGroupParameter(name='start', title='Start', expanded=False),
+                       'descriptor': CounterGroupParameter(name='descriptor', title='Descriptors', expanded=False),
+                       'event': CounterGroupParameter(name='event', title='Events', expanded=False),
+                       'stop': CounterGroupParameter(name='stop', title='Stop', expanded=False)}
         self.addChildren(self.groups.values())
 
 
@@ -152,7 +191,7 @@ class HeaderBuffer:
         yield from self.buf
 
 
-class MDVConusumer(MetadataView):
+class MDVConusumer(MetadataViewBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._buffers = {}
