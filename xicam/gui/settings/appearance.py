@@ -53,7 +53,6 @@ class AppearanceSettingsPlugin(ParameterSettingsPlugin):
                                                              type='list')]
                                                        )
 
-
     def apply(self):
         self['Theme']()
         self['Plot Theme (requires restart)']()
