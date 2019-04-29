@@ -50,13 +50,17 @@ Intended Scope
 Roadmap
 =======
 
-* Add heatmap (scalar vs 2D scan) and image stack viewer.
+* Get feature parity with Best-Effort Callback.
+  * Table
+  * Grid
+  * PeakStats
+* Add image stack viewer.
 * Enable user to change what is plotted interactively. (The hints becomes just
   a *default*.)
 * Suport "overplotting" via right-click "Overplot on...".
 * Add a way to run just the viewer part against live data (from RE).
-* Add a "Summary" tab.
-* Add integration with suitcase for file export.
+* Add a "Summary" widget to the top of the Header tab.
+* Add integration with suitcase for file export, starting with CSV.
 * Make the search inputs, search result row, summary viewer, and tab
   factories configurable.
 * Support "progressive search", iteratively refining search results.
