@@ -31,6 +31,9 @@ from pyqtgraph.widgets.SpinBox import SpinBox
 from pyqtgraph.widgets.ColorButton import ColorButton
 from pyqtgraph import ImageView
 import numpy as np
+from qtpy.QtCore import QSize
+from qtpy.QtGui import QBrush, QPalette
+
 
 
 class ImageParameterItem(WidgetParameterItem):
@@ -142,3 +145,86 @@ class FixableSimpleParameter(parameterTypes.SimpleParameter):
 
 registerParameterType('int', FixableSimpleParameter, override=True)
 registerParameterType('float', FixableSimpleParameter, override=True)
+
+
+class BetterGroupParameteritem(parameterTypes.GroupParameterItem):
+    def updateDepth(self, depth):
+
+        ## Change item's appearance based on its depth in the tree
+        ## This allows highest-level groups to be displayed more prominently.
+        if depth == 0:
+            for c in [0, 1]:
+                self.setBackground(c, QBrush(QPalette().color(QPalette.Light)))
+                # self.setForeground(c, QBrush(QPalette().color(QPalette.Dark)))
+                font = self.font(c)
+                font.setBold(True)
+                font.setPointSize(font.pointSize() + 1)
+                self.setFont(c, font)
+                self.setSizeHint(0, QSize(0, 25))
+        else:
+            for c in [0, 1]:
+                self.setBackground(c, QBrush(QPalette().color(QPalette.Light)))
+                font = self.font(c)
+                font.setBold(True)
+                # font.setPointSize(font.pointSize()+1)
+                self.setFont(c, font)
+                self.setSizeHint(0, QSize(0, 20))
+
+
+class BetterGroupParameter(parameterTypes.GroupParameter):
+    itemClass = BetterGroupParameteritem
+
+
+parameterTypes.GroupParameter = BetterGroupParameter
+registerParameterType('group', BetterGroupParameter, override=True)
+
+
+class CounterGroupParameterItem(BetterGroupParameteritem):
+    def __init__(self, *args, **kwargs):
+        super(CounterGroupParameterItem, self).__init__(*args, **kwargs)
+        self.param.sigChildAdded.connect(self.updateText)
+        self.param.sigChildRemoved.connect(self.updateText)
+
+    def updateText(self, *_):
+        self.setText(0, f'{self.param.name()} ({self.childCount()})')
+
+
+class CounterGroupParameter(BetterGroupParameter):
+    itemClass = CounterGroupParameterItem
+
+
+registerParameterType('countergroup', CounterGroupParameter, override=True)
+
+
+class LazyGroupParameterItem(BetterGroupParameteritem):
+    # Note: no accounting for if items are removed
+
+    def __init__(self, *args, **kwargs):
+        super(LazyGroupParameterItem, self).__init__(*args, **kwargs)
+        self._queuedchildren = []
+
+    @staticmethod
+    def initialize_treewidget(treewidget):
+        treewidget.itemExpanded.connect(LazyGroupParameterItem.itemExpanded)
+
+    @staticmethod
+    def itemExpanded(item):
+        for i in range(item.childCount()):
+            if hasattr(item.child(i), 'flushChildren'):
+                item.child(i).flushChildren()
+
+    def childAdded(self, *childargs):
+        self._queuedchildren.append(childargs)
+        if self.isExpanded():
+            self.flushChildren()
+
+    def flushChildren(self):
+        while len(self._queuedchildren):
+            super(LazyGroupParameterItem, self).childAdded(*self._queuedchildren.pop())
+
+
+class LazyGroupParameter(BetterGroupParameter):
+    itemClass = LazyGroupParameterItem
+
+
+registerParameterType('lazygroup', LazyGroupParameter, override=True)
