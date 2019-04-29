@@ -67,7 +67,10 @@ class ConfigDialog(QDialog):
         self.createIcons()
         self.restore()
 
+        pluginmanager.attach(self.pluginsChanged)
+
     def createIcons(self):
+        self.contentsModel.clear()
         for pluginInfo in pluginmanager.getPluginsOfCategory('SettingsPlugin'):
             item = QStandardItem(pluginInfo.plugin_object.icon, pluginInfo.plugin_object.name())
             item.widget = pluginInfo.plugin_object.widget
@@ -80,6 +83,7 @@ class ConfigDialog(QDialog):
         if self.lastwidget:
             self.pagesWidget.addWidget(self.lastwidget)
             self.pagesWidget.setCurrentWidget(self.lastwidget)
+        self.restore()
         super(ConfigDialog, self).show()
 
     def changePage(self, current, previous):
