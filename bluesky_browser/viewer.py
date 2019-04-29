@@ -85,6 +85,7 @@ class Viewer(MoveableTabContainer):
                 widget = target_area.widget(index)
                 self._title_to_tab[tab_title] = widget
                 self._run_to_tabs[uid].append(widget)
+        # TODO Make last entry in the list the current widget.
 
     def set_overplot_state(self, state):
         log.debug('Overplot state is %s', state)
