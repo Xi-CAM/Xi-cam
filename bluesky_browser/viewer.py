@@ -30,6 +30,7 @@ class Viewer(MoveableTabContainer):
         self._run_to_tabs = collections.defaultdict(list)
         self._title_to_tab = {}
         self._overplot = OverPlotState.off
+        self._overplot_target = None
 
         self._containers = [TabbedViewingArea(self, menuBar=menuBar) for _ in range(2)]
         layout = QVBoxLayout()
@@ -61,7 +62,7 @@ class Viewer(MoveableTabContainer):
         def set_fixed_uid():
             self.set_overplot_state(OverPlotState.fixed)
             item, ok = QInputDialog.getItem(
-                self, "Select Run", "Run", tuple(self._runs), 0, False)
+                self, "Select Run", "Run", tuple(self._title_to_tab), 0, False)
             if not ok:
                 # Abort and fallback to Off. Would be better to fall back to
                 # previous state (which could be latest_live) but it's not
@@ -69,7 +70,7 @@ class Viewer(MoveableTabContainer):
                 off.setChecked(True)
                 return
             self.set_overplot_state(OverPlotState.fixed)
-            print('fixed_uid', item)
+            self._overplot_target = item
 
         fixed.triggered.connect(set_fixed_uid)
 
@@ -78,21 +79,31 @@ class Viewer(MoveableTabContainer):
         for entry in entries:
             uid = entry().metadata['start']['uid']
             if not self._run_to_tabs[uid]:
-                # Add new Viewer tab.
-                viewer = RunViewer(entry=entry)
-                tab_title = uid[:8]
-                index = target_area.addTab(viewer, tab_title)
-                widget = target_area.widget(index)
-                self._title_to_tab[tab_title] = widget
-                self._run_to_tabs[uid].append(widget)
+                if self._overplot == OverPlotState.off:
+                    # Add new Viewer tab.
+                    viewer = RunViewer()
+                    tab_title = uid[:8]
+                    index = target_area.addTab(viewer, tab_title)
+                    self._title_to_tab[tab_title] = viewer
+                    self._run_to_tabs[uid].append(viewer)
+                    viewer.load(entry)
+                elif self._overplot == OverPlotState.fixed:
+                    viewer = self._title_to_tab[self._overplot_target]
+                    self._run_to_tabs[uid].append(viewer)
+                    viewer.load(entry)
+                elif self._overplot == OverPlotState.latest_live:
+                    ...
+                else:
+                    raise NotImplementedError
         # TODO Make last entry in the list the current widget.
 
     def set_overplot_state(self, state):
         log.debug('Overplot state is %s', state)
-        self.overplot = state
+        self._overplot = state
 
     def close_run_viewer(self, widget):
-        self._run_to_tabs[widget.uid].remove(widget)
+        for uid in widget.uids:
+            self._run_to_tabs[uid].remove(widget)
 
 
 class TabbedViewingArea(MoveableTabWidget):
@@ -114,28 +125,31 @@ class RunViewer(QTabWidget):
     """
     Contains tabs showing various view on the data from one Run.
     """
-    def __init__(self, *args, entry, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.entry = entry
-        self._uid = None
+        self._entries = []
+        self._uids = []
         self.run_router = RunRouter([
             BaselineFactory(self.addTab),
             HeaderTreeFactory(self.addTab),
             FigureManager(self.addTab),
             ])
-        self.load()
 
     @property
-    def uid(self):
-        "Return RunStart UID."
-        if self._uid is None:
-            self._uid = self.entry().metadata['start']['uid']
-        return self._uid
+    def entries(self):
+        return self._entries
 
-    def load(self):
+    @property
+    def uids(self):
+        return self._uids
+
+    def load(self, entry):
         "Load all documents from intake and push them through the RunRouter."
+        self._entries.append(entry)
+        datasource = entry()
+        self._uids.append(datasource.metadata['start']['uid'])
         # TODO Put this on a thread.
-        for name, doc in self.entry().read_canonical():
+        for name, doc in entry().read_canonical():
             self.run_router(name, doc)
 
 
