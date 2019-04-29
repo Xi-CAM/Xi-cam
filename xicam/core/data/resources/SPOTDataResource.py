@@ -3,6 +3,7 @@ from urllib import parse
 
 
 class SpotDataResourcePlugin(DataResourcePlugin):
+    name = 'Spot'
     def __init__(self, user='anonymous', password='',
                  query='skipnum=0&sortterm=fs.stage_date&sorttype=desc&search=end_station=bl832'):
         scheme = 'https'
