@@ -7,7 +7,6 @@ from xicam.plugins.GUIPlugin import PanelState
 from yapsy import PluginInfo
 
 from xicam.plugins import manager as pluginmanager
-from xicam.plugins import observers as pluginobservers
 from xicam.plugins import venvs
 from xicam.gui.widgets.debugmenubar import DebuggableMenuBar
 from xicam.core import msg
@@ -221,7 +220,7 @@ class pluginModeWidget(QToolBar):
         self.setLayoutDirection(Qt.RightToLeft)
 
         # Subscribe to plugins
-        pluginobservers.append(self)
+        pluginmanager.attach(self.pluginsChanged)
 
         # Build children
         self.pluginsChanged()
