@@ -2,6 +2,63 @@ from pyqtgraph.parametertree import Parameter, parameterTypes, ParameterTree
 from qtpy.QtWidgets import QDialog, QVBoxLayout, QDialogButtonBox
 from qtpy.QtCore import Qt
 
+"""
+Usage:
+
+parameterized_scan = ParameterizablePlan(scan)
+
+plan = parameterized_scan([det], device_list(), min, max)
+
+plan_parameter = plan.parameter
+
+RE(plan)
+
+"""
+
+
+class ParameterizablePlan(object):
+    def __init__(self, plan):
+        self.plan = plan
+
+    def __call__(self, *args, **kwargs):
+        return ParameterizedPlan(self.plan, args, kwargs)
+
+
+class ParameterizedPlan(object):
+    def __init__(self, plan, args, kwargs):
+        self.plan = plan
+        self.args = args
+        self.kwargs = kwargs
+        self._parameter = None
+
+    @property
+    def parameter(self):
+        if not self._parameter:
+            self._parameter = args_to_params(*self.args, **self.kwargs)
+        return self._parameter
+
+    def __iter__(self):
+        args = list(self.args)
+        kwargs = dict()
+        for i, arg in enumerate(args):
+            if isinstance(arg, Parameter):
+                args[i] = arg.value()
+            else:
+                args[i] = arg
+
+        for key, value in self.kwargs.items():
+            if isinstance(value, Parameter):
+                kwargs[key] = value.value()
+            else:
+                kwargs[key] = value
+
+        return self.plan(*args, **kwargs)
+
+    # def __next__(self):
+    #     if not self._plan_instance:
+    #         self._plan_instance = self.plan(*self.args, **self.kwargs)
+    #     return next(self._plan_instance)
+
 
 def parameterize(func):
     """
