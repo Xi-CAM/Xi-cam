@@ -256,7 +256,7 @@ class Grid(DocumentRouter):
         if ax is None:
             _, ax = plt.subplots()
         self.ax = ax
-        self.grid_data = np.full(self.shape, np.nan)
+        self.grid_data = numpy.full(self.shape, numpy.nan)
         self.image, = ax.imshow(self.grid_data, **kwargs)
 
     def event_page(self, doc):
