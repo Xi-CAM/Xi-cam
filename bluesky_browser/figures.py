@@ -88,67 +88,75 @@ class LinePlotManager:
 
     def subfactory(self, name, descriptor_doc):
         fields = set(hinted_fields(descriptor_doc))
+        # Filter out the fields with a data type or shape that we cannot
+        # represent in a line plot.
+        for field in list(fields):
+            dtype = descriptor_doc['data_keys'][field]['dtype']
+            if dtype not in ('number', 'integer'):
+                fields.remove(field)
+            ndim = len(descriptor_doc['data_keys'][field]['shape'] or [])
+            if ndim != 0:
+                fields.remove(field)
 
         callbacks = []
-        dim_stream, = self.dim_streams  # TODO
+        dim_stream, = self.dim_streams  # TODO Handle multiple dim_streams.
         if descriptor_doc.get('name') == dim_stream:
             if self.omit_single_point_plot and self.start_doc.get('num_points') == 1:
                 return []
-            x_key, = self.dimensions[0][0]
-            fields -= set([x_key])
-            figure_label = f'Scalars v {x_key}'
-            fig = self.fig_manager.get_figure(x_key, figure_label, len(fields), sharex=True)
-            for y_key, ax in zip(fields, fig.axes):
-                dtype = descriptor_doc['data_keys'][y_key]['dtype']
-                if dtype not in ('number', 'integer'):
-                    log.warn("Omitting %s from plot because dtype is %s",
-                             y_key, dtype)
-                    continue
+            for dimension in self.dimensions:
+                x_keys, stream_name = dimension
+                assert stream_name == dim_stream  # TODO Handle multiple dim_streams.
+                print('x_keys', x_keys)
+                for x_key in x_keys:
+                    fields -= set([x_key])
+                    figure_label = f'Scalars v {x_key}'
+                    fig = self.fig_manager.get_figure(x_key, figure_label, len(fields), sharex=True)
+                    for y_key, ax in zip(fields, fig.axes):
 
-                log.debug('plot %s against %s', y_key, x_key)
+                        log.debug('plot %s against %s', y_key, x_key)
 
-                ylabel = y_key
-                y_units = descriptor_doc['data_keys'][y_key].get('units')
-                ax.set_ylabel(y_key)
-                if y_units:
-                    ylabel += f' [{y_units}]'
-                # Set xlabel only on lowest axes, outside for loop below.
+                        ylabel = y_key
+                        y_units = descriptor_doc['data_keys'][y_key].get('units')
+                        ax.set_ylabel(y_key)
+                        if y_units:
+                            ylabel += f' [{y_units}]'
+                        # Set xlabel only on lowest axes, outside for loop below.
 
-                def func(event_page, y_key=y_key):
-                    """
-                    Extract x points and y points to plot out of an EventPage.
+                        def func(event_page, y_key=y_key):
+                            """
+                            Extract x points and y points to plot out of an EventPage.
 
-                    This will be passed to LineWithPeaks.
-                    """
-                    y_data = event_page['data'][y_key]
-                    if x_key == 'time':
-                        t0 = self.start_doc['time']
-                        x_data = numpy.asarray(event_page['time']) - t0
-                    elif x_key == 'seq_num':
-                        x_data = event_page['seq_num']
-                    else:
-                        x_data = event_page['data'][x_key]
-                    return x_data, y_data
+                            This will be passed to LineWithPeaks.
+                            """
+                            y_data = event_page['data'][y_key]
+                            if x_key == 'time':
+                                t0 = self.start_doc['time']
+                                x_data = numpy.asarray(event_page['time']) - t0
+                            elif x_key == 'seq_num':
+                                x_data = event_page['seq_num']
+                            else:
+                                x_data = event_page['data'][x_key]
+                            return x_data, y_data
 
-                line = Line(func, ax=ax)
-                callbacks.append(line)
+                        line = Line(func, ax=ax)
+                        callbacks.append(line)
 
-            if fields:
-                # Set the xlabel on the bottom-most axis.
-                if x_key == 'time':
-                    xlabel = x_key
-                    x_units = 's'
-                elif x_key == 'seq_num':
-                    xlabel = 'sequence number'
-                    x_units = None
-                else:
-                    xlabel = x_key
-                    x_units = descriptor_doc['data_keys'][x_key].get('units')
-                if x_units:
-                    xlabel += f' [{x_units}]'
-                ax.set_xlabel(x_key)
-                fig.tight_layout()
-        # TODO Plot other streams against time.
+                    if fields:
+                        # Set the xlabel on the bottom-most axis.
+                        if x_key == 'time':
+                            xlabel = x_key
+                            x_units = 's'
+                        elif x_key == 'seq_num':
+                            xlabel = 'sequence number'
+                            x_units = None
+                        else:
+                            xlabel = x_key
+                            x_units = descriptor_doc['data_keys'][x_key].get('units')
+                        if x_units:
+                            xlabel += f' [{x_units}]'
+                        ax.set_xlabel(x_key)
+                        fig.tight_layout()
+                # TODO Plot other streams against time.
         return callbacks
 
 
