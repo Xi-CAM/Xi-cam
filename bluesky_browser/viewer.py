@@ -1,3 +1,4 @@
+import collections
 import enum
 from functools import partial
 import logging
@@ -8,28 +9,33 @@ from qtpy.QtWidgets import (
     QActionGroup,
     QInputDialog,
     QTabWidget,
+    QVBoxLayout,
 )
 
 from .header_tree import HeaderTreeFactory
 from .baseline import BaselineFactory
 from .figures import FigureManager
-from .utils import MoveableTabWidget
+from .utils import MoveableTabWidget, MoveableTabContainer
 
 
 log = logging.getLogger('bluesky_browser')
 
 
-class ViewerOuterTabs(MoveableTabWidget):
+class Viewer(MoveableTabContainer):
+    """
+    Contains multiple TabbedViewingAreas
+    """
     def __init__(self, *args, menuBar, **kwargs):
         super().__init__(*args, **kwargs)
-        self.setTabsClosable(True)
-        self.tabCloseRequested.connect(self.close_tab)
-        self._runs = []
+        self._run_to_tabs = collections.defaultdict(list)
+        self._title_to_tab = {}
         self._overplot = OverPlotState.off
 
-        # TMP
-        if menuBar is None:
-            return
+        self._containers = [TabbedViewingArea(self, menuBar=menuBar) for _ in range(2)]
+        layout = QVBoxLayout()
+        for container in self._containers:
+            layout.addWidget(container)
+        self.setLayout(layout)
 
         overplot_group = QActionGroup(self)
         off = QAction('&Off')
@@ -68,38 +74,68 @@ class ViewerOuterTabs(MoveableTabWidget):
         fixed.triggered.connect(set_fixed_uid)
 
     def show_entries(self, entries):
+        target_area = self._containers[0]
         for entry in entries:
-            run_catalog = entry()
-            uid = run_catalog.metadata['start']['uid']
-            if uid not in self._runs:
+            uid = entry().metadata['start']['uid']
+            if not self._run_to_tabs[uid]:
                 # Add new Viewer tab.
-                viewer = ViewerInnerTabs()
-                for name, doc in run_catalog.read_canonical():
-                    viewer.run_router(name, doc)
-                self.addTab(viewer, uid[:8])
-                self._runs.append(uid)
-        if entries:
-            # Show the last entry in the list.
-            index = self._runs.index(uid)
-            self.setCurrentIndex(index)
+                viewer = RunViewer(entry=entry)
+                tab_title = uid[:8]
+                index = target_area.addTab(viewer, tab_title)
+                widget = target_area.widget(index)
+                self._title_to_tab[tab_title] = widget
+                self._run_to_tabs[uid].append(widget)
 
     def set_overplot_state(self, state):
         log.debug('Overplot state is %s', state)
         self.overplot = state
 
+    def close_run_viewer(self, widget):
+        self._run_to_tabs[widget.uid].remove(widget)
+
+
+class TabbedViewingArea(MoveableTabWidget):
+    """
+    Contains RunViewers
+    """
+    def __init__(self, *args, menuBar, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setTabsClosable(True)
+        self.tabCloseRequested.connect(self.close_tab)
+
     def close_tab(self, index):
-        self._runs.pop(index)
+        widget = self.widget(index)
+        self.parent().close_run_viewer(widget)
         self.removeTab(index)
 
 
-class ViewerInnerTabs(QTabWidget):
-    def __init__(self, *args, **kwargs):
+class RunViewer(QTabWidget):
+    """
+    Contains tabs showing various view on the data from one Run.
+    """
+    def __init__(self, *args, entry, **kwargs):
         super().__init__(*args, **kwargs)
+        self.entry = entry
+        self._uid = None
         self.run_router = RunRouter([
             BaselineFactory(self.addTab),
             HeaderTreeFactory(self.addTab),
             FigureManager(self.addTab),
             ])
+        self.load()
+
+    @property
+    def uid(self):
+        "Return RunStart UID."
+        if self._uid is None:
+            self._uid = self.entry().metadata['start']['uid']
+        return self._uid
+
+    def load(self):
+        "Load all documents from intake and push them through the RunRouter."
+        # TODO Put this on a thread.
+        for name, doc in self.entry().read_canonical():
+            self.run_router(name, doc)
 
 
 class OverPlotState(enum.Enum):
