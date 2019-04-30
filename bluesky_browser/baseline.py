@@ -1,6 +1,6 @@
 from event_model import unpack_event_page
 from qtpy.QtGui import QStandardItemModel, QStandardItem
-from qtpy.QtWidgets import QTableView
+from qtpy.QtWidgets import QTableView, QWidget, QVBoxLayout
 
 
 class BaselineModel(QStandardItemModel):
@@ -25,7 +25,10 @@ class BaselineWidget(QTableView):
 
 class BaselineFactory:
     def __init__(self, add_tab):
-        self.add_tab = add_tab
+        container = QWidget()
+        self.layout = QVBoxLayout()
+        container.setLayout(self.layout)
+        add_tab(container, 'Baseline')
 
     def __call__(self, name, start_doc):
         def subfactory(name, descriptor_doc):
@@ -33,7 +36,7 @@ class BaselineFactory:
                 baseline_widget = BaselineWidget()
                 baseline_model = BaselineModel()
                 baseline_widget.setModel(baseline_model)
-                self.add_tab(baseline_widget, 'Baseline')
+                self.layout.addWidget(baseline_widget)
                 return [baseline_model]
             else:
                 return []
