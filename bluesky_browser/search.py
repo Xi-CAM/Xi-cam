@@ -8,6 +8,7 @@ import logging
 from qtpy.QtCore import Qt, Signal
 from qtpy.QtGui import QStandardItemModel, QStandardItem
 from qtpy.QtWidgets import (
+    QAbstractItemView,
     QPushButton,
     QComboBox,
     QDateTimeEdit,
@@ -219,6 +220,7 @@ class SearchResultsWidget(QTableView):
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.setSortingEnabled(True)
         self.setSelectionBehavior(QTableView.SelectRows)
         self.setShowGrid(False)
