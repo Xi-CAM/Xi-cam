@@ -29,6 +29,7 @@ class Viewer(MoveableTabContainer):
         super().__init__(*args, **kwargs)
         self._run_to_tabs = collections.defaultdict(list)
         self._title_to_tab = {}
+        self._tabs_from_streaming = []
         self._overplot = OverPlotState.off
         self._overplot_target = None
 
@@ -87,11 +88,20 @@ class Viewer(MoveableTabContainer):
             tab_title = uid[:8]
             index = target_area.addTab(viewer, tab_title)
             self._title_to_tab[tab_title] = viewer
+            self._tabs_from_streaming.append(viewer)
             target_area.setCurrentIndex(index)
         elif self._overplot == OverPlotState.fixed:
             viewer = self._title_to_tab[self._overplot_target]
         elif self._overplot == OverPlotState.latest_live:
-            ...
+            if self._tabs_from_streaming:
+                viewer = self._tabs_from_streaming[-1]
+            else:
+                viewer = RunViewer()
+                tab_title = uid[:8]
+                index = target_area.addTab(viewer, tab_title)
+                self._title_to_tab[tab_title] = viewer
+                self._tabs_from_streaming.append(viewer)
+                target_area.setCurrentIndex(index)
         self._run_to_tabs[uid].append(viewer)
         viewer.run_router('start', start_doc)
         return [viewer.run_router], []
@@ -125,6 +135,10 @@ class Viewer(MoveableTabContainer):
         self._overplot = state
 
     def close_run_viewer(self, widget):
+        try:
+            self._tabs_from_streaming.remove(widget)
+        except ValueError:
+            pass
         for uid in widget.uids:
             self._run_to_tabs[uid].remove(widget)
             for title, tab in list(self._title_to_tab.items()):
