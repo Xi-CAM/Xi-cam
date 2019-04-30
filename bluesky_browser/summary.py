@@ -10,7 +10,7 @@ from qtpy.QtWidgets import (
 
 
 class SummaryWidget(QWidget):
-    open = Signal([list])
+    open = Signal([str, list])
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -37,7 +37,8 @@ class SummaryWidget(QWidget):
         QApplication.clipboard().setText(self.uid)
 
     def _open(self):
-        self.open.emit(self.entries)
+        for entry in self.entries:
+            self.open.emit(None, [entry])
 
     def set_entries(self, entries):
         self.entries.clear()

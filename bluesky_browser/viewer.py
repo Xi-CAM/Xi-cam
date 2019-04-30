@@ -1,6 +1,7 @@
 import collections
 import enum
 from functools import partial
+import itertools
 import logging
 
 from event_model import RunRouter
@@ -108,29 +109,34 @@ class Viewer(MoveableTabContainer):
         viewer.run_router('start', start_doc)
         return [viewer.run_router], []
 
-    def show_entries(self, entries):
+    def show_entries(self, target, entries):
         target_area = self._containers[0]
+        if not target:
+            # Add new Viewer tab.
+            viewer = RunViewer()
+            if len(entries) == 1:
+                entry, = entries
+                uid = entry().metadata['start']['uid']
+                tab_title = uid[:8] 
+            else:
+                title = self.get_title()
+            index = target_area.addTab(viewer, tab_title)
+            self._title_to_tab[tab_title] = viewer
+            target_area.setCurrentIndex(index)
+        else:
+            viewer = self._title_to_tab[target]
         for entry in entries:
+            viewer.load_entry(entry)
             uid = entry().metadata['start']['uid']
-            if not self._run_to_tabs[uid]:
-                if self._overplot == OverPlotState.off:
-                    # Add new Viewer tab.
-                    viewer = RunViewer()
-                    tab_title = uid[:8]
-                    index = target_area.addTab(viewer, tab_title)
-                    self._title_to_tab[tab_title] = viewer
-                    self._run_to_tabs[uid].append(viewer)
-                    viewer.load_entry(entry)
-                    target_area.setCurrentIndex(index)
-                elif self._overplot == OverPlotState.fixed:
-                    viewer = self._title_to_tab[self._overplot_target]
-                    self._run_to_tabs[uid].append(viewer)
-                    viewer.load_entry(entry)
-                elif self._overplot == OverPlotState.latest_live:
-                    ...
-                else:
-                    raise NotImplementedError
+            self._run_to_tabs[uid].append(viewer)
         # TODO Make last entry in the list the current widget.
+
+    def get_title(self):
+        for i in itertools.count(1):
+            title = f'Group {i}' 
+            if title in self._title_to_tab:
+                continue
+            return title
 
     def set_overplot_state(self, state):
         log.debug('Overplot state is %s', state)
