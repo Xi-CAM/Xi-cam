@@ -59,20 +59,31 @@ Intended Scope
 * Be extensible, providing for the possibility of views that are specific to a
   beamline or instrument.
 
+Current Features
+================
+
+* Search multiple Catalogs (e.g. multiple beamlines) for saved data and sort
+  search results.
+* View selected search results in individual tabs or "over-plotted" in one tab.
+* View Header, baseline readings, and line plots from saved or streaming data.
+* "Over-plot" arbitrary groups of Runs, including saved data, streaming data,
+  or a mix of both.
+
 Roadmap
 =======
 
 * Get feature parity with Best-Effort Callback.
-  * Table
-  * Grid
-  * PeakStats
+    * Table
+    * Grid
+    * PeakStats
 * Add image stack viewer.
 * Enable user to change what is plotted interactively. (The hints becomes just
   a *default*.)
-* Suport "overplotting" via right-click "Overplot on...".
 * Add a way to run just the viewer part against live data (from RE).
 * Add a "Summary" widget to the top of the Header tab.
 * Add integration with suitcase for file export, starting with CSV.
+* Add context menus (right click) as an alternative way to do overplotting,
+  etc.
 * Make the search inputs, search result row, summary viewer, and tab
   factories configurable.
 * Support "progressive search", iteratively refining search results.
