@@ -42,25 +42,25 @@ class Viewer(MoveableTabContainer):
         self.setLayout(layout)
 
         overplot_group = QActionGroup(self)
-        off = QAction('&Off', self)
-        off.setStatusTip('Open a new viewer tab for each Run.')
-        latest_live = QAction('&Latest Live Tab', self)
-        latest_live.setStatusTip('Attempt to overplot on the most recent live Run.')
-        fixed = QAction('&Fixed Tab...', self)
-        fixed.setStatusTip('Attempt to overplot on a specific tab.')
-        overplot_group.addAction(off)
-        overplot_group.addAction(latest_live)
-        overplot_group.addAction(fixed)
+        self.off = QAction('&Off', self)
+        self.off.setStatusTip('Open a new viewer tab for each Run.')
+        self.latest_live = QAction('&Latest Live Tab', self)
+        self.latest_live.setStatusTip('Attempt to overplot on the most recent live Run.')
+        self.fixed = QAction('&Fixed Tab...', self)
+        self.fixed.setStatusTip('Attempt to overplot on a specific tab.')
+        overplot_group.addAction(self.off)
+        overplot_group.addAction(self.latest_live)
+        overplot_group.addAction(self.fixed)
         for action in overplot_group.actions():
             action.setCheckable(True)
         overplot_group.setExclusive(True)
-        off.setChecked(True)
+        self.off.setChecked(True)
 
         overplot_menu = menuBar().addMenu('&Over-plotting')
         overplot_menu.addActions(overplot_group.actions())
 
-        off.triggered.connect(partial(self.set_overplot_state, OverPlotState.off))
-        latest_live.triggered.connect(partial(self.set_overplot_state, OverPlotState.latest_live))
+        self.off.triggered.connect(partial(self.set_overplot_state, OverPlotState.off))
+        self.latest_live.triggered.connect(partial(self.set_overplot_state, OverPlotState.latest_live))
 
         def set_overplot_target():
             self.set_overplot_state(OverPlotState.fixed)
@@ -75,7 +75,7 @@ class Viewer(MoveableTabContainer):
             self.set_overplot_state(OverPlotState.fixed)
             self._overplot_target = item
 
-        fixed.triggered.connect(set_overplot_target)
+        self.fixed.triggered.connect(set_overplot_target)
 
     def consumer(self, item):
         """Slot that receives (name, doc) and unpacks it into RunRouter."""
