@@ -134,8 +134,8 @@ class RunViewer(QTabWidget):
         self._entries = []
         self._uids = []
         self.run_router = RunRouter([
-            BaselineFactory(self.addTab),
             HeaderTreeFactory(self.addTab),
+            BaselineFactory(self.addTab),
             FigureManager(self.addTab),
             ])
 
