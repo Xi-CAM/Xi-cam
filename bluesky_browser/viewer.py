@@ -89,6 +89,7 @@ class Viewer(MoveableTabContainer):
         self._title_to_tab[tab_title] = viewer
         self._run_to_tabs[uid].append(viewer)
         target_area.setCurrentIndex(index)
+        viewer.run_router('start', start_doc)
         return [viewer.run_router], []
 
     def show_entries(self, entries):
