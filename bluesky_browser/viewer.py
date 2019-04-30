@@ -81,13 +81,18 @@ class Viewer(MoveableTabContainer):
 
     def route_live_stream(self, name, start_doc):
         target_area = self._containers[0]
-        viewer = RunViewer()
         uid = start_doc['uid']
-        tab_title = uid[:8]
-        index = target_area.addTab(viewer, tab_title)
-        self._title_to_tab[tab_title] = viewer
+        if self._overplot == OverPlotState.off:
+            viewer = RunViewer()
+            tab_title = uid[:8]
+            index = target_area.addTab(viewer, tab_title)
+            self._title_to_tab[tab_title] = viewer
+            target_area.setCurrentIndex(index)
+        elif self._overplot == OverPlotState.fixed:
+            viewer = self._title_to_tab[self._overplot_target]
+        elif self._overplot == OverPlotState.latest_live:
+            ...
         self._run_to_tabs[uid].append(viewer)
-        target_area.setCurrentIndex(index)
         viewer.run_router('start', start_doc)
         return [viewer.run_router], []
 
