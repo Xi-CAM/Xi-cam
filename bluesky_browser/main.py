@@ -66,9 +66,13 @@ class CentralWidget(QWidget):
         self.search_widget.catalog_selection_widget.catalog_list.currentIndexChanged.connect(
             search_state.set_selected_catalog)
         self.search_widget.search_results_widget.selectionModel().selectionChanged.connect(
-            search_state.search_results_model.emit_selected_result_signal)
-        search_state.search_results_model.selected_result_signal.connect(
+            search_state.search_results_model.emit_selected_result)
+        self.search_widget.search_results_widget.doubleClicked.connect(
+            search_state.search_results_model.emit_open_result)
+        search_state.search_results_model.selected_result.connect(
             self.summary_widget.set_entries)
+        search_state.search_results_model.open_result.connect(
+            self.viewer.show_entries)
         self.summary_widget.open.connect(self.viewer.show_entries)
         search_state.search_results_model.valid_custom_query.connect(
             self.search_widget.search_input_widget.mark_custom_query)

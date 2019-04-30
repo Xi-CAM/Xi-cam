@@ -101,7 +101,8 @@ class SearchResultsModel(QStandardItemModel):
     """
     Perform searches on a Catalog and model the results.
     """
-    selected_result_signal = Signal([list])
+    selected_result = Signal([list])
+    open_result = Signal([list])
     valid_custom_query = Signal([bool])
 
     def __init__(self, search_state, *args, **kwargs):
@@ -111,10 +112,13 @@ class SearchResultsModel(QStandardItemModel):
         self.since = None
         self.until = None
 
-    def emit_selected_result_signal(self, selected, deselected):
+    def emit_selected_result(self, selected, deselected):
         rows = set(index.row() for index in selected.indexes())
-        self.selected_result_signal.emit(
+        self.selected_result.emit(
             [self.search_state._results[row] for row in rows])
+
+    def emit_open_result(self, index):
+        self.open_result.emit([self.search_state._results[index.row()]])
 
     def on_search_text_changed(self, text):
         try:
