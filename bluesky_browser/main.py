@@ -4,7 +4,7 @@ import sys
 import time
 from . import __version__
 
-from qtpy.QtCore import QDateTime
+from qtpy.QtCore import QDateTime, QThread
 from qtpy.QtWidgets import (
     QApplication,
     QWidget,
@@ -91,14 +91,7 @@ def main():
     sys.exit(app.exec_())
 
 
-def build_app(catalog_uri):
-    import logging
-    log = logging.getLogger('bluesky_browser')
-    handler = logging.StreamHandler()
-    handler.setLevel('DEBUG')
-    log.addHandler(handler)
-    log.setLevel('DEBUG')
-
+def build_app(catalog_uri, zmq_address):
     from intake import Catalog
     catalog = Catalog(catalog_uri)
 
@@ -144,13 +137,26 @@ class _DemoAction(argparse.Action):
             help=help)
 
     def __call__(self, parser, namespace, values, option_string=None):
-        from .demo import generate_example_data
+        import logging
+        log = logging.getLogger('bluesky_browser')
+        handler = logging.StreamHandler()
+        handler.setLevel('DEBUG')
+        log.addHandler(handler)
+        log.setLevel('DEBUG')
+
+        from .demo import generate_example_catalog, stream_example_data
         from tempfile import TemporaryDirectory
         with TemporaryDirectory() as directory:
-            catalog_filepath = generate_example_data(directory)
-            app = build_app(catalog_filepath)
-            sys.exit(app.exec_())
-            parser.exit()
+            catalog_filepath = generate_example_catalog(directory)
+            zmq_address, proxy_process, publisher_process = stream_example_data()
+            app = build_app(catalog_filepath, zmq_address)
+            try:
+                ret = app.exec_()
+            finally:
+                proxy_process.terminate()
+                publisher_process.terminate()
+                sys.exit(ret)
+                parser.exit()
 
 
 if __name__ == '__main__':

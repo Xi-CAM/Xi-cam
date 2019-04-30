@@ -1,4 +1,7 @@
+import logging
+from multiprocessing import Process, Queue
 from pathlib import Path
+
 
 from suitcase.jsonl import Serializer
 from bluesky import RunEngine
@@ -14,7 +17,10 @@ noisy_det.kind = 'hinted'
 det4.kind = 'hinted'
 
 
-def generate_example_data(data_path):
+log = logging.getLogger('bluesky_browser')
+
+
+def generate_example_catalog(data_path):
     data_path = Path(data_path)
 
     def factory(name, doc):
@@ -75,3 +81,42 @@ sources:
       beamline: "99-ID"
 ''')
     return str(catalog_filepath)
+
+
+def stream_example_data():
+    def run_proxy(queue):
+        """
+        Run Proxy on random, free ports and communicate the port numbers back.
+        """
+        from bluesky.callbacks.zmq import Proxy
+        proxy = Proxy()
+        queue.put((proxy.in_port, proxy.out_port))
+        proxy.start()
+
+    queue = Queue()
+    proxy_process = Process(target=run_proxy, args=(queue,))
+    proxy_process.start()
+    in_port, out_port = queue.get()
+    log.debug(f"Demo Proxy is listening on port {in_port} and publishing to {out_port}.")
+
+    def run_publisher():
+        """
+        Acquire data in an infinite loop and publish it.
+        """
+        from bluesky.callbacks.zmq import Publisher
+        from ophyd.sim import det
+        from bluesky.plans import count
+        publisher = Publisher(f'localhost:{in_port}')
+        RE = RunEngine()
+        RE.subscribe(publisher)
+
+        def infinite_plan():
+            yield from count([det], 10, delay=0.5)
+
+        RE(infinite_plan())
+
+    publisher_process = Process(target=run_publisher, args=())
+    publisher_process.start()
+    log.debug("Demo acquisition has started.")
+
+    return f'localhost:{out_port}', proxy_process, publisher_process
