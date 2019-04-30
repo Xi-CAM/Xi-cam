@@ -103,12 +103,13 @@ def stream_example_data():
         """
         Acquire data in an infinite loop and publish it.
         """
+        import asyncio
         from bluesky.callbacks.zmq import Publisher
         from ophyd.sim import noisy_det
         from bluesky.plans import count
         from bluesky.plan_stubs import sleep
         publisher = Publisher(f'localhost:{in_port}')
-        RE = RunEngine()
+        RE = RunEngine(loop=asyncio.new_event_loop())
         RE.subscribe(publisher)
 
         def infinite_plan():

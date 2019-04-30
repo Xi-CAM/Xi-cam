@@ -78,9 +78,11 @@ class Viewer(MoveableTabContainer):
         fixed.triggered.connect(set_overplot_target)
 
     def consumer(self, item):
+        """Slot that receives (name, doc) and unpacks it into RunRouter."""
         self._live_run_router(*item)
 
     def route_live_stream(self, name, start_doc):
+        """Create or choose a Viewer to receive this Run."""
         target_area = self._containers[0]
         uid = start_doc['uid']
         if self._overplot == OverPlotState.off:
