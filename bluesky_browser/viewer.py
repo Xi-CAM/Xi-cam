@@ -31,8 +31,9 @@ class Viewer(MoveableTabContainer):
         self._run_to_tabs = collections.defaultdict(list)
         self._title_to_tab = {}
         self._tabs_from_streaming = []
-        self._overplot = OverPlotState.off
+        self._overplot = OverPlotState.individual_tab
         self._overplot_target = None
+        self._live_enabled = False
 
         self._live_run_router = RunRouter([self.route_live_stream])
 
@@ -44,12 +45,15 @@ class Viewer(MoveableTabContainer):
 
         overplot_group = QActionGroup(self)
         self.off = QAction('&Off', self)
-        self.off.setStatusTip('Open a new viewer tab for each Run.')
+        self.off.setStatusTip('Drop streaming data.')
+        self.individual_tab = QAction('&New Tab', self)
+        self.individual_tab.setStatusTip('Open a new viewer tab for each Run.')
         self.latest_live = QAction('&Latest Live Tab', self)
         self.latest_live.setStatusTip('Attempt to overplot on the most recent live Run.')
         self.fixed = QAction('&Fixed Tab...', self)
         self.fixed.setStatusTip('Attempt to overplot on a specific tab.')
         overplot_group.addAction(self.off)
+        overplot_group.addAction(self.individual_tab)
         overplot_group.addAction(self.latest_live)
         overplot_group.addAction(self.fixed)
         for action in overplot_group.actions():
@@ -57,10 +61,11 @@ class Viewer(MoveableTabContainer):
         overplot_group.setExclusive(True)
         self.off.setChecked(True)
 
-        overplot_menu = menuBar().addMenu('&Over-plotting')
+        overplot_menu = menuBar().addMenu('&Streaming')
         overplot_menu.addActions(overplot_group.actions())
 
-        self.off.triggered.connect(partial(self.set_overplot_state, OverPlotState.off))
+        self.off.triggered.connect(self.disable_live)
+        self.individual_tab.triggered.connect(partial(self.set_overplot_state, OverPlotState.individual_tab))
         self.latest_live.triggered.connect(partial(self.set_overplot_state, OverPlotState.latest_live))
 
         def set_overplot_target():
@@ -78,15 +83,24 @@ class Viewer(MoveableTabContainer):
 
         self.fixed.triggered.connect(set_overplot_target)
 
+    def enable_live(self):
+        self._live_enabled = True
+
+    def disable_live(self):
+        self._live_enabled = False
+
     def consumer(self, item):
         """Slot that receives (name, doc) and unpacks it into RunRouter."""
         self._live_run_router(*item)
 
     def route_live_stream(self, name, start_doc):
         """Create or choose a Viewer to receive this Run."""
+        if not self._live_enabled:
+            log.debug("Streaming Run ignored because Streaming is disabled.")
+            return [], []
         target_area = self._containers[0]
         uid = start_doc['uid']
-        if self._overplot == OverPlotState.off:
+        if self._overplot == OverPlotState.individual_tab:
             viewer = RunViewer()
             tab_title = uid[:8]
             index = target_area.addTab(viewer, tab_title)
@@ -139,6 +153,7 @@ class Viewer(MoveableTabContainer):
             return title
 
     def set_overplot_state(self, state):
+        self.enable_live()
         log.debug('Overplot state is %s', state)
         self._overplot = state
 
@@ -204,6 +219,6 @@ class RunViewer(QTabWidget):
 
 
 class OverPlotState(enum.Enum):
-    off = enum.auto()
+    individual_tab = enum.auto()
     latest_live = enum.auto()
     fixed = enum.auto()

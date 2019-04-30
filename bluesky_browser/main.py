@@ -155,14 +155,12 @@ class _DemoAction(argparse.Action):
         log.setLevel('DEBUG')
 
         from .demo import generate_example_catalog, stream_example_data
-        from .viewer import OverPlotState
         from tempfile import TemporaryDirectory
         with TemporaryDirectory() as directory:
             catalog_filepath = generate_example_catalog(directory)
             zmq_address, proxy_process, publisher_process = stream_example_data()
             app = build_app(catalog_filepath, zmq_address)
-            app.main_window.centralWidget().viewer.latest_live.setChecked(True)
-            app.main_window.centralWidget().viewer.set_overplot_state(OverPlotState.latest_live)
+            app.main_window.centralWidget().viewer.off.setChecked(True)
             try:
                 ret = app.exec_()
             finally:
