@@ -83,10 +83,11 @@ class Viewer(MoveableTabContainer):
                     # Add new Viewer tab.
                     viewer = RunViewer()
                     tab_title = uid[:8]
-                    target_area.addTab(viewer, tab_title)
+                    index = target_area.addTab(viewer, tab_title)
                     self._title_to_tab[tab_title] = viewer
                     self._run_to_tabs[uid].append(viewer)
                     viewer.load(entry)
+                    target_area.setCurrentIndex(index)
                 elif self._overplot == OverPlotState.fixed:
                     viewer = self._title_to_tab[self._overplot_target]
                     self._run_to_tabs[uid].append(viewer)
