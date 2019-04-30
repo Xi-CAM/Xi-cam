@@ -4,8 +4,9 @@ Experimental Qt-based data browser for bluesky
 import ast
 import itertools
 import logging
+import time
 
-from qtpy.QtCore import Qt, Signal
+from qtpy.QtCore import Qt, Signal, QThread
 from qtpy.QtGui import QStandardItemModel, QStandardItem
 from qtpy.QtWidgets import (
     QAbstractItemView,
@@ -35,6 +36,7 @@ QLineEdit {
     background-color: rgb(255, 255, 255);
 }
 """
+RELOAD_INTERVAL = 11
 
 
 class SearchState:
@@ -48,8 +50,25 @@ class SearchState:
         self.search_results_model = SearchResultsModel(self)
         self._subcatalogs = []  # to support lookup by item's positional index
         self._results = []  # to support lookup by item's positional index
+        self._results_catalog = None
         self.list_subcatalogs()
         self.set_selected_catalog(0)
+        self.search()
+
+        search_state = self
+
+        class ReloadThread(QThread):
+
+            def run(self):
+                while True:
+                    time.sleep(RELOAD_INTERVAL)
+                    search_state.reload()
+
+        self.reload_thread = ReloadThread()
+        self.reload_thread.start()
+
+    def __del__(self):
+        self.reload_thread.terminate()
 
     def list_subcatalogs(self):
         self._subcatalogs.clear()
@@ -64,30 +83,40 @@ class SearchState:
         self.search()
 
     def search(self):
-        self._results.clear()
         self.search_results_model.clear()
+        self._results.clear()
         query = {'time': {}}
         if self.search_results_model.since is not None:
             query['time']['$gte'] = self.search_results_model.since
         if self.search_results_model.until is not None:
             query['time']['$lt'] = self.search_results_model.until
         query.update(**self.search_results_model.custom_query)
-        results = self.selected_catalog.search(query)
-        log.debug('Query %r -> %d results', query, len(results))
-        for uid, entry in itertools.islice(results.items(), MAX_SEARCH_RESULTS):
-            row = []
+        self._results_catalog = self.selected_catalog.search(query)
+        log.debug('Query %r -> %d results', query, len(self._results_catalog))
+        self.show_results()
+
+    def show_results(self):
+        for uid, entry in itertools.islice(self._results_catalog.items(), MAX_SEARCH_RESULTS):
+            if entry in self._results:
+                continue
             self._results.append(entry)
+            row = []
             for text in self.search_result_row(entry).values():
                 item = QStandardItem(text or '')
                 row.append(item)
             self.search_results_model.appendRow(row)
         try:
-            _, entry = next(iter(results.items()))
+            _, entry = next(iter(self._results_catalog.items()))
         except StopIteration:
             pass
         else:
             self.search_results_model.setHorizontalHeaderLabels(
                 list(self.search_result_row(entry)))
+
+    def reload(self):
+        log.debug("Reloaded search results")
+        self._results_catalog.reload()
+        self.show_results()
 
 
 class CatalogSelectionModel(QStandardItemModel):
