@@ -59,7 +59,7 @@ class Viewer(MoveableTabContainer):
         off.triggered.connect(partial(self.set_overplot_state, OverPlotState.off))
         latest_live.triggered.connect(partial(self.set_overplot_state, OverPlotState.latest_live))
 
-        def set_fixed_uid():
+        def set_overplot_target():
             self.set_overplot_state(OverPlotState.fixed)
             item, ok = QInputDialog.getItem(
                 self, "Select Run", "Run", tuple(self._title_to_tab), 0, False)
@@ -72,7 +72,7 @@ class Viewer(MoveableTabContainer):
             self.set_overplot_state(OverPlotState.fixed)
             self._overplot_target = item
 
-        fixed.triggered.connect(set_fixed_uid)
+        fixed.triggered.connect(set_overplot_target)
 
     def show_entries(self, entries):
         target_area = self._containers[0]
@@ -107,7 +107,9 @@ class Viewer(MoveableTabContainer):
             self._run_to_tabs[uid].remove(widget)
             for title, tab in list(self._title_to_tab.items()):
                 if tab == widget:
-                    self._title_to_tab[title]
+                    del self._title_to_tab[title]
+                    if title == self._overplot_target:
+                        self.set_overplot_state(OverPlotState.off)
 
 
 class TabbedViewingArea(MoveableTabWidget):
