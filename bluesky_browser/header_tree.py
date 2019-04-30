@@ -10,7 +10,7 @@ def fill_item(item, value):
 
     adapted from http://stackoverflow.com/a/21806048/1221924
     """
-    item.setExpanded(True)
+    item.setExpanded(False)
     if hasattr(value, 'items'):
         for key, val in sorted(value.items()):
             child = QTreeWidgetItem()
@@ -44,7 +44,7 @@ def fill_item(item, value):
             else:
                 child = QTreeWidgetItem()
                 item.addChild(child)
-                child.setExpanded(True)
+                child.setExpanded(False)
                 child.setText(0, _short_repr(val))
     else:
         child = QTreeWidgetItem()
