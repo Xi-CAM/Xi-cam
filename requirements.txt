@@ -1,8 +1,9 @@
 bluesky
 event-model >=1.9.0a3
 intake-bluesky
-ophyd
+ophyd  # for demo's example data generator -- maybe should be optional?
 pyqt5
+pyzmq==16.0.4  # pinned for bluesky
 qtpy
 suitcase-jsonl
 tornado<5  # pinned for bluesky

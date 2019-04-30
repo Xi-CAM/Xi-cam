@@ -32,6 +32,8 @@ class Viewer(MoveableTabContainer):
         self._overplot = OverPlotState.off
         self._overplot_target = None
 
+        self._live_run_router = RunRouter([self.route_live_stream])
+
         self._containers = [TabbedViewingArea(self, menuBar=menuBar) for _ in range(2)]
         layout = QVBoxLayout()
         for container in self._containers:
@@ -74,6 +76,21 @@ class Viewer(MoveableTabContainer):
 
         fixed.triggered.connect(set_overplot_target)
 
+    def consumer(self, item):
+        self._live_run_router(*item)
+
+    def route_live_stream(self, name, start_doc):
+        print('route_live_stream')
+        target_area = self._containers[0]
+        viewer = RunViewer()
+        uid = start_doc['uid']
+        tab_title = uid[:8]
+        index = target_area.addTab(viewer, tab_title)
+        self._title_to_tab[tab_title] = viewer
+        self._run_to_tabs[uid].append(viewer)
+        target_area.setCurrentIndex(index)
+        return [viewer.run_router], []
+
     def show_entries(self, entries):
         target_area = self._containers[0]
         for entry in entries:
@@ -86,12 +103,12 @@ class Viewer(MoveableTabContainer):
                     index = target_area.addTab(viewer, tab_title)
                     self._title_to_tab[tab_title] = viewer
                     self._run_to_tabs[uid].append(viewer)
-                    viewer.load(entry)
+                    viewer.load_entry(entry)
                     target_area.setCurrentIndex(index)
                 elif self._overplot == OverPlotState.fixed:
                     viewer = self._title_to_tab[self._overplot_target]
                     self._run_to_tabs[uid].append(viewer)
-                    viewer.load(entry)
+                    viewer.load_entry(entry)
                 elif self._overplot == OverPlotState.latest_live:
                     ...
                 else:
@@ -149,7 +166,7 @@ class RunViewer(QTabWidget):
     def uids(self):
         return self._uids
 
-    def load(self, entry):
+    def load_entry(self, entry):
         "Load all documents from intake and push them through the RunRouter."
         self._entries.append(entry)
         datasource = entry()

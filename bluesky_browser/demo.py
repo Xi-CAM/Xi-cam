@@ -106,14 +106,20 @@ def stream_example_data():
         from bluesky.callbacks.zmq import Publisher
         from ophyd.sim import det
         from bluesky.plans import count
+        from bluesky.plan_stubs import sleep
         publisher = Publisher(f'localhost:{in_port}')
         RE = RunEngine()
         RE.subscribe(publisher)
 
         def infinite_plan():
-            yield from count([det], 10, delay=0.5)
+            while True:
+                yield from sleep(3)
+                yield from count([det], 10, delay=0.5)
 
-        RE(infinite_plan())
+        try:
+            RE(infinite_plan())
+        finally:
+            RE.halt()
 
     publisher_process = Process(target=run_publisher, args=())
     publisher_process.start()

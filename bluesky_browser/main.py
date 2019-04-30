@@ -4,7 +4,7 @@ import sys
 import time
 from . import __version__
 
-from qtpy.QtCore import QDateTime, QThread
+from qtpy.QtCore import QDateTime
 from qtpy.QtWidgets import (
     QApplication,
     QWidget,
@@ -14,13 +14,15 @@ from qtpy.QtWidgets import (
 from .search import SearchWidget, SearchState
 from .summary import SummaryWidget
 from .viewer import Viewer
+from .zmq import ConsumerThread
 
 
 class CentralWidget(QWidget):
     """
     Encapsulates all widgets and models. Connect signals on __init__.
     """
-    def __init__(self, *args, catalog, search_result_row, menuBar, **kwargs):
+    def __init__(self, *args, catalog, zmq_address,
+                 search_result_row, menuBar, **kwargs):
         super().__init__(*args, **kwargs)
 
         # Define models.
@@ -77,6 +79,14 @@ class CentralWidget(QWidget):
         search_state.search_results_model.valid_custom_query.connect(
             self.search_widget.search_input_widget.mark_custom_query)
 
+        self.consumer_thread = ConsumerThread(zmq_address=zmq_address)
+
+        def callback(name, doc):
+            print(name, doc)
+
+        self.consumer_thread.documents.connect(self.viewer.consumer)
+        self.consumer_thread.start()
+
 
 def main():
     parser = argparse.ArgumentParser(description='Prototype bluesky data browser',
@@ -110,6 +120,7 @@ def build_app(catalog_uri, zmq_address):
     app.main_window = QMainWindow()
     central_widget = CentralWidget(
         catalog=catalog,
+        zmq_address=zmq_address,
         search_result_row=search_result_row,
         menuBar=app.main_window.menuBar)
     app.main_window.setCentralWidget(central_widget)
