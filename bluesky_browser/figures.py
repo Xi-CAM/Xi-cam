@@ -159,6 +159,9 @@ class LinePlotManager:
                     ax.set_xlabel(x_key)
                     fig.tight_layout()
             # TODO Plot other streams against time.
+        for callback in callbacks:
+            callback('start', self.start_doc)
+            callback('descriptor', descriptor_doc)
         return callbacks
 
 
