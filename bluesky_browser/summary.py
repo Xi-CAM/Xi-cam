@@ -15,8 +15,12 @@ class SummaryWidget(QWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.uid_label = QLabel()
-        self.open_button = QPushButton('Open in Viewer')
-        self.open_button.clicked.connect(self._open)
+        self.open_individually_button = QPushButton('Open individually')
+        self.open_individually_button.hide()
+        self.open_individually_button.clicked.connect(self._open_individually)
+        self.open_overplotted_button = QPushButton('Open overplotted')
+        self.open_overplotted_button.hide()
+        self.open_overplotted_button.clicked.connect(self._open_overplotted)
         self.copy_uid_button = QPushButton('Copy UID to Clipboard')
         self.copy_uid_button.hide()
         self.copy_uid_button.clicked.connect(self._copy_uid)
@@ -27,7 +31,8 @@ class SummaryWidget(QWidget):
         uid_layout.addWidget(self.uid_label)
         uid_layout.addWidget(self.copy_uid_button)
         layout = QVBoxLayout()
-        layout.addWidget(self.open_button)
+        layout.addWidget(self.open_individually_button)
+        layout.addWidget(self.open_overplotted_button)
         layout.addLayout(uid_layout)
         layout.addWidget(self.streams)
         self.setLayout(layout)
@@ -36,9 +41,12 @@ class SummaryWidget(QWidget):
     def _copy_uid(self):
         QApplication.clipboard().setText(self.uid)
 
-    def _open(self):
+    def _open_individually(self):
         for entry in self.entries:
             self.open.emit(None, [entry])
+
+    def _open_overplotted(self):
+        self.open.emit(None, self.entries)
 
     def set_entries(self, entries):
         self.entries.clear()
@@ -47,13 +55,16 @@ class SummaryWidget(QWidget):
             self.uid_label.setText('')
             self.streams.setText('')
             self.copy_uid_button.hide()
-            self.open_button.hide()
+            self.open_individually_button.hide()
+            self.open_overplotted_button.hide()
         elif len(entries) == 1:
             entry, = entries
             self.uid = entry.metadata['start']['uid']
             self.uid_label.setText(self.uid[:8])
             self.copy_uid_button.show()
-            self.open_button.show()
+            self.open_individually_button.show()
+            self.open_individually_button.setText('Open')
+            self.open_overplotted_button.hide()
             num_events = entry.metadata.get('stop', {}).get('num_events')
             if num_events:
                 self.streams.setText(
@@ -68,4 +79,6 @@ class SummaryWidget(QWidget):
             self.uid_label.setText('(Multiple Selected)')
             self.streams.setText('')
             self.copy_uid_button.hide()
-            self.open_button.show()
+            self.open_individually_button.setText('Open individually')
+            self.open_individually_button.show()
+            self.open_overplotted_button.show()
