@@ -111,7 +111,8 @@ class LinePlotManager:
             assert stream_name == dim_stream  # TODO Handle multiple dim_streams.
             for x_key in x_keys:
                 figure_label = f'Scalars v {x_key}'
-                fig = self.fig_manager.get_figure(x_key, figure_label, len(fields), sharex=True)
+                fig = self.fig_manager.get_figure(
+                    (x_key, tuple(fields)), figure_label, len(fields), sharex=True)
                 for y_key, ax in zip(fields, fig.axes):
 
                     log.debug('plot %s against %s', y_key, x_key)
