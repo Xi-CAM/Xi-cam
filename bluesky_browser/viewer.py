@@ -83,7 +83,7 @@ class Viewer(MoveableTabContainer):
                     # Add new Viewer tab.
                     viewer = RunViewer()
                     tab_title = uid[:8]
-                    index = target_area.addTab(viewer, tab_title)
+                    target_area.addTab(viewer, tab_title)
                     self._title_to_tab[tab_title] = viewer
                     self._run_to_tabs[uid].append(viewer)
                     viewer.load(entry)
@@ -104,6 +104,9 @@ class Viewer(MoveableTabContainer):
     def close_run_viewer(self, widget):
         for uid in widget.uids:
             self._run_to_tabs[uid].remove(widget)
+            for title, tab in list(self._title_to_tab.items()):
+                if tab == widget:
+                    self._title_to_tab[title]
 
 
 class TabbedViewingArea(MoveableTabWidget):
