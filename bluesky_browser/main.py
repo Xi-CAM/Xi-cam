@@ -87,10 +87,11 @@ def main():
                         default=argparse.SUPPRESS,
                         help="Launch the app with example data.")
     args = parser.parse_args()
-    run(args.catalog_uri)
+    app = build_app(args.catalog_uri)
+    sys.exit(app.exec_())
 
 
-def run(catalog_uri):
+def build_app(catalog_uri):
     import logging
     log = logging.getLogger('bluesky_browser')
     handler = logging.StreamHandler()
@@ -120,7 +121,7 @@ def run(catalog_uri):
         menuBar=app.main_window.menuBar)
     app.main_window.setCentralWidget(central_widget)
     app.main_window.show()
-    sys.exit(app.exec_())
+    return app
 
 
 class _DemoAction(argparse.Action):
@@ -147,7 +148,8 @@ class _DemoAction(argparse.Action):
         from tempfile import TemporaryDirectory
         with TemporaryDirectory() as directory:
             catalog_filepath = generate_example_data(directory)
-            run(catalog_filepath)
+            app = build_app(catalog_filepath)
+            sys.exit(app.exec_())
             parser.exit()
 
 
