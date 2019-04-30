@@ -1,3 +1,4 @@
+import collections
 import logging
 
 from event_model import DocumentRouter, RunRouter
@@ -176,18 +177,16 @@ class Line(DocumentRouter):
         (x points and y points). The two lists must contain an equal number of
         items, but that number is arbitrary. That is, a given document may add
         one new point to the plot, no new points, or multiple new points.
-    legend_keys : Iterable
-        This collection of keys will be extracted from the RunStart document
-        and shown in the legend with the corresponding values if present or
-        'None' if not present. The default includes just one item, 'scan_id'.
-        If a 'label' keyword argument is given, this paramter will be ignored
-        and that label will be used instead.
+    label_template : string
+        This string will be formatted with the RunStart document. Any missing
+        values will be filled with '?'. If the keyword argument 'label' is
+        given, this argument will be ignored.
     ax : matplotlib Axes, optional
         If None, a new Figure and Axes are created.
     **kwargs
         Passed through to :meth:`Axes.plot` to style Line object.
     """
-    def __init__(self, func, *, legend_keys=('scan_id',), ax=None, **kwargs):
+    def __init__(self, func, *, label_template='{scan_id} [{uid:.8}]', ax=None, **kwargs):
         self.func = func
         if ax is None:
             import matplotlib.pyplot as plt
@@ -196,14 +195,19 @@ class Line(DocumentRouter):
         self.line, = ax.plot([], [], **kwargs)
         self.x_data = []
         self.y_data = []
-        self.legend_keys = legend_keys
+        self.label_template = label_template
         self.label = kwargs.get('label')
 
     def start(self, doc):
         if self.label is None:
-            label = ' :: '.join([f'{key!s} {doc.get(key)!r}'
-                                 for key in self.legend_keys])
+            d = collections.defaultdict(lambda: '?')
+            d.update(**doc)
+            label = self.label_template.format_map(d)
+        else:
+            label = self.label
+        if label:
             self.line.set_label(label)
+            self.ax.legend(loc='best')
 
     def event_page(self, doc):
         x, y = self.func(doc)
