@@ -1,6 +1,5 @@
 import argparse
 from datetime import datetime
-from functools import partial
 import sys
 import time
 from . import __version__

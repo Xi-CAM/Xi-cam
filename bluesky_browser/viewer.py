@@ -71,7 +71,7 @@ class Viewer(MoveableTabContainer):
                 # Abort and fallback to Off. Would be better to fall back to
                 # previous state (which could be latest_live) but it's not
                 # clear how to know what that state was.
-                off.setChecked(True)
+                self.off.setChecked(True)
                 return
             self.set_overplot_state(OverPlotState.fixed)
             self._overplot_target = item
@@ -117,9 +117,9 @@ class Viewer(MoveableTabContainer):
             if len(entries) == 1:
                 entry, = entries
                 uid = entry().metadata['start']['uid']
-                tab_title = uid[:8] 
+                tab_title = uid[:8]
             else:
-                title = self.get_title()
+                tab_title = self.get_title()
             index = target_area.addTab(viewer, tab_title)
             self._title_to_tab[tab_title] = viewer
             target_area.setCurrentIndex(index)
@@ -133,7 +133,7 @@ class Viewer(MoveableTabContainer):
 
     def get_title(self):
         for i in itertools.count(1):
-            title = f'Group {i}' 
+            title = f'Group {i}'
             if title in self._title_to_tab:
                 continue
             return title
