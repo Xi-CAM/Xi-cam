@@ -80,10 +80,6 @@ class CentralWidget(QWidget):
             self.search_widget.search_input_widget.mark_custom_query)
 
         self.consumer_thread = ConsumerThread(zmq_address=zmq_address)
-
-        def callback(name, doc):
-            print(name, doc)
-
         self.consumer_thread.documents.connect(self.viewer.consumer)
         self.consumer_thread.start()
 

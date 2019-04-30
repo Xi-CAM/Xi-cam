@@ -1,6 +1,11 @@
+import logging
+
 from bluesky.callbacks.zmq import RemoteDispatcher
 from qtpy.QtCore import QThread
 from qtpy.QtCore import Signal
+
+
+log = logging.getLogger('bluesky_browser')
 
 
 class ConsumerThread(QThread):
@@ -11,6 +16,8 @@ class ConsumerThread(QThread):
         self.dispatcher = RemoteDispatcher(zmq_address)
 
         def callback(name, doc):
+            if name == 'start':
+                log.debug("New streaming Run: uid=%r", doc['uid'])
             self.documents.emit((name, doc))
 
         self.dispatcher.subscribe(callback)

@@ -80,7 +80,6 @@ class Viewer(MoveableTabContainer):
         self._live_run_router(*item)
 
     def route_live_stream(self, name, start_doc):
-        print('route_live_stream')
         target_area = self._containers[0]
         viewer = RunViewer()
         uid = start_doc['uid']
