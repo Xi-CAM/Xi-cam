@@ -104,7 +104,7 @@ def stream_example_data():
         Acquire data in an infinite loop and publish it.
         """
         from bluesky.callbacks.zmq import Publisher
-        from ophyd.sim import det
+        from ophyd.sim import noisy_det
         from bluesky.plans import count
         from bluesky.plan_stubs import sleep
         publisher = Publisher(f'localhost:{in_port}')
@@ -114,7 +114,7 @@ def stream_example_data():
         def infinite_plan():
             while True:
                 yield from sleep(3)
-                yield from count([det], 10, delay=0.5)
+                yield from count([noisy_det], 20, delay=0.5)
 
         try:
             RE(infinite_plan())
