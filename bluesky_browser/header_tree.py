@@ -1,7 +1,12 @@
 from collections.abc import Iterable
 from datetime import datetime
 
-from qtpy.QtWidgets import QTreeWidget, QTreeWidgetItem
+from qtpy.QtWidgets import (
+    QTreeWidget,
+    QTreeWidgetItem,
+    QWidget,
+    QVBoxLayout,
+)
 
 
 def fill_item(item, value):
@@ -76,15 +81,18 @@ class HeaderTreeWidget(QTreeWidget):
 
 class HeaderTreeFactory:
     def __init__(self, add_tab):
-        self.add_tab = add_tab
+        container = QWidget()
+        self.layout = QVBoxLayout()
+        container.setLayout(self.layout)
+        add_tab(container, 'Header')
 
     def __call__(self, name, start_doc):
         """
         Make a HeaderTreeWidget and give it the start and descriptor and stop docs.
         """
         header_tree_widget = HeaderTreeWidget()
+        self.layout.addWidget(header_tree_widget)
         header_tree_widget('start', start_doc)
-        self.add_tab(header_tree_widget, 'Header')
 
         def get_stop(name, doc):
             if name == 'stop':
