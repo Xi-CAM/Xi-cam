@@ -2,7 +2,6 @@ import logging
 from multiprocessing import Process, Queue
 from pathlib import Path
 
-
 from suitcase.jsonl import Serializer
 from bluesky import RunEngine
 from ophyd.sim import det, det4, noisy_det, motor, motor1, motor2, img
@@ -83,7 +82,10 @@ sources:
     return str(catalog_filepath)
 
 
-def stream_example_data():
+def stream_example_data(data_path):
+    data_path = Path(data_path)
+    log.debug(f"Serializing example data into directory {data_path!s}")
+
     def run_proxy(queue):
         """
         Run Proxy on random, free ports and communicate the port numbers back.
@@ -105,12 +107,21 @@ def stream_example_data():
         """
         import asyncio
         from bluesky.callbacks.zmq import Publisher
+        from suitcase.jsonl import Serializer
         from ophyd.sim import noisy_det
         from bluesky.plans import count
         from bluesky.plan_stubs import sleep
         publisher = Publisher(f'localhost:{in_port}')
         RE = RunEngine(loop=asyncio.new_event_loop())
         RE.subscribe(publisher)
+
+        def factory(name, doc):
+            serializer = Serializer(data_path / 'abc')
+            serializer('start', doc)
+            return [serializer], []
+
+        rr = RunRouter([factory])
+        RE.subscribe(rr)
 
         def infinite_plan():
             while True:
