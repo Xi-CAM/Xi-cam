@@ -2,7 +2,10 @@
 Experimental Qt-based data browser for bluesky
 """
 import ast
+import event_model
+import functools
 import itertools
+import jsonschema
 import logging
 import time
 
@@ -37,6 +40,7 @@ QLineEdit {
 }
 """
 RELOAD_INTERVAL = 11
+_validate = functools.partial(jsonschema.validate, types={'array': (list, tuple)})
 
 
 class SearchState:
@@ -67,6 +71,29 @@ class SearchState:
         self.reload_thread = ReloadThread()
         self.reload_thread.start()
 
+    def apply_search_result_row(self, entry):
+        try:
+            return self.search_result_row(entry)
+        except Exception:
+            # Either the documents in entry are not valid or the definition of
+            # search_result_row (which will be user-configurable) has failed to
+            # account for some possiblity. Figure out which situation this is.
+            try:
+                _validate(entry.metadata['start'],
+                          event_model.schemas[event_model.DocumentNames.start])
+            except jsonschema.ValidationError:
+                log.warning("Invalid RunStart Document: %r", entry.metadata['start'])
+                raise SkipRow("invalid document")
+            try:
+                _validate(entry.metadata['stop'],
+                          event_model.schemas[event_model.DocumentNames.stop])
+            except jsonschema.ValidationError:
+                log.warning("Invalid RunStop Document: %r", entry.metadata['stop'])
+                raise SkipRow("invalid document")
+            log.warning("Run with uid %s raised error with search_result_row: %r",
+                        entry.metadata['start']['uid'])
+            raise SkipRow("error is search_result_row")
+
     def __del__(self):
         self.reload_thread.terminate()
 
@@ -96,22 +123,24 @@ class SearchState:
         self.show_results()
 
     def show_results(self):
+        header_labels_set = False
         for uid, entry in itertools.islice(self._results_catalog.items(), MAX_SEARCH_RESULTS):
             if entry in self._results:
                 continue
             self._results.append(entry)
             row = []
-            for text in self.search_result_row(entry).values():
+            try:
+                row_text = self.apply_search_result_row(entry)
+            except SkipRow:
+                continue
+            if not header_labels_set:
+                # Set header labels just once.
+                self.search_results_model.setHorizontalHeaderLabels(list(row_text))
+                header_labels_set = True
+            for text in row_text.values():
                 item = QStandardItem(text or '')
                 row.append(item)
             self.search_results_model.appendRow(row)
-        try:
-            _, entry = next(iter(self._results_catalog.items()))
-        except StopIteration:
-            pass
-        else:
-            self.search_results_model.setHorizontalHeaderLabels(
-                list(self.search_result_row(entry)))
 
     def reload(self):
         log.debug("Reloaded search results")
@@ -283,3 +312,7 @@ class SearchWidget(QWidget):
         layout.addWidget(self.search_input_widget)
         layout.addWidget(self.search_results_widget)
         self.setLayout(layout)
+
+
+class SkipRow(Exception):
+    ...
