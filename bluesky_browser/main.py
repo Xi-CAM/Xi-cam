@@ -126,7 +126,7 @@ def build_app(catalog_uri, zmq_address=None):
                 'Transient Scan ID': str(start.get('scan_id', '-')),
                 'Plan Name': start.get('plan_name', '-'),
                 'Time': datetime.fromtimestamp(start['time']).strftime('%Y-%m-%d %H:%M:%S'),
-                'Exit Status': stop['exit_status']}
+                'Exit Status': '-' if stop is None else stop['exit_status']}
 
     app = QApplication([b'Bluesky Browser'])
     app.main_window = QMainWindow()
