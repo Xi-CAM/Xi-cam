@@ -99,13 +99,8 @@ class ConfigDialog(QDialog):
 
     def restore(self):
         for pluginInfo in pluginmanager.getPluginsOfCategory('SettingsPlugin'):
-            try:
-                pluginInfo.plugin_object.restore()
-            except (AttributeError, TypeError, SystemError, KeyError, ModuleNotFoundError) as ex:
-                # No settings saved
-                msg.logError(ex)
-                msg.logMessage(f'Could not restore settings for {pluginInfo.name} plugin; re-initializing settings...',
-                               level=msg.WARNING)
+            pluginInfo.plugin_object.restore()
+
         self.apply()
 
     def ok(self):
