@@ -21,8 +21,9 @@ class CentralWidget(QWidget):
     """
     Encapsulates all widgets and models. Connect signals on __init__.
     """
-    def __init__(self, *args, catalog, zmq_address,
-                 search_result_row, menuBar, **kwargs):
+    def __init__(self, *args,
+                 catalog, search_result_row, menuBar,
+                 zmq_address=None, **kwargs):
         super().__init__(*args, **kwargs)
 
         # Define models.
@@ -83,9 +84,10 @@ class CentralWidget(QWidget):
         search_state.search_results_model.valid_custom_query.connect(
             self.search_widget.search_input_widget.mark_custom_query)
 
-        self.consumer_thread = ConsumerThread(zmq_address=zmq_address)
-        self.consumer_thread.documents.connect(self.viewer.consumer)
-        self.consumer_thread.start()
+        if zmq_address:
+            self.consumer_thread = ConsumerThread(zmq_address=zmq_address)
+            self.consumer_thread.documents.connect(self.viewer.consumer)
+            self.consumer_thread.start()
 
 
 def main():
@@ -101,7 +103,7 @@ def main():
     sys.exit(app.exec_())
 
 
-def build_app(catalog_uri, zmq_address):
+def build_app(catalog_uri, zmq_address=None):
     from intake import Catalog
     catalog = Catalog(catalog_uri)
 
