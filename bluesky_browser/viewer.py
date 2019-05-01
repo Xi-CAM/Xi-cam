@@ -52,6 +52,7 @@ class Viewer(MoveableTabContainer):
         self.latest_live.setStatusTip('Attempt to overplot on the most recent live Run.')
         self.fixed = QAction('&Fixed Tab...', self)
         self.fixed.setStatusTip('Attempt to overplot on a specific tab.')
+        self.fixed.setEnabled(False)
         overplot_group.addAction(self.off)
         overplot_group.addAction(self.individual_tab)
         overplot_group.addAction(self.latest_live)
@@ -71,7 +72,7 @@ class Viewer(MoveableTabContainer):
         def set_overplot_target():
             self.set_overplot_state(OverPlotState.fixed)
             item, ok = QInputDialog.getItem(
-                self, "Select Run", "Run", tuple(self._title_to_tab), 0, False)
+                self, "Select Tab", "Tab", tuple(self._title_to_tab), 0, False)
             if not ok:
                 # Abort and fallback to Off. Would be better to fall back to
                 # previous state (which could be latest_live) but it's not
@@ -124,6 +125,7 @@ class Viewer(MoveableTabContainer):
         return [viewer.run_router], []
 
     def show_entries(self, target, entries):
+        self.fixed.setEnabled(True)
         target_area = self._containers[0]
         if not target:
             # Add new Viewer tab.
@@ -169,6 +171,8 @@ class Viewer(MoveableTabContainer):
                     del self._title_to_tab[title]
                     if title == self._overplot_target:
                         self.set_overplot_state(OverPlotState.off)
+        if not self._title_to_tab:
+            self.fixed.setEnabled(False)
 
 
 class TabbedViewingArea(MoveableTabWidget):
