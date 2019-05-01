@@ -44,7 +44,7 @@ class MetadataWidgetBase(ParameterTree):
                 group.clearChildren()
 
         try:
-            new_children = MetadataViewBase._from_dict(document)
+            new_children = MetadataView._from_dict(document)
         except Exception as ex:
             msg.logError(ex)
             print(f'failed to make children for {doctype}')
@@ -65,13 +65,13 @@ class MetadataWidgetBase(ParameterTree):
         if isinstance(metadata, Sequence):
             metadata = OrderedDict(enumerate(metadata))
 
-        metadata = MetadataViewBase._strip_reserved(metadata)
+        metadata = MetadataView._strip_reserved(metadata)
         children = []
         for key, value in metadata.items():
             subchildren = []
             paramcls = SimpleParameter
             if typemap.get(type(value), None) == 'group':
-                subchildren = MetadataViewBase._from_dict(value)
+                subchildren = MetadataView._from_dict(value)
                 key = f'{str(key)} {type(value)}'
                 value = None
                 paramcls = LazyGroupParameter
@@ -119,13 +119,13 @@ class MetadataWidget(MetadataWidgetBase):
         self.setParameters(self.header)
 
 
-class MetadataViewBase(MetadataWidgetBase):
+class MetadataView(MetadataWidgetBase):
     sigUpdate = Signal()
 
     def __init__(self, headermodel: QStandardItemModel,
                  selectionmodel: QItemSelectionModel,
                  *args, **kwargs):
-        super(MetadataViewBase, self).__init__(*args, **kwargs)
+        super(MetadataView, self).__init__(*args, **kwargs)
         self._seen = set()
         self._last_uid = None
         self._thread_id = 'MetadataView' + str(uuid.uuid4())
@@ -191,7 +191,7 @@ class HeaderBuffer:
         yield from self.buf
 
 
-class MDVConusumer(MetadataViewBase):
+class MDVConusumer(MetadataView):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._buffers = {}
