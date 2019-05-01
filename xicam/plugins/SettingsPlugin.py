@@ -45,11 +45,15 @@ class SettingsPlugin(QObject, IPlugin):
         self.fromState(pickle.loads(QSettings().value(self.name())))
 
 
+
 class ParameterSettingsPlugin(GroupParameter, SettingsPlugin):
 
     def __init__(self, icon, name: str, paramdicts: List[dict], **kwargs):
         SettingsPlugin.__init__(self, icon, name, None)
         GroupParameter.__init__(self, name=name, type='group', children=paramdicts, **kwargs)
+        self.restore()
+
+    name = SettingsPlugin.name  # must be re-overridden because of GroupParameter
 
     @property
     def widget(self):
