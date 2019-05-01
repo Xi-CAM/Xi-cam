@@ -73,7 +73,6 @@ class Viewer(MoveableTabContainer):
         self.latest_live.triggered.connect(partial(self.set_overplot_state, OverPlotState.latest_live))
 
         def set_overplot_target():
-            self.set_overplot_state(OverPlotState.fixed)
             item, ok = QInputDialog.getItem(
                 self, "Select Tab", "Tab", tuple(self._title_to_tab), 0, False)
             if not ok:
