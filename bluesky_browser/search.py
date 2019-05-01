@@ -140,11 +140,14 @@ class SearchResultsModel(QStandardItemModel):
         self.search_state = search_state
         self.since = None
         self.until = None
+        self.selected_rows = set()
 
     def emit_selected_result(self, selected, deselected):
-        rows = set(index.row() for index in selected.indexes())
+        self.selected_rows |= set(index.row() for index in selected.indexes())
+        self.selected_rows -= set(index.row() for index in deselected.indexes())
         self.selected_result.emit(
-            [self.search_state._results[row] for row in rows])
+            [self.search_state._results[row]
+             for row in sorted(self.selected_rows)])
 
     def emit_open_entries(self, target, indexes):
         rows = set(index.row() for index in indexes)
