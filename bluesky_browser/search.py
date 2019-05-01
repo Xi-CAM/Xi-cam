@@ -90,7 +90,7 @@ class SearchState:
             except jsonschema.ValidationError:
                 log.warning("Invalid RunStop Document: %r", entry.metadata['stop'])
                 raise SkipRow("invalid document")
-            log.warning("Run with uid %s raised error with search_result_row: %r",
+            log.warning("Run with uid %s raised error with search_result_row.",
                         entry.metadata['start']['uid'])
             raise SkipRow("error is search_result_row")
 
