@@ -36,9 +36,6 @@ else:
     user_plugin_dir = os.path.join(user_config_dir(appname='xicam'), 'plugins')
 site_plugin_dir = os.path.join(site_config_dir(appname='xicam'), 'plugins')
 
-# Observers will be notified when active plugins changes
-observers = []
-
 qt_is_safe = False
 if 'qtpy' in sys.modules:
     from qtpy.QtWidgets import QApplication
@@ -91,11 +88,21 @@ class XicamPluginManager(PluginManager):
         self.loadthread = None
         self.loadqueue = deque()
 
+        self.observers = []
+
+    def attach(self, callback, filter=None):
+        self.observers.append((callback, filter))
+
+    def notify(self, filter=None):
+        for callback, obsfilter in self.observers:
+            callback()
+
+
     def loading_except_slot(self, ex):
         msg.logError(ex)
         raise NameError(f'No plugin named {name} is in the queue or plugin manager.')
 
-    def getPluginByName(self, name, category="Default", timeout=5):
+    def getPluginByName(self, name, category="Default", timeout=10):
         plugin = super(XicamPluginManager, self).getPluginByName(name, category)
 
         if plugin:
@@ -164,8 +171,7 @@ class XicamPluginManager(PluginManager):
 
         self.loadPlugins(callback=self.showLoading)
 
-        for observer in observers:
-            observer.pluginsChanged()
+        self.notify()
 
     def instanciatePlugin(self, plugin_info, element):
         '''
@@ -191,8 +197,7 @@ class XicamPluginManager(PluginManager):
         msg.logMessage(f'{int(elapsed()*1000)} ms elapsed while instanciating {plugin_info.name}',
                        level=msg.INFO)
 
-        for observer in observers:  # TODO: put this on a timer system
-            threads.invoke_in_main_thread(observer.pluginsChanged)
+        self.notify()
 
     def showLoading(self, plugininfo: PluginInfo):
         # Indicate loading status
