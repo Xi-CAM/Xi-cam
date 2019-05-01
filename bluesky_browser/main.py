@@ -79,6 +79,7 @@ class CentralWidget(QWidget):
         search_state.search_results_model.open_entries.connect(
             self.viewer.show_entries)
         self.summary_widget.open.connect(self.viewer.show_entries)
+        self.viewer.tab_titles.connect(self.summary_widget.cache_tab_titles)
         search_state.search_results_model.valid_custom_query.connect(
             self.search_widget.search_input_widget.mark_custom_query)
 

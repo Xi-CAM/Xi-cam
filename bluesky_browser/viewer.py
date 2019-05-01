@@ -5,6 +5,7 @@ import itertools
 import logging
 
 from event_model import RunRouter
+from qtpy.QtCore import Signal
 from qtpy.QtWidgets import (
     QAction,
     QActionGroup,
@@ -26,6 +27,8 @@ class Viewer(MoveableTabContainer):
     """
     Contains multiple TabbedViewingAreas
     """
+    tab_titles = Signal([tuple])
+
     def __init__(self, *args, menuBar, **kwargs):
         super().__init__(*args, **kwargs)
         self._run_to_tabs = collections.defaultdict(list)
@@ -99,6 +102,7 @@ class Viewer(MoveableTabContainer):
         if not self._live_enabled:
             log.debug("Streaming Run ignored because Streaming is disabled.")
             return [], []
+        self.fixed.setEnabled(True)
         target_area = self._containers[0]
         uid = start_doc['uid']
         if self._overplot == OverPlotState.individual_tab:
@@ -108,6 +112,7 @@ class Viewer(MoveableTabContainer):
             self._title_to_tab[tab_title] = viewer
             self._tabs_from_streaming.append(viewer)
             target_area.setCurrentIndex(index)
+            self.tab_titles.emit(tuple(self._title_to_tab))
         elif self._overplot == OverPlotState.fixed:
             viewer = self._title_to_tab[self._overplot_target]
         elif self._overplot == OverPlotState.latest_live:
@@ -120,6 +125,7 @@ class Viewer(MoveableTabContainer):
                 self._title_to_tab[tab_title] = viewer
                 self._tabs_from_streaming.append(viewer)
                 target_area.setCurrentIndex(index)
+                self.tab_titles.emit(tuple(self._title_to_tab))
         self._run_to_tabs[uid].append(viewer)
         viewer.run_router('start', start_doc)
         return [viewer.run_router], []
@@ -139,6 +145,7 @@ class Viewer(MoveableTabContainer):
             index = target_area.addTab(viewer, tab_title)
             self._title_to_tab[tab_title] = viewer
             target_area.setCurrentIndex(index)
+            self.tab_titles.emit(tuple(self._title_to_tab))
         else:
             viewer = self._title_to_tab[target]
         for entry in entries:
@@ -169,6 +176,7 @@ class Viewer(MoveableTabContainer):
             for title, tab in list(self._title_to_tab.items()):
                 if tab == widget:
                     del self._title_to_tab[title]
+                    self.tab_titles.emit(tuple(self._title_to_tab))
                     if title == self._overplot_target:
                         self.set_overplot_state(OverPlotState.off)
         if not self._title_to_tab:

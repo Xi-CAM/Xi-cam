@@ -2,6 +2,7 @@ from qtpy.QtCore import Signal
 from qtpy.QtWidgets import (
     QApplication,
     QHBoxLayout,
+    QInputDialog,
     QLabel,
     QPushButton,
     QVBoxLayout,
@@ -18,9 +19,13 @@ class SummaryWidget(QWidget):
         self.open_individually_button = QPushButton('Open individually')
         self.open_individually_button.hide()
         self.open_individually_button.clicked.connect(self._open_individually)
-        self.open_overplotted_button = QPushButton('Open overplotted')
+        self.open_overplotted_button = QPushButton('Open over-plotted')
         self.open_overplotted_button.hide()
         self.open_overplotted_button.clicked.connect(self._open_overplotted)
+        self.open_overplotted_on_button = QPushButton('Add to tab...')
+        self.open_overplotted_on_button.hide()
+        self.open_overplotted_on_button.setEnabled(False)
+        self.open_overplotted_on_button.clicked.connect(self._open_overplotted_on)
         self.copy_uid_button = QPushButton('Copy UID to Clipboard')
         self.copy_uid_button.hide()
         self.copy_uid_button.clicked.connect(self._copy_uid)
@@ -33,11 +38,17 @@ class SummaryWidget(QWidget):
         layout = QVBoxLayout()
         layout.addWidget(self.open_individually_button)
         layout.addWidget(self.open_overplotted_button)
+        layout.addWidget(self.open_overplotted_on_button)
         layout.addLayout(uid_layout)
         layout.addWidget(self.streams)
         self.setLayout(layout)
 
-    # @QtCore.pyqtSlot()
+        self._tab_titles = ()
+
+    def cache_tab_titles(self, titles):
+        self._tab_titles = titles
+        self.open_overplotted_on_button.setEnabled(bool(titles))
+
     def _copy_uid(self):
         QApplication.clipboard().setText(self.uid)
 
@@ -48,6 +59,13 @@ class SummaryWidget(QWidget):
     def _open_overplotted(self):
         self.open.emit(None, self.entries)
 
+    def _open_overplotted_on(self):
+        item, ok = QInputDialog.getItem(
+            self, "Select Tab", "Tab", self._tab_titles, 0, False)
+        if not ok:
+            return
+        self.open.emit(item, self.entries)
+
     def set_entries(self, entries):
         self.entries.clear()
         self.entries.extend(entries)
@@ -57,6 +75,7 @@ class SummaryWidget(QWidget):
             self.copy_uid_button.hide()
             self.open_individually_button.hide()
             self.open_overplotted_button.hide()
+            self.open_overplotted_on_button.hide()
         elif len(entries) == 1:
             entry, = entries
             self.uid = entry.metadata['start']['uid']
@@ -64,6 +83,7 @@ class SummaryWidget(QWidget):
             self.copy_uid_button.show()
             self.open_individually_button.show()
             self.open_individually_button.setText('Open')
+            self.open_overplotted_on_button.show()
             self.open_overplotted_button.hide()
             num_events = entry.metadata.get('stop', {}).get('num_events')
             if num_events:
@@ -82,3 +102,4 @@ class SummaryWidget(QWidget):
             self.open_individually_button.setText('Open individually')
             self.open_individually_button.show()
             self.open_overplotted_button.show()
+            self.open_overplotted_on_button.show()
