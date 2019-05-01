@@ -99,7 +99,7 @@ def main():
                         default=argparse.SUPPRESS,
                         help="Launch the app with example data.")
     args = parser.parse_args()
-    app = build_app(args.catalog_uri)
+    app = build_app(args.catalog)
     sys.exit(app.exec_())
 
 
