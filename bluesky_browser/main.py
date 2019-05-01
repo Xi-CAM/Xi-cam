@@ -1,5 +1,6 @@
 import argparse
 from datetime import datetime
+import logging
 import sys
 import time
 from . import __version__
@@ -15,6 +16,9 @@ from .search import SearchWidget, SearchState
 from .summary import SummaryWidget
 from .viewer import Viewer
 from .zmq import ConsumerThread
+
+
+log = logging.getLogger('bluesky_browser')
 
 
 class CentralWidget(QWidget):
@@ -95,10 +99,16 @@ def main():
                                      epilog=f'version {__version__}')
     parser.register('action', 'demo', _DemoAction)
     parser.add_argument('catalog', type=str)
+    parser.add_argument('--verbose', '-v', action='count')
     parser.add_argument('--demo', action='demo',
                         default=argparse.SUPPRESS,
                         help="Launch the app with example data.")
     args = parser.parse_args()
+    if args.verbose:
+        handler = logging.StreamHandler()
+        handler.setLevel('DEBUG')
+        log.addHandler(handler)
+        log.setLevel('DEBUG')
     app = build_app(args.catalog)
     sys.exit(app.exec_())
 
@@ -150,8 +160,6 @@ class _DemoAction(argparse.Action):
             help=help)
 
     def __call__(self, parser, namespace, values, option_string=None):
-        import logging
-        log = logging.getLogger('bluesky_browser')
         handler = logging.StreamHandler()
         handler.setLevel('DEBUG')
         log.addHandler(handler)
