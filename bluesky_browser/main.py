@@ -87,6 +87,8 @@ class CentralWidget(QWidget):
         self.viewer.tab_titles.connect(self.summary_widget.cache_tab_titles)
         search_state.search_results_model.valid_custom_query.connect(
             self.search_widget.search_input_widget.mark_custom_query)
+        search_state.enabled = True
+        search_state.search()
 
         if zmq_address:
             self.consumer_thread = ConsumerThread(zmq_address=zmq_address)

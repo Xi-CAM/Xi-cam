@@ -50,6 +50,7 @@ class SearchState:
     def __init__(self, catalog, search_result_row):
         self.catalog = catalog
         self.search_result_row = search_result_row
+        self.enabled = False  # to block searches during initial configuration
         self.catalog_selection_model = CatalogSelectionModel()
         self.search_results_model = SearchResultsModel(self)
         self._subcatalogs = []  # to support lookup by item's positional index
@@ -57,7 +58,6 @@ class SearchState:
         self._results_catalog = None
         self.list_subcatalogs()
         self.set_selected_catalog(0)
-        self.search()
 
         search_state = self
 
@@ -112,6 +112,8 @@ class SearchState:
     def search(self):
         self.search_results_model.clear()
         self._results.clear()
+        if not self.enabled:
+            return
         query = {'time': {}}
         if self.search_results_model.since is not None:
             query['time']['$gte'] = self.search_results_model.since
