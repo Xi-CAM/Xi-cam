@@ -5,6 +5,7 @@ from xicam import plugins
 from pyqtgraph.parametertree import ParameterTree
 from pyqtgraph.parametertree.parameterTypes import GroupParameter
 import cloudpickle as pickle
+from xicam.core import msg
 
 class SettingsPlugin(QObject, IPlugin):
     def __new__(cls, *args, **kwargs):
@@ -42,7 +43,13 @@ class SettingsPlugin(QObject, IPlugin):
         QSettings().setValue(self.name(), pickle.dumps(self.toState()))
 
     def restore(self):
-        self.fromState(pickle.loads(QSettings().value(self.name())))
+        try:
+            self.fromState(pickle.loads(QSettings().value(self.name())))
+        except (AttributeError, TypeError, SystemError, KeyError, ModuleNotFoundError) as ex:
+            # No settings saved
+            msg.logError(ex)
+            msg.logMessage(f'Could not restore settings for {self.name} plugin; re-initializing settings...',
+                           level=msg.WARNING)
 
 
 
