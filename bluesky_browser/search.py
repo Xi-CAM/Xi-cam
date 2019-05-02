@@ -91,15 +91,15 @@ class SearchState:
                 _validate(entry.metadata['start'],
                           event_model.schemas[event_model.DocumentNames.start])
             except jsonschema.ValidationError:
-                log.warning("Invalid RunStart Document: %r", entry.metadata['start'])
+                log.exception("Invalid RunStart Document: %r", entry.metadata['start'])
                 raise SkipRow("invalid document")
             try:
                 _validate(entry.metadata['stop'],
                           event_model.schemas[event_model.DocumentNames.stop])
             except jsonschema.ValidationError:
-                log.warning("Invalid RunStop Document: %r", entry.metadata['stop'])
+                log.exception("Invalid RunStop Document: %r", entry.metadata['stop'])
                 raise SkipRow("invalid document")
-            log.warning("Run with uid %s raised error with search_result_row.",
+            log.exception("Run with uid %s raised error with search_result_row.",
                         entry.metadata['start']['uid'])
             raise SkipRow("error is search_result_row")
 
