@@ -107,11 +107,11 @@ class SearchState:
     def set_selected_catalog(self, item):
         name = self._subcatalogs[item]
         self.selected_catalog = self.catalog[name]
-        self.search_results_model.selected_rows.clear()
         self.search()
 
     def search(self):
         self.search_results_model.clear()
+        self.search_results_model.selected_rows.clear()
         self._results.clear()
         if not self.enabled:
             return
