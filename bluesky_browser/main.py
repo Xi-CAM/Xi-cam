@@ -101,6 +101,7 @@ def main():
                                      epilog=f'version {__version__}')
     parser.register('action', 'demo', _DemoAction)
     parser.add_argument('catalog', type=str)
+    parser.add_argument('zmq_address', type=str)
     parser.add_argument('--verbose', '-v', action='count')
     parser.add_argument('--demo', action='demo',
                         default=argparse.SUPPRESS,
@@ -111,7 +112,7 @@ def main():
         handler.setLevel('DEBUG')
         log.addHandler(handler)
         log.setLevel('DEBUG')
-    app = build_app(args.catalog)
+    app = build_app(args.catalog, args.zmq_address)
     sys.exit(app.exec_())
 
 
