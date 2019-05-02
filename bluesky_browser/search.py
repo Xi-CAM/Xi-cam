@@ -107,6 +107,7 @@ class SearchState:
     def set_selected_catalog(self, item):
         name = self._subcatalogs[item]
         self.selected_catalog = self.catalog[name]
+        self.search_results_model.selected_rows.clear()
         self.search()
 
     def search(self):
