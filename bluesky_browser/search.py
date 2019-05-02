@@ -7,6 +7,7 @@ import functools
 import itertools
 import jsonschema
 import logging
+import queue
 import time
 
 from qtpy.QtCore import Qt, Signal, QThread
@@ -58,11 +59,11 @@ class SearchState:
         self._results_catalog = None
         self.list_subcatalogs()
         self.set_selected_catalog(0)
+        self.query_queue = queue.Queue()
 
         search_state = self
 
         class ReloadThread(QThread):
-
             def run(self):
                 while True:
                     time.sleep(RELOAD_INTERVAL)
@@ -70,6 +71,14 @@ class SearchState:
 
         self.reload_thread = ReloadThread()
         self.reload_thread.start()
+
+        class ProcessQueriesThread(QThread):
+            def run(self):
+                while True:
+                    search_state.process_queries()
+
+        self.process_queries_thread = ProcessQueriesThread()
+        self.process_queries_thread.start()
 
     def apply_search_result_row(self, entry):
         try:
@@ -109,6 +118,25 @@ class SearchState:
         self.selected_catalog = self.catalog[name]
         self.search()
 
+    def process_queries(self):
+        # If there is a backlog, process only the newer query.
+        block = True
+        while True:
+            try:
+                query = self.query_queue.get_nowait()
+                block = False
+            except queue.Empty:
+                if block:
+                    query = self.query_queue.get()
+                break
+        log.debug('Submitting query %r', query)
+        t0 = time.monotonic()
+        self._results_catalog = self.selected_catalog.search(query)
+        duration = time.monotonic() - t0
+        log.debug('Query yielded %r reusults (%.3f s).',
+                  len(self._results_catalog), duration)
+        self.show_results()
+
     def search(self):
         self.search_results_model.clear()
         self.search_results_model.selected_rows.clear()
@@ -121,9 +149,7 @@ class SearchState:
         if self.search_results_model.until is not None:
             query['time']['$lt'] = self.search_results_model.until
         query.update(**self.search_results_model.custom_query)
-        self._results_catalog = self.selected_catalog.search(query)
-        log.debug('Query %r -> %d results', query, len(self._results_catalog))
-        self.show_results()
+        self.query_queue.put(query)
 
     def show_results(self):
         header_labels_set = False
