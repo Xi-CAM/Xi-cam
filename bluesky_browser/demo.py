@@ -108,11 +108,15 @@ def stream_example_data(data_path):
         import asyncio
         from bluesky.callbacks.zmq import Publisher
         from suitcase.jsonl import Serializer
-        from ophyd.sim import noisy_det
+        from ophyd.sim import noisy_det, motor1, motor2
         from bluesky.plans import count
+        from bluesky.preprocessors import SupplementalData
         from bluesky.plan_stubs import sleep
         publisher = Publisher(f'localhost:{in_port}')
         RE = RunEngine(loop=asyncio.new_event_loop())
+        sd = SupplementalData()
+        RE.preprocessors.append(sd)
+        sd.baseline.extend([motor1, motor2])
         RE.subscribe(publisher)
 
         def factory(name, doc):
