@@ -172,9 +172,10 @@ class SearchState:
             self.search_results_model.appendRow(row)
 
     def reload(self):
-        log.debug("Reloaded search results")
-        self._results_catalog.reload()
-        self.show_results()
+        if self._results_catalog is not None:
+            log.debug("Reloaded search results")
+            self._results_catalog.reload()
+            self.show_results()
 
 
 class CatalogSelectionModel(QStandardItemModel):
