@@ -101,7 +101,9 @@ def main():
                                      epilog=f'version {__version__}')
     parser.register('action', 'demo', _DemoAction)
     parser.add_argument('catalog', type=str)
-    parser.add_argument('zmq_address', type=str)
+    parser.add_argument('-z', '--zmq-address', dest='zmq_address',
+                        default=None, type=str,
+                        help='0MQ remote dispatcher address (host:port)')
     parser.add_argument('--verbose', '-v', action='count')
     parser.add_argument('--demo', action='demo',
                         default=argparse.SUPPRESS,
@@ -112,7 +114,7 @@ def main():
         handler.setLevel('DEBUG')
         log.addHandler(handler)
         log.setLevel('DEBUG')
-    app = build_app(args.catalog, args.zmq_address)
+    app = build_app(args.catalog, zmq_address=args.zmq_address)
     sys.exit(app.exec_())
 
 
