@@ -98,10 +98,10 @@ class LinePlotManager:
         for field in list(fields):
             dtype = descriptor_doc['data_keys'][field]['dtype']
             if dtype not in ('number', 'integer'):
-                fields.remove(field)
+                fields.discard(field)
             ndim = len(descriptor_doc['data_keys'][field]['shape'] or [])
             if ndim != 0:
-                fields.remove(field)
+                fields.discard(field)
 
         callbacks = []
         dim_stream, = self.dim_streams  # TODO Handle multiple dim_streams.
