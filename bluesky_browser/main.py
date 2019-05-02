@@ -124,10 +124,14 @@ def build_app(catalog_uri, zmq_address=None):
     def search_result_row(entry):
         start = entry.metadata['start']
         stop = entry.metadata['stop']
+        start_time = datetime.fromtimestamp(start['time'])
+        duration = datetime.fromtimestamp(stop['time']) - start_time
+        str_duration = str(duration)
         return {'Unique ID': start['uid'][:8],
                 'Transient Scan ID': str(start.get('scan_id', '-')),
                 'Plan Name': start.get('plan_name', '-'),
-                'Time': datetime.fromtimestamp(start['time']).strftime('%Y-%m-%d %H:%M:%S'),
+                'Start Time': start_time.strftime('%Y-%m-%d %H:%M:%S'),
+                'Duration': str_duration[:str_duration.index('.')],
                 'Exit Status': '-' if stop is None else stop['exit_status']}
 
     app = QApplication([b'Bluesky Browser'])
