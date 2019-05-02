@@ -5,7 +5,7 @@ import itertools
 import logging
 
 from event_model import RunRouter
-from qtpy.QtCore import Signal
+from qtpy.QtCore import Signal, QThread
 from qtpy.QtWidgets import (
     QAction,
     QActionGroup,
@@ -205,6 +205,7 @@ class RunViewer(QTabWidget):
         super().__init__(*args, **kwargs)
         self._entries = []
         self._uids = []
+        self._active_loaders = set()
         self.run_router = RunRouter([
             HeaderTreeFactory(self.addTab),
             BaselineFactory(self.addTab),
@@ -224,9 +225,24 @@ class RunViewer(QTabWidget):
         self._entries.append(entry)
         datasource = entry()
         self._uids.append(datasource.metadata['start']['uid'])
-        # TODO Put this on a thread.
-        for name, doc in entry().read_canonical():
-            self.run_router(name, doc)
+        entry_loader = EntryLoader(entry, self._active_loaders)
+        entry_loader.signal.connect(self.run_router)
+        entry_loader.start()
+
+
+class EntryLoader(QThread):
+    signal = Signal([str, dict])
+
+    def __init__(self, entry, loaders, *args, **kwargs):
+        self.entry = entry
+        self.loaders = loaders
+        self.loaders.add(self)  # Keep it safe from gc.
+        super().__init__(*args, **kwargs)
+
+    def run(self):
+        for name, doc in self.entry().read_canonical():
+            self.signal.emit(name, doc)
+        self.loaders.remove(self)
 
 
 class OverPlotState(enum.Enum):
