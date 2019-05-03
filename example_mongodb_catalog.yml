@@ -1,0 +1,13 @@
+plugins:                                                                                                                                                                                      
+  source:                                                                                                                                                                                     
+    - module: intake_bluesky                                                                                                                                                                  
+sources:                                                                                                                                                                                      
+  xyz:                                                                          
+    description: PLACEHOLDER
+    driver: intake_bluesky.mongo_normalized.BlueskyMongoCatalog                 
+    container: catalog                                                          
+    args:                                                                       
+      metadatastore_db: mongodb://localhost:27017/bluesky_browser_example_metadatastore
+      asset_registry_db: mongodb://localhost:27017/bluesky_browser_example_filestore
+    metadata:                                                                   
+      beamline: PLACEHOLDER
