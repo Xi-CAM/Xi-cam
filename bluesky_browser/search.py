@@ -10,7 +10,7 @@ import logging
 import queue
 import time
 
-from qtpy.QtCore import Qt, Signal, QThread
+from qtpy.QtCore import Qt, Signal, QObject, QThread
 from qtpy.QtGui import QStandardItemModel, QStandardItem
 from qtpy.QtWidgets import (
     QAbstractItemView,
@@ -44,10 +44,12 @@ RELOAD_INTERVAL = 11
 _validate = functools.partial(jsonschema.validate, types={'array': (list, tuple)})
 
 
-class SearchState:
+class SearchState(QObject):
     """
     Encapsulates CatalogSelectionModel and SearchResultsModel. Executes search.
     """
+    new_results_catalog = Signal([])
+
     def __init__(self, catalog, search_result_row):
         self.catalog = catalog
         self.search_result_row = search_result_row
@@ -62,6 +64,10 @@ class SearchState:
         self.query_queue = queue.Queue()
 
         search_state = self
+
+        super().__init__()
+
+        self.new_results_catalog.connect(self.show_results)
 
         class ReloadThread(QThread):
             def run(self):
@@ -135,7 +141,7 @@ class SearchState:
         duration = time.monotonic() - t0
         log.debug('Query yielded %r reusults (%.3f s).',
                   len(self._results_catalog), duration)
-        self.show_results()
+        self.new_results_catalog.emit()
 
     def search(self):
         self.search_results_model.clear()
@@ -153,9 +159,12 @@ class SearchState:
 
     def show_results(self):
         header_labels_set = False
+        t0 = time.monotonic()
+        counter = 0
         for uid, entry in itertools.islice(self._results_catalog.items(), MAX_SEARCH_RESULTS):
             if entry in self._results:
                 continue
+            counter += 1
             self._results.append(entry)
             row = []
             try:
@@ -170,12 +179,15 @@ class SearchState:
                 item = QStandardItem(text or '')
                 row.append(item)
             self.search_results_model.appendRow(row)
+        if counter:
+            duration = time.monotonic() - t0
+            log.debug("Displayed %d new results (%.3f s)", counter, duration)
 
     def reload(self):
         if self._results_catalog is not None:
             log.debug("Reloaded search results")
             self._results_catalog.reload()
-            self.show_results()
+            self.new_results_catalog.emit()
 
 
 class CatalogSelectionModel(QStandardItemModel):
