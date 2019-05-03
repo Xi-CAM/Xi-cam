@@ -106,7 +106,7 @@ class SearchState(QObject):
                 log.exception("Invalid RunStop Document: %r", entry.metadata['stop'])
                 raise SkipRow("invalid document")
             log.exception("Run with uid %s raised error with search_result_row.",
-                        entry.metadata['start']['uid'])
+                          entry.metadata['start']['uid'])
             raise SkipRow("error is search_result_row")
 
     def __del__(self):
