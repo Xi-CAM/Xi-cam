@@ -5,7 +5,7 @@ jsonschema
 matplotlib
 ophyd  # for demo's example data generator -- maybe should be optional?
 pyqt5>=5.8
-pyzmq==16.0.4  # pinned for bluesky
+pyzmq
 qtpy
 suitcase-jsonl
 tornado<5  # pinned for bluesky
