@@ -102,7 +102,7 @@ class XicamPluginManager(PluginManager):
         msg.logError(ex)
         raise NameError(f'No plugin named {name} is in the queue or plugin manager.')
 
-    def getPluginByName(self, name, category="Default", timeout=10):
+    def getPluginByName(self, name, category="Default", timeout=15):
         plugin = super(XicamPluginManager, self).getPluginByName(name, category)
 
         if plugin:
