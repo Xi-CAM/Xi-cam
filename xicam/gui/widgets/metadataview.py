@@ -1,5 +1,5 @@
 from pyqtgraph.parametertree import ParameterTree
-from pyqtgraph.parametertree.parameterTypes import (SimpleParameter,
+from pyqtgraph.parametertree.parameterTypes import (Parameter,
                                                     GroupParameter)
 from collections import deque, OrderedDict, defaultdict
 from qtpy.QtGui import (QStandardItem, QStandardItemModel)
@@ -20,13 +20,14 @@ typemap = {int: 'int',
            float: 'float',
            np.float64: 'float',
            str: 'str',
-           dict: 'group',
-           OrderedDict: 'group',
-           list: 'group',
+           dict: 'lazygroup',
+           OrderedDict: 'lazygroup',
+           list: 'lazygroup',
            type(None): None,
-           tuple: 'group',
+           tuple: 'lazygroup',
            datetime.datetime: 'str',
            np.float: 'float',
+           np.ndarray: 'ndarray',
            np.int: 'int'
            }
 
@@ -69,27 +70,25 @@ class MetadataWidgetBase(ParameterTree):
         children = []
         for key, value in metadata.items():
             subchildren = []
-            paramcls = SimpleParameter
-            if typemap.get(type(value), None) == 'group':
+            if typemap.get(type(value), None) in ['group', 'lazygroup']:
                 subchildren = MetadataView._from_dict(value)
                 key = f'{str(key)} {type(value)}'
                 value = None
-                paramcls = LazyGroupParameter
             try:
-                children.append(paramcls(name=str(key),
-                                         value=value,
-                                         type=typemap[type(value)],
-                                         children=subchildren,
-                                         expanded=False,
-                                         readonly=True))
+                children.append(Parameter.create(name=str(key),
+                                                 value=value,
+                                                 type=typemap[type(value)],
+                                                 children=subchildren,
+                                                 expanded=False,
+                                                 readonly=True))
             except KeyError:
                 warnings.warn(f'Failed to display a {type(value)}: {value}')
-                children.append(paramcls(name=str(key),
-                                         value=repr(value),
-                                         type=typemap[str],
-                                         children=subchildren,
-                                         expanded=False,
-                                         readonly=True))
+                children.append(Parameter.create(name=str(key),
+                                                 value=repr(value),
+                                                 type=typemap[str],
+                                                 children=subchildren,
+                                                 expanded=False,
+                                                 readonly=True))
         return children
 
     @staticmethod
