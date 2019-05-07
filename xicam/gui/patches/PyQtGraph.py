@@ -34,6 +34,13 @@ import numpy as np
 from qtpy.QtCore import QSize
 from qtpy.QtGui import QBrush, QPalette
 
+class SafeImageView(ImageView):
+    def setImage(self, img, *args, **kwargs):
+        if len(img.shape) < 2:
+            return
+        if len(img) < 4:
+            return
+        super(SafeImageView, self).setImage(np.squeeze(img), *args, **kwargs)
 
 
 class ImageParameterItem(WidgetParameterItem):
@@ -41,9 +48,9 @@ class ImageParameterItem(WidgetParameterItem):
         self.subItem = QTreeWidgetItem()
         self.addChild(self.subItem)
 
-        w = ImageView()
+        w = SafeImageView()
         w.value = lambda: w.image
-        w.setValue = lambda image: w.setImage(np.squeeze(image))
+        w.setValue = w.setImage
         w.sigChanged = None
 
         self.hideWidget = False
@@ -64,7 +71,7 @@ class ImageParameterItem(WidgetParameterItem):
         ## called when the parameter's value has changed
         ParameterItem.valueChanged(self, param, val)
         if force or not np.array_equal(val, self.widget.value()):
-            self.widget.setValue(val.astype(np.float))
+            self.widget.setValue(val)
         self.updateDisplayLabel(val)  ## always make sure label is updated, even if values match!
 
     def updateDefaultBtn(self):
