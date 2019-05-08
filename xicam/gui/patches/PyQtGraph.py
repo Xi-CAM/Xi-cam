@@ -52,6 +52,10 @@ class ImageParameterItem(WidgetParameterItem):
         w.value = lambda: w.image
         w.setValue = w.setImage
         w.sigChanged = None
+        # Shrink LUT
+        w.getHistogramWidget().setMinimumWidth(5)
+        w.ui.menuBtn.setParent(None)
+        w.ui.roiBtn.setParent(None)
 
         self.hideWidget = False
         return w
