@@ -15,6 +15,7 @@ Install the Snappy C library. On Linux:
 
 .. code-block:: bash
 
+   sudo apt-get update
    sudo apt-get install libsnappy-dev
 
 On OSX using Homebrew:
