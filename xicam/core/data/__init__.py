@@ -1,7 +1,10 @@
 from pathlib import Path
 from typing import Union, List
 
+from qtpy.QtCore import Signal, QObject
+
 from databroker.utils import ALL
+from databroker.core import Header
 from warnings import warn
 
 
@@ -52,17 +55,32 @@ class NonDBHeader(object):
 
     ### dict-like methods ###
 
-    def __init__(self, start: dict, descriptors: List[dict], events: List[dict], stop: dict):
-        self.startdoc = start
-        self.descriptordocs = descriptors
-        self.eventdocs = events
-        self.stopdoc = stop
+    def __init__(self, start: dict = None, descriptors: List[dict] = None, events: List[dict] = None,
+                 stop: dict = None):
+        self._documents = {'start': [start] if start else [],
+                           'descriptor': descriptors or [],
+                           'event': events or [],
+                           'stop': [stop] if stop else []}
+
+    def append(self, docname, doc):
+        if docname in ['start', 'stop'] and self._documents[docname]:
+            raise KeyError(f'A {docname} document already exists within this header.')
+        self._documents[docname].append(doc)
 
     def __getitem__(self, k):
         try:
             return getattr(self, k)
         except AttributeError as e:
             raise KeyError(k)
+
+    @property
+    def startdoc(self):
+        startdocs = self._documents['start']
+        return startdocs[0] if startdocs else {}
+
+    @property
+    def eventdocs(self):
+        return self._documents['event']
 
     def get(self, *args, **kwargs):
         return getattr(self, *args, **kwargs)
@@ -76,8 +94,7 @@ class NonDBHeader(object):
             yield getattr(self, k)
 
     def keys(self):
-        for k in ('start', 'descriptors', 'events', 'stop'):
-            yield k
+        yield from iter(self._documents.keys())
 
     # def to_name_dict_pair(self):
     #     ret = attr.asdict(self)
@@ -96,7 +113,7 @@ class NonDBHeader(object):
 
     @property
     def descriptors(self):
-        return self.descriptordocs
+        return self.documents('descriptors')
 
     @property
     def stream_names(self):
@@ -244,10 +261,9 @@ class NonDBHeader(object):
         >>> for name, doc in h.headers():
         ...     # do something
         """
-        yield self.start
-        yield self.descriptors
-        yield self.events
-        yield self.stop
+        for docname in self.keys():
+            for doc in self._documents[docname]:
+                yield docname, doc
 
     def stream(self, *args, **kwargs):
         warn("The 'stream' method been renamed to 'documents'. The old name "
@@ -382,7 +398,7 @@ class NonDBHeader(object):
         # ev_gen = self.db.get_events([self], stream_name=stream_name,
         #                             fields=fields, fill=fill)
 
-        for ev in self.eventdocs:
+        for ev in self._documents['event']:
             if not set(fields).isdisjoint(set(ev['data'].keys())) or not fields:
                 yield ev
 
@@ -415,35 +431,104 @@ class NonDBHeader(object):
     def meta_array(self, field=None):
         return DocMetaArray(self, field)
 
+
+class QNonDBHeader(QObject, NonDBHeader):
+    sigChanged = Signal()
+
+    def append(self, docname, doc):
+        super(QNonDBHeader, self).append(docname, doc)
+        self.sigChanged.emit()
+
+
 from functools import lru_cache
 import numpy as np
+from xicam.core import msg
 
 class DocMetaArray(object):
-    def __init__(self, header: NonDBHeader, field=None):
-        if not field:
-            fields = []
-        else:
-            fields = [field]
-        self.events = list(header.events(fields=fields))
-        if not field: field = list(self.events[0]['data'].keys())[0]
-        self.field = field
-        firstslice = self.slice(0)
-        self.dtype = firstslice.dtype
-        self.len = len(list(self.events))
-        self.shape = (self.len, *firstslice.shape)
-        self.ndim = firstslice.ndim + 1
-        self.size = firstslice.size * self.len
+    def __init__(self, header: NonDBHeader, field: str = None):
+        self._dtype = None
+        self.header = header
+        self._field = field
+        self._events = None
+        self._len = None
+        self._shape = None
+        self._size = None
+        self._ndim = None
+
+    @property
+    def events(self):
+        if not self._events:
+            self._events = list(self.header.events(fields=[self.field]))
+        return self._events
+
+    def __len__(self):
+        if not self._len:
+            self._len = len(list(self.events))
+        return self._len
+
+    @property
+    def size(self):
+        if not self._size:
+            self._size = self.slice(0).size * len(self)
+        return self._size
+
+    @property
+    def ndim(self):
+        if not self._ndim:
+            self._ndim = self.slice(0).ndim + 1
+        return self._ndim
+
+    @property
+    def shape(self):
+        if not self._shape:
+            self._shape = (len(self), *self.slice(0).shape)
+        return self._shape
+
+    @property
+    def dtype(self):
+        if not self._dtype:
+            firstslice = self.slice(0)
+            self._dtype = firstslice.dtype
+        return self._dtype
+
+    @property
+    def field(self):
+        if not self._field:
+            fields = list(self.header.fields())
+            if len(fields) > 1:
+                msg.logError(
+                    ValueError('Unspecified field for document stream with >1 field. Potentially unexpected behavior.'))
+                self.field = next(iter(self.header.eventdocs[0]['data'].keys()))
+            else:
+                self.field = fields[0]
+
+        return self._field
+
+    @field.setter
+    def field(self, value):
+        self._field = value
 
     def min(self):
+        if not self._min:
+            # cache using slice
+            self.slice(0)
         return self._min
 
     def max(self):
+        if not self._max:
+            # cache using slice
+            self.slice(0)
         return self._max
 
     def slice(self, i):
+        if not self.events:
+            return None
+
         arr = self.events[i]['data'][self.field]
         if hasattr(arr, 'asarray'):
             arr = arr.asarray()
+        if not isinstance(arr, np.ndarray):
+            arr = np.array(arr)
         self._min = arr.min()
         self._max = arr.max()
         return arr
@@ -466,8 +551,7 @@ class DocMetaArray(object):
     def view(self, _):
         return self
 
-    def __len__(self):
-        return self.len
+    # TODO: Add asarray
 
 
 class lazyfield(object):

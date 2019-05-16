@@ -1,10 +1,8 @@
 from xicam.plugins import ProcessingPlugin
 from typing import Callable, List
-from .camlinkexecutor import CamLinkExecutor
-from .localexecutor import LocalExecutor
 from collections import OrderedDict
 from xicam.core import msg, execution
-from xicam.gui.threads import QThreadFuture, QThreadFutureIterator
+from xicam.core.threads import QThreadFuture, QThreadFutureIterator
 
 
 # TODO: add debug flag that checks mutations by hashing inputs
@@ -39,10 +37,10 @@ class WorkflowProcess():
 
 
 class Workflow(object):
-    def __init__(self, name, processes=None):
+    def __init__(self, name='', processes=None):
         self._processes = []
         self._observers = set()
-        self.name = name
+        if name: self.name = name
 
         if processes:
             self._processes.extend(processes)
@@ -234,7 +232,7 @@ class Workflow(object):
         # TODO: check if data is accessible from compute resource; if not -> copy data to compute resource
         # TODO: use cam-link to mirror installation of plugin packages
 
-    def execute(self, connection, callback_slot=None, finished_slot=None, except_slot=None, default_exhandle=True,
+    def execute(self, connection=None, callback_slot=None, finished_slot=None, except_slot=None, default_exhandle=True,
                 lock=None, fill_kwargs=True, threadkey=None, **kwargs):
         """
         Execute this workflow on the specified host. Connection will be a Connection object (WIP) keeping a connection

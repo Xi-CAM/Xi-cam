@@ -4,6 +4,9 @@ import sys
 import time
 from typing import Any
 import traceback
+import threading
+from collections import defaultdict
+
 
 """
 This module provides application-wide logging tools. Unhandled exceptions are hooked into the log. Messages and progress
@@ -52,6 +55,16 @@ if 'qtpy' in sys.modules:
 
         trayicon = QSystemTrayIcon(QIcon(QPixmap(str(path('icons/xicam.gif')))))  # TODO: better icon
 
+_thread_count = 0
+
+
+def _increment_thread():
+    global _thread_count
+    _thread_count += 1
+    return _thread_count
+
+
+threadIds = defaultdict(_increment_thread)
 
 def showProgress(value: int, minval: int = 0, maxval: int = 100):
     """
@@ -68,9 +81,10 @@ def showProgress(value: int, minval: int = 0, maxval: int = 100):
 
     """
     if progressbar:
-        progressbar.show()
-        progressbar.setRange(minval, maxval)
-        progressbar.setValue(value)
+        from .. import threads  # must be a late import
+        threads.invoke_in_main_thread(progressbar.show)
+        threads.invoke_in_main_thread(progressbar.setRange, minval, maxval)
+        threads.invoke_in_main_thread(progressbar.setValue, value)
 
 
 def showBusy():
@@ -79,8 +93,9 @@ def showBusy():
 
     """
     if progressbar:
-        progressbar.show()
-        progressbar.setRange(0, 0)
+        from .. import threads  # must be a late import
+        threads.invoke_in_main_thread(progressbar.show)
+        threads.invoke_in_main_thread(progressbar.setRange, 0, 0)
 
 
 def hideBusy():
@@ -100,7 +115,7 @@ hideProgress = hideBusy
 
 def notifyMessage(*args, timeout=8000, title='', level: int = INFO):
     """
-    Same as logMessage, but displays to the subscribed statusbar with a timeout.
+    Same as logMessage, but displays to the subscribed notification system with a timeout.
 
     Parameters
     ----------
@@ -122,7 +137,9 @@ def notifyMessage(*args, timeout=8000, title='', level: int = INFO):
         if level in [ERROR, CRITICAL]: icon = trayicon.Critical
         if icon is None: raise ValueError('Invalid message level.')
         trayicon.show()
-        trayicon.showMessage(title, ''.join(args), icon, timeout)  # TODO: check if title and message are swapped?
+        from .. import threads  # must be a late import
+        threads.invoke_in_main_thread(trayicon.showMessage, title, ''.join(args), icon, timeout)
+        # trayicon.showMessage(title, ''.join(args), icon, timeout)  # TODO: check if title and message are swapped?
 
 
 def showMessage(*args, timeout=5, **kwargs):
@@ -146,7 +163,6 @@ def showMessage(*args, timeout=5, **kwargs):
         statusbar.showMessage(s, timeout * 1000)
 
     logMessage(*args, **kwargs)
-
 
 def logMessage(*args: Any, level: int = INFO, loggername: str = None, timestamp: str = None,
                suppressreprint: bool = False):
@@ -195,15 +211,19 @@ def logMessage(*args: Any, level: int = INFO, loggername: str = None, timestamp:
     # Lookup levelname from level
     levelname = levels[level]
 
+    if threading.current_thread() is threading.main_thread():
+        thread = "M"
+    else:
+        thread = str(threadIds[threading.get_ident()])
+
     # LOG IT!
-    logger.log(level, f'{timestamp} - {loggername} - {levelname} - {s}')
+    logger.log(level, f'{timestamp} - {loggername} - {levelname} - {thread} - {s}')
 
     # Also, print message to stdout
     # try:
     #     if not suppressreprint: print(f'{timestamp} - {loggername} - {levelname} - {s}')
     # except UnicodeEncodeError:
     #     print('A unicode string could not be written to console. Some logging will not be displayed.')
-
 
 def clearMessage():
     """
