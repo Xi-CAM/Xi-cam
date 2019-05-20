@@ -82,6 +82,10 @@ class NonDBHeader(object):
     def eventdocs(self):
         return self._documents['event']
 
+    @property
+    def descriptordocs(self):
+        return self._documents['descriptor']
+
     def get(self, *args, **kwargs):
         return getattr(self, *args, **kwargs)
 
