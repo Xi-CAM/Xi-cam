@@ -11,6 +11,7 @@ import numpy as np
 import warnings
 from typing import Iterable, Sequence
 from xicam.core import msg
+from xicam.core.data import NonDBHeader
 from xicam.gui.patches.PyQtGraph import CounterGroupParameter, LazyGroupParameter
 
 # TODO: map list to groupparameter
@@ -139,15 +140,16 @@ class MetadataView(MetadataWidgetBase):
         if not index.isValid():
             return
 
-        header = self.headermodel.itemFromIndex(index).header
+        header = self.headermodel.itemFromIndex(index).header  # type: NonDBHeader
 
-        if header.uid != self._last_uid:
+        if header.startdoc['uid'] != self._last_uid:
             self._seen = set()
 
         if not isinstance(header, HeaderBuffer):
-            header = HeaderBuffer(header.uid, HeaderParameter(name=header.uid), docs=header.documents())
+            headerbuffer = HeaderBuffer(header.startdoc['uid'], HeaderParameter(name=header.startdoc['uid']),
+                                        docs=header.documents())
 
-        param = header.param
+        param = headerbuffer.param
         groups = param.groups
 
         # TODO: make compatible with actively streaming header
@@ -160,8 +162,8 @@ class MetadataView(MetadataWidgetBase):
             self._seen.add(document['uid'])
             self.insert(doctype, document, groups)
 
-        if header.uid != self._last_uid:
-            self._last_uid = header.uid
+        if headerbuffer.uid != self._last_uid:
+            self._last_uid = headerbuffer.uid
             # try:
             self.setParameters(param, showTop=False)
 
