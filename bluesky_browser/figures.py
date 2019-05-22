@@ -60,7 +60,7 @@ class FigureManager:
 
     def __call__(self, name, start_doc):
         if not self.enabled:
-            return
+            return [], []
         dimensions = start_doc.get('hints', {}).get('dimensions', guess_dimensions(start_doc))
         log.debug('dimensions: %s', dimensions)
         line_plot_manager = LinePlotManager(self, dimensions)
