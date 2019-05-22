@@ -15,7 +15,7 @@ from qtpy.QtWidgets import (  # noqa
     QWidget,
     QVBoxLayout,
     )
-from traitlets.traitlets import Bool, Set
+from traitlets.traitlets import Bool, List, Set
 from traitlets.config import Configurable
 
 from .hints import hinted_fields, guess_dimensions  # noqa
@@ -23,54 +23,6 @@ from .utils import load_config
 
 
 log = logging.getLogger('bluesky_browser')
-
-
-class FigureManager(Configurable):
-    """
-    For a given Viewer, encasulate the matplotlib Figures and associated tabs.
-    """
-    enabled = Bool(True, config=True)
-    exclude_streams = Set([], config=True)
-
-    def __init__(self, add_tab):
-        self.update_config(load_config())
-        self.add_tab = add_tab
-        self._figures = {}
-
-    def get_figure(self, key, label, *args, **kwargs):
-        try:
-            return self._figures[key]
-        except KeyError:
-            return self._add_figure(key, label, *args, **kwargs)
-
-    def _add_figure(self, key, label, *args, **kwargs):
-        tab = QWidget()
-        fig, _ = plt.subplots(*args, **kwargs)
-        canvas = FigureCanvas(fig)
-        canvas.setMinimumWidth(640)
-        canvas.setParent(tab)
-        toolbar = NavigationToolbar(canvas, tab)
-        tab_label = QLabel(label)
-        tab_label.setMaximumHeight(20)
-
-        layout = QVBoxLayout()
-        layout.addWidget(tab_label)
-        layout.addWidget(canvas)
-        layout.addWidget(toolbar)
-        tab.setLayout(layout)
-        self.add_tab(tab, label)
-        self._figures[key] = fig
-        return fig
-
-    def __call__(self, name, start_doc):
-        if not self.enabled:
-            return [], []
-        dimensions = start_doc.get('hints', {}).get('dimensions', guess_dimensions(start_doc))
-        log.debug('dimensions: %s', dimensions)
-        line_plot_manager = LinePlotManager(self, dimensions)
-        rr = RunRouter([line_plot_manager])
-        rr('start', start_doc)
-        return [rr], []
 
 
 class LinePlotManager(Configurable):
@@ -320,3 +272,51 @@ class Grid(DocumentRouter):
         # Update grid_data and the plot.
         self.grid_data[x_coords, y_coords] = I_vals
         self.image.set_array(self.grid_data)
+
+
+class FigureManager(Configurable):
+    """
+    For a given Viewer, encasulate the matplotlib Figures and associated tabs.
+    """
+    factories = List([LinePlotManager], config=True)
+    enabled = Bool(True, config=True)
+    exclude_streams = Set([], config=True)
+
+    def __init__(self, add_tab):
+        self.update_config(load_config())
+        self.add_tab = add_tab
+        self._figures = {}
+
+    def get_figure(self, key, label, *args, **kwargs):
+        try:
+            return self._figures[key]
+        except KeyError:
+            return self._add_figure(key, label, *args, **kwargs)
+
+    def _add_figure(self, key, label, *args, **kwargs):
+        tab = QWidget()
+        fig, _ = plt.subplots(*args, **kwargs)
+        canvas = FigureCanvas(fig)
+        canvas.setMinimumWidth(640)
+        canvas.setParent(tab)
+        toolbar = NavigationToolbar(canvas, tab)
+        tab_label = QLabel(label)
+        tab_label.setMaximumHeight(20)
+
+        layout = QVBoxLayout()
+        layout.addWidget(tab_label)
+        layout.addWidget(canvas)
+        layout.addWidget(toolbar)
+        tab.setLayout(layout)
+        self.add_tab(tab, label)
+        self._figures[key] = fig
+        return fig
+
+    def __call__(self, name, start_doc):
+        if not self.enabled:
+            return [], []
+        dimensions = start_doc.get('hints', {}).get('dimensions', guess_dimensions(start_doc))
+        rr = RunRouter(
+            [factory(self, dimensions) for factory in self.factories])
+        rr('start', start_doc)
+        return [rr], []
