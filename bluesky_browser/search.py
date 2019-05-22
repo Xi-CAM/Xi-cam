@@ -2,6 +2,7 @@
 Experimental Qt-based data browser for bluesky
 """
 import ast
+from datetime import datetime
 import event_model
 import functools
 import itertools
@@ -10,7 +11,7 @@ import logging
 import queue
 import time
 
-from qtpy.QtCore import Qt, Signal, QObject, QThread
+from qtpy.QtCore import Qt, Signal, QThread
 from qtpy.QtGui import QStandardItemModel, QStandardItem
 from qtpy.QtWidgets import (
     QAbstractItemView,
@@ -26,6 +27,7 @@ from qtpy.QtWidgets import (
     QWidget,
     QTableView,
     )
+from .utils import load_config, ConfigurableQObject, Callable
 
 
 MAX_SEARCH_RESULTS = 100  # TODO Use fetchMore instead of a hard limit.
@@ -44,15 +46,30 @@ RELOAD_INTERVAL = 11
 _validate = functools.partial(jsonschema.validate, types={'array': (list, tuple)})
 
 
-class SearchState(QObject):
+def default_search_result_row(entry):
+    start = entry.metadata['start']
+    stop = entry.metadata['stop']
+    start_time = datetime.fromtimestamp(start['time'])
+    duration = datetime.fromtimestamp(stop['time']) - start_time
+    str_duration = str(duration)
+    return {'Unique ID': start['uid'][:8],
+            'Transient Scan ID': str(start.get('scan_id', '-')),
+            'Plan Name': start.get('plan_name', '-'),
+            'Start Time': start_time.strftime('%Y-%m-%d %H:%M:%S'),
+            'Duration': str_duration[:str_duration.index('.')],
+            'Exit Status': '-' if stop is None else stop['exit_status']}
+
+
+class SearchState(ConfigurableQObject):
     """
     Encapsulates CatalogSelectionModel and SearchResultsModel. Executes search.
     """
     new_results_catalog = Signal([])
+    search_result_row = Callable(default_search_result_row, config=True)
 
-    def __init__(self, catalog, search_result_row):
+    def __init__(self, catalog):
+        self.update_config(load_config())
         self.catalog = catalog
-        self.search_result_row = search_result_row
         self.enabled = False  # to block searches during initial configuration
         self.catalog_selection_model = CatalogSelectionModel()
         self.search_results_model = SearchResultsModel(self)

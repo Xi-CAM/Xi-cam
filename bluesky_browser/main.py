@@ -1,5 +1,4 @@
 import argparse
-from datetime import datetime
 import logging
 import sys
 import time
@@ -26,14 +25,13 @@ class CentralWidget(QWidget):
     Encapsulates all widgets and models. Connect signals on __init__.
     """
     def __init__(self, *args,
-                 catalog, search_result_row, menuBar,
+                 catalog, menuBar,
                  zmq_address=None, **kwargs):
         super().__init__(*args, **kwargs)
 
         # Define models.
         search_state = SearchState(
-            catalog=catalog,
-            search_result_row=search_result_row)
+            catalog=catalog)
 
         # Define widgets.
         self.search_widget = SearchWidget()
@@ -122,27 +120,11 @@ def build_app(catalog_uri, zmq_address=None):
     from intake import Catalog
     catalog = Catalog(catalog_uri)
 
-    # TODO Make search_result_row configurable.
-
-    def search_result_row(entry):
-        start = entry.metadata['start']
-        stop = entry.metadata['stop']
-        start_time = datetime.fromtimestamp(start['time'])
-        duration = datetime.fromtimestamp(stop['time']) - start_time
-        str_duration = str(duration)
-        return {'Unique ID': start['uid'][:8],
-                'Transient Scan ID': str(start.get('scan_id', '-')),
-                'Plan Name': start.get('plan_name', '-'),
-                'Start Time': start_time.strftime('%Y-%m-%d %H:%M:%S'),
-                'Duration': str_duration[:str_duration.index('.')],
-                'Exit Status': '-' if stop is None else stop['exit_status']}
-
     app = QApplication([b'Bluesky Browser'])
     app.main_window = QMainWindow()
     central_widget = CentralWidget(
         catalog=catalog,
         zmq_address=zmq_address,
-        search_result_row=search_result_row,
         menuBar=app.main_window.menuBar)
     app.main_window.setCentralWidget(central_widget)
     app.main_window.show()

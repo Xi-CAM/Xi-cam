@@ -9,14 +9,14 @@ from matplotlib.backends.backend_qt5agg import (
 from matplotlib.figure import Figure
 import matplotlib
 matplotlib.use('Qt5Agg')
-import matplotlib.pyplot as plt
-from qtpy.QtWidgets import (
+import matplotlib.pyplot as plt  # noqa
+from qtpy.QtWidgets import (  # noqa
     QLabel,
     QWidget,
     QVBoxLayout,
     )
 
-from .hints import hinted_fields, guess_dimensions
+from .hints import hinted_fields, guess_dimensions  # noqa
 
 
 log = logging.getLogger('bluesky_browser')
