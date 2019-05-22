@@ -55,6 +55,7 @@ setup(
             # When adding files here, remember to update MANIFEST.in as well,
             # or else they will not be included in the distribution on PyPI!
             # 'path/to/data_file',
+            'example_config.py'
             ]
         },
     install_requires=requirements,
