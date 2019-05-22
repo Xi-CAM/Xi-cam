@@ -15,23 +15,27 @@ from qtpy.QtWidgets import (  # noqa
     QWidget,
     QVBoxLayout,
     )
+from traitlets.traitlets import Bool, Set
+from traitlets.config import Configurable
 
 from .hints import hinted_fields, guess_dimensions  # noqa
+from .utils import load_config
 
 
 log = logging.getLogger('bluesky_browser')
 
 
-class FigureManager:
+class FigureManager(Configurable):
     """
     For a given Viewer, encasulate the matplotlib Figures and associated tabs.
     """
+    enabled = Bool(True, config=True)
+    exclude_streams = Set([], config=True)
+
     def __init__(self, add_tab):
+        self.update_config(load_config())
         self.add_tab = add_tab
         self._figures = {}
-        # Configuartion
-        self.enabled = True
-        self.exclude_streams = set()
 
     def get_figure(self, key, label, *args, **kwargs):
         try:
@@ -69,19 +73,20 @@ class FigureManager:
         return [rr], []
 
 
-class LinePlotManager:
+class LinePlotManager(Configurable):
     """
     Manage the line plots for one FigureManager.
     """
+    omit_single_point_plot = Bool(True, config=True)
+
     def __init__(self, fig_manager, dimensions):
+        self.update_config(load_config())
         self.fig_manager = fig_manager
         self.start_doc = None
         self.dimensions = dimensions
         self.dim_streams = set(stream for _, stream in self.dimensions)
         if len(self.dim_streams) > 1:
             raise NotImplementedError
-        # Configuration
-        self.omit_single_point_plot = True
 
     def __call__(self, name, start_doc):
         self.start_doc = start_doc
