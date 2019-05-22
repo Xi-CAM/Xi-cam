@@ -13,11 +13,16 @@ from qtpy.QtWidgets import (
     QTabWidget,
     QVBoxLayout,
 )
+from traitlets.traitlets import List
 
 from .header_tree import HeaderTreeFactory
 from .baseline import BaselineFactory
 from .figures import FigureManager
-from .utils import MoveableTabWidget, MoveableTabContainer
+from .utils import (
+    MoveableTabWidget,
+    MoveableTabContainer,
+    ConfigurableQTabWidget,
+    load_config)
 
 
 log = logging.getLogger('bluesky_browser')
@@ -197,20 +202,22 @@ class TabbedViewingArea(MoveableTabWidget):
         self.removeTab(index)
 
 
-class RunViewer(QTabWidget):
+class RunViewer(ConfigurableQTabWidget):
     """
     Contains tabs showing various view on the data from one Run.
     """
+    factories = List([HeaderTreeFactory,
+                      BaselineFactory,
+                      FigureManager], config=True)
+
     def __init__(self, *args, **kwargs):
+        self.update_config(load_config())
         super().__init__(*args, **kwargs)
         self._entries = []
         self._uids = []
         self._active_loaders = set()
-        self.run_router = RunRouter([
-            HeaderTreeFactory(self.addTab),
-            BaselineFactory(self.addTab),
-            FigureManager(self.addTab),
-            ])
+        self.run_router = RunRouter(
+            [factory(self.addTab) for factory in self.factories])
 
     @property
     def entries(self):
