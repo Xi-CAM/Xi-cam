@@ -11,19 +11,6 @@ libraries.
 Launching the demo
 ==================
 
-Install the Snappy C library. On Linux:
-
-.. code-block:: bash
-
-   sudo apt-get update
-   sudo apt-get install libsnappy-dev
-
-On OSX using Homebrew:
-
-.. code-block:: bash
-
-   brew install snappy
-
 Clone and install.
 
 .. code-block:: bash
