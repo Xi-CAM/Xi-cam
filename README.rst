@@ -33,6 +33,17 @@ date range or any custom Mongo query. Clicking on a search result pulls up a
 new tab with a more detailed view. There are two viewing areas to facilitate
 comparing data. Right-click and drag a tab to move it between areas.
 
+To customize and extend this, generate a configuration file
+
+.. code-block:: bash
+
+   bluesky-browser --generate-config
+
+and edit it. The ``bluesky-browser`` will automatically discover and apply the
+configuration file if it located in the current directory where
+``bluesky-browser`` is run. (In the future we will add a proper search path
+with other standard locations.)
+
 Intended Scope
 ==============
 
@@ -72,6 +83,4 @@ Roadmap
 * Add integration with suitcase for file export, starting with CSV.
 * Add context menus (right click) as an alternative way to do overplotting,
   etc.
-* Make the search inputs, search result row, summary viewer, and tab
-  factories configurable.
 * Support "progressive search", iteratively refining search results.

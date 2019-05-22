@@ -1,5 +1,7 @@
 import argparse
 import logging
+import os
+import pkg_resources
 import sys
 import time
 from . import __version__
@@ -98,6 +100,7 @@ def main():
     parser = argparse.ArgumentParser(description='Prototype bluesky data browser',
                                      epilog=f'version {__version__}')
     parser.register('action', 'demo', _DemoAction)
+    parser.register('action', 'generate_config', _GenerateConfigAction)
     parser.add_argument('catalog', type=str)
     parser.add_argument('-z', '--zmq-address', dest='zmq_address',
                         default=None, type=str,
@@ -106,6 +109,9 @@ def main():
     parser.add_argument('--demo', action='demo',
                         default=argparse.SUPPRESS,
                         help="Launch the app with example data.")
+    parser.add_argument('--generate-config', action='generate_config',
+                        default=argparse.SUPPRESS,
+                        help="Generate a configuration file.")
     args = parser.parse_args()
     if args.verbose:
         handler = logging.StreamHandler()
@@ -170,6 +176,34 @@ class _DemoAction(argparse.Action):
                 publisher_process.terminate()
                 sys.exit(ret)
                 parser.exit()
+
+
+class _GenerateConfigAction(argparse.Action):
+    def __init__(self,
+                 option_strings,
+                 dest=argparse.SUPPRESS,
+                 default=argparse.SUPPRESS,
+                 help=None):
+        super().__init__(
+            option_strings=option_strings,
+            dest=dest,
+            default=default,
+            nargs=0,
+            help=help)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        filepath = pkg_resources.resource_filename('bluesky_browser', 'example_config.py')
+        with open(filepath) as example_config:
+            if os.path.exists('bluesky_browser_config.py'):
+                overwrite = input("Overwite bluesky_browser_config.py? (y/n) ")
+                if overwrite != 'y':
+                    print("Quitting without writing.")
+                    parser.exit()
+                    return
+            with open('bluesky_browser_config.py', 'w') as file:
+                print("Writing default configuration file to bluesky_browser_config.py...")
+                file.write(example_config.read())
+        parser.exit()
 
 
 if __name__ == '__main__':

@@ -154,7 +154,10 @@ def superQ(QClass):
 
 
 SuperQObject = superQ(QObject)
-ConfigurableQObject = MetaQObjectHasTraits('NewBase', (Configurable, SuperQObject), {})
+ConfigurableQObject = MetaQObjectHasTraits(
+    'NewBase', (Configurable, SuperQObject), {})
+ConfigurableQTabWidget = MetaQObjectHasTraits(
+    'NewBase', (Configurable, QTabWidget, SuperQObject), {})
 
 
 class Callable(TraitType):
