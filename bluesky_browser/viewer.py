@@ -10,7 +10,6 @@ from qtpy.QtWidgets import (
     QAction,
     QActionGroup,
     QInputDialog,
-    QTabWidget,
     QVBoxLayout,
 )
 from traitlets.traitlets import List

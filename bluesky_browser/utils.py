@@ -160,8 +160,6 @@ ConfigurableQTabWidget = MetaQObjectHasTraits(
     'NewBase', (Configurable, QTabWidget, SuperQObject), {})
 
 
-
-
 class Callable(TraitType):
     """A trait which is callable.
     Notes
