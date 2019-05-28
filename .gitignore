@@ -78,3 +78,6 @@ target/
 
 #Ipython Notebook
 .ipynb_checkpoints
+
+# Bluesky-browser config file
+bluesky_browser_config.py
