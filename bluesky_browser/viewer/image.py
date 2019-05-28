@@ -72,7 +72,9 @@ class BaseImageManager(Configurable):
             fig = self.fig_manager.get_figure(
                 ('image', image_key), figure_label, 1)
 
-            ax, = fig.axes
+            # If we are resuing an existing figure, it will have a second axis
+            # for the colorbar, which we should ignore.
+            ax, *_possible_colorbar = fig.axes
 
             log.debug('plot image %s', image_key)
 
@@ -121,9 +123,16 @@ class Image(DocumentRouter):
             import matplotlib.pyplot as plt
             _, ax = plt.subplots()
         self.ax = ax
-        self.image = ax.imshow(np.zeros(shape), **kwargs)
-        self.ax.figure.colorbar(self.image, ax=self.ax)
-        self.label_template = label_template
+        if len(self.ax.images) == 1:
+            self.image, = self.ax.images
+        elif len(self.ax.images) == 0:
+            self.image = ax.imshow(np.zeros(shape), **kwargs)
+            self.ax.figure.colorbar(self.image, ax=self.ax)
+            self.label_template = label_template
+        else:
+            raise ValueError(f"Expected ax to be an axis with no image "
+                             f"artists or one image artist. Found "
+                             f"ax.images={self.ax.images}")
 
     def event_page(self, doc):
         data = self.func(doc)
