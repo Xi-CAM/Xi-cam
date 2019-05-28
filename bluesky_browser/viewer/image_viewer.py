@@ -1,3 +1,7 @@
+import logging
+
+from event_model import DocumentRouter, RunRouter
+
 from traitlets.traitlets import Bool, List, Set
 from traitlets.config import Configurable
 
@@ -6,6 +10,9 @@ from ..utils import load_config
 
 from matplotlib.colors import LogNorm
 import numpy as np
+
+
+log = logging.getLogger('bluesky_browser')
 
 
 class ImageManager(Configurable):
@@ -21,16 +28,19 @@ class ImageManager(Configurable):
         self.dim_streams = set(stream for _, stream in self.dimensions)
         if len(self.dim_streams) > 1:
             raise NotImplementedError
-
+    
     def __call__(self, name, start_doc):
         self.start_doc = start_doc
         return [], [self.subfactory]
 
     def subfactory(self, name, descriptor_doc):
         image_keys = {}
-        for key, data_key in descriptor_doc['data_keys'].items()
+        for key, data_key in descriptor_doc['data_keys'].items():
             if len(data_key['shape'] or []) == 2:
                 image_keys[key] = data_key['shape']
+
+        callbacks = []
+        #has_received_data = dict.fromkeys(image_keys, False)
 
         for image_key, shape in image_keys.items():
             figure_label = image_key
@@ -45,12 +55,15 @@ class ImageManager(Configurable):
                 """
                 Extract image data to plot out of an EventPage.
                 """
-                data = np.asarray(event_page['data'][image_key])
-                if data.ndim != 3:
-                    raise ValueError(f'The number of dimensions for the image_key "{image_key}" '
-                                     f'must be 3, but received array '
-                                     f'has {arr.ndim} number of dimensions.')
-                return data[0, ::]
+                if event_page['seq_num'][0] == 1:
+                    data = np.asarray(event_page['data'][image_key])
+                    if data.ndim != 3:
+                        raise ValueError(f'The number of dimensions for the image_key "{image_key}" '
+                                         f'must be 3, but received array '
+                                         f'has {arr.ndim} number of dimensions.')
+                    return data[0, ::]
+                else:
+                    return None
 
             image = Image(func, shape=shape, ax=ax)
             callbacks.append(image)
@@ -88,11 +101,13 @@ class Image(DocumentRouter):
             _, ax = plt.subplots()
         self.ax = ax
         self.image = ax.imshow(np.zeros(shape), **kwargs)
+        self.ax.figure.colorbar(self.image, ax=self.ax)
         self.label_template = label_template
 
     def event_page(self, doc):
         data = self.func(doc)
-        self._update(data)
+        if data is not None:
+            self._update(data)
 
     def _update(self, arr):
         """
@@ -111,7 +126,7 @@ class Image(DocumentRouter):
     def infer_clim(self, current_clim, arr):
         return (min(current_clim[0], arr.min()), max(current_clim[1], arr.max()))
 
-
+'''
 def swviewer(hdr, SorW='s', panel='right', shift=True, name=''):
     """
     SWViewer is a SAXS or WAXS image viewer which takes either the SAXS or WAXS image and plots it
@@ -614,3 +629,6 @@ add in some archiver plotting rouines, for vacuum, any old motor etc etc
 
 
 """
+'''
+
+pass

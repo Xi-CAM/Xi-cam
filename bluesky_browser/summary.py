@@ -77,6 +77,7 @@ class SummaryWidget(QWidget):
             self.open_overplotted_button.hide()
             self.open_overplotted_on_button.hide()
         elif len(entries) == 1:
+            print(f'!!! entries: {entries} {type(entries)}')
             entry, = entries
             self.uid = entry.metadata['start']['uid']
             self.uid_label.setText(self.uid[:8])
