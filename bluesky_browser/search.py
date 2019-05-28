@@ -55,7 +55,7 @@ def default_search_result_row(entry):
     else:
         duration = datetime.fromtimestamp(stop['time']) - start_time
         str_duration = str(duration)
-        str_duration[:str_duration.index('.')]
+        str_duration = str_duration[:str_duration.index('.')]
     return {'Unique ID': start['uid'][:8],
             'Transient Scan ID': str(start.get('scan_id', '-')),
             'Plan Name': start.get('plan_name', '-'),
