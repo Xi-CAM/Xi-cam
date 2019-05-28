@@ -5,6 +5,7 @@ from event_model import DocumentRouter
 from matplotlib.colors import LogNorm
 import numpy as np
 from traitlets.config import Configurable
+from traitlets.traitlets import Dict
 
 from ..utils import load_config, Callable
 
@@ -45,6 +46,7 @@ class BaseImageManager(Configurable):
     """
     Manage the image plots for one FigureManager.
     """
+    imshow_options = Dict({}, config=True)
 
     def __init__(self, fig_manager, dimensions):
         self.update_config(load_config())
@@ -76,7 +78,7 @@ class BaseImageManager(Configurable):
 
             func = functools.partial(self.func, image_key=image_key)
 
-            image = Image(func, shape=shape, ax=ax)
+            image = Image(func, shape=shape, ax=ax, **self.imshow_options)
             callbacks.append(image)
 
         for callback in callbacks:
