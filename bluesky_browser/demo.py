@@ -127,8 +127,6 @@ def run_publisher(in_port, data_path):
             yield from count([noisy_det], 20, delay=0.5)
             yield from count([random_img], 10, delay=1)
 
-    from bluesky.utils import ts_msg_hook
-    RE.msg_hook = ts_msg_hook
     try:
         RE(infinite_plan())
     finally:
