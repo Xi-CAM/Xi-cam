@@ -70,7 +70,7 @@ class LinePlotManager(Configurable):
             for x_key in x_keys:
                 figure_label = f'Scalars v {x_key}'
                 fig = self.fig_manager.get_figure(
-                    (x_key, tuple(fields)), figure_label, len(fields), sharex=True)
+                    ('line', x_key, tuple(fields)), figure_label, len(fields), sharex=True)
                 for y_key, ax in zip(fields, fig.axes):
 
                     log.debug('plot %s against %s', y_key, x_key)
