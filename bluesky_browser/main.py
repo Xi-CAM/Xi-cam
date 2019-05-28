@@ -15,7 +15,7 @@ from qtpy.QtWidgets import (
     QVBoxLayout)
 from .search import SearchWidget, SearchState
 from .summary import SummaryWidget
-from .viewer import Viewer
+from .viewer.viewer import Viewer
 from .zmq import ConsumerThread
 
 

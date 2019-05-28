@@ -19,7 +19,7 @@ from traitlets.traitlets import Bool, List, Set
 from traitlets.config import Configurable
 
 from .hints import hinted_fields, guess_dimensions  # noqa
-from .utils import load_config
+from ..utils import load_config
 
 
 log = logging.getLogger('bluesky_browser')

@@ -25,9 +25,9 @@
 #
 ## VIEWER
 #
-#from bluesky_browser.header_tree import HeaderTreeFactory
-#from bluesky_browser.baseline import BaselineFactory
-#from bluesky_browser.figures import FigureManager, LinePlotManager
+#from bluesky_browser.viewer.header_tree import HeaderTreeFactory
+#from bluesky_browser.viewer.baseline import BaselineFactory
+#from bluesky_browser.viewer.figures import FigureManager, LinePlotManager
 #
 #c.RunViewer.factories = [
 #    HeaderTreeFactory,

@@ -17,7 +17,7 @@ from traitlets.traitlets import List
 from .header_tree import HeaderTreeFactory
 from .baseline import BaselineFactory
 from .figures import FigureManager
-from .utils import (
+from ..utils import (
     MoveableTabWidget,
     MoveableTabContainer,
     ConfigurableQTabWidget,
