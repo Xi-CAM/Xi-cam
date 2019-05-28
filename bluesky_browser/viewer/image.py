@@ -65,7 +65,8 @@ class BaseImageManager(Configurable):
         callbacks = []
 
         for image_key, shape in image_keys.items():
-            figure_label = image_key
+            caption_desc = f'{" ".join(self.func.__name__.split("_")).capitalize()}'
+            figure_label = f'{caption_desc} of {image_key}'
             fig = self.fig_manager.get_figure(
                 ('image', image_key), figure_label, 1)
 
