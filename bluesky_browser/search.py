@@ -190,10 +190,10 @@ class SearchState(ConfigurableQObject):
         t0 = time.monotonic()
         counter = 0
         for uid, entry in itertools.islice(self._results_catalog.items(), MAX_SEARCH_RESULTS):
-            if entry in self._results:
+            if uid in self._results:
                 continue
             counter += 1
-            self._results.append(entry)
+            self._results.append(uid)
             row = []
             try:
                 row_text = self.apply_search_result_row(entry)
@@ -244,14 +244,21 @@ class SearchResultsModel(QStandardItemModel):
     def emit_selected_result(self, selected, deselected):
         self.selected_rows |= set(index.row() for index in selected.indexes())
         self.selected_rows -= set(index.row() for index in deselected.indexes())
-        self.selected_result.emit(
-            [self.search_state._results[row]
-             for row in sorted(self.selected_rows)])
+        entries = []
+        for row in sorted(self.selected_rows):
+            uid = self.search_state._results[row]
+            entry = self.search_state._results_catalog[uid]
+            entries.append(entry)
+        self.selected_result.emit(entries)
 
     def emit_open_entries(self, target, indexes):
         rows = set(index.row() for index in indexes)
-        self.open_entries.emit(
-            target, [self.search_state._results[row] for row in rows])
+        entries = []
+        for row in rows:
+            uid = self.search_state._results[row]
+            entry = self.search_state._results_catalog[uid]
+            entries.append(entry)
+        self.open_entries.emit(target, entries)
 
     def on_search_text_changed(self, text):
         try:
