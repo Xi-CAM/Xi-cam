@@ -1,16 +1,12 @@
 import logging
 import functools
 
-from event_model import DocumentRouter, RunRouter
-
-from traitlets.traitlets import Bool, List, Set
-from traitlets.config import Configurable
-
-from .hints import hinted_fields, guess_dimensions  # noqa
-from ..utils import load_config, Callable
-
+from event_model import DocumentRouter
 from matplotlib.colors import LogNorm
 import numpy as np
+from traitlets.config import Configurable
+
+from ..utils import load_config, Callable
 
 
 log = logging.getLogger('bluesky_browser')
@@ -23,9 +19,10 @@ def first_frame(event_page, image_key):
     if event_page['seq_num'][0] == 1:
         data = np.asarray(event_page['data'][image_key])
         if data.ndim != 3:
-            raise ValueError(f'The number of dimensions for the image_key "{image_key}" '
-                             f'must be 3, but received array '
-                             f'has {arr.ndim} number of dimensions.')
+            raise ValueError(
+                f'The number of dimensions for the image_key "{image_key}" '
+                f'must be 3, but received array '
+                f'has {data.ndim} number of dimensions.')
         return data[0, ...]
     else:
         return None
@@ -37,9 +34,10 @@ def latest_frame(event_page, image_key):
     """
     data = np.asarray(event_page['data'][image_key])
     if data.ndim != 3:
-        raise ValueError(f'The number of dimensions for the image_key "{image_key}" '
-                         f'must be 3, but received array '
-                         f'has {arr.ndim} number of dimensions.')
+        raise ValueError(
+            f'The number of dimensions for the image_key "{image_key}" '
+            f'must be 3, but received array '
+            f'has {data.ndim} number of dimensions.')
     return data[0, ...]
 
 
@@ -70,7 +68,7 @@ class BaseImageManager(Configurable):
             figure_label = image_key
             fig = self.fig_manager.get_figure(
                 ('image', image_key), figure_label, 1)
-            
+
             ax, = fig.axes
 
             log.debug('plot image %s', image_key)
@@ -134,8 +132,9 @@ class Image(DocumentRouter):
         Takes in new array data and redraws plot if they are not empty.
         """
         if arr.ndim != 2:
-            raise ValueError(f'The number of dimensions must be 2, but received array '
-                              f'has {arr.ndim} number of dimensions.')
+            raise ValueError(
+                f'The number of dimensions must be 2, but received array '
+                f'has {arr.ndim} number of dimensions.')
         self.image.set_array(arr)
         new_clim = self.infer_clim(self.image.get_clim(), arr)
         self.image.set_clim(*new_clim)
@@ -145,6 +144,7 @@ class Image(DocumentRouter):
 
     def infer_clim(self, current_clim, arr):
         return (min(current_clim[0], arr.min()), max(current_clim[1], arr.max()))
+
 
 '''
 def swviewer(hdr, SorW='s', panel='right', shift=True, name=''):
