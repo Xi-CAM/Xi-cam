@@ -72,7 +72,7 @@ class BaseImageManager(Configurable):
             fig = self.fig_manager.get_figure(
                 ('image', image_key), figure_label, 1)
 
-            # If we are resuing an existing figure, it will have a second axis
+            # If we are reusing an existing figure, it will have a second axis
             # for the colorbar, which we should ignore.
             ax, *_possible_colorbar = fig.axes
 
