@@ -9,6 +9,7 @@ import itertools
 import jsonschema
 import logging
 import queue
+import threading
 import time
 
 from qtpy.QtCore import Qt, Signal, QThread
@@ -83,6 +84,7 @@ class SearchState(ConfigurableQObject):
         self.list_subcatalogs()
         self.set_selected_catalog(0)
         self.query_queue = queue.Queue()
+        self.show_results_event = threading.Event()
 
         search_state = self
 
@@ -93,7 +95,12 @@ class SearchState(ConfigurableQObject):
         class ReloadThread(QThread):
             def run(self):
                 while True:
-                    time.sleep(RELOAD_INTERVAL)
+                    # Reload the Catalog at most every RELOAD_INTERVAL seconds.
+                    # Never reload in the middle of drawing an update to avoid
+                    # the line-painter problem.
+                    t0 = time.monotonic()
+                    search_state.show_results_event.wait()
+                    time.sleep(max(0, RELOAD_INTERVAL - (time.monotonic() - t0)))
                     search_state.reload()
 
         self.reload_thread = ReloadThread()
@@ -187,6 +194,7 @@ class SearchState(ConfigurableQObject):
 
     def show_results(self):
         header_labels_set = False
+        self.show_results_event.clear()
         t0 = time.monotonic()
         counter = 0
         for uid, entry in itertools.islice(self._results_catalog.items(), MAX_SEARCH_RESULTS):
@@ -209,12 +217,15 @@ class SearchState(ConfigurableQObject):
             self.search_results_model.appendRow(row)
         if counter:
             duration = time.monotonic() - t0
-            log.debug("Displayed %d new results (%.3f s)", counter, duration)
+            log.debug("Displayed %d new results (%.3f s).", counter, duration)
+        self.show_results_event.set()
 
     def reload(self):
+        t0 = time.monotonic()
         if self._results_catalog is not None:
-            log.debug("Reloaded search results")
             self._results_catalog.reload()
+            duration = time.monotonic() - t0
+            log.debug("Reloaded search results (%.3f s).", duration)
             self.new_results_catalog.emit()
 
 
