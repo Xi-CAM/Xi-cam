@@ -6,10 +6,7 @@ import numpy
 from matplotlib.backends.backend_qt5agg import (
     FigureCanvasQTAgg as FigureCanvas,
     NavigationToolbar2QT as NavigationToolbar)
-from matplotlib.figure import Figure
 import matplotlib
-matplotlib.use('Qt5Agg')
-import matplotlib.pyplot as plt  # noqa
 from qtpy.QtWidgets import (  # noqa
     QLabel,
     QWidget,
@@ -20,6 +17,9 @@ from traitlets.config import Configurable
 
 from .hints import hinted_fields, guess_dimensions  # noqa
 from ..utils import load_config
+
+matplotlib.use('Qt5Agg')  # must set before importing matplotlib.pyplot
+import matplotlib.pyplot as plt  # noqa
 
 
 log = logging.getLogger('bluesky_browser')

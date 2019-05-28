@@ -2,7 +2,6 @@ import logging
 import functools
 
 from event_model import DocumentRouter
-from matplotlib.colors import LogNorm
 import numpy as np
 from traitlets.config import Configurable
 from traitlets.traitlets import Dict

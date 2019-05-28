@@ -4,7 +4,7 @@ from pathlib import Path
 
 from suitcase.jsonl import Serializer
 from bluesky import RunEngine
-from ophyd.sim import det, det4, noisy_det, motor, motor1, motor2, direct_img
+from ophyd.sim import det, det4, noisy_det, motor, motor1, motor2
 from bluesky.plans import scan, count, grid_scan
 from bluesky.preprocessors import SupplementalData
 from event_model import RunRouter
