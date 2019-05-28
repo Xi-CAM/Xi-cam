@@ -15,7 +15,7 @@ log = logging.getLogger('bluesky_browser')
 
 def first_frame(event_page, image_key):
     """
-    Extract image data to plot out of an EventPage.
+    Extract the first frame image data to plot out of an EventPage.
     """
     if event_page['seq_num'][0] == 1:
         data = np.asarray(event_page['data'][image_key])
@@ -31,7 +31,7 @@ def first_frame(event_page, image_key):
 
 def latest_frame(event_page, image_key):
     """
-    Extract image data to plot out of an EventPage.
+    Extract the most recent frame of image data to plot out of an EventPage.
     """
     data = np.asarray(event_page['data'][image_key])
     if data.ndim != 3:
@@ -52,9 +52,13 @@ class BaseImageManager(Configurable):
         self.update_config(load_config())
         self.fig_manager = fig_manager
         self.start_doc = None
+        # We do not actually do anything with self.dimensions, just stashing it
+        # here in case we need it later.
         self.dimensions = dimensions
 
     def __call__(self, name, start_doc):
+        # We do not actually do anything with self.start_doc, just stashing it
+        # here in case we need it later.
         self.start_doc = start_doc
         return [], [self.subfactory]
 
@@ -74,6 +78,7 @@ class BaseImageManager(Configurable):
 
             # If we are reusing an existing figure, it will have a second axis
             # for the colorbar, which we should ignore.
+            # This is likely a bit brittle.
             ax, *_possible_colorbar = fig.axes
 
             log.debug('plot image %s', image_key)
