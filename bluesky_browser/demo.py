@@ -4,7 +4,7 @@ from pathlib import Path
 
 from suitcase.jsonl import Serializer
 from bluesky import RunEngine
-from ophyd.sim import det, det4, noisy_det, motor, motor1, motor2
+from ophyd.sim import det, det4, noisy_det, motor, motor1, motor2, img
 from bluesky.plans import scan, count, grid_scan
 from bluesky.preprocessors import SupplementalData
 from event_model import RunRouter
@@ -43,6 +43,7 @@ def generate_example_catalog(data_path):
     RE(scan([det], motor, -1, 1, motor2, -1, 1, 5))
     RE(count([noisy_det, det], 5))
     RE(count([random_img], 5))
+    RE(count([img], 5))
 
     def factory(name, doc):
         serializer = Serializer(data_path / 'xyz')

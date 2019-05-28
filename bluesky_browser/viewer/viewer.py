@@ -4,7 +4,8 @@ from functools import partial
 import itertools
 import logging
 
-from event_model import RunRouter
+from event_model import RunRouter, Filler
+from intake_bluesky.core import parse_handler_registry
 from qtpy.QtCore import Signal, QThread
 from qtpy.QtWidgets import (
     QAction,
@@ -12,14 +13,14 @@ from qtpy.QtWidgets import (
     QInputDialog,
     QVBoxLayout,
 )
-from traitlets.traitlets import List
+from traitlets.traitlets import List, Dict, DottedObjectName
 
 from .header_tree import HeaderTreeFactory
 from .baseline import BaselineFactory
 from .figures import FigureManager
 from ..utils import (
     MoveableTabWidget,
-    MoveableTabContainer,
+    ConfigurableMoveableTabContainer,
     ConfigurableQTabWidget,
     load_config)
 
@@ -27,7 +28,7 @@ from ..utils import (
 log = logging.getLogger('bluesky_browser')
 
 
-class Viewer(MoveableTabContainer):
+class Viewer(ConfigurableMoveableTabContainer):
     """
     Contains multiple TabbedViewingAreas
     """
@@ -131,6 +132,7 @@ class Viewer(MoveableTabContainer):
                 self.tab_titles.emit(tuple(self._title_to_tab))
         self._run_to_tabs[uid].append(viewer)
         viewer.run_router('start', start_doc)
+
         return [viewer.run_router], []
 
     def show_entries(self, target, entries):
@@ -208,6 +210,7 @@ class RunViewer(ConfigurableQTabWidget):
     factories = List([HeaderTreeFactory,
                       BaselineFactory,
                       FigureManager], config=True)
+    handler_registry = Dict(DottedObjectName(), config=True)
 
     def __init__(self, *args, **kwargs):
         self.update_config(load_config())
@@ -215,7 +218,9 @@ class RunViewer(ConfigurableQTabWidget):
         self._entries = []
         self._uids = []
         self._active_loaders = set()
-        self.run_router = RunRouter(
+        filler = Filler(parse_handler_registry(self.handler_registry))
+        print(self.handler_registry)
+        self.run_router = RunRouter([filler] +
             [factory(self.addTab) for factory in self.factories])
 
     @property
