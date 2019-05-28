@@ -13,12 +13,17 @@
 #    stop = entry.metadata['stop']
 #    start_time = datetime.fromtimestamp(start['time'])
 #    duration = datetime.fromtimestamp(stop['time']) - start_time
-#    str_duration = str(duration)
+#    if stop is None:
+#        str_duration = '-'
+#    else:
+#        duration = datetime.fromtimestamp(stop['time']) - start_time
+#        str_duration = str(duration)
+#        str_duration[:str_duration.index('.')]
 #    return {'Unique ID': start['uid'][:8],
 #            'Transient Scan ID': str(start.get('scan_id', '-')),
 #            'Plan Name': start.get('plan_name', '-'),
 #            'Start Time': start_time.strftime('%Y-%m-%d %H:%M:%S'),
-#            'Duration': str_duration[:str_duration.index('.')],
+#            'Duration': str_duration,
 #            'Exit Status': '-' if stop is None else stop['exit_status']}
 #
 #c.SearchState.search_result_row = search_result_row

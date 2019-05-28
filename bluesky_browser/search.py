@@ -50,13 +50,17 @@ def default_search_result_row(entry):
     start = entry.metadata['start']
     stop = entry.metadata['stop']
     start_time = datetime.fromtimestamp(start['time'])
-    duration = datetime.fromtimestamp(stop['time']) - start_time
-    str_duration = str(duration)
+    if stop is None:
+        str_duration = '-'
+    else:
+        duration = datetime.fromtimestamp(stop['time']) - start_time
+        str_duration = str(duration)
+        str_duration[:str_duration.index('.')]
     return {'Unique ID': start['uid'][:8],
             'Transient Scan ID': str(start.get('scan_id', '-')),
             'Plan Name': start.get('plan_name', '-'),
             'Start Time': start_time.strftime('%Y-%m-%d %H:%M:%S'),
-            'Duration': str_duration[:str_duration.index('.')],
+            'Duration': str_duration,
             'Exit Status': '-' if stop is None else stop['exit_status']}
 
 
@@ -106,7 +110,7 @@ class SearchState(ConfigurableQObject):
     def apply_search_result_row(self, entry):
         try:
             return self.search_result_row(entry)
-        except Exception:
+        except Exception as exc:
             # Either the documents in entry are not valid or the definition of
             # search_result_row (which will be user-configurable) has failed to
             # account for some possiblity. Figure out which situation this is.
@@ -114,17 +118,23 @@ class SearchState(ConfigurableQObject):
                 _validate(entry.metadata['start'],
                           event_model.schemas[event_model.DocumentNames.start])
             except jsonschema.ValidationError:
-                log.exception("Invalid RunStart Document: %r", entry.metadata['start'])
-                raise SkipRow("invalid document")
+                log.exception("Invalid RunStart Document: %r",
+                              entry.metadata['start'])
+                raise SkipRow("invalid document") from exc
             try:
                 _validate(entry.metadata['stop'],
                           event_model.schemas[event_model.DocumentNames.stop])
             except jsonschema.ValidationError:
-                log.exception("Invalid RunStop Document: %r", entry.metadata['stop'])
+                if entry.metadata['stop'] is None:
+                    log.debug("Run %r has no RunStop document.",
+                              entry.metadata['start']['uid'])
+                else:
+                    log.exception("Invalid RunStop Document: %r",
+                                  entry.metadata['stop'])
                 raise SkipRow("invalid document")
             log.exception("Run with uid %s raised error with search_result_row.",
                           entry.metadata['start']['uid'])
-            raise SkipRow("error is search_result_row")
+            raise SkipRow("error in search_result_row") from exc
 
     def __del__(self):
         self.reload_thread.terminate()
