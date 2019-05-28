@@ -1,4 +1,5 @@
 import logging
+import functools
 
 from event_model import DocumentRouter, RunRouter
 
@@ -6,7 +7,7 @@ from traitlets.traitlets import Bool, List, Set
 from traitlets.config import Configurable
 
 from .hints import hinted_fields, guess_dimensions  # noqa
-from ..utils import load_config
+from ..utils import load_config, Callable
 
 from matplotlib.colors import LogNorm
 import numpy as np
@@ -15,7 +16,34 @@ import numpy as np
 log = logging.getLogger('bluesky_browser')
 
 
-class ImageManager(Configurable):
+def first_frame(event_page, image_key):
+    """
+    Extract image data to plot out of an EventPage.
+    """
+    if event_page['seq_num'][0] == 1:
+        data = np.asarray(event_page['data'][image_key])
+        if data.ndim != 3:
+            raise ValueError(f'The number of dimensions for the image_key "{image_key}" '
+                             f'must be 3, but received array '
+                             f'has {arr.ndim} number of dimensions.')
+        return data[0, ...]
+    else:
+        return None
+
+
+def latest_frame(event_page, image_key):
+    """
+    Extract image data to plot out of an EventPage.
+    """
+    data = np.asarray(event_page['data'][image_key])
+    if data.ndim != 3:
+        raise ValueError(f'The number of dimensions for the image_key "{image_key}" '
+                         f'must be 3, but received array '
+                         f'has {arr.ndim} number of dimensions.')
+    return data[0, ...]
+
+
+class BaseImageManager(Configurable):
     """
     Manage the image plots for one FigureManager.
     """
@@ -25,10 +53,7 @@ class ImageManager(Configurable):
         self.fig_manager = fig_manager
         self.start_doc = None
         self.dimensions = dimensions
-        self.dim_streams = set(stream for _, stream in self.dimensions)
-        if len(self.dim_streams) > 1:
-            raise NotImplementedError
-    
+
     def __call__(self, name, start_doc):
         self.start_doc = start_doc
         return [], [self.subfactory]
@@ -40,7 +65,6 @@ class ImageManager(Configurable):
                 image_keys[key] = data_key['shape']
 
         callbacks = []
-        #has_received_data = dict.fromkeys(image_keys, False)
 
         for image_key, shape in image_keys.items():
             figure_label = image_key
@@ -51,19 +75,7 @@ class ImageManager(Configurable):
 
             log.debug('plot image %s', image_key)
 
-            def func(event_page, image_key=image_key):
-                """
-                Extract image data to plot out of an EventPage.
-                """
-                if event_page['seq_num'][0] == 1:
-                    data = np.asarray(event_page['data'][image_key])
-                    if data.ndim != 3:
-                        raise ValueError(f'The number of dimensions for the image_key "{image_key}" '
-                                         f'must be 3, but received array '
-                                         f'has {arr.ndim} number of dimensions.')
-                    return data[0, ::]
-                else:
-                    return None
+            func = functools.partial(self.func, image_key=image_key)
 
             image = Image(func, shape=shape, ax=ax)
             callbacks.append(image)
@@ -72,6 +84,14 @@ class ImageManager(Configurable):
             callback('start', self.start_doc)
             callback('descriptor', descriptor_doc)
         return callbacks
+
+
+class FirstFrameImageManager(BaseImageManager):
+    func = Callable(first_frame, config=True)
+
+
+class LatestFrameImageManager(BaseImageManager):
+    func = Callable(latest_frame, config=True)
 
 
 class Image(DocumentRouter):
