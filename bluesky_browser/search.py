@@ -137,7 +137,8 @@ class SearchState(ConfigurableQObject):
             raise SkipRow("error in search_result_row") from exc
 
     def __del__(self):
-        self.reload_thread.terminate()
+        if hasattr(self.reload_thread):
+            self.reload_thread.terminate()
 
     def list_subcatalogs(self):
         self._subcatalogs.clear()
