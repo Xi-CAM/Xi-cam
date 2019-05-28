@@ -9,3 +9,4 @@ pyzmq
 qtpy
 suitcase-jsonl
 tornado<5  # pinned for bluesky
+traitlets
