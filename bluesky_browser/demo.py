@@ -19,7 +19,7 @@ det4.kind = 'hinted'
 
 log = logging.getLogger('bluesky_browser')
 
-random_img = SynSignal(func=lambda: np.random.random((10, 10)), name='random_img')
+random_img = SynSignal(func=lambda: np.random.random((5, 10, 10)), name='random_img')
 
 
 def generate_example_catalog(data_path):

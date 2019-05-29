@@ -18,12 +18,18 @@ def first_frame(event_page, image_key):
     """
     if event_page['seq_num'][0] == 1:
         data = np.asarray(event_page['data'][image_key])
-        if data.ndim != 3:
+        if data.ndim == 3:
+            # Axes are event axis, y, x. Slice out the first event.
+            return data[0, ...]
+        elif data.ndim == 4:
+            # Axes are event axis, 'num_images' stack, y, x.
+            # Slice out the first event and sum along 'num_images' stack.
+            return data[0, ...].sum(0)
+        else:
             raise ValueError(
                 f'The number of dimensions for the image_key "{image_key}" '
-                f'must be 3, but received array '
+                f'must be 3 or 4, but received array '
                 f'has {data.ndim} number of dimensions.')
-        return data[0, ...]
     else:
         return None
 
@@ -33,12 +39,18 @@ def latest_frame(event_page, image_key):
     Extract the most recent frame of image data to plot out of an EventPage.
     """
     data = np.asarray(event_page['data'][image_key])
-    if data.ndim != 3:
+    if data.ndim == 3:
+        # Axes are event axis, y, x. Slice out the first event.
+        return data[0, ...]
+    elif data.ndim == 4:
+        # Axes are event axis, 'num_images' stack, y, x.
+        # Slice out the first event and sum along 'num_images' stack.
+        return data[0, ...].sum(0)
+    else:
         raise ValueError(
             f'The number of dimensions for the image_key "{image_key}" '
             f'must be 3, but received array '
             f'has {data.ndim} number of dimensions.')
-    return data[0, ...]
 
 
 class BaseImageManager(Configurable):
@@ -64,8 +76,11 @@ class BaseImageManager(Configurable):
     def subfactory(self, name, descriptor_doc):
         image_keys = {}
         for key, data_key in descriptor_doc['data_keys'].items():
-            if len(data_key['shape'] or []) == 2:
+            ndim = len(data_key['shape'] or [])
+            if ndim == 2:
                 image_keys[key] = data_key['shape']
+            elif ndim == 3:
+                image_keys[key] = data_key['shape'][1:]
 
         callbacks = []
 
