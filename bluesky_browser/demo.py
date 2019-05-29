@@ -115,7 +115,7 @@ def run_publisher(in_port, data_path):
     RE.subscribe(publisher)
 
     def factory(name, doc):
-        serializer = Serializer(data_path / 'abc')
+        serializer = Serializer(data_path / 'abc', flush=True)
         serializer('start', doc)
         return [serializer], []
 
