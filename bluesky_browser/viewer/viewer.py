@@ -218,9 +218,13 @@ class RunViewer(ConfigurableQTabWidget):
         self._entries = []
         self._uids = []
         self._active_loaders = set()
-        filler = Filler(parse_handler_registry(self.handler_registry))
-        print(self.handler_registry)
-        self.run_router = RunRouter([filler] +
+
+        def filler_factory(name, doc):
+            filler = Filler(parse_handler_registry(self.handler_registry))
+            filler('start', doc)
+            return [filler], []
+
+        self.run_router = RunRouter([filler_factory] +
             [factory(self.addTab) for factory in self.factories])
 
     @property
