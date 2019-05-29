@@ -16,6 +16,7 @@ from traitlets.traitlets import Bool, List, Set
 from traitlets.config import Configurable
 
 from .hints import hinted_fields, guess_dimensions  # noqa
+from .image import LatestFrameImageManager
 from ..utils import load_config
 
 matplotlib.use('Qt5Agg')  # must set before importing matplotlib.pyplot
@@ -278,7 +279,10 @@ class FigureManager(Configurable):
     """
     For a given Viewer, encasulate the matplotlib Figures and associated tabs.
     """
-    factories = List([LinePlotManager], config=True)
+    factories = List([
+        LinePlotManager,
+        LatestFrameImageManager],
+        config=True)
     enabled = Bool(True, config=True)
     exclude_streams = Set([], config=True)
 
