@@ -70,6 +70,7 @@ class SearchState(ConfigurableQObject):
     Encapsulates CatalogSelectionModel and SearchResultsModel. Executes search.
     """
     new_results_catalog = Signal([])
+    new_results_catalog = Signal([])
     search_result_row = Callable(default_search_result_row, config=True)
 
     def __init__(self, catalog):
@@ -85,6 +86,7 @@ class SearchState(ConfigurableQObject):
         self.set_selected_catalog(0)
         self.query_queue = queue.Queue()
         self.show_results_event = threading.Event()
+        self.reload_event = threading.Event()
 
         search_state = self
 
@@ -95,12 +97,16 @@ class SearchState(ConfigurableQObject):
         class ReloadThread(QThread):
             def run(self):
                 while True:
-                    # Reload the Catalog at most every RELOAD_INTERVAL seconds.
-                    # Never reload in the middle of drawing an update to avoid
-                    # the line-painter problem.
                     t0 = time.monotonic()
+                    # Never reload until the last reload finished being
+                    # displayed.
                     search_state.show_results_event.wait()
-                    time.sleep(max(0, RELOAD_INTERVAL - (time.monotonic() - t0)))
+                    # Wait for RELOAD_INTERVAL to pass or until we are poked,
+                    # whichever happens first.
+                    search_state.reload_event.wait(
+                        max(0, RELOAD_INTERVAL - (time.monotonic() - t0)))
+                    search_state.reload_event.clear()
+                    # Reload the catalog to show any new results.
                     search_state.reload()
 
         self.reload_thread = ReloadThread()
@@ -113,6 +119,10 @@ class SearchState(ConfigurableQObject):
 
         self.process_queries_thread = ProcessQueriesThread()
         self.process_queries_thread.start()
+
+    def request_reload(self):
+        self._results_catalog.force_reload()
+        self.reload_event.set()
 
     def apply_search_result_row(self, entry):
         try:

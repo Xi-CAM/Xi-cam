@@ -91,8 +91,16 @@ class CentralWidget(QWidget):
         search_state.search()
 
         if zmq_address:
+
+            def request_reload_after_delay(uid):
+                DELAY = 2  # Wait for RunStart to be available in Catalog.
+                time.sleep(DELAY)
+                search_state.request_reload()
+
             self.consumer_thread = ConsumerThread(zmq_address=zmq_address)
             self.consumer_thread.documents.connect(self.viewer.consumer)
+            self.consumer_thread.new_run_uid.connect(
+                request_reload_after_delay)
             self.consumer_thread.start()
 
 
