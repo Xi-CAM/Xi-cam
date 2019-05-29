@@ -224,7 +224,8 @@ class RunViewer(ConfigurableQTabWidget):
             filler('start', doc)
             return [filler], []
 
-        self.run_router = RunRouter([filler_factory] +
+        self.run_router = RunRouter(
+            [filler_factory] +
             [factory(self.addTab) for factory in self.factories])
 
     @property

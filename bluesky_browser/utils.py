@@ -2,7 +2,7 @@ import inspect
 
 from PyQt5.QtGui import QCursor, QDrag, QPixmap, QRegion
 from PyQt5.QtWidgets import QWidget, QTabWidget
-from PyQt5.QtCore import Qt, QMimeData, QObject, QPoint, QThread
+from PyQt5.QtCore import Qt, QMimeData, QObject, QPoint
 from traitlets import HasTraits, TraitType
 from traitlets.config.loader import (PyFileConfigLoader, ConfigFileNotFound,
                                      Config)
