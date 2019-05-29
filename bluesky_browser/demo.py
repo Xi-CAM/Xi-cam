@@ -9,7 +9,8 @@ from bluesky.plans import scan, count, grid_scan
 from bluesky.preprocessors import SupplementalData
 from event_model import RunRouter
 import intake_bluesky.jsonl  # noqa; to force intake registration
-
+from ophyd.sim import SynSignal
+import numpy as np
 
 det.kind = 'hinted'
 noisy_det.kind = 'hinted'
@@ -17,6 +18,8 @@ det4.kind = 'hinted'
 
 
 log = logging.getLogger('bluesky_browser')
+
+random_img = SynSignal(func=lambda: np.random.random((10, 10)), name='random_img')
 
 
 def generate_example_catalog(data_path):
@@ -39,7 +42,8 @@ def generate_example_catalog(data_path):
     RE(grid_scan([det4], motor1, -1, 1, 4, motor2, -1, 1, 7, False))
     RE(scan([det], motor, -1, 1, motor2, -1, 1, 5))
     RE(count([noisy_det, det], 5))
-    # RE(count([img], 5))
+    RE(count([random_img], 5))
+    RE(count([img], 5))
 
     def factory(name, doc):
         serializer = Serializer(data_path / 'xyz')
@@ -122,6 +126,7 @@ def run_publisher(in_port, data_path):
         while True:
             yield from sleep(3)
             yield from count([noisy_det], 20, delay=0.5)
+            yield from count([random_img], 10, delay=1)
 
     try:
         RE(infinite_plan())

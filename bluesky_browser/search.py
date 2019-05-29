@@ -174,7 +174,7 @@ class SearchState(ConfigurableQObject):
         t0 = time.monotonic()
         self._results_catalog = self.selected_catalog.search(query)
         duration = time.monotonic() - t0
-        log.debug('Query yielded %r reusults (%.3f s).',
+        log.debug('Query yielded %r results (%.3f s).',
                   len(self._results_catalog), duration)
         self.new_results_catalog.emit()
 
