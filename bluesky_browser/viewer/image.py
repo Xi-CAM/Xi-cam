@@ -49,7 +49,7 @@ def latest_frame(event_page, image_key):
     else:
         raise ValueError(
             f'The number of dimensions for the image_key "{image_key}" '
-            f'must be 3, but received array '
+            f'must be 3 for event page {event_page}, but received array '
             f'has {data.ndim} number of dimensions.')
 
 
