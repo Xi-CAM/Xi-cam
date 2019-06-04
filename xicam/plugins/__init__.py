@@ -78,8 +78,7 @@ class XicamPluginManager(PluginManager):
 
         # Places to look for plugins
         self.plugindirs = [user_plugin_dir,
-                           site_plugin_dir,
-                           venvs.current_environment] \
+                           site_plugin_dir] \
                           + list(xicam.__path__)
         self.setPluginPlaces(self.plugindirs)
         msg.logMessage('plugindirectories:', *self.plugindirs)
