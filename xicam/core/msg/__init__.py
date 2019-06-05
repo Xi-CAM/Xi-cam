@@ -1,19 +1,19 @@
 import inspect
 import logging
 import sys
+import os
 import time
 from typing import Any
 import traceback
 import threading
 from collections import defaultdict
-
+from xicam.core import paths
 
 """
 This module provides application-wide logging tools. Unhandled exceptions are hooked into the log. Messages and progress
 can be displayed in the main Xi-cam window using showProgress and showMessage.
 
 """
-
 
 # TODO: Add logging for images
 # TODO: Add icons in GUI reflection
@@ -22,10 +22,12 @@ can be displayed in the main Xi-cam window using showProgress and showMessage.
 # GUI widgets are registered into these slots to display messages/progress
 statusbar = None
 progressbar = None
-logging.basicConfig(filename='out.log', level=logging.DEBUG)
+os.makedirs(os.path.join(paths.user_cache_dir, 'logs'), exist_ok=True)
+logging.basicConfig(filename=os.path.join(paths.user_cache_dir, 'logs', 'out.log'), level=logging.DEBUG)
 
 blacklist = ['fabio.edfimage', 'ipykernel.inprocess.ipkernel', 'pyFAI.azimuthalIntegrator', 'traitlets',
-             'fabio.openimage', 'fabio.fabioutils', 'PyQt5.uic.uiparser', 'yapsy']
+             'fabio.openimage', 'fabio.fabioutils', 'PyQt5.uic.uiparser', 'yapsy', 'caproto.threading.client',
+             'caproto._circuit', 'caproto']
 
 for modname in blacklist:
     logging.getLogger(modname).setLevel(logging.ERROR)
@@ -65,6 +67,7 @@ def _increment_thread():
 
 
 threadIds = defaultdict(_increment_thread)
+
 
 def showProgress(value: int, minval: int = 0, maxval: int = 100):
     """
@@ -164,6 +167,7 @@ def showMessage(*args, timeout=5, **kwargs):
 
     logMessage(*args, **kwargs)
 
+
 def logMessage(*args: Any, level: int = INFO, loggername: str = None, timestamp: str = None,
                suppressreprint: bool = False):
     """
@@ -191,7 +195,7 @@ def logMessage(*args: Any, level: int = INFO, loggername: str = None, timestamp:
     s = ' '.join(map(str, args))
 
     # ATTENTION: loggername is 'intelligently' determined with inspect. You probably want to leave it None.
-    if loggername is not None:
+    if not loggername:
         loggername = inspect.stack()[1][3]
     logger = logging.getLogger(loggername)
     logger.setLevel(DEBUG)
@@ -224,6 +228,7 @@ def logMessage(*args: Any, level: int = INFO, loggername: str = None, timestamp:
     #     if not suppressreprint: print(f'{timestamp} - {loggername} - {levelname} - {s}')
     # except UnicodeEncodeError:
     #     print('A unicode string could not be written to console. Some logging will not be displayed.')
+
 
 def clearMessage():
     """
