@@ -11,6 +11,8 @@ Welcome to Xi-cam's documentation!
    :caption: Contents:
 
    intro
+   ezPlugin
+   pluginDev
    api
 
 
