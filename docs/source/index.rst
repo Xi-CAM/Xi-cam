@@ -10,6 +10,8 @@ Welcome to Xi-cam's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   intro
+   api
 
 
 Indices and tables

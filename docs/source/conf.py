@@ -13,6 +13,8 @@
 # import os
 # import sys
 # sys.path.insert(0, os.path.abspath('.'))
+from recommonmark.transform import AutoStructify
+from sphinx.ext import autodoc
 
 
 # -- Project information -----------------------------------------------------
@@ -56,3 +58,41 @@ html_theme = 'alabaster'
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+
+
+class SimpleClassDocumenter(autodoc.ClassDocumenter):
+   objtype = "simpleclass"
+   content_indent = ""
+   
+   def add_directive_header(self, sig):
+      pass
+
+
+class SimpleFunctionDocumenter(autodoc.FunctionDocumenter):
+   objtype = "simplefunction"
+   content_indent = ""
+   
+   def add_directive_header(self, sig):
+      pass
+
+
+def process_signature(app, what, name, obj, options, signature, return_annotation):
+   print("RET: {}", return_annotation)
+   print("app: {}\nwhat: {}\nname: {}\nobj: {}\noptions: {}\nsignature: {}",
+      app, what, name, obj, options, signature)
+
+def process_docstring(app, what, name, obj, options, lines):
+   for line in lines:
+      print("LINE: {}", line)
+
+def setup(app):
+    app.add_config_value('recommonmark_config', {
+        'enable_eval_rst': True
+        }, True)
+    app.add_transform(AutoStructify)
+   #  app.connect('autodoc-process-signature', process_signature)
+   #  app.connect('autodoc-process-docstring', process_docstring)
+   #  from sphinx.ext.autodoc import cut_lines
+   #  app.connect('autodoc-process-docstring', cut_lines(4, what=['class']))
+    app.add_autodocumenter(SimpleClassDocumenter)
+    app.add_autodocumenter(SimpleFunctionDocumenter)
