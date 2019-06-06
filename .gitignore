@@ -7,4 +7,5 @@
 *.tif
 build/
 dist/
+docs/build/
 xicam.egg_info/
