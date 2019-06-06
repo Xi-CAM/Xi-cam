@@ -31,6 +31,9 @@ release = '0.1.0'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+   'numpydoc',
+   'recommonmark',
+   'sphinx.ext.autodoc',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
