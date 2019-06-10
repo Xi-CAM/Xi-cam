@@ -1,6 +1,6 @@
 from collections import OrderedDict
 from enum import Enum
-from typing import Dict, List
+from typing import Dict, List, Union
 from xicam.core.data import NonDBHeader
 from qtpy.QtGui import *
 
@@ -45,12 +45,52 @@ class GUIPlugin(IPlugin):
 
 
 class PanelState(Enum):
+    """
+    Represents the state of a panel (widget).
+
+    """
     Disabled = 1
     Defaulted = 2
     Customized = 3
 
 
 class GUILayout(object):
+    """
+    Represents a layout of dockable widgets in a 3x3 grid.
+
+    The parameters can either be a PanelState value or a QWidget object. Note
+    that only the `center` parameter is required; the other parameters default
+    to `PanelState.Defaulted`. The default behavior of a `PanelState.Defaulted`
+    widget is to be hidden.
+
+    Parameters
+    ----------
+    center : Union[QWidget, PanelState]
+        The center widget
+    left : Union[QWidget, PanelState], optional
+        The left widget
+    right : Union[QWidget, PanelState], optional
+        The right widget
+    bottom : Union[QWidget, PanelState], optional
+        The bottom widget
+    top : Union[QWidget, PanelState], optional
+        The top widget
+    lefttop : Union[QWidget, PanelState], optional
+        The top-left widget
+    righttop : Union[QWidget, PanelState], optional
+        The top-right widget
+    leftbottom : Union[QWidget, PanelState], optional
+        The bottom-left widget
+    rightbottom : Union[QWidget, PanelState], optional
+        The bottom-right widget
+
+    Notes
+    -----
+    For an example of how this class can be used, see the xicam.gui
+    XicamMainWindow class.
+
+    """
+
     def __init__(self, center, left=PanelState.Defaulted, right=PanelState.Defaulted, bottom=PanelState.Defaulted,
                  top=PanelState.Defaulted, lefttop=PanelState.Defaulted, righttop=PanelState.Defaulted,
                  leftbottom=PanelState.Defaulted, rightbottom=PanelState.Defaulted):
