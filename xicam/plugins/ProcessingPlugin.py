@@ -31,6 +31,7 @@ class ProcessingPlugin(IPlugin):
     Notes
     -----
     Must override the `evaluate()` method in derived classes.
+
     """
     isSingleton = False
 
@@ -81,6 +82,7 @@ class ProcessingPlugin(IPlugin):
     def _getresult(self) -> Dict:
         """
         Evaluates the plugin and returns its outputs.
+
         """
         self.evaluate()
         outputs = {}
@@ -98,6 +100,7 @@ class ProcessingPlugin(IPlugin):
         kwargs
             Keywords corresponding to the name of an input variable, and the
             value to set the input variable's value to
+
         """
         for k, v in kwargs.items():
             if k in self.inputs:
@@ -171,6 +174,7 @@ class ProcessingPlugin(IPlugin):
     def setParameterValue(self, name, param, value): #TODO param is unused
         """
         Sets the `name` parameter's value to the passed value.
+
         """
         if value is not None:
             self.inputs[name].value = value
@@ -199,6 +203,7 @@ class ProcessingPlugin(IPlugin):
         -----
         The `_param`, `_workflow`, and `parameter` attributes are not
         serialized.
+
         """
         d = self.__dict__.copy()
         print('reduction:', d)
@@ -213,6 +218,7 @@ class _ProcessingPluginRetriever(object):
     When called with the containing class as the first argument,
     and the name of the nested class as the second argument,
     returns an instance of the nested class.
+
     """
 
     def __call__(self, pluginname, internaldata):
@@ -240,6 +246,7 @@ def EZProcessingPlugin(method: Callable) -> Type[ProcessingPlugin]:
 
     Creates a new derived ProcessingPlugin type, where passed method's name
     is used as the new type's name.
+
     """
 
     def __new__(cls, *args, **kwargs):
@@ -291,6 +298,7 @@ class Var(object):
     conn_type
     map_inputs
     subscriptions
+
     """
 
     def __init__(self):
@@ -333,6 +341,7 @@ class Input(Var):
     limits : Tuple[Num, Num]
     fixed : bool
     fixable : bool
+
     """
 
     def __init__(self, name='', description='', default=None, type=None, units=None, min=None, max=None, limits=None,
@@ -413,6 +422,7 @@ class Output(Var):
         Defines the units of the variable (the default is None).
     args
     kwargs
+
     """
 
     def __init__(self, name='', description='', type=None, units=None, *args, **kwargs):
