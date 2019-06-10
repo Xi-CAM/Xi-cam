@@ -4,11 +4,34 @@ from xicam.core import msg
 from distributed.protocol.serialize import serialize
 from functools import partial
 import numpy as np
+from typing import Callable, Dict, Type
+from collections import namedtuple
 from typing import List
 
 # TODO allow outputs/inputs to connect
 
+
 class ProcessingPlugin(IPlugin):
+    """
+    A ProcessingPlugin defines a plugin that can process inputs and/or outputs
+    in a workflow.
+
+    A ProcessingPlugin can take in input variables and operate on the inputs via
+    the `evaluate()` method. The evaluation can occur in-place and modify the
+    input variables, or create output variables.
+
+    Attributes
+    ----------
+    disabled : bool
+        Disables the processing plugin (the default is 'False').
+    name : str
+        Name of the processing plugin (the default is the name of the class).
+    hints : List
+
+    Notes
+    -----
+    Must override the `evaluate()` method in derived classes.
+    """
     isSingleton = False
 
     def __new__(cls, *args, **kwargs):
@@ -55,32 +78,48 @@ class ProcessingPlugin(IPlugin):
     def evaluate(self):
         raise NotImplementedError
 
-    def _getresult(self):
+    def _getresult(self) -> Dict:
+        """
+        Evaluates the plugin and returns its outputs.
+        """
         self.evaluate()
-        return tuple(output.value for output in self.outputs.values())
+        outputs = {}
+        for k, v in self.outputs.items():
+            outputs[k] = v
+        return outputs
 
-    def asfunction(self, *args, **kwargs):
-        for input, arg in zip(self.inputs.values(), args):
-            input.value = arg
+    def asfunction(self, **kwargs) -> Dict:
+        """
+        Sets the values of any inputs via `kwargs`, evaluates, then returns
+        the output variables.
+
+        Parameters
+        ----------
+        kwargs
+            Keywords corresponding to the name of an input variable, and the
+            value to set the input variable's value to
+        """
         for k, v in kwargs.items():
             if k in self.inputs:
                 self.inputs[k].value = v
         return self._getresult()
 
     @property
-    def inputs(self):
+    def inputs(self) -> Dict:
         if not self._inputs:
             self._inputs = {name: param for name, param in self.__dict__.items() if isinstance(param, Input)}
+        print(f'\n\tself.__dict__.items(): {self.__dict__.items()}')
+        print(f'\n\tself._inputs: {self._inputs}')
         return self._inputs
 
     @property
-    def outputs(self):
+    def outputs(self) -> Dict:
         if not self._outputs:
             self._outputs = {name: param for name, param in self.__dict__.items() if isinstance(param, Output)}
         return self._outputs
 
     @property
-    def inverted_vars(self):
+    def inverted_vars(self) -> Dict:
         if not self._inverted_vars:
             self._inverted_vars = {param: name for name, param in self.__class__.__dict__.items() if
                                    isinstance(param, (Input, Output))}
@@ -88,6 +127,13 @@ class ProcessingPlugin(IPlugin):
 
     @property
     def parameter(self):
+        """
+
+        Returns
+        -------
+            pyqtgraph Parameter #TODO
+
+        """
         if not (hasattr(self, '_param') and self._param):
             from pyqtgraph.parametertree.Parameter import Parameter, PARAM_TYPES
             children = []
@@ -122,7 +168,10 @@ class ProcessingPlugin(IPlugin):
             self._param.sigValueChanged.connect(self.setParameterValue)
         return self._param
 
-    def setParameterValue(self, name, param, value):
+    def setParameterValue(self, name, param, value): #TODO param is unused
+        """
+        Sets the `name` parameter's value to the passed value.
+        """
         if value is not None:
             self.inputs[name].value = value
         else:
@@ -138,6 +187,19 @@ class ProcessingPlugin(IPlugin):
         pass
 
     def __reduce__(self):
+        """
+        Defines custom serialization of a ProcessingPlugin's attributes.
+
+        This effectively allows a ProcessingPlugin to be un-serialized
+        if the plugin is located in a different directory, provided that
+        plugin info file (<plugin>.yapsy-plugin) is in a directory the
+        PluginManager searches.
+
+        Notes
+        -----
+        The `_param`, `_workflow`, and `parameter` attributes are not
+        serialized.
+        """
         d = self.__dict__.copy()
         print('reduction:', d)
         blacklist = ['_param', '_workflow', 'parameter']
@@ -171,7 +233,15 @@ class _ProcessingPluginRetriever(object):
         raise ValueError(f'No plugin found with name {pluginname} in list of plugins:{pluginlist}')
 
 
-def EZProcessingPlugin(method):
+def EZProcessingPlugin(method: Callable) -> Type[ProcessingPlugin]:
+    """
+    Provides an easy-to-use but limited way to create a ProcessingPlugin
+    for use in a workflow.
+
+    Creates a new derived ProcessingPlugin type, where passed method's name
+    is used as the new type's name.
+    """
+
     def __new__(cls, *args, **kwargs):
         instance = ProcessingPlugin.__new__(cls)
         return instance
@@ -180,7 +250,10 @@ def EZProcessingPlugin(method):
         ProcessingPlugin.__init__(self)
 
     def evaluate(self):
+        print('inputs before eval: {}', self.inputs)
         self.method(*[i.value for i in self.inputs])
+        print('inputs after eval: {}', self.inputs)
+        print('outputs : {}', self.outputs)
 
     argspec = inspect.getfullargspec(method)
     allargs = argspec.args
@@ -205,9 +278,24 @@ def EZProcessingPlugin(method):
 
 
 class Var(object):
+    """
+    Defines a variable.
+
+    #TODO -- add to attributes documentation
+
+    Attributes
+    ----------
+    value
+    workflow
+    parent
+    conn_type
+    map_inputs
+    subscriptions
+    """
+
     def __init__(self):
         self.value = None
-        self.workflow = None
+        self.workflow = None # type: Workflow
         self.parent = None
         self.conn_type = None  # input or output
         self.map_inputs = []
@@ -230,8 +318,26 @@ class Var(object):
 
 
 class Input(Var):
+    """
+    Defines an input variable.
+
+    Parameters
+    ----------
+    name : str
+    description : str
+    default
+    type : Type
+    units : str
+    min : Num
+    max : Num
+    limits : Tuple[Num, Num]
+    fixed : bool
+    fixable : bool
+    """
+
     def __init__(self, name='', description='', default=None, type=None, units=None, min=None, max=None, limits=None,
                  fixed=False, fixable=False):
+        
         self.fixed = fixed
         super(Input, self).__init__()
         self.name = name
@@ -291,14 +397,31 @@ class Input(Var):
         self.fixed = fixed
 
 
-
 class Output(Var):
+    """
+    Defines an output variable.
+
+    Parameters
+    ----------
+    name : str, optional
+        Name of the output variable (the default is '').
+    description : str, optional
+        Describes what the variable represents (the default is '').
+    type : Type, optional
+        Defines the type that the variable holds (the default is None).
+    units : str
+        Defines the units of the variable (the default is None).
+    args
+    kwargs
+    """
+
     def __init__(self, name='', description='', type=None, units=None, *args, **kwargs):
         super().__init__()
         self.name = name
         self.description = description
         self.units = units
         self.type = type
+
 
 class InOut(Input, Output):
     pass
