@@ -17,13 +17,16 @@ class ProcessingPlugin(IPlugin):
     in a workflow.
 
     A ProcessingPlugin can take in input variables and operate on the inputs via
-    the `evaluate()` method. The evaluation can occur in-place and modify the
-    input variables, or create output variables.
+    the `evaluate()` method. Typically, the `evaluate()` method would output 
+    results to an `Output`. In-place processing can be accomplished with
+    `InputOutput` variables.
 
     Attributes
     ----------
     disabled : bool
-        Disables the processing plugin (the default is 'False').
+        Disables the processing plugin (the default is 'False'). This state 
+        only applies when a workflow's variables are auto-connected; disabled
+        operations are bypassed.
     name : str
         Name of the processing plugin (the default is the name of the class).
     hints : List
