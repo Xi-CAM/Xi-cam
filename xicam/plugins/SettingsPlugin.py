@@ -2,7 +2,10 @@ from typing import List
 from qtpy.QtCore import QObject, QSettings
 from yapsy.IPlugin import IPlugin
 from xicam import plugins
-from pyqtgraph.parametertree import Parameter, ParameterTree
+from pyqtgraph.parametertree import ParameterTree
+from pyqtgraph.parametertree.parameterTypes import GroupParameter
+import cloudpickle as pickle
+from xicam.core import msg
 
 class SettingsPlugin(QObject, IPlugin):
     def __new__(cls, *args, **kwargs):
@@ -37,14 +40,27 @@ class SettingsPlugin(QObject, IPlugin):
         ...
 
     def save(self):
-        QSettings().setValue(self.name(), self.toState())
+        QSettings().setValue(self.name(), pickle.dumps(self.toState()))
+
+    def restore(self):
+        try:
+            self.fromState(pickle.loads(QSettings().value(self.name())))
+        except (AttributeError, TypeError, SystemError, KeyError, ModuleNotFoundError) as ex:
+            # No settings saved
+            msg.logError(ex)
+            msg.logMessage(f'Could not restore settings for {self.name} plugin; re-initializing settings...',
+                           level=msg.WARNING)
 
 
-class ParameterSettingsPlugin(Parameter, SettingsPlugin):
 
-    def __init__(self, icon, name: str, paramdicts: List[dict]):
+class ParameterSettingsPlugin(GroupParameter, SettingsPlugin):
+
+    def __init__(self, icon, name: str, paramdicts: List[dict], **kwargs):
         SettingsPlugin.__init__(self, icon, name, None)
-        Parameter.__init__(self, name=name, type='group', children=paramdicts)
+        GroupParameter.__init__(self, name=name, type='group', children=paramdicts, **kwargs)
+        self.restore()
+
+    name = SettingsPlugin.name  # must be re-overridden because of GroupParameter
 
     @property
     def widget(self):

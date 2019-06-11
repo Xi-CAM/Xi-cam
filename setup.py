@@ -78,10 +78,7 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    # TODO: deprecate fabio
-    install_requires=['yapsy', 'astropy', 'signalslot', 'virtualenv',
-                      'requests', 'appdirs', 'fabio',
-                      'xicam.core'],
+    install_requires=['yapsy', 'astropy', 'signalslot', 'virtualenv', 'requests', 'appdirs', 'xicam.core'],
 
     setup_requires=[],
 

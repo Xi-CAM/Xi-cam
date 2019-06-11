@@ -48,6 +48,8 @@ class DataResourcePlugin(IPlugin):
 
     isSingleton = False
 
+    name = ''
+
     def __init__(self, flags: dict = None, **config):
         """
         Config keys should follow RFC 3986 URI format:

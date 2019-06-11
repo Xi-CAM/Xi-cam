@@ -98,7 +98,11 @@ class EnvBuilder(venv.EnvBuilder):
 
         # Install the bundled software
         import pip
-        pip.main(args)
+        try:
+            pip.main(args)
+        except AttributeError:
+            from pip._internal import main
+            main(args)
 
         # Restore sys.path
         sys.path=oldpath
@@ -167,7 +171,11 @@ def activate_this(path):
     sys.path[:0] = new_sys_path
 
 
+current_environment = ''
+
 # TODO: find all venvs; populate the venvs global
-create_environment("default")
-use_environment("default")
-current_environment = str(pathlib.Path(user_venv_dir, "default"))
+def initialize_venv():
+    global current_environment
+    create_environment("default")
+    use_environment("default")
+    current_environment = str(pathlib.Path(user_venv_dir, "default"))
