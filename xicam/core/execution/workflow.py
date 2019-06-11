@@ -58,7 +58,7 @@ class Workflow(object):
 
         for process in self.processes:
             for input in process.inputs.values():
-                for _, mapped_output in input.map_inputs:
+                for _, mapped_output in input._map_inputs:
                     dependent_tasks.add(mapped_output.parent)
 
         end_tasks = set(self.processes) - dependent_tasks
@@ -84,7 +84,7 @@ class Workflow(object):
         named_args = {}
 
         for inp in node.inputs.keys():
-            for input_map in node.inputs[inp].map_inputs:
+            for input_map in node.inputs[inp]._map_inputs:
                 self.generateGraph(dsk, input_map[1].parent, mapped_node)
                 args[input_map[1].parent.id] = None
                 # named_args.append({input_map[1].name: input_map[0]})  # TODO test to make sure output is in input
@@ -299,7 +299,7 @@ class Workflow(object):
         """
         for process in self.processes:
             for key, input in process.inputs.items():
-                if not input.map_inputs and key in kwargs:
+                if not input._map_inputs and key in kwargs:
                     input.value = kwargs[key]
 
 
