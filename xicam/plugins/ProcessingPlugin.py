@@ -186,7 +186,7 @@ class ProcessingPlugin(IPlugin):
 
     def clearConnections(self):
         for input in self.inputs.values():
-            input.map_inputs = []
+            input._map_inputs = []
 
     def detach(self):
         pass
@@ -304,12 +304,12 @@ class Var(object):
         self.value = None
         self.workflow = None
         self.parent = None
-        self.map_inputs = []  # type: List[List[str, Var]]
+        self._map_inputs = []  # type: List[List[str, Var]]
         self.subscriptions = []
 
     def connect(self, var):
         # find which variable and connect to it.
-        var.map_inputs.append([var.name, self])
+        var._map_inputs.append([var.name, self])
 
     def disconnect(self, var):
         pass
@@ -317,7 +317,7 @@ class Var(object):
     def subscribe(self, var):
         # find which variable and connect to it.
         self.subscriptions.append([var.name, var])
-        self.map_inputs.append([self.name, var])
+        self._map_inputs.append([self.name, var])
 
     def unsubscribe(self, var):
         pass
