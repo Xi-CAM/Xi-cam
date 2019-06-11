@@ -308,7 +308,7 @@ class Var(object):
         self.workflow = None
         self.parent = None
         self._map_inputs = []  # type: List[List[str, Var]]
-        self.subscriptions = []
+        self._subscriptions = []
 
     def connect(self, var):
         # find which variable and connect to it.
@@ -319,7 +319,7 @@ class Var(object):
 
     def subscribe(self, var):
         # find which variable and connect to it.
-        self.subscriptions.append([var.name, var])
+        self._subscriptions.append([var.name, var])
         self._map_inputs.append([self.name, var])
 
     def unsubscribe(self, var):
