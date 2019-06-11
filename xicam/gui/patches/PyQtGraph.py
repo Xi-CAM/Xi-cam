@@ -33,6 +33,32 @@ from pyqtgraph import ImageView
 import numpy as np
 from qtpy.QtCore import QSize
 from qtpy.QtGui import QBrush, QPalette
+import pyqtgraph
+
+
+class ImageView(ImageView):
+    def timeIndex(self, slider):
+        ## Return the time and frame index indicated by a slider
+        if self.image is None:
+            return (0, 0)
+
+        t = slider.value()
+
+        xv = self.tVals
+        if xv is None:
+            ind = int(t)
+        else:
+            if len(xv) < 2:
+                return (0, 0)
+            inds = np.argwhere(xv <= t)  # <- The = is import to reach the last value
+            if len(inds) < 1:
+                return (0, t)
+            ind = inds[-1, 0]
+        return ind, t
+
+
+pyqtgraph.__dict__['ImageView'] = ImageView
+
 
 class SafeImageView(ImageView):
     def setImage(self, img, *args, **kwargs):
