@@ -46,7 +46,10 @@ class GUIPlugin(IPlugin):
 
 class PanelState(Enum):
     """
-    Represents the state of a panel (widget).
+    Represents the state of a panel (widget). Some panels have default
+    widgets. The data preview widget and data browser widget are defaults
+    for the top-left and left panels respectively. In order to not show
+    these widgets, PanelState.Disabled must be set to those panels.
 
     """
     Disabled = 1
