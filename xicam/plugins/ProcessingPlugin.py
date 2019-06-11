@@ -7,9 +7,9 @@ import numpy as np
 from typing import Callable, Dict, Type
 from collections import namedtuple
 from typing import List
+from warnings import warn
 
 # TODO allow outputs/inputs to connect
-
 
 class ProcessingPlugin(IPlugin):
     """
@@ -27,6 +27,7 @@ class ProcessingPlugin(IPlugin):
     name : str
         Name of the processing plugin (the default is the name of the class).
     hints : List
+        TODO
 
     Notes
     -----
@@ -288,25 +289,22 @@ class Var(object):
     """
     Defines a variable.
 
-    #TODO -- add to attributes documentation
-
     Attributes
     ----------
-    value
-    workflow
-    parent
-    conn_type
-    map_inputs
-    subscriptions
+    value : Num
+        Value of the variable (the default is None).
+    workflow : Workflow
+        The workflow that this variable belongs to (the default is None).
+    parent : ProcessingPlugin
+        The processing plugin this variable belongs to (the default is None).
 
     """
 
     def __init__(self):
         self.value = None
-        self.workflow = None # type: Workflow
+        self.workflow = None
         self.parent = None
-        self.conn_type = None  # input or output
-        self.map_inputs = []
+        self.map_inputs = []  # type: List[List[str, Var]]
         self.subscriptions = []
 
     def connect(self, var):
@@ -332,15 +330,27 @@ class Input(Var):
     Parameters
     ----------
     name : str
-    description : str
-    default
-    type : Type
-    units : str
-    min : Num
-    max : Num
+        Name of the variable (the default is '').
+    description : str, optional
+        Describes the variable (the default is '').
+    default : Num, optional
+        Default value for the variable (the default is None).
+    type : Type, optional
+        Defines the type that the variable holds (the default is None)
+    units : str, optional
+        Defines the units of the variable (the default is None).
+    min : Num, optional
+        Minimum value the variable can store (the default is None).
+    max : Num, optional
+        Maximum value the variable can store (the default is None).
     limits : Tuple[Num, Num]
-    fixed : bool
-    fixable : bool
+        Defines the minimum and maximum values the variable can store (the
+        default is None).
+    fixed : bool, optional
+        Indicates if the variable is a fixed parameter (the default is False).
+    fixable : bool, optional
+        Indicates if the variable is able to be fixed or not as a parameter
+        (the default is False).
 
     """
 
@@ -420,19 +430,23 @@ class Output(Var):
         Defines the type that the variable holds (the default is None).
     units : str
         Defines the units of the variable (the default is None).
-    args
-    kwargs
 
     """
 
-    def __init__(self, name='', description='', type=None, units=None, *args, **kwargs):
-        super().__init__()
+    def __init__(self, name='', description='', type=None, units=None):
+        super(Output, self).__init__()
         self.name = name
         self.description = description
         self.units = units
         self.type = type
 
 
-class InOut(Input, Output):
+class InputOutput(Input, Output):
+    """
+    Represents a variable that acts both as in input and an output.
+    """
     pass
 
+
+class InOut(InputOutput):
+    warn('InOut has been renamed; use InputOutput', DeprecationWarning)
