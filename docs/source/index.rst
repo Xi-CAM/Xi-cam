@@ -13,7 +13,6 @@ Welcome to Xi-cam's documentation!
    ezPlugin
    processingPlugin
    pluginDev
-   api
 
 
 Indices and tables
