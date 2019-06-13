@@ -88,7 +88,7 @@ setup(
     # for example:
     # $ pip install -e .[dev,tests]
     extras_require={
-        # 'dev': ['check-manifest'],
+        'dev': ['sphinx', 'recommonmark', 'sphinx_bootstrap_theme'],
         'tests': ['pytest', 'coverage'],
     },
 
