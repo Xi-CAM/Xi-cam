@@ -7,5 +7,5 @@
 .. autofunction:: EZProcessingPlugin
 .. autoclass:: Input
 .. autoclass:: Output
-.. autoclass:: InOut
+.. autoclass:: InputOutput
 ```
