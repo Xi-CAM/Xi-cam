@@ -9,9 +9,11 @@ from collections import namedtuple
 from typing import List
 from warnings import warn
 
+
 # TODO allow outputs/inputs to connect
 
 class ProcessingPlugin(IPlugin):
+    # TODO -- hints documentation
     """
     A ProcessingPlugin defines a plugin that can process inputs and/or outputs
     in a workflow.
@@ -29,12 +31,77 @@ class ProcessingPlugin(IPlugin):
         operations are bypassed.
     name : str
         Name of the processing plugin (the default is the name of the class).
-    hints : List
-        TODO
 
     Notes
     -----
     Must override the `evaluate()` method in derived classes.
+
+    Examples
+    --------
+    Create a MaskProcessingPlugin that masks an array of input pixels.
+
+    1. Define the input and output variables as class variables
+
+    All processing variables (Input, Output, InputOutput) must be defined as class
+    variables. In the example below, `data`, `min_threshold`, `mask`, and
+    `masked_data` are the variables we define. When creating these variables, we
+    should give them a description and a type.
+    The description briefly describes the variable.
+    The type represents what kind of data the variable will hold.
+
+    The Input variables are `data` and `masked_data`. These are the inputs to
+    be evaluated. The `data` variable is the pixel data that we will be applying
+    some mask to. The `minimum_threshold` defines the minimum value that a pixel
+    value must be; otherwise it will be masked.
+
+    The InputOutput variable is `mask`. The mask is an input because we can
+    define an initial mask to our process. During evaluation, any pixels that
+    do not meet the minimum threshold will be added to this mask. We can then
+    inspect the mask as an output to see the final mask applied to the input
+    data.
+
+    The Output variable is `masked_data`. This will store the pixel data after
+    the mask is applied (i.e. this stores the pixels that were not part of the
+    mask).
+
+    2. Implement the evaluate() method.
+
+    After defining our processing plugin's variables, we need to provide
+    instructions for how to process these variables. We do this by implementing
+    the evaluate() method as part of the MaskProcessingPlugin class.
+
+    To access our variables inside of evaluate(), we can use the following syntax:
+        `self.variable.value`,
+    where variable is the name of our python variables we assigned our processing
+    variables to earlier.
+    When accessing the variable this way, it is important to keep in mind that
+    the value returned to us will be the type that we defined earlier. For
+    example, for our `data` variable, we gave it the type `np.ndarray`. This
+    means when we access it through `self.data.value`, we get a numpy ndarray
+    back.::
+
+
+        class MaskProcessingPlugin(ProcessingPlugin):
+            # Define variables here
+            data = Input(description='Input data', type=np.ndarray)
+            min_threshold = Input(description='Minimum value that will not be masked', type=float)
+            mask = InputOutput(description='Mask array (1 indicates mask)', type=np.ndarray)
+            masked_data = Output(description='Data after mask is applied', type=np.ndarray)
+
+
+        def evaluate(self):
+            # Operate on variables here
+            # Access variables using self.variable.value
+            data_shape = self.data.value.shape
+            self.masked_data.value = np.zeros(data_shape)
+
+            for i in range(self.data.value.shape[0]):
+                for j in range(self.data.value.shape[1]):
+                    if self.data[i][j] < self.min_threshold:
+                        self.mask.value[i][j] = 1  # 1 indicates mask
+                    self.masked_data.value[i][j] = (not self.mask.value[i][j]) * self.data.value[i][j]
+
+
 
     """
     isSingleton = False
@@ -81,6 +148,11 @@ class ProcessingPlugin(IPlugin):
         for hint in self.hints: hint.parent = self
 
     def evaluate(self):
+        """
+        Implements the processing behavior.
+
+        This method must be overriden to provide a processing implementation.
+        """
         raise NotImplementedError
 
     def _getresult(self) -> Dict:
@@ -114,7 +186,8 @@ class ProcessingPlugin(IPlugin):
     @property
     def inputs(self) -> Dict:
         if not self._inputs:
-            self._inputs = {name: param for name, param in self.__dict__.items() if isinstance(param, Input)}
+            self._inputs = {name: param for name, param in self.__dict__.items()
+                            if isinstance(param, Input)}
         print(f'\n\tself.__dict__.items(): {self.__dict__.items()}')
         print(f'\n\tself._inputs: {self._inputs}')
         return self._inputs
@@ -122,60 +195,64 @@ class ProcessingPlugin(IPlugin):
     @property
     def outputs(self) -> Dict:
         if not self._outputs:
-            self._outputs = {name: param for name, param in self.__dict__.items() if isinstance(param, Output)}
+            self._outputs = {name: param for name, param in
+                             self.__dict__.items() if isinstance(param, Output)}
         return self._outputs
 
     @property
     def inverted_vars(self) -> Dict:
         if not self._inverted_vars:
-            self._inverted_vars = {param: name for name, param in self.__class__.__dict__.items() if
+            self._inverted_vars = {param: name for name, param in
+                                   self.__class__.__dict__.items() if
                                    isinstance(param, (Input, Output))}
         return self._inverted_vars
 
     @property
     def parameter(self):
-        """
-
-        Returns
-        -------
-            pyqtgraph Parameter #TODO
-
-        """
         if not (hasattr(self, '_param') and self._param):
             from pyqtgraph.parametertree.Parameter import Parameter, PARAM_TYPES
             children = []
             for name, input in self.inputs.items():
                 if getattr(input.type, '__name__', None) in PARAM_TYPES:
                     childparam = Parameter.create(name=name,
-                                                  value=getattr(input, 'value', input.default),
+                                                  value=getattr(input, 'value',
+                                                                input.default),
                                                   default=input.default,
                                                   limits=input.limits,
-                                                  type=getattr(input.type, '__name__', None),
+                                                  type=getattr(input.type,
+                                                               '__name__',
+                                                               None),
                                                   units=input.units,
                                                   fixed=input.fixed,
                                                   fixable=input.fixable)
-                    childparam.sigValueChanged.connect(partial(self.setParameterValue, name))
+                    childparam.sigValueChanged.connect(
+                        partial(self.setParameterValue, name))
                     if input.fixable:
                         childparam.sigFixToggled.connect(input.setFixed)
                     children.append(childparam)
                     input._param = childparam
                 elif getattr(input.type, '__name__', None) == 'Enum':
                     childparam = Parameter.create(name=name,
-                                                  value=getattr(input, 'value', input.default) or '---',
-                                                  values=input.limits or ['---'],
+                                                  value=getattr(input, 'value',
+                                                                input.default) or '---',
+                                                  values=input.limits or [
+                                                      '---'],
                                                   default=input.default,
                                                   type='list')
-                    childparam.sigValueChanged.connect(partial(self.setParameterValue, name))
+                    childparam.sigValueChanged.connect(
+                        partial(self.setParameterValue, name))
                     children.append(childparam)
                     input._param = childparam
 
-            self._param = Parameter(name=getattr(self, 'name', self.__class__.__name__), children=children,
-                                    type='group')
+            self._param = Parameter(
+                name=getattr(self, 'name', self.__class__.__name__),
+                children=children,
+                type='group')
 
             self._param.sigValueChanged.connect(self.setParameterValue)
         return self._param
 
-    def setParameterValue(self, name, param, value): #TODO param is unused
+    def setParameterValue(self, name, param, value):
         """
         Sets the `name` parameter's value to the passed value.
 
@@ -239,8 +316,10 @@ class _ProcessingPluginRetriever(object):
                 return p
 
         pluginlist = '\n\t'.join(
-            [plugin.plugin_object.__name__ for plugin in pluginmanager.getPluginsOfCategory('ProcessingPlugin')])
-        raise ValueError(f'No plugin found with name {pluginname} in list of plugins:{pluginlist}')
+            [plugin.plugin_object.__name__ for plugin in
+             pluginmanager.getPluginsOfCategory('ProcessingPlugin')])
+        raise ValueError(
+            f'No plugin found with name {pluginname} in list of plugins:{pluginlist}')
 
 
 def EZProcessingPlugin(method: Callable) -> Type[ProcessingPlugin]:
@@ -250,6 +329,9 @@ def EZProcessingPlugin(method: Callable) -> Type[ProcessingPlugin]:
 
     Creates a new derived ProcessingPlugin type, where passed method's name
     is used as the new type's name.
+
+    Examples
+    --------
 
     """
 
@@ -261,10 +343,7 @@ def EZProcessingPlugin(method: Callable) -> Type[ProcessingPlugin]:
         ProcessingPlugin.__init__(self)
 
     def evaluate(self):
-        print('inputs before eval: {}', self.inputs)
         self.method(*[i.value for i in self.inputs])
-        print('inputs after eval: {}', self.inputs)
-        print('outputs : {}', self.outputs)
 
     argspec = inspect.getfullargspec(method)
     allargs = argspec.args
@@ -332,7 +411,7 @@ class Input(Var):
 
     Parameters
     ----------
-    name : str
+    name : str, optional
         Name of the variable (the default is '').
     description : str, optional
         Describes the variable (the default is '').
@@ -357,9 +436,10 @@ class Input(Var):
 
     """
 
-    def __init__(self, name='', description='', default=None, type=None, units=None, min=None, max=None, limits=None,
+    def __init__(self, name='', description='', default=None, type=None,
+                 units=None, min=None, max=None, limits=None,
                  fixed=False, fixable=False):
-        
+
         self.fixed = fixed
         super(Input, self).__init__()
         self.name = name
@@ -398,7 +478,9 @@ class Input(Var):
                 serialize(value)
             except:
                 # TODO: narrow except
-                msg.logMessage(f"Value '{value}'on input '{name}' could not be cloudpickled.", level=msg.WARNING)
+                msg.logMessage(
+                    f"Value '{value}'on input '{name}' could not be cloudpickled.",
+                    level=msg.WARNING)
             super().__setattr__(name, value)
         else:
             super().__setattr__(name, value)
