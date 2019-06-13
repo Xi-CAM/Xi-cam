@@ -14,6 +14,7 @@ from warnings import warn
 
 class ProcessingPlugin(IPlugin):
     # TODO -- hints documentation
+    # TODO: Categories documentation
     """
     A ProcessingPlugin defines a plugin that can process inputs and/or outputs
     in a workflow.
