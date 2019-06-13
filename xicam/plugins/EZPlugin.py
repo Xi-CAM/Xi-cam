@@ -49,6 +49,45 @@ class _EZPlugin(GUIPlugin):
 def EZPlugin(name='TestPlugin', toolbuttons=None, parameters=None, appendheadertest=None,
              centerwidget=None,
              bottomwidget=None):
+    """
+    Quickly create a custom Xi-cam plugin.
+
+    This function provides an easy-to-use interface for creating a customized
+    Xi-cam plugin.
+
+    Parameters
+    ----------
+    name : str
+        The name of the plugin to create (the default is 'TestPlugin').
+    toolbuttons : List[Tuple[str, Callable, (str)]]
+        A list of tool buttons to create. A tool button will implement some
+        action when the tool button is clicked. See the `Notes` section
+        for more information.
+    parameters : List[pyqtgraph.parametertree.Parameter]
+        TODO
+    appendheadertest
+        TODO
+    centerwidget : QWidget
+        The widget displayed in the center of the plugin's GUI (the default is
+        None, which creates an pyqtgraph.ImageView).
+    bottomwidget : QWidget
+        The widget displayed at the bottom (below the center) of the plugin's
+        GUI (the default is None, which creates a pyqtgraph.PlotWidget).
+
+    Returns
+    -------
+    EZPlugin derived type
+        Returns an EZPlugin derived object of type `name`.
+
+    Notes
+    -----
+    The `toolbutton` parameter is an iterable of tool buttons. Each
+    tool button is an iterable with the following contents: the location of
+    the icon for the button, an action (method) that is invoked when the button
+    is triggered, and an optional text string for the button (e.g. when the
+    mouse hovers over the button).
+
+    """
     import pyqtgraph as pg
     if centerwidget is None: centerwidget = pg.ImageView
     if bottomwidget is None: bottomwidget = pg.PlotWidget
