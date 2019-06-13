@@ -7,11 +7,11 @@ Welcome to Xi-cam's documentation!
 ==================================
 
 .. toctree::
-   :maxdepth: 2
    :caption: Contents:
 
    intro
    ezPlugin
+   processingPlugin
    pluginDev
    api
 
