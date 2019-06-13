@@ -1,0 +1,3 @@
+-e git://github.com/lbl-camera/xi-cam.core.git
+-e git://github.com/lbl-camera/xi-cam.plugins.git
+-e git://github.com/lbl-camera/xi-cam.gui.git
