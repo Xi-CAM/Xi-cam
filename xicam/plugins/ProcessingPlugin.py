@@ -73,6 +73,7 @@ class ProcessingPlugin(IPlugin):
 
     To access our variables inside of evaluate(), we can use the following syntax:
         `self.variable.value`,
+
     where variable is the name of our python variables we assigned our processing
     variables to earlier.
     When accessing the variable this way, it is important to keep in mind that
@@ -81,7 +82,6 @@ class ProcessingPlugin(IPlugin):
     means when we access it through `self.data.value`, we get a numpy ndarray
     back.::
 
-
         class MaskProcessingPlugin(ProcessingPlugin):
             # Define variables here
             data = Input(description='Input data', type=np.ndarray)
@@ -89,18 +89,17 @@ class ProcessingPlugin(IPlugin):
             mask = InputOutput(description='Mask array (1 indicates mask)', type=np.ndarray)
             masked_data = Output(description='Data after mask is applied', type=np.ndarray)
 
+            def evaluate(self):
+                # Operate on variables here
+                # Access variables using self.variable.value
+                data_shape = self.data.value.shape
+                self.masked_data.value = np.zeros(data_shape)
 
-        def evaluate(self):
-            # Operate on variables here
-            # Access variables using self.variable.value
-            data_shape = self.data.value.shape
-            self.masked_data.value = np.zeros(data_shape)
-
-            for i in range(self.data.value.shape[0]):
-                for j in range(self.data.value.shape[1]):
-                    if self.data[i][j] < self.min_threshold:
-                        self.mask.value[i][j] = 1  # 1 indicates mask
-                    self.masked_data.value[i][j] = (not self.mask.value[i][j]) * self.data.value[i][j]
+                for i in range(self.data.value.shape[0]):
+                    for j in range(self.data.value.shape[1]):
+                        if self.data[i][j] < self.min_threshold:
+                            self.mask.value[i][j] = 1  # 1 indicates mask
+                        self.masked_data.value[i][j] = (not self.mask.value[i][j]) * self.data.value[i][j]
 
 
 
