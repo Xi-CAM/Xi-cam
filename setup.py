@@ -90,6 +90,8 @@ setup(
     extras_require={
         'docs': ['sphinx', 'recommonmark', 'sphinx_bootstrap_theme'],
         'tests': ['pytest', 'coverage'],
+        'pyqt5': ['pyqt5'],
+        'PySide2': ['PySide2'],
     },
 
     # If there are data files included in your packages that need to be
