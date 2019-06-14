@@ -27,6 +27,7 @@ script:
 - sh -e /etc/init.d/xvfb start
 - sleep 3
 - 'pytest . || :'
+- pip install -e .[dev]
 - (cd docs && make html)
 - python setup.py install
 after_success:
