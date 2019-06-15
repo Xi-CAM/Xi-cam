@@ -9,6 +9,7 @@ Welcome to Xi-cam's documentation!
 .. toctree::
    :caption: Contents:
 
+   install
    intro
    ezPlugin
    processingPlugin
