@@ -187,7 +187,7 @@ class XicamPluginManager(PluginManager):
                     plugin_info.plugin_object = element
             except (Exception, SystemError) as ex:
                 exc_info = sys.exc_info()
-                log.error("Unable to instanciate plugin: %s" % plugin_info.path, exc_info=exc_info)
+                msg.logMessage("Unable to instanciate plugin: %s" % plugin_info.path, msg.Error)
                 msg.notifyMessage(repr(ex),
                                   title=f'An error occurred while starting the "{plugin_info.name}" plugin.',
                                   level=msg.CRITICAL)
@@ -289,7 +289,8 @@ class XicamPluginManager(PluginManager):
 
         except Exception as ex:
             exc_info = sys.exc_info()
-            log.error("Unable to import plugin: %s" % plugin_info.path, exc_info=exc_info)
+            msg.logMessage("Unable to import plugin: %s" % plugin_info.path, msg.ERROR)
+            msg.logError(ex)
             msg.notifyMessage(repr(ex),
                               title=f'The "{plugin_info.name}" plugin could not be loaded.',
                               level=msg.CRITICAL)
