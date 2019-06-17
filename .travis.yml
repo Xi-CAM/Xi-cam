@@ -15,6 +15,7 @@ addons:
     - qtbase5-dev
 install:
 - pip install cx_freeze==6.0b1
+- pip install databroker # avoid attrs version conflict
 - pip install coveralls pytest
 - pip install git+https://github.com/lbl-camera/Xi-cam.core.git
 - pip install git+https://github.com/lbl-camera/Xi-cam.plugins.git
