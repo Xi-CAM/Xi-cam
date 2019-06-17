@@ -1,29 +1,28 @@
 # Installing Xi-cam
 
-## Install git, python3, and pip
+Installing Xi-cam for developing plugins requires some system configuration.
+By following this guide, you will have Xi-cam running and ready for
+development.
 
-You will need to ensure that you have both *git* and *python3* installed on
+## Install git and python3
+
+You will need to ensure that you have both **git** and **python3** installed on
 your system for Xi-cam development. You will also probably want to install
 a text editor or IDE (integrated development environment) for writing python 
 code.
 
-`TODO -- need a section on what git is ?`
-
-`TODO -- windows python either 64 or 32 bit`
-
 ### macOS
 
-Open the **Terminal** application (in Applications/Utilities).
-In the terminal, check to see if git is installed using ```git --version```.
+Open the **Terminal** application (in Applications/Utilities). In the terminal,
+check to see if git is installed by typing ```git --version```.
 Either a version number will be printed, indicating git is already installed,
-or a dialog will open asking "The 'git' command requires the command line 
-developer tools. Would you like to install the tools now?" Click the Install
+or a dialog will open asking **The "git" command requires the command line 
+developer tools. Would you like to install the tools now?** Click the Install
 button to install the developer tools, which will install git for you.
-
 
 You will also need to install python3. You can download python3 at
 [python.org](https://www.python.org/downloads/release/python-373/). You will
-want to get the "macOS 64-bit installer" if you are running any macOS version
+want to get the **macOS 64-bit installer** if you are running any macOS version
 since Mavericks.
 
 ### Windows
@@ -32,32 +31,28 @@ Download git [here](https://git-scm.com/download/win) and follow the installer's
 instructions. This will install **Git for Windows**, which provides a **Git Bash**
 command line interface as well as a **Git GUI** graphical interface for git.
 
-To install python3, you will first want to check if your system is 32-bit
-or 64-bit architecture. To check this, search for **system information** and
-click the **System Information** icon that shows up. If the search feature is not
-enabled, open a file explorer window (either the folder icon on the bottom
-of the screen or **WindowsKey + E**). On the left, you will need to right-click
-**This PC**. Look for the **System type** text, which will tell you if you have
-a 64-bit or 32-bit operating system.
+You will want to go to the python3 download page at
+[python.org](https://www.python.org/downloads/release/python-373/).
+For modern systems, install the **Windows x86-64 executable installer** at
+the bottom. 
 
-Next, you will want go to the 
-[python.org python3 download page](https://www.python.org/downloads/release/python-373/).
-At the bottom, you will see **Windows x86-64 executable installer** and
-**Windows x86 executable installer**. If you have a **32-bit** operating system,
-download the **x86** installer. If you have a **64-bit** operating system,
-download the **x86-64** installer.
-
-### Install pip
-
-`TODO -- what is pip`
-pip can be installed on
-
-`TODO -- Path configuration for windows python3 installer? check at home`
+When you run the installer, make sure sure to check the box that says 
+**Add Python 3.x to PATH** to ensure that the interpreter will be placed in your
+execution path.
 
 ## Create and Activate Virtual Environment
 
-Create a virtual environment and activate it so we can install the Xi-cam
-components into a sequestered environment. This allows us to install 
+The latest python3 version comes with the **venv** module, which can be used
+to create a virtual environment. A virtual environment is a sequestered space
+where you can install and uninstall packages without modifying your system's
+installed packages.
+
+Create a virtual environment for installing the Xi-cam components and 
+dependencies. You will then want to activate the virtual environment you
+created so that any packages you install with python's package manager, **pip**,
+will be installed into that active virtual environment. In the commands below,
+replace `<directory>` with the directory that you want to install your virtual
+environment in: 
 
 ```
 python3 -m venv <directory>
@@ -69,7 +64,10 @@ source <directory>/bin/actviate
 Clone the primary Xi-cam repositories needed for development: Xi-cam.core,
 Xi-cam.gui, Xi-cam.plugins, and Xi-cam.
 
-Then, install these into the virtual environment via pip. Use the **-e** option
+Then, install these into your active virtual environment via pip.
+Use the **-e** option to create an editable installation. This allows you to
+modify any code in these repos and see the changes without having to run
+`pip install` again.
 
 ```
 git clone https://github.com/Xi-cam.core
@@ -90,5 +88,11 @@ cd ..
 git clone https://github.com/Xi-cam
 cd Xi-cam
 pip install -e .
+```
+
+To ensure everything is installed correctly, you can run Xi-cam. In the
+**Xi-cam** directory, run:
+
+```
 python run_xicam.py
 ```
