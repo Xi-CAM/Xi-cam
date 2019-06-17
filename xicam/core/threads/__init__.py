@@ -29,10 +29,10 @@ class ThreadManager(QObject):
         return self._threads
 
     def purge(self):
-        self._threads = [thread for thread in self._threads if not thread.purge]
+        self._threads = [thread for thread in self._threads if not thread._purge]
         for thread in self._threads:
             if thread.done or thread.cancelled or thread.exception:
-                thread.purge = True
+                thread._purge = True
 
     def append(self, thread):
         self._threads.append(thread)
@@ -48,7 +48,7 @@ class QThreadFuture(QThread):
     A future-like QThread, with many conveniences.
     """
     sigCallback = Signal()
-    sigFinished = Signal()
+    sigFinished = Signal()  # redundant?
     sigExcept = Signal(Exception)
 
     def __init__(self, method, *args, callback_slot=None, finished_slot=None, except_slot=None, default_exhandle=True,
