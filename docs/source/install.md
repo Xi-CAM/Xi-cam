@@ -9,7 +9,8 @@ development.
 You will need to ensure that you have both **git** and **python3** installed on
 your system for Xi-cam development. You will also probably want to install
 a text editor or IDE (integrated development environment) for writing python 
-code.
+code. For a python IDE, we recommend
+[PyCharm Community Edition](https://www.jetbrains.com/pycharm/download/).
 
 ### macOS
 
@@ -62,6 +63,14 @@ source <directory>/bin/actviate
 
 ## Install Xi-cam and Core Dependencies
 
+Xi-cam depends on a GUI library package called Qt; you will need to install
+one of the python bindings for Qt in order to install Xi-cam.
+You can install the **PyQt5** pip package as follows:
+
+```
+pip install PyQt5
+```
+
 Clone the primary Xi-cam repositories needed for development: Xi-cam.core,
 Xi-cam.gui, Xi-cam.plugins, and Xi-cam.
 
@@ -95,5 +104,13 @@ To ensure everything is installed correctly, you can run Xi-cam. In the
 **Xi-cam** directory, run:
 
 ```
-python run_xicam.py
+xicam
 ```
+
+<!--
+* test these instructions on windows
+    * test the install
+    * test the venv creation
+    * test the cloning (git bash?)
+    * test run_xicam
+-->
