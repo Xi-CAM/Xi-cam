@@ -17,8 +17,9 @@ Open the **Terminal** application (in Applications/Utilities). In the terminal,
 check to see if git is installed by typing ```git --version```.
 Either a version number will be printed, indicating git is already installed,
 or a dialog will open asking **The "git" command requires the command line 
-developer tools. Would you like to install the tools now?** Click the Install
-button to install the developer tools, which will install git for you.
+developer tools. Would you like to install the tools now?** Click the 
+**Install** button to install the developer tools, which will install git for 
+you.
 
 You will also need to install python3. You can download python3 at
 [python.org](https://www.python.org/downloads/release/python-373/). You will
@@ -40,7 +41,7 @@ When you run the installer, make sure sure to check the box that says
 **Add Python 3.x to PATH** to ensure that the interpreter will be placed in your
 execution path.
 
-## Create and Activate Virtual Environment
+## Create and Activate a Virtual Environment
 
 The latest python3 version comes with the **venv** module, which can be used
 to create a virtual environment. A virtual environment is a sequestered space
