@@ -5,12 +5,14 @@ from qtpy.QtGui import QTransform, QPolygonF
 from qtpy.QtWidgets import QLabel, QErrorMessage, QSizePolicy, QPushButton
 from qtpy.QtCore import Qt, Signal, Slot, QSize, QPointF, QRectF
 import numpy as np
-from pyFAI.geometry import Geometry
+# from pyFAI.geometry import Geometry
 from xicam.gui.widgets.elidedlabel import ElidedLabel
 from xicam.gui.widgets.ROI import BetterPolyLineROI
 from xicam.core import msg
 import enum
-from pyFAI import AzimuthalIntegrator
+
+
+# from pyFAI import AzimuthalIntegrator
 
 
 # NOTE: PyQt widget mixins have pitfalls; note #2 here: http://trevorius.com/scrapbook/python/pyqt-multiple-inheritance/
@@ -101,7 +103,7 @@ class PixelSpace(ImageView):
 
 
 class QSpace(PixelSpace):
-    def __init__(self, *args, geometry: Geometry = None, **kwargs):
+    def __init__(self, *args, geometry=None, **kwargs):
         self.displaymode = DisplayMode.raw
 
         super(QSpace, self).__init__(*args, **kwargs)
@@ -109,7 +111,7 @@ class QSpace(PixelSpace):
         self._geometry = None  # type: AzimuthalIntegrator
         self.setGeometry(geometry)
 
-    def setGeometry(self, geometry: Geometry):
+    def setGeometry(self, geometry):
         if callable(geometry):
             geometry = geometry()
         self._geometry = geometry
@@ -184,7 +186,7 @@ class CenterMarker(QSpace):
             y = 0  # fit2d['centerY']
             self.centerplot.setData(x=[x], y=[y])
 
-    def setGeometry(self, geometry: Geometry):
+    def setGeometry(self, geometry):
         super(CenterMarker, self).setGeometry(geometry)
         self.drawCenter()
 
