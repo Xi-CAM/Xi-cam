@@ -4,6 +4,7 @@ from xicam.core import msg
 import logging
 from qtpy.QtCore import *
 from qtpy.QtWidgets import *
+from qtpy.QtGui import *
 import threading
 
 log = msg.logMessage
@@ -12,31 +13,50 @@ show_busy = msg.showBusy
 show_ready = msg.showReady
 
 
-class ThreadManager(QObject):
+class ThreadManager(QStandardItemModel):
     """
     A global thread manager that holds on to threads with 'keepalive'
     """
-    # TODO: convert to QStandardItemModel
-    sigStateChanged = Signal()
+    ThreadRole = Qt.UserRole
 
     def __init__(self):
         super(ThreadManager, self).__init__()
+        self.timer = QTimer()
+        self.timer.setInterval(1000)
+        self.timer.timeout.connect(self.update)
+        self.timer.start()
         self._threads = []
 
     @property
     def threads(self):
-        self.purge()
-        return self._threads
+        return [self.item(i).data(self.ThreadRole) for i in range(self.rowCount())]
 
-    def purge(self):
-        self._threads = [thread for thread in self._threads if not thread._purge]
-        for thread in self._threads:
-            if thread.done or thread.cancelled or thread.exception:
+    def update(self):
+        # purge
+        for i in reversed(range(self.rowCount())):
+            item = self.item(i)
+            thread = item.data(self.ThreadRole)
+            if thread._purge:
+                self.removeRow(i)
+                self._threads.remove(thread)
+                continue
+            elif thread.done or thread.cancelled or thread.exception:
                 thread._purge = True
 
+            if thread.exception:
+                item.setData(QColor(Qt.red), Qt.ForegroundRole)
+            elif thread.cancelled:
+                item.setData(QColor(Qt.magenta), Qt.ForegroundRole)
+            elif thread.done:
+                item.setData(QColor(Qt.green), Qt.ForegroundRole)
+            elif thread.running:
+                item.setData(QColor(Qt.yellow), Qt.ForegroundRole)
+
     def append(self, thread):
+        item = QStandardItem(repr(thread.method))
+        item.setData(thread, role=self.ThreadRole)
+        self.appendRow(item)
         self._threads.append(thread)
-        self.sigStateChanged.emit()
 
 
 manager = ThreadManager()
