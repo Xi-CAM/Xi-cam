@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from functools import WRAPPER_ASSIGNMENTS
 from pyqtgraph import ImageView, InfiniteLine, mkPen, ScatterPlotItem, ImageItem, PlotItem
 from qtpy.QtGui import QTransform, QPolygonF
@@ -9,6 +10,7 @@ from xicam.gui.widgets.elidedlabel import ElidedLabel
 from xicam.gui.widgets.ROI import BetterPolyLineROI
 from xicam.core import msg
 import enum
+from pyFAI import AzimuthalIntegrator
 
 
 # NOTE: PyQt widget mixins have pitfalls; note #2 here: http://trevorius.com/scrapbook/python/pyqt-multiple-inheritance/
@@ -42,19 +44,69 @@ class DisplayMode(enum.Enum):
     remesh = enum.auto
 
 
-class QSpace(ImageView):
-    def __init__(self, *args, geometry: Geometry = None, **kwargs):
-        self._transform = QTransform()
-        self.displaymode = DisplayMode.raw
-
-        # Add q axes
+class PixelSpace(ImageView):
+    def __init__(self, *args, **kwargs):
+        # Add axes
         self.axesItem = PlotItem()
         self.axesItem.axes['left']['item'].setZValue(10)
         self.axesItem.axes['top']['item'].setZValue(10)
         if 'view' not in kwargs: kwargs['view'] = self.axesItem
 
+        self._transform = QTransform()
+
+        super(PixelSpace, self).__init__(*args, **kwargs)
+
+    def transform(self, img=None):
+        # Build Quads
+        shape = np.squeeze(img).shape
+        a = [(0, shape[0] - 1),
+             (shape[1] - 1, shape[0] - 1),
+             (shape[1] - 1, 0),
+             (0, 0)]
+
+        b = [(0, 0),
+             (shape[1] - 1, 0),
+             (shape[1] - 1, shape[0] - 1),
+             (0, shape[0] - 1)]
+
+        quad1 = QPolygonF()
+        quad2 = QPolygonF()
+        for p, q in zip(a, b):
+            quad1.append(QPointF(*p))
+            quad2.append(QPointF(*q))
+
+        transform = QTransform()
+        QTransform.quadToQuad(quad1, quad2, transform)
+
+        for item in self.view.items:
+            if isinstance(item, ImageItem):
+                item.setTransform(transform)
+        self._transform = transform
+        return img, transform
+
+    def setImage(self, img, *args, **kwargs):
+        if img is None: return
+
+        if not kwargs.get('transform', None):
+            img, transform = self.transform(img)
+            self.axesItem.setLabel('bottom', u'x (px)')  # , units='s')
+            self.axesItem.setLabel('left', u'z (px)')
+            super(PixelSpace, self).setImage(img, *args, transform=transform, **kwargs)
+
+        else:
+            super(PixelSpace, self).setImage(img, *args, **kwargs)
+
+    def setTransform(self):
+        self.setImage(self.imageItem.image)  # this should loop back around to the respective transforms
+
+
+class QSpace(PixelSpace):
+    def __init__(self, *args, geometry: Geometry = None, **kwargs):
+        self.displaymode = DisplayMode.raw
+
         super(QSpace, self).__init__(*args, **kwargs)
 
+        self._geometry = None  # type: AzimuthalIntegrator
         self.setGeometry(geometry)
 
     def setGeometry(self, geometry: Geometry):
@@ -63,99 +115,52 @@ class QSpace(ImageView):
         self._geometry = geometry
         self.setTransform()
 
+
+class EwaldCorrected(QSpace):
     def setDisplayMode(self, mode):
         self.displaymode = mode
         self.setTransform()
 
-    def setTransform(self):
-        if self.imageItem.image is not None:
-            shape = self.imageItem.image.shape
-            qbottomright = np.array([shape[1], 0])
-            qtopright = np.array([shape[1], shape[0]])
-            qtopleft = np.array([0, shape[0]])
-            qbottomleft = np.array([0, 0])
-            self.axesItem.setLabel('bottom', u'x (px)')  # , units='s')
-            self.axesItem.setLabel('left', u'z (px)')
+    def transform(self, img):
+        if not self._geometry: return super(QSpace, self).transform(img)  # Do pixel space transform when not calibrated
 
-            if self._geometry:
-                # TODO: move to the hint system
-                if self.displaymode == DisplayMode.remesh:
-                    from camsaxs import remesh_bbox
+        from camsaxs import remesh_bbox
+        img, q_x, q_z = remesh_bbox.remesh(np.squeeze(img), self._geometry, reflection=False, alphai=None)
 
-                    self.axesItem.setLabel('bottom', u'q (Å⁻¹)')  # , units='s')
-                    self.axesItem.setLabel('left', u'q (Å⁻¹)')
+        # Build Quads
+        shape = img.shape
+        a = 0, shape[0] - 1
+        b = shape[1] - 1, shape[0] - 1
+        c = shape[1] - 1, 0
+        d = 0, 0
 
-                    shape = self._geometry.detector.max_shape
-                    z, y, x = self._geometry.calc_pos_zyx(*[np.array([0])] * 3)
-                    topleftpos = np.array([x, y, z]).flatten()
+        quad1 = QPolygonF()
+        quad2 = QPolygonF()
+        for p, q in zip([a, b, c, d], [a, b, c, d]):  # the zip does the flip :P
+            quad1.append(QPointF(*p))
+            quad2.append(QPointF(q_x[q[::-1]], q_z[q[::-1]]))
 
-                    z, y, x = self._geometry.calc_pos_zyx(np.array([0]), np.array([0]), np.array([shape[1]]))
-                    toprightpos = np.array([x, y, z]).flatten()
-                    #
-                    z, y, x = self._geometry.calc_pos_zyx(np.array([0]), np.array([shape[0]]), np.array([shape[1]]))
-                    bottomrightpos = np.array([x, y, z]).flatten()
-                    #
-                    z, y, x = self._geometry.calc_pos_zyx(np.array([0]), np.array([shape[0]]), np.array([0]))
-                    bottomleftpos = np.array([x, y, z]).flatten()
+        transform = QTransform()
+        QTransform.quadToQuad(quad1, quad2, transform)
 
-                    qbottomleft = q_from_angles(phi(*bottomleftpos), alpha(*bottomleftpos),
-                                                self._geometry.wavelength) * 1e-10 * np.array([1, -1, 1])
-                    qbottomright = q_from_angles(phi(*bottomrightpos), alpha(*bottomrightpos),
-                                                 self._geometry.wavelength) * 1e-10 * np.array([1, -1, 1])
-                    qtopright = q_from_angles(phi(*toprightpos), alpha(*toprightpos),
-                                              self._geometry.wavelength) * 1e-10 * np.array([1, -1, 1])
-                    qtopleft = q_from_angles(phi(*topleftpos), alpha(*topleftpos),
-                                             self._geometry.wavelength) * 1e-10 * np.array([1, -1, 1])
+        for item in self.view.items:
+            if isinstance(item, ImageItem):
+                item.setTransform(transform)
+        self._transform = transform
 
-                    # qbottomleft = np.array(bottomleftpos[:2]) * np.array([1, -1])
-                    # qbottomright = np.array(bottomrightpos[:2]) * np.array([1, -1])
-                    # qtopright = np.array(toprightpos[:2]) * np.array([1, -1])
-                    # qtopleft = np.array(topleftpos[:2]) * np.array([1, -1])
+        return img, self._transform
 
-            # Build Quads
-            quad1 = QPolygonF()
-            quad1.append(QPointF(0, shape[0]))
-            quad1.append(QPointF(shape[1], shape[0]))
-            quad1.append(QPointF(shape[1], 0))
-            quad1.append(QPointF(0, 0))
+    def setImage(self, img, *args, **kwargs):
+        if img is None: return
 
-            quad2 = QPolygonF()
-            quad2.append(QPointF(*qbottomleft[:2]))
-            quad2.append(QPointF(*qbottomright[:2]))
-            quad2.append(QPointF(*qtopright[:2]))
-            quad2.append(QPointF(*qtopleft[:2]))
+        if self._geometry:
+            img, transform = self.transform(img)
+            self.axesItem.setLabel('bottom', u'q_x (Å⁻¹)')  # , units='s')
+            self.axesItem.setLabel('left', u'q_z (Å⁻¹)')
+            super(QSpace, self).setImage(img, *args, transform=transform, **kwargs)
 
-            # What did I build?
-            msg.logMessage('qbottomleft:', np.array(qbottomleft[:2]))
-            msg.logMessage('qbottomright:', np.array(qbottomright[:2]))
-            msg.logMessage('qtopright:', np.array(qtopright[:2]))
-            msg.logMessage('qtopleft:', np.array(qtopleft[:2]))
-
-            transform = QTransform()
-            QTransform.quadToQuad(quad1, quad2, transform)
-
-            # # Invert Y axis (correct data dimensioning)
-            # transform = QTransform()
-            #
-            # # Translate to Q-space
-            # transform.translate(qtopleft[0]*1e-10, qtopleft[2]*1e-10)
-            #
-            # # Scale to Q-space
-            # # transform.scale(1, -1)
-            # transform.scale(((qbottomright[0]-qbottomleft[0])*1e-10)/shape[1],
-            #                           ((qtopleft[2] - qbottomleft[2]) * 1e-10)/shape[0])
-
-            # # Translate to Q-space
-            # transform.translate(qbottomleft[0]*1e-10, (qbottomleft[2]+qtopright[2]-qbottomleft[2])*1e-10)
-
-            for item in self.view.items:
-                if isinstance(item, ImageItem):
-                    item.setTransform(transform)
-            self._transform = transform
-
-    def setImage(self, *args, **kwargs):
-        super(QSpace, self).setImage(*args, **kwargs)
-        self.setTransform()
+        else:
+            super(QSpace, self).setImage(img, *args, **kwargs)
 
 
 class CenterMarker(QSpace):
@@ -248,13 +253,13 @@ class QCoordinates(ImageView):
                 self._coordslabel.setText(f"<div style='font-size: 12pt;background-color:#111111; "
                                           f"text-overflow: ellipsis; width:100%;'>"
                                           f"x={pxpos.x():0.1f}, "
-                                          f"<span style=''>y={self.imageItem.image.shape[0]-pxpos.y():0.1f}</span>, "
+                                          f"<span style=''>y={self.imageItem.image.shape[0] - pxpos.y():0.1f}</span>, "
                                           f"<span style=''>I={I:0.0f}</span>, "
-                                          f"q={np.sqrt(x**2+y**2):0.3f} \u212B\u207B\u00B9, "
+                                          f"q={np.sqrt(x ** 2 + y ** 2):0.3f} \u212B\u207B\u00B9, "
                                           f"q<sub>z</sub>={y:0.3f} \u212B\u207B\u00B9, "
                                           f"q<sub>\u2225</sub>={x:0.3f} \u212B\u207B\u00B9, "
-                                          f"d={2*np.pi/np.sqrt(x**2+y**2)*10:0.3f} nm, "
-                                          f"\u03B8={np.deg2rad(np.arctan2(y,x)):.2f}&#176;</div>")
+                                          f"d={2 * np.pi / np.sqrt(x ** 2 + y ** 2) * 10:0.3f} nm, "
+                                          f"\u03B8={np.rad2deg(np.arctan2(y, x)):.2f}&#176;</div>")
                 # if self.plotwidget is not None:  # for timeline
                 #     self.plotwidget.movPosLine(self.getq(x, y),
                 #                                self.getq(x, y, mode='parallel'),
