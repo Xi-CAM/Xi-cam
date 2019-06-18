@@ -44,6 +44,8 @@ class ImageView(ImageView):
 
         t = slider.value()
 
+        if not hasattr(self, 'tVals'): return (0, 0)
+
         xv = self.tVals
         if xv is None:
             ind = int(t)
