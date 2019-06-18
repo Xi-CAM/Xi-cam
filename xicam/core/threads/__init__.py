@@ -29,10 +29,10 @@ class ThreadManager(QObject):
         return self._threads
 
     def purge(self):
-        self._threads = [thread for thread in self._threads if not thread.purge]
+        self._threads = [thread for thread in self._threads if not thread._purge]
         for thread in self._threads:
             if thread.done or thread.cancelled or thread.exception:
-                thread.purge = True
+                thread._purge = True
 
     def append(self, thread):
         self._threads.append(thread)
@@ -48,7 +48,7 @@ class QThreadFuture(QThread):
     A future-like QThread, with many conveniences.
     """
     sigCallback = Signal()
-    sigFinished = Signal()
+    sigFinished = Signal()  # redundant?
     sigExcept = Signal(Exception)
 
     def __init__(self, method, *args, callback_slot=None, finished_slot=None, except_slot=None, default_exhandle=True,
@@ -74,16 +74,22 @@ class QThreadFuture(QThread):
         self.timeout = timeout  # ms
 
         self.cancelled = False
-        self.running = False
-        self.done = False
         self.exception = None
-        self.purge = False
+        self._purge = False
         self.thread = None
         self.priority = priority
         self.showBusy = showBusy
 
         if keepalive:
             manager.append(self)
+
+    @property
+    def done(self):
+        return self.isFinished()
+
+    @property
+    def running(self):
+        return self.isRunning()
 
     def start(self):
         """
@@ -100,15 +106,12 @@ class QThreadFuture(QThread):
         Do not call this from the main thread; you're probably looking for start()
         """
         self.cancelled = False
-        self.running = True
-        self.done = False
         self.exception = None
         if self.showBusy: invoke_in_main_thread(show_busy)
         try:
             for self._result in self._run(*args, **kwargs):
                 if not isinstance(self._result, tuple): self._result = (self._result,)
                 if self.callback_slot: invoke_in_main_thread(self.callback_slot, *self._result)
-            self.running = False
 
         except Exception as ex:
             self.exception = ex
@@ -119,10 +122,11 @@ class QThreadFuture(QThread):
                 f'Kwargs: {self.kwargs}', level=logging.ERROR)
             log_error(ex)
         else:
-            self.done = True
             self.sigFinished.emit()
         finally:
             invoke_in_main_thread(show_ready)
+            self.quit()
+            QApplication.instance().aboutToQuit.disconnect(self.quit)
 
     def _run(self, *args, **kwargs):  # Used to generalize to QThreadFutureIterator
         yield self.method(*self.args, **self.kwargs)
@@ -136,9 +140,9 @@ class QThreadFuture(QThread):
         return self._result
 
     def cancel(self):
+        self.cancelled = True
         self.quit()
         self.wait()
-        self.cancelled = True
 
 
 class QThreadFutureIterator(QThreadFuture):
