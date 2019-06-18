@@ -32,4 +32,3 @@ class DynImageView(ImageView):
         super(DynImageView, self).setImage(img, **kwargs)
         if len(img.shape) > 2 and img.shape[0] == 1:
             self.ui.roiPlot.hide()
-
