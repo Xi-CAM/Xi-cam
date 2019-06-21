@@ -209,7 +209,7 @@ class SearchState(ConfigurableQObject):
                 continue
             if not header_labels_set:
                 # Set header labels just once.
-                self.search_results_model.setHorizontalHeaderLabels(list(row_text))
+                self.search_results_model.setHorizontalHeaderLabels(list(row_data))
                 header_labels_set = True
             for value in row_data.values():
                 item = QStandardItem()
