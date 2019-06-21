@@ -58,7 +58,7 @@ def default_search_result_row(entry):
         str_duration = str(duration)
         str_duration = str_duration[:str_duration.index('.')]
     return {'Unique ID': start['uid'][:8],
-            'Transient Scan ID': str(start.get('scan_id', '-')),
+            'Transient Scan ID': (start.get('scan_id', '-')),
             'Plan Name': start.get('plan_name', '-'),
             'Start Time': start_time.strftime('%Y-%m-%d %H:%M:%S'),
             'Duration': str_duration,
@@ -204,15 +204,16 @@ class SearchState(ConfigurableQObject):
             self._results.append(uid)
             row = []
             try:
-                row_text = self.apply_search_result_row(entry)
+                row_data = self.apply_search_result_row(entry)
             except SkipRow:
                 continue
             if not header_labels_set:
                 # Set header labels just once.
-                self.search_results_model.setHorizontalHeaderLabels(list(row_text))
+                self.search_results_model.setHorizontalHeaderLabels(list(row_data))
                 header_labels_set = True
-            for text in row_text.values():
-                item = QStandardItem(text or '')
+            for value in row_data.values():
+                item = QStandardItem()
+                item.setData(value, Qt.DisplayRole)
                 row.append(item)
             self.search_results_model.appendRow(row)
         if counter:
