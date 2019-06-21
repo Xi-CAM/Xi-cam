@@ -115,7 +115,7 @@ def run_publisher(in_port, data_path):
     RE.subscribe(publisher)
 
     def factory(name, doc):
-        serializer = Serializer(data_path / 'abc')
+        serializer = Serializer(data_path / 'abc', flush=True)
         serializer('start', doc)
         return [serializer], []
 
@@ -128,6 +128,8 @@ def run_publisher(in_port, data_path):
             yield from count([noisy_det], 20, delay=0.5)
             yield from count([random_img], 10, delay=1)
 
+    # Just as a convenience, avoid collission with scan_ids of runs in Catalog.
+    RE.md['scan_id'] = 100
     try:
         RE(infinite_plan())
     finally:

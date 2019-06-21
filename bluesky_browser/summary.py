@@ -78,14 +78,15 @@ class SummaryWidget(QWidget):
             self.open_overplotted_on_button.hide()
         elif len(entries) == 1:
             entry, = entries
-            self.uid = entry.metadata['start']['uid']
+            run = entry()
+            self.uid = run.metadata['start']['uid']
             self.uid_label.setText(self.uid[:8])
             self.copy_uid_button.show()
             self.open_individually_button.show()
             self.open_individually_button.setText('Open')
             self.open_overplotted_on_button.show()
             self.open_overplotted_button.hide()
-            num_events = entry.metadata.get('stop', {}).get('num_events')
+            num_events = (run.metadata['stop'] or {}).get('num_events')
             if num_events:
                 self.streams.setText(
                     'Streams:\n' + ('\n'.join(f'{k} ({v} Events)' for k, v in num_events.items())))
@@ -94,7 +95,7 @@ class SummaryWidget(QWidget):
                 # emitted due to critical failure or this is an old document stream
                 # from before 'num_events' was added to the schema. Get the list of
                 # stream names another way, and omit the Event count.
-                self.streams.setText('Streams:\n' + ('\n'.join(list(entry()))))
+                self.streams.setText('Streams:\n' + ('\n'.join(list(run))))
         else:
             self.uid_label.setText('(Multiple Selected)')
             self.streams.setText('')
