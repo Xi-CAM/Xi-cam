@@ -101,7 +101,7 @@ class XicamPluginManager(PluginManager):
         msg.logError(ex)
         raise NameError(f'No plugin named {name} is in the queue or plugin manager.')
 
-    def getPluginByName(self, name, category="Default", timeout=15):
+    def getPluginByName(self, name, category="Default", timeout=150):
         plugin = super(XicamPluginManager, self).getPluginByName(name, category)
 
         if plugin:
@@ -313,35 +313,66 @@ class XicamPluginManager(PluginManager):
 
         with load_timer() as elapsed:  # cm for load timing
 
-            for element in (getattr(candidate_module, name) for name in dirlist):  # add filtering?
-                target_plugin_info = None
-                for category_name in self.categories_interfaces:
+            element_name = plugin_info.details['Core'].get('Object', None)  # Try explicitly defined element first
+
+            success = False
+            if element_name:
+                element = getattr(candidate_module, element_name)
+                success = self.load_element(element, candidate_infofile, plugin_info)
+
+            if not success:
+                for element in (getattr(candidate_module, name) for name in dirlist):  # add filtering?
+
+                    self.load_element(element, candidate_infofile, plugin_info)
+
+            if success:
+                msg.logMessage(f'{int(elapsed() * 1000)} ms elapsed while loading {plugin_info.name}', level=msg.INFO)
+            else:
+                msg.logMessage(f'No plugin found in indicated module: {candidate_filepath}', msg.ERROR)
+
+    def load_element(self, element, candidate_infofile, plugin_info):
+        """
+
+        Parameters
+        ----------
+        element
+        candidate_infofile
+        plugin_info
+
+        Returns
+        -------
+        bool
+            True if the element matched a category, and will be accepted as a plugin
+
+        """
+        target_plugin_info = None
+        for category_name in self.categories_interfaces:
+            try:
+                is_correct_subclass = issubclass(element, self.categories_interfaces[category_name])
+            except Exception:
+                continue
+            if is_correct_subclass and element is not self.categories_interfaces[category_name]:
+                current_category = category_name
+                if candidate_infofile not in self._category_file_mapping[current_category]:
+                    # we found a new plugin: initialise it and search for the next one
                     try:
-                        is_correct_subclass = issubclass(element, self.categories_interfaces[category_name])
-                    except Exception:
-                        continue
-                    if is_correct_subclass and element is not self.categories_interfaces[category_name]:
-                        current_category = category_name
-                        if candidate_infofile not in self._category_file_mapping[current_category]:
-                            # we found a new plugin: initialise it and search for the next one
-                            try:
 
-                                threads.invoke_in_main_thread(self.instanciatePlugin, plugin_info, element)
+                        threads.invoke_in_main_thread(self.instanciatePlugin, plugin_info, element)
 
 
-                            except Exception:
-                                exc_info = sys.exc_info()
-                                log.error("Unable to create plugin object: %s" % plugin_info.path,
-                                          exc_info=exc_info)
-                                plugin_info.error = exc_info
-                                break  # If it didn't work once it wont again
-                            else:
-                                plugin_info.categories.append(current_category)
-                                self.category_mapping[current_category].append(plugin_info)
-                                self._category_file_mapping[current_category].append(candidate_infofile)
-                                msg.logMessage(f'{int(elapsed()*1000)} ms elapsed while loading {plugin_info.name}',
-                                               level=msg.INFO)
-                                return  # ?
+                    except Exception as ex:
+                        exc_info = sys.exc_info()
+                        msg.logError(ex)
+                        msg.logMessage("Unable to create plugin object: %s" % plugin_info.path)
+                        plugin_info.error = exc_info
+                        # break  # If it didn't work once it wont again
+                        raise RuntimeError('An error occurred while loading plugin: %s' % plugin_info.path)
+                    else:
+                        plugin_info.categories.append(current_category)
+                        self.category_mapping[current_category].append(plugin_info)
+                        self._category_file_mapping[current_category].append(candidate_infofile)
+
+                        return True
 
 
 # Setup plugin manager
