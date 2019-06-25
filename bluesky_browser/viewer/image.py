@@ -18,6 +18,7 @@ def first_frame(event_page, image_key):
     """
     if event_page['seq_num'][0] == 1:
         data = np.asarray(event_page['data'][image_key])
+        log.debug('Image from %s has shape %r', image_key, data.shape)
         if data.ndim == 3:
             # Axes are event axis, y, x. Slice out the first event.
             return data[0, ...]
@@ -39,6 +40,9 @@ def latest_frame(event_page, image_key):
     Extract the most recent frame of image data to plot out of an EventPage.
     """
     data = np.asarray(event_page['data'][image_key])
+    if event_page['seq_num'][0] == 1:
+        # Just log once per event stream.
+        log.debug('Image from %s has shape %r', image_key, data.shape)
     if data.ndim == 3:
         # Axes are event axis, y, x. Slice out the first event.
         return data[0, ...]
@@ -77,10 +81,37 @@ class BaseImageManager(Configurable):
         image_keys = {}
         for key, data_key in descriptor_doc['data_keys'].items():
             ndim = len(data_key['shape'] or [])
+            # We want to record a shape that will match the arr.shape
+            # of the arrays we will see later. Ophyd has been writing
+            # incorrect info into descriptors. We try to detect and corect
+            # that here.
             if ndim == 2:
                 image_keys[key] = data_key['shape']
             elif ndim == 3:
-                image_keys[key] = data_key['shape'][1:]
+                # ophyd <1.4.0 gives (x, y, z) where z is 0
+                # Maybe the better way to detect this is start['version']['ophyd'].
+                if data_key['shape'][-1] == 0:
+                    object_keys = descriptor_doc.get('object_keys', {})
+                    for object_name, data_keys in object_keys.items():
+                        if key in data_keys:
+                            break
+                    else:
+                        log.debug("Couldn't find %s in object_keys %r", key, object_keys)
+                        # Unable to handle this. Skip it.
+                        continue
+                    num_images = descriptor_doc['configuration'][object_name]['data'].get('num_images', -1)
+                    x, y, _ = data_key['shape']
+                    shape = (num_images, y, x)
+                    image_keys[key] = shape[1:]  # Stash (y, x) shape alone.
+                    log.debug("Patching the shape in the data key for %s"
+                              "from %r to %r", key, data_key['shape'], shape)
+                else:
+                    # Assume we are getting correct metadata.
+                    image_keys[key] = data_key['shape'][1:]  # Stash (y, x) shape alone.
+            else:
+                continue
+            log.debug('%s has %d-dimensional image of shape %r',
+                      key, ndim, shape)
 
         callbacks = []
 
