@@ -24,8 +24,11 @@ class DynImageView(ImageView):
         """
         Estimate the min/max values of *data* by subsampling. MODIFIED TO USE THE 99TH PERCENTILE instead of max.
         """
-        if data.size > 1e6:
-            data = data[len(data) // 2]
+        while data.size > 1e6:
+            ax = np.argmax(data.shape)
+            sl = [slice(None)] * data.ndim
+            sl[ax] = slice(None, None, 2)
+            data = data[sl]
         return np.nanmin(data), np.nanpercentile(data, 99)
 
     def setImage(self, img, **kwargs):
