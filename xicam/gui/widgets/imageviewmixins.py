@@ -58,6 +58,8 @@ class PixelSpace(ImageView):
 
         super(PixelSpace, self).__init__(*args, **kwargs)
 
+        self.imageItem.sigImageChanged.connect(self.updateAxes)
+
     def transform(self, img=None):
         # Build Quads
         shape = np.squeeze(img).shape
@@ -91,8 +93,7 @@ class PixelSpace(ImageView):
 
         if not kwargs.get('transform', None):
             img, transform = self.transform(img)
-            self.axesItem.setLabel('bottom', u'x (px)')  # , units='s')
-            self.axesItem.setLabel('left', u'z (px)')
+            self.updateAxes()
             super(PixelSpace, self).setImage(img, *args, transform=transform, **kwargs)
 
         else:
@@ -100,6 +101,10 @@ class PixelSpace(ImageView):
 
     def setTransform(self):
         self.setImage(self.imageItem.image)  # this should loop back around to the respective transforms
+
+    def updateAxes(self):
+        self.axesItem.setLabel('bottom', u'x (px)')  # , units='s')
+        self.axesItem.setLabel('left', u'z (px)')
 
 
 class QSpace(PixelSpace):
@@ -221,9 +226,9 @@ class Crosshair(ImageView):
                 self._vline.setVisible(False)
 
 
-class QCoordinates(ImageView):
+class PixelCoordinates(PixelSpace):
     def __init__(self, *args, **kwargs):
-        super(QCoordinates, self).__init__(*args, **kwargs)
+        super(PixelCoordinates, self).__init__(*args, **kwargs)
 
         self._coordslabel = QLabel(u"<div style='font-size:12pt;background-color:#111111; "
                                    u"text-overflow: ellipsis; width:100%;'>&nbsp;</div>")
@@ -239,38 +244,55 @@ class QCoordinates(ImageView):
         self.scene.sigMouseMoved.connect(self.displayCoordinates)
 
     def displayCoordinates(self, pos):
-        """
-        when the mouse is moved in the viewer, translate the crosshair, recalculate coordinates
-        """
         if self.view.sceneBoundingRect().contains(pos):
             mousePoint = self.view.getViewBox().mapSceneToView(pos)
-            x, y = mousePoint.x(), mousePoint.y()
+            pos = QPointF(mousePoint.x(), mousePoint.y())
+
             if self.imageItem.mapRectToView(self.imageItem.boundingRect()).contains(mousePoint):  # within bounds
                 # angstrom=QChar(0x00B5)
-                pxpos = self.imageItem.mapFromView(QPointF(x, y))
-                try:
-                    I = self.imageItem.image[int(pxpos.y()), int(pxpos.x())]
-                except IndexError:
-                    I = 0
-                self._coordslabel.setText(f"<div style='font-size: 12pt;background-color:#111111; "
-                                          f"text-overflow: ellipsis; width:100%;'>"
-                                          f"x={pxpos.x():0.1f}, "
-                                          f"<span style=''>y={self.imageItem.image.shape[0] - pxpos.y():0.1f}</span>, "
-                                          f"<span style=''>I={I:0.0f}</span>, "
-                                          f"q={np.sqrt(x ** 2 + y ** 2):0.3f} \u212B\u207B\u00B9, "
-                                          f"q<sub>z</sub>={y:0.3f} \u212B\u207B\u00B9, "
-                                          f"q<sub>\u2225</sub>={x:0.3f} \u212B\u207B\u00B9, "
-                                          f"d={2 * np.pi / np.sqrt(x ** 2 + y ** 2) * 10:0.3f} nm, "
-                                          f"\u03B8={np.rad2deg(np.arctan2(y, x)):.2f}&#176;</div>")
-                # if self.plotwidget is not None:  # for timeline
-                #     self.plotwidget.movPosLine(self.getq(x, y),
-                #                                self.getq(x, y, mode='parallel'),
-                #                                self.getq(x, y, mode='z'))
+                pxpos = self.imageItem.mapFromView(pos)
 
+                self.formatCoordinates(pxpos, pos)
             else:
                 self._coordslabel.setText(u"<div style='font-size:12pt;background-color:#111111;'>&nbsp;</div>")
-                # if hasattr(self.plotwidget, 'qintegration'):
-                #     self.plotwidget.qintegration.posLine.hide()
+
+    def formatCoordinates(self, pxpos, pos):
+        """
+        when the mouse is moved in the viewer, recalculate coordinates
+        """
+
+        try:
+            I = self.imageItem.image[int(pxpos.y()), int(pxpos.x())]
+        except IndexError:
+            I = 0
+
+        self._coordslabel.setText(f"<div style='font-size: 12pt;background-color:#111111; "
+                                  f"text-overflow: ellipsis; width:100%;'>"
+                                  f"x={pxpos.x():0.1f}, "
+                                  f"<span style=''>y={self.imageItem.image.shape[0] - pxpos.y():0.1f}</span>, "
+                                  f"<span style=''>I={I:0.0f}</span></div>")
+
+
+class QCoordinates(QSpace):
+    def formatCoordinates(self, pxpos, pos):
+        """
+        when the mouse is moved in the viewer, recalculate coordinates
+        """
+
+        try:
+            I = self.imageItem.image[int(pxpos.y()), int(pxpos.x())]
+        except IndexError:
+            I = 0
+        self._coordslabel.setText(f"<div style='font-size: 12pt;background-color:#111111; "
+                                  f"text-overflow: ellipsis; width:100%;'>"
+                                  f"x={pxpos.x():0.1f}, "
+                                  f"<span style=''>y={self.imageItem.image.shape[0] - pxpos.y():0.1f}</span>, "
+                                  f"<span style=''>I={I:0.0f}</span>, "
+                                  f"q={np.sqrt(pos.x() ** 2 + pos.y() ** 2):0.3f} \u212B\u207B\u00B9, "
+                                  f"q<sub>z</sub>={pos.y():0.3f} \u212B\u207B\u00B9, "
+                                  f"q<sub>\u2225</sub>={pos.x():0.3f} \u212B\u207B\u00B9, "
+                                  f"d={2 * np.pi / np.sqrt(pos.x() ** 2 + pos.y() ** 2) * 10:0.3f} nm, "
+                                  f"\u03B8={np.rad2deg(np.arctan2(pos.y(), pos.x())):.2f}&#176;</div>")
 
 
 class BetterButtons(ImageView):
