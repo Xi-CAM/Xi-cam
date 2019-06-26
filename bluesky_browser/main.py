@@ -6,13 +6,13 @@ import sys
 import time
 from . import __version__
 
-from qtpy.QtCore import QDateTime
+from qtpy.QtCore import QDateTime, Qt
 from qtpy.QtWidgets import (
     QApplication,
     QWidget,
     QMainWindow,
     QHBoxLayout,
-    QVBoxLayout)
+    QSplitter)
 from .search import SearchWidget, SearchState
 from .summary import SummaryWidget
 from .viewer.viewer import Viewer
@@ -39,18 +39,17 @@ class CentralWidget(QWidget):
         self.search_widget = SearchWidget()
         self.summary_widget = SummaryWidget()
 
-        left_pane = QVBoxLayout()
+        left_pane = QSplitter(Qt.Vertical)
         left_pane.addWidget(self.search_widget)
         left_pane.addWidget(self.summary_widget)
 
-        right_pane = QVBoxLayout()
         self.viewer = Viewer(menuBar=menuBar)
 
-        right_pane.addWidget(self.viewer)
-
         layout = QHBoxLayout()
-        layout.addLayout(left_pane)
-        layout.addLayout(right_pane)
+        splitter = QSplitter(Qt.Horizontal)
+        layout.addWidget(splitter)
+        splitter.addWidget(left_pane)
+        splitter.addWidget(self.viewer)
         self.setLayout(layout)
 
         def show_double_clicked_entry(index):

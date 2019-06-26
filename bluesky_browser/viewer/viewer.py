@@ -6,14 +6,15 @@ import logging
 
 from event_model import RunRouter, Filler
 from intake_bluesky.core import parse_handler_registry
-from qtpy.QtCore import Signal, QThread
+from qtpy.QtCore import Signal, Qt, QThread
 from qtpy.QtWidgets import (
     QAction,
     QActionGroup,
     QInputDialog,
+    QSplitter,
     QVBoxLayout,
 )
-from traitlets.traitlets import List, Dict, DottedObjectName
+from traitlets.traitlets import List, Dict, DottedObjectName, Integer
 
 from .header_tree import HeaderTreeFactory
 from .baseline import BaselineFactory
@@ -33,6 +34,7 @@ class Viewer(ConfigurableMoveableTabContainer):
     Contains multiple TabbedViewingAreas
     """
     tab_titles = Signal([tuple])
+    num_viewing_areas = Integer(2, config=True)
 
     def __init__(self, *args, menuBar, **kwargs):
         super().__init__(*args, **kwargs)
@@ -45,10 +47,13 @@ class Viewer(ConfigurableMoveableTabContainer):
 
         self._live_run_router = RunRouter([self.route_live_stream])
 
-        self._containers = [TabbedViewingArea(self, menuBar=menuBar) for _ in range(2)]
+        self._containers = [TabbedViewingArea(self, menuBar=menuBar) for _ in
+                            range(self.num_viewing_areas)]
         layout = QVBoxLayout()
+        splitter = QSplitter(Qt.Vertical)
+        layout.addWidget(splitter)
         for container in self._containers:
-            layout.addWidget(container)
+            splitter.addWidget(container)
         self.setLayout(layout)
 
         overplot_group = QActionGroup(self)
