@@ -129,7 +129,8 @@ class EwaldCorrected(QSpace):
         self.setTransform()
 
     def transform(self, img):
-        if not self._geometry: return super(QSpace, self).transform(img)  # Do pixel space transform when not calibrated
+        if not self._geometry: return super(EwaldCorrected, self).transform(
+            img)  # Do pixel space transform when not calibrated
 
         from camsaxs import remesh_bbox
         img, q_x, q_z = remesh_bbox.remesh(np.squeeze(img), self._geometry, reflection=False, alphai=None)
@@ -164,10 +165,10 @@ class EwaldCorrected(QSpace):
             img, transform = self.transform(img)
             self.axesItem.setLabel('bottom', u'q_x (Å⁻¹)')  # , units='s')
             self.axesItem.setLabel('left', u'q_z (Å⁻¹)')
-            super(QSpace, self).setImage(img, *args, transform=transform, **kwargs)
+            super(EwaldCorrected, self).setImage(img, *args, transform=transform, **kwargs)
 
         else:
-            super(QSpace, self).setImage(img, *args, **kwargs)
+            super(EwaldCorrected, self).setImage(img, *args, **kwargs)
 
 
 class CenterMarker(QSpace):
@@ -273,7 +274,7 @@ class PixelCoordinates(PixelSpace):
                                   f"<span style=''>I={I:0.0f}</span></div>")
 
 
-class QCoordinates(QSpace):
+class QCoordinates(QSpace, PixelCoordinates):
     def formatCoordinates(self, pxpos, pos):
         """
         when the mouse is moved in the viewer, recalculate coordinates
