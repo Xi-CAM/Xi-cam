@@ -4,6 +4,7 @@ from xicam.core import msg
 import logging
 from qtpy.QtCore import *
 from qtpy.QtWidgets import *
+from qtpy.QtGui import *
 import threading
 
 log = msg.logMessage
@@ -12,31 +13,50 @@ show_busy = msg.showBusy
 show_ready = msg.showReady
 
 
-class ThreadManager(QObject):
+class ThreadManager(QStandardItemModel):
     """
     A global thread manager that holds on to threads with 'keepalive'
     """
-    # TODO: convert to QStandardItemModel
-    sigStateChanged = Signal()
+    ThreadRole = Qt.UserRole
 
     def __init__(self):
         super(ThreadManager, self).__init__()
+        self.timer = QTimer()
+        self.timer.setInterval(1000)
+        self.timer.timeout.connect(self.update)
+        self.timer.start()
         self._threads = []
 
     @property
     def threads(self):
-        self.purge()
-        return self._threads
+        return [self.item(i).data(self.ThreadRole) for i in range(self.rowCount())]
 
-    def purge(self):
-        self._threads = [thread for thread in self._threads if not thread.purge]
-        for thread in self._threads:
-            if thread.done or thread.cancelled or thread.exception:
-                thread.purge = True
+    def update(self):
+        # purge
+        for i in reversed(range(self.rowCount())):
+            item = self.item(i)
+            thread = item.data(self.ThreadRole)
+            if thread._purge:
+                self.removeRow(i)
+                self._threads.remove(thread)
+                continue
+            elif thread.done or thread.cancelled or thread.exception:
+                thread._purge = True
+
+            if thread.exception:
+                item.setData(QColor(Qt.red), Qt.ForegroundRole)
+            elif thread.cancelled:
+                item.setData(QColor(Qt.magenta), Qt.ForegroundRole)
+            elif thread.done:
+                item.setData(QColor(Qt.green), Qt.ForegroundRole)
+            elif thread.running:
+                item.setData(QColor(Qt.yellow), Qt.ForegroundRole)
 
     def append(self, thread):
+        item = QStandardItem(repr(thread.method))
+        item.setData(thread, role=self.ThreadRole)
+        self.appendRow(item)
         self._threads.append(thread)
-        self.sigStateChanged.emit()
 
 
 manager = ThreadManager()
@@ -48,7 +68,7 @@ class QThreadFuture(QThread):
     A future-like QThread, with many conveniences.
     """
     sigCallback = Signal()
-    sigFinished = Signal()
+    sigFinished = Signal()  # redundant?
     sigExcept = Signal(Exception)
 
     def __init__(self, method, *args, callback_slot=None, finished_slot=None, except_slot=None, default_exhandle=True,
@@ -74,16 +94,22 @@ class QThreadFuture(QThread):
         self.timeout = timeout  # ms
 
         self.cancelled = False
-        self.running = False
-        self.done = False
         self.exception = None
-        self.purge = False
+        self._purge = False
         self.thread = None
         self.priority = priority
         self.showBusy = showBusy
 
         if keepalive:
             manager.append(self)
+
+    @property
+    def done(self):
+        return self.isFinished()
+
+    @property
+    def running(self):
+        return self.isRunning()
 
     def start(self):
         """
@@ -100,15 +126,12 @@ class QThreadFuture(QThread):
         Do not call this from the main thread; you're probably looking for start()
         """
         self.cancelled = False
-        self.running = True
-        self.done = False
         self.exception = None
         if self.showBusy: invoke_in_main_thread(show_busy)
         try:
             for self._result in self._run(*args, **kwargs):
                 if not isinstance(self._result, tuple): self._result = (self._result,)
                 if self.callback_slot: invoke_in_main_thread(self.callback_slot, *self._result)
-            self.running = False
 
         except Exception as ex:
             self.exception = ex
@@ -119,10 +142,11 @@ class QThreadFuture(QThread):
                 f'Kwargs: {self.kwargs}', level=logging.ERROR)
             log_error(ex)
         else:
-            self.done = True
             self.sigFinished.emit()
         finally:
             invoke_in_main_thread(show_ready)
+            self.quit()
+            QApplication.instance().aboutToQuit.disconnect(self.quit)
 
     def _run(self, *args, **kwargs):  # Used to generalize to QThreadFutureIterator
         yield self.method(*self.args, **self.kwargs)
@@ -136,9 +160,9 @@ class QThreadFuture(QThread):
         return self._result
 
     def cancel(self):
+        self.cancelled = True
         self.quit()
         self.wait()
-        self.cancelled = True
 
 
 class QThreadFutureIterator(QThreadFuture):

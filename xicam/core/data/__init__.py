@@ -117,7 +117,8 @@ class NonDBHeader(object):
 
     @property
     def descriptors(self):
-        return self.documents('descriptors')
+        yield from self._documents['descriptor']
+
 
     @property
     def stream_names(self):
