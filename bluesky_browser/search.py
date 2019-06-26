@@ -394,6 +394,7 @@ class SearchResultsWidget(QTableView):
         self.verticalHeader().setVisible(False)
         self.horizontalHeader().setDefaultAlignment(Qt.AlignHCenter)
         self.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.setAlternatingRowColors(True)
 
 
 class SearchWidget(QWidget):
