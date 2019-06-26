@@ -1,5 +1,6 @@
 bluesky
 event-model >=1.9.0a3
+intake >=0.5.1
 intake-bluesky >=0.1.0a5
 jsonschema
 matplotlib
