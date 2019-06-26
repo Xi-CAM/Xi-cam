@@ -267,7 +267,7 @@ class PixelCoordinates(PixelSpace):
         except IndexError:
             I = 0
 
-        self._coordslabel.setText(f"<div style='font-size: 12pt;background-color:#111111; "
+        self._coordslabel.setText(f"<div style='font-size: 12pt;background-color:#111111; color:#FFFFFF;"
                                   f"text-overflow: ellipsis; width:100%;'>"
                                   f"x={pxpos.x():0.1f}, "
                                   f"<span style=''>y={self.imageItem.image.shape[0] - pxpos.y():0.1f}</span>, "
@@ -284,7 +284,7 @@ class QCoordinates(QSpace, PixelCoordinates):
             I = self.imageItem.image[int(pxpos.y()), int(pxpos.x())]
         except IndexError:
             I = 0
-        self._coordslabel.setText(f"<div style='font-size: 12pt;background-color:#111111; "
+        self._coordslabel.setText(f"<div style='font-size: 12pt;background-color:#111111; color:#FFFFFF; "
                                   f"text-overflow: ellipsis; width:100%;'>"
                                   f"x={pxpos.x():0.1f}, "
                                   f"<span style=''>y={self.imageItem.image.shape[0] - pxpos.y():0.1f}</span>, "
