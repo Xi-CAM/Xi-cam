@@ -83,7 +83,7 @@ class BaseImageManager(Configurable):
             ndim = len(data_key['shape'] or [])
             # We want to record a shape that will match the arr.shape
             # of the arrays we will see later. Ophyd has been writing
-            # incorrect info into descriptors. We try to detect and corect
+            # incorrect info into descriptors. We try to detect and correct
             # that here.
             if ndim == 2:
                 image_keys[key] = data_key['shape']
