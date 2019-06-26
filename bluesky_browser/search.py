@@ -48,9 +48,8 @@ _validate = functools.partial(jsonschema.validate, types={'array': (list, tuple)
 
 
 def default_search_result_row(entry):
-    metadata = entry.describe()['metadata']
-    start = metadata['start']
-    stop = metadata['stop']
+    start = entry.metadata['start']
+    stop = entry.metadata['stop']
     start_time = datetime.fromtimestamp(start['time'])
     if stop is None:
         str_duration = '-'
@@ -394,6 +393,7 @@ class SearchResultsWidget(QTableView):
         self.verticalHeader().setVisible(False)
         self.horizontalHeader().setDefaultAlignment(Qt.AlignHCenter)
         self.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+        self.setAlternatingRowColors(True)
 
 
 class SearchWidget(QWidget):
