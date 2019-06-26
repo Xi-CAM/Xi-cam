@@ -48,8 +48,9 @@ _validate = functools.partial(jsonschema.validate, types={'array': (list, tuple)
 
 
 def default_search_result_row(entry):
-    start = entry.metadata['start']
-    stop = entry.metadata['stop']
+    metadata = entry.describe()['metadata']
+    start = metadata['start']
+    stop = metadata['stop']
     start_time = datetime.fromtimestamp(start['time'])
     if stop is None:
         str_duration = '-'
