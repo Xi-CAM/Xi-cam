@@ -86,7 +86,8 @@ class BaseImageManager(Configurable):
             # incorrect info into descriptors. We try to detect and correct
             # that here.
             if ndim == 2:
-                image_keys[key] = data_key['shape']
+                shape = data_key['shape']
+                image_keys[key] = shape
             elif ndim == 3:
                 # ophyd <1.4.0 gives (x, y, z) where z is 0
                 # Maybe the better way to detect this is start['version']['ophyd'].
@@ -107,7 +108,8 @@ class BaseImageManager(Configurable):
                               "from %r to %r", key, data_key['shape'], shape)
                 else:
                     # Assume we are getting correct metadata.
-                    image_keys[key] = data_key['shape'][1:]  # Stash (y, x) shape alone.
+                    shape = data_key['shape'][1:]  # Stash (y, x) shape alone.
+                    image_keys[key] = shape
             else:
                 continue
             log.debug('%s has %d-dimensional image of shape %r',
