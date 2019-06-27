@@ -148,7 +148,7 @@ class Viewer(ConfigurableMoveableTabContainer):
             viewer = RunViewer()
             if len(entries) == 1:
                 entry, = entries
-                uid = entry().metadata['start']['uid']
+                uid = entry.describe()['metadata']['start']['uid']
                 tab_title = uid[:8]
             else:
                 tab_title = self.get_title()
@@ -160,7 +160,7 @@ class Viewer(ConfigurableMoveableTabContainer):
             viewer = self._title_to_tab[target]
         for entry in entries:
             viewer.load_entry(entry)
-            uid = entry().metadata['start']['uid']
+            uid = entry.describe()['metadata']['start']['uid']
             self._run_to_tabs[uid].append(viewer)
         # TODO Make last entry in the list the current widget.
 
@@ -244,8 +244,7 @@ class RunViewer(ConfigurableQTabWidget):
     def load_entry(self, entry):
         "Load all documents from intake and push them through the RunRouter."
         self._entries.append(entry)
-        datasource = entry()
-        self._uids.append(datasource.metadata['start']['uid'])
+        self._uids.append(entry.describe()['metadata']['start']['uid'])
         entry_loader = EntryLoader(entry, self._active_loaders)
         entry_loader.signal.connect(self.run_router)
         entry_loader.start()
@@ -258,10 +257,18 @@ class EntryLoader(QThread):
         self.entry = entry
         self.loaders = loaders
         self.loaders.add(self)  # Keep it safe from gc.
+        self._datasource = None
         super().__init__(*args, **kwargs)
 
+    @property
+    def datasource(self):
+        # Ensure that entry.get() is called only once.
+        if self._datasource is None:
+            self._datasource = self.entry.get()
+        return self._datasource
+
     def run(self):
-        for name, doc in self.entry().read_canonical():
+        for name, doc in self.datasource.read_canonical():
             self.signal.emit(name, doc)
         self.loaders.remove(self)
 
