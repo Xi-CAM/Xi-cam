@@ -188,6 +188,7 @@ class XicamPluginManager(PluginManager):
             except (Exception, SystemError) as ex:
                 exc_info = sys.exc_info()
                 msg.logMessage("Unable to instanciate plugin: %s" % plugin_info.path, msg.ERROR)
+                msg.logError(ex)
                 msg.notifyMessage(repr(ex),
                                   title=f'An error occurred while starting the "{plugin_info.name}" plugin.',
                                   level=msg.CRITICAL)
