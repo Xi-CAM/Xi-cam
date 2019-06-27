@@ -188,8 +188,6 @@ class ProcessingPlugin(IPlugin):
         if not self._inputs:
             self._inputs = {name: param for name, param in self.__dict__.items()
                             if isinstance(param, Input)}
-        print(f'\n\tself.__dict__.items(): {self.__dict__.items()}')
-        print(f'\n\tself._inputs: {self._inputs}')
         return self._inputs
 
     @property
