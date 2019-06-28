@@ -24,6 +24,7 @@ class DynImageView(ImageView):
         """
         Estimate the min/max values of *data* by subsampling. MODIFIED TO USE THE 99TH PERCENTILE instead of max.
         """
+        if data is None: return 0, 0
         while data.size > 1e6:
             ax = np.argmax(data.shape)
             sl = [slice(None)] * data.ndim
