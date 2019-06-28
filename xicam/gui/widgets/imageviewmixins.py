@@ -63,15 +63,15 @@ class PixelSpace(ImageView):
     def transform(self, img=None):
         # Build Quads
         shape = np.squeeze(img).shape
-        a = [(0, shape[0] - 1),
-             (shape[1] - 1, shape[0] - 1),
-             (shape[1] - 1, 0),
+        a = [(0, shape[-2] - 1),
+             (shape[-1] - 1, shape[-2] - 1),
+             (shape[-1] - 1, 0),
              (0, 0)]
 
         b = [(0, 0),
-             (shape[1] - 1, 0),
-             (shape[1] - 1, shape[0] - 1),
-             (0, shape[0] - 1)]
+             (shape[-1] - 1, 0),
+             (shape[-1] - 1, shape[-2] - 1),
+             (0, shape[-2] - 1)]
 
         quad1 = QPolygonF()
         quad2 = QPolygonF()
@@ -137,9 +137,9 @@ class EwaldCorrected(QSpace):
 
         # Build Quads
         shape = img.shape
-        a = 0, shape[0] - 1
-        b = shape[1] - 1, shape[0] - 1
-        c = shape[1] - 1, 0
+        a = 0, shape[-2] - 1
+        b = shape[-1] - 1, shape[-2] - 1
+        c = shape[-1] - 1, 0
         d = 0, 0
 
         quad1 = QPolygonF()
@@ -287,7 +287,7 @@ class QCoordinates(QSpace, PixelCoordinates):
         self._coordslabel.setText(f"<div style='font-size: 12pt;background-color:#111111; color:#FFFFFF; "
                                   f"text-overflow: ellipsis; width:100%;'>"
                                   f"x={pxpos.x():0.1f}, "
-                                  f"<span style=''>y={self.imageItem.image.shape[0] - pxpos.y():0.1f}</span>, "
+                                  f"<span style=''>y={self.imageItem.image.shape[-2] - pxpos.y():0.1f}</span>, "
                                   f"<span style=''>I={I:0.0f}</span>, "
                                   f"q={np.sqrt(pos.x() ** 2 + pos.y() ** 2):0.3f} \u212B\u207B\u00B9, "
                                   f"q<sub>z</sub>={pos.y():0.3f} \u212B\u207B\u00B9, "
