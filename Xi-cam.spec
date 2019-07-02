@@ -1,4 +1,8 @@
 # -*- mode: python -*-
+# TODO: ALERT! Before building, you MUST manually set the PYTHONPATH env-var as follows!
+# WIN Preparation: set PYTHONPATH="C:\Users\rp\.virtualenvs\xi-cam2\Lib\site-packages"
+# WIN Usage: pyinstaller --clean --onefile --noconsole --paths C:\Windows\System32\downlevel Xi-cam.spec
+# OSX Usage: pyinstaller --clean --onefile --noconsole --osx-bundle-identifier gov.lbl.camera.xicam Xi-cam.spec
 
 import glob, os
 import distributed
@@ -11,6 +15,7 @@ import xicam.plugins, xicam.core, xicam.gui
 import qtmodern
 import pip
 import PyQt5
+import dask
 
 block_cipher = None
 
@@ -18,8 +23,7 @@ from xicam.gui import static
 datas_src = glob.glob(os.path.join(static.__path__[0],'**/*.*'), recursive=True)
 datas_dst = [os.path.dirname(os.path.relpath(path,static.__path__[0])) for path in datas_src]
 
-datas_src.append(os.path.join(distributed.__path__[0],'distributed.yaml'))
-datas_dst.append('distributed')
+# Some packages have messy non-py contents; Lets wrangle them!
 
 # Astropy is a mess of file-based imports; must include source outside of pkg
 datas_src.append(astropy.__path__[0])
@@ -37,6 +41,14 @@ datas_dst.append('pip')
 datas_src.append(PyQt5.__path__[0])
 datas_dst.append('PyQt5')
 
+# Dask needs its config yaml
+datas_src.append(dask.__path__[0])
+datas_dst.append('dask')
+
+# Distributed needs its yaml
+datas_src.append(os.path.join(distributed.__path__[0],'distributed.yaml'))
+datas_dst.append('distributed')
+
 pluginmanager.collectPlugins(paths=[xicam.core.__path__[0],xicam.plugins.__path__[0],xicam.gui.__path__[0]])
 plugins = pluginmanager.getAllPlugins()
 datas_src.extend([plugin.path for plugin in plugins])
@@ -51,10 +63,13 @@ for data in zip(datas_dst, datas_src):
     print(data)
 
 a = Analysis(['run_xicam.py'],
-             pathex=['C:\\Users\\rp\\PycharmProjects\\Xi-cam'],
+             pathex=['C:\\Users\\rp\\PycharmProjects\\xi-cam2',
+                     'C:\\Windows\\System32\\downlevel',
+                     'C:\\Users\\rp\\.virtualenvs\\xi-cam2\\Lib\\site-packages'],
              binaries=[],
              datas=zip(datas_src, datas_dst),
              hiddenimports=['pandas._libs.tslibs.timedeltas',
+                            'imagecodecs._imagecodecs_lite',
                             'pandas._libs.tslibs.np_datetime',
                             'pandas._libs.tslibs.nattype',
                             'pandas._libs.tslibs',
@@ -68,6 +83,10 @@ a = Analysis(['run_xicam.py'],
                             'xicam.plugins.cammart',
                             'xicam.gui.widgets.dynimageview',
                             'compileall',
+                            'xicam.gui.windows',
+                            'xicam.core',
+                            'xicam.plugins',
+                            'xicam.gui'
                             ],
              hookspath=[],
              runtime_hooks=[],
