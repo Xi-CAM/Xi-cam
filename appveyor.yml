@@ -34,7 +34,7 @@ install:
   - "%PYTHON%\\python.exe -m pip install Xi-cam/"
   - "%PYTHON%\\python.exe -m pip install list"
 #  - build.bat
-  - pyinstaller Xi-cam/Xi-cam.spec
+  - "%PYTHON%\\Scripts\\pyinstaller.exe Xi-cam/Xi-cam.spec
 
 
 build: false
