@@ -18,7 +18,7 @@ cache:
   - '%LOCALAPPDATA%\pip\Cache\wheels'
 
 install:
-  - pip install PyQt5
+  - pip install PyQt5==5.12.3
   - cp "c:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\include\stdint.h" "C:\Users\appveyor\AppData\Local\Programs\Common\Microsoft\Visual C++ for Python\9.0\VC\include\stdint.h"
   - "%PYTHON%\\python.exe -m pip install --upgrade pip setuptools wheel"
   - "%PYTHON%\\python.exe -m pip install pyinstaller"
