@@ -21,7 +21,7 @@ import site
 block_cipher = None
 
 from xicam.gui import static
-datas_src = glob.glob(os.path.join(static.__path__[0],'**/*.*'), recursive=True)
+datas_src = [path for path in glob.glob(os.path.join(static.__path__[0],'**/*.*'), recursive=True) if '__init__.py' not in path]
 datas_dst = [os.path.dirname(os.path.relpath(path,static.__path__[0])) for path in datas_src]
 
 # Some packages have messy non-py contents; Lets wrangle them!
@@ -54,14 +54,11 @@ pluginmanager.collectPlugins(paths=[xicam.core.__path__[0],xicam.plugins.__path_
 plugins = pluginmanager.getAllPlugins()
 datas_src.extend([plugin.path for plugin in plugins])
 datas_dst.extend(['plugins']*len(plugins))
-markerfiles = glob.glob('../**/*.yapsy-plugin', recursive=True)
+
+markerfiles = list(map(os.path.abspath, glob.glob('**/*.yapsy-plugin', recursive=True)))
 datas_src.extend(markerfiles)
 datas_dst.extend(['plugins']*len(markerfiles))
 
-
-print('datas:')
-for data in zip(datas_dst, datas_src):
-    print(data)
 
 a = Analysis(['run_xicam.py'],
              pathex=[os.getcwd(),
