@@ -18,7 +18,7 @@ cache:
   - '%LOCALAPPDATA%\pip\Cache\wheels'
 
 install:
-  - pip install https://files.pythonhosted.org/packages/f7/ee/3e5dafdbdf6b35649bd471122e78cab9ae937986586528d247d1f8173007/PyQt5-5.12.3-5.12.4-cp35.cp36.cp37.cp38-none-win_amd64.whl
+  - "%PYTHON%\\python.exe -m pip install PyQt5"
   - cp "c:\Program Files (x86)\Microsoft Visual Studio 10.0\VC\include\stdint.h" "C:\Users\appveyor\AppData\Local\Programs\Common\Microsoft\Visual C++ for Python\9.0\VC\include\stdint.h"
   - "%PYTHON%\\python.exe -m pip install --upgrade pip setuptools wheel"
   - "%PYTHON%\\python.exe -m pip install pyinstaller"
@@ -28,11 +28,11 @@ install:
   - git clone http://www.github.com/lbl-camera/Xi-cam.core
   - git clone http://www.github.com/lbl-camera/Xi-cam.plugins
   - git clone http://www.github.com/lbl-camera/Xi-cam.gui
-  - pip install Xi-cam.core/
-  - pip install Xi-cam.plugins/
-  - pip install Xi-cam.gui/
-  - pip install Xi-cam/
-  - pip list
+  - "%PYTHON%\\python.exe -m pip install Xi-cam.core/"
+  - "%PYTHON%\\python.exe -m pip install Xi-cam.plugins/"
+  - "%PYTHON%\\python.exe -m pip install Xi-cam.gui/"
+  - "%PYTHON%\\python.exe -m pip install Xi-cam/"
+  - "%PYTHON%\\python.exe -m pip install list"
 #  - build.bat
   - pyinstaller Xi-cam/Xi-cam.spec
 
