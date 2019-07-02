@@ -1,9 +1,14 @@
 image:
   - Visual Studio 2015
 
+platform:
+  - x64
+
 environment:
   matrix:
-    - PYTHON: "C:\\Python36"
+    - PYTHON_VERSION: "3.6"
+      PIP_DEPENDENCIES: "pyqt5"
+      PIP_DEPENDENCIES_FLAGS: "-q"
       MSVC_VERSION: "Visual Studio 10 Win64"
   TWINE_USERNAME: rp
 
@@ -22,7 +27,7 @@ install:
   - git clone http://www.github.com/lbl-camera/Xi-cam.core
   - git clone http://www.github.com/lbl-camera/Xi-cam.plugins
   - git clone http://www.github.com/lbl-camera/Xi-cam.gui
-  - pip install PyQt5
+  #- pip install PyQt5
   - pip install Xi-cam.core/
   - pip install Xi-cam.plugins/
   - pip install Xi-cam.gui/
@@ -32,7 +37,7 @@ install:
   - pyinstaller Xi-cam/Xi-cam.spec
 
 
-build: off
+build: false
 
 artifacts:
   - path: dist\*
