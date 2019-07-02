@@ -6,7 +6,7 @@ platform:
 
 environment:
   matrix:
-    - PYTHON: "C:\\Python36"
+    - PYTHON: "C:\\Python37-x64"
       PIP_DEPENDENCIES: "pyqt5"
       PIP_DEPENDENCIES_FLAGS: "-q"
       MSVC_VERSION: "Visual Studio 10 Win64"
