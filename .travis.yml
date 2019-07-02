@@ -14,6 +14,7 @@ addons:
     packages:
     - qtbase5-dev
 install:
+- pip install --upgrade attrs>=17.4.0 # travis python3.6 has attrs 17.3.0 installed
 - pip install cx_freeze==6.0b1
 - pip install coveralls pytest
 - pip install git+https://github.com/lbl-camera/Xi-cam.core.git
