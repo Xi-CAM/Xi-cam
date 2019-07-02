@@ -16,6 +16,7 @@ import qtmodern
 import pip
 import PyQt5
 import dask
+import site
 
 block_cipher = None
 
@@ -63,9 +64,9 @@ for data in zip(datas_dst, datas_src):
     print(data)
 
 a = Analysis(['run_xicam.py'],
-             pathex=['C:\\Users\\rp\\PycharmProjects\\xi-cam2',
+             pathex=[os.getcwd(),
                      'C:\\Windows\\System32\\downlevel',
-                     'C:\\Users\\rp\\.virtualenvs\\xi-cam2\\Lib\\site-packages'],
+                     site.getsitepackages()],
              binaries=[],
              datas=zip(datas_src, datas_dst),
              hiddenimports=['pandas._libs.tslibs.timedeltas',
