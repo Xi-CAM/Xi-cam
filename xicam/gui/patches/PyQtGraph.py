@@ -58,6 +58,11 @@ class ImageView(ImageView):
             ind = inds[-1, 0]
         return ind, t
 
+    def setCurrentIndex(self, ind):
+        super(ImageView, self).setCurrentIndex(ind)
+        (ind, time) = self.timeIndex(self.timeLine)
+        self.sigTimeChanged.emit(ind, time)
+
 
 pyqtgraph.__dict__['ImageView'] = ImageView
 
