@@ -89,7 +89,7 @@ setup(
     # $ pip install -e .[dev,tests]
     extras_require={
         'docs': ['sphinx', 'recommonmark', 'sphinx_bootstrap_theme'],
-        'tests': ['pytest', 'coverage'],
+        'tests': ['pytest', 'coverage', 'coveralls', 'codecov'],
         'pyqt5': ['pyqt5'],
         'PySide2': ['PySide2'],
     },
