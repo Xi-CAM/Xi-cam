@@ -331,15 +331,124 @@ class BetterButtons(ImageView):
 
 class PolygonROI(ImageView):
     def __init__(self, *args, **kwargs):
+        """
+        Image view extended with an adjustable polygon region-of-interest (ROI).
+
+        When first displayed, the polygon ROI's corners will be set to the image item's corners.
+
+        Parameters
+        ----------
+        args, optional
+            Positional arguments for the ImageView.
+        kwargs, optional
+            Keyword arguments for the ImageView.
+        """
         super(PolygonROI, self).__init__(*args, **kwargs)
         rect = self.imageItem.boundingRect()  # type: QRectF
         positions = [(rect.bottomLeft().x(), rect.bottomLeft().y()),
                      (rect.bottomRight().x(), rect.bottomRight().y()),
                      (rect.topRight().x(), rect.topRight().y()),
                      (rect.topLeft().x(), rect.topLeft().y())]
-        self._roiItem = BetterPolyLineROI(positions=positions, closed=True)
+        self._roiItem = BetterPolyLineROI(positions=positions, closed=True, scaleSnap=True, translateSnap=True)
         self.addItem(self._roiItem)
 
-    def poly_mask(self, shape=None, ):
-        if not shape: shape = self.imageItem.image.shape
-        return self._roiItem.renderShapeMask(*shape)
+    def poly_mask(self):
+        """
+        Gets the mask array for a ROI polygon on the image.
+
+        The mask array's shape will match the image's shape.
+        Any pixel inside both the ROI polygon and the image will be set to 1 in the mask array;
+        all other values in the mask will be set to 0.
+
+        Returns
+        -------
+        ndarray:
+            Mask array of the ROI polygon within image space (mask shape matches image shape).
+
+        """
+        result, mapped = self._roiItem.getArrayRegion(np.ones_like(self.imageItem.image), self.imageItem, returnMappedCoords=True)
+
+        # TODO -- move this code to own function and test
+        # Reverse the result array to make indexing calculations easier, then revert back
+        result = result[::-1, ::-1]
+        mapped = mapped[::-1, ::-1]
+
+        # Pad result mask rect into bounding rect of mask and image
+        floorRow = np.floor(mapped[0]).astype(int)
+        floorCol = np.floor(mapped[1]).astype(int)
+
+        # Return empty mask if ROI bounding box does not intersect image bounding box
+        resultRect = QRectF(QPointF(np.min(floorRow), np.min(floorCol)), QPointF(np.max(floorRow), np.max(floorCol)))
+        if not self._intersectsImage(resultRect):
+            # TODO -- is zeros(shape) the right return value for a non-intersecting polygon?
+            return np.zeros(self.imageItem.image.shape)
+
+        # Find the bounds of the ROI polygon
+        minX = np.min(floorRow)
+        maxX = np.max(floorRow)
+        minY = np.min(floorCol)
+        maxY = np.max(floorCol)
+
+        width = self.imageItem.width()
+        height = self.imageItem.height()
+        # Pad the ROI polygon into the image shape
+        # Don't need padding if a polygon boundary is outside of the image shape
+        padXBefore = minX
+        if minX < 0:
+            padXBefore = 0
+        padXAfter = height - maxX
+        if padXAfter < 0:
+            padXAfter = 0
+        padYBefore = minY
+        if minY < 0:
+            padYBefore = 0
+        padYAfter = width - maxY
+        if padYAfter < 0:
+            padYAfter = 0
+
+        boundingBox = np.pad(result, ((padYBefore, padYAfter), (padXBefore, padXAfter)), 'constant')
+
+        # For trimming, any negative minimums need to be shifted into the image shape
+        offsetX = 0
+        offsetY = 0
+        if minX < 0:
+            offsetX = abs(minX)
+        if minY < 0:
+            offsetY = abs(minY)
+        trimmed = boundingBox[abs(offsetY): abs(offsetY) + height, abs(offsetX):abs(offsetX) + width]
+
+        # Reorient the trimmed mask array
+        trimmed = trimmed[::-1, ::-1]
+
+        # # TODO remove plotting code below
+        # from matplotlib import pyplot as plt
+        # plt.figure('bounding_box, origin="lower"')
+        # plt.imshow(boundingBox, origin='lower')
+        # plt.show()
+        #
+        #
+        # plt.figure(f'trimmed, origin="lower", [{abs(offsetY)}:{abs(offsetY)+height}, {abs(offsetX)}:{abs(offsetX)+width}]')
+        # plt.imshow(trimmed, origin='lower')
+        # plt.show()
+        # # TODO remove the plotting code above
+        return trimmed
+
+
+    def _intersectsImage(self, rectangle: QRectF):
+        """
+        Checks if a rectangle intersects the image's bounding rectangle.
+
+        Parameters
+        ----------
+        rectangle
+            Rectangle to test intersection with the image item's bounding rectangle.
+
+        Returns
+        -------
+        bool
+            True if the rectangle and the image bounding rectangle intersect; otherwise False.
+
+        """
+        # TODO -- test
+        return self.imageItem.boundingRect().intersects(rectangle)
+
