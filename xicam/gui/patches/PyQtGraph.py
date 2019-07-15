@@ -29,7 +29,7 @@ from pyqtgraph.parametertree import Parameter, ParameterItem, registerParameterT
 from pyqtgraph.parametertree import parameterTypes
 from pyqtgraph.widgets.SpinBox import SpinBox
 from pyqtgraph.widgets.ColorButton import ColorButton
-from pyqtgraph import ImageView
+from pyqtgraph import ImageView, ROI, PolyLineROI
 import numpy as np
 from qtpy.QtCore import QSize
 from qtpy.QtGui import QBrush, QPalette
@@ -65,6 +65,40 @@ class ImageView(ImageView):
 
 
 pyqtgraph.__dict__['ImageView'] = ImageView
+
+
+class PolyLineROI(PolyLineROI):
+    def getArrayRegion(self, data, img, axes=(0, 1), **kwds):
+        """
+        Return the result of ROI.getArrayRegion(), masked by the shape of the
+        ROI. Values outside the ROI shape are set to 0.
+        """
+        br = self.boundingRect()
+        if br.width() > 1000:
+            raise Exception()
+        sliced = ROI.getArrayRegion(self, data, img, axes=axes, fromBoundingRect=True, **kwds)
+        if kwds.get('returnMappedCoords'):
+            sliced, mapped = sliced
+
+        if img.axisOrder == 'col-major':
+            mask = self.renderShapeMask(sliced.shape[axes[0]], sliced.shape[axes[1]])
+        else:
+            mask = self.renderShapeMask(sliced.shape[axes[1]], sliced.shape[axes[0]])
+            mask = mask.T
+
+        # reshape mask to ensure it is applied to the correct data axes
+        shape = [1] * data.ndim
+        shape[axes[0]] = sliced.shape[axes[0]]
+        shape[axes[1]] = sliced.shape[axes[1]]
+        mask = mask.reshape(shape)
+
+        if kwds.get('returnMappedCoords'):
+            return sliced * mask, mapped
+        else:
+            return sliced * mask
+
+
+pyqtgraph.__dict__['PolyLineROI'] = PolyLineROI
 
 
 class SafeImageView(ImageView):
