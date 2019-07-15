@@ -62,7 +62,7 @@ class PixelSpace(ImageView):
 
     def transform(self, img=None):
         # Build Quads
-        shape = np.squeeze(img).shape
+        shape = img.shape
         a = [(0, shape[-2] - 1),
              (shape[-1] - 1, shape[-2] - 1),
              (shape[-1] - 1, 0),
