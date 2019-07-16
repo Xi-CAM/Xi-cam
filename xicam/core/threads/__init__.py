@@ -84,6 +84,7 @@ class QThreadFuture(QThread):
         self.threadkey = threadkey
 
         self.callback_slot = callback_slot
+        self.except_slot = except_slot
         # if callback_slot: self.sigCallback.connect(callback_slot)
         if finished_slot: self.sigFinished.connect(finished_slot)
         if except_slot: self.sigExcept.connect(except_slot)
@@ -161,6 +162,8 @@ class QThreadFuture(QThread):
 
     def cancel(self):
         self.cancelled = True
+        if self.except_slot:
+            invoke_in_main_thread(self.except_slot, InterruptedError('Thread cancelled.'))
         self.quit()
         self.wait()
 
