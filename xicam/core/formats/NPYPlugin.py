@@ -8,7 +8,7 @@ class NPYPlugin(DataHandlerPlugin):
     DEFAULT_EXTENTIONS = ['.npy']
 
     def __call__(self, *args, **kwargs):
-        return np.load(self.path)
+        return np.load(self.path, allow_pickle=True)
 
     def __init__(self, path):
         super(NPYPlugin, self).__init__()
