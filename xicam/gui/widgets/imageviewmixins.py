@@ -453,7 +453,6 @@ class PolygonROI(ImageView):
         return self.imageItem.boundingRect().intersects(rectangle)
 
 
-
 import collections
 from pyqtgraph import functions as fn
 from pyqtgraph import debug
