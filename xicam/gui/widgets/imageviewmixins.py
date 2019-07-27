@@ -270,7 +270,7 @@ class PixelCoordinates(PixelSpace):
         self._coordslabel.setText(f"<div style='font-size: 12pt;background-color:#111111; color:#FFFFFF;"
                                   f"text-overflow: ellipsis; width:100%;'>"
                                   f"x={pxpos.x():0.1f}, "
-                                  f"<span style=''>y={self.imageItem.image.shape[0] - pxpos.y():0.1f}</span>, "
+                                  f"<span style=''>y={self.imageItem.image.shape[-2] - pxpos.y():0.1f}</span>, "
                                   f"<span style=''>I={I:0.0f}</span></div>")
 
 
@@ -452,3 +452,124 @@ class PolygonROI(ImageView):
         # TODO -- test
         return self.imageItem.boundingRect().intersects(rectangle)
 
+
+
+import collections
+from pyqtgraph import functions as fn
+from pyqtgraph import debug
+from pyqtgraph import Point
+
+
+class LogScaleImageItem(ImageItem):
+    def __init__(self, *args, **kwargs):
+        super(LogScaleImageItem, self).__init__(*args, **kwargs)
+        self.logScale = True
+
+    def render(self):
+        # Convert data to QImage for display.
+
+        profile = debug.Profiler()
+        if self.image is None or self.image.size == 0:
+            return
+        if isinstance(self.lut, collections.Callable):
+            lut = self.lut(self.image)
+        else:
+            lut = self.lut
+
+        if self.logScale:
+            image = self.image + 1
+            with np.errstate(invalid='ignore'):
+                image = image.astype(np.float)
+                np.log(image, where=image >= 0, out=image)  # map to 0-255
+        else:
+            image = self.image
+
+        if self.autoDownsample:
+            # reduce dimensions of image based on screen resolution
+            o = self.mapToDevice(QPointF(0, 0))
+            x = self.mapToDevice(QPointF(1, 0))
+            y = self.mapToDevice(QPointF(0, 1))
+            w = Point(x - o).length()
+            h = Point(y - o).length()
+            if w == 0 or h == 0:
+                self.qimage = None
+                return
+            xds = max(1, int(1.0 / w))
+            yds = max(1, int(1.0 / h))
+            axes = [1, 0] if self.axisOrder == 'row-major' else [0, 1]
+            image = fn.downsample(image, xds, axis=axes[0])
+            image = fn.downsample(image, yds, axis=axes[1])
+            self._lastDownsample = (xds, yds)
+        else:
+            pass
+
+        # if the image data is a small int, then we can combine levels + lut
+        # into a single lut for better performance
+        levels = self.levels
+        if levels is not None and levels.ndim == 1 and image.dtype in (np.ubyte, np.uint16):
+            if self._effectiveLut is None:
+                eflsize = 2 ** (image.itemsize * 8)
+                ind = np.arange(eflsize)
+                minlev, maxlev = levels
+                levdiff = maxlev - minlev
+                levdiff = 1 if levdiff == 0 else levdiff  # don't allow division by 0
+                if lut is None:
+                    efflut = fn.rescaleData(ind, scale=255. / levdiff,
+                                            offset=minlev, dtype=np.ubyte)
+                else:
+                    lutdtype = np.min_scalar_type(lut.shape[0] - 1)
+                    efflut = fn.rescaleData(ind, scale=(lut.shape[0] - 1) / levdiff,
+                                            offset=minlev, dtype=lutdtype, clip=(0, lut.shape[0] - 1))
+                    efflut = lut[efflut]
+
+                self._effectiveLut = efflut
+            lut = self._effectiveLut
+            levels = None
+
+        # Assume images are in column-major order for backward compatibility
+        # (most images are in row-major order)
+
+        if self.axisOrder == 'col-major':
+            image = image.transpose((1, 0, 2)[:image.ndim])
+
+        if self.logScale:
+            with np.errstate(invalid='ignore'):
+                levels = np.log(np.add(levels, 1))
+            levels[0] = np.nanmax([levels[0], 0])
+
+        argb, alpha = fn.makeARGB(image, lut=lut, levels=levels)
+        self.qimage = fn.makeQImage(argb, alpha, transpose=False)
+
+
+class LogScaleIntensity(ImageView):
+    def __init__(self, *args, **kwargs):
+        if kwargs.get('imageItem') and not isinstance(kwargs.get('imageItem'), LogScaleImageItem):
+            raise RuntimeError('The imageItem set to a LogScaleIntensity ImageView must be a LogScaleImageItem.')
+
+        kwargs['imageItem'] = LogScaleImageItem()
+        super(LogScaleIntensity, self).__init__(*args, **kwargs)
+
+        self.logScale = True
+
+        # Setup log scale button
+        self.logIntensityButton = QPushButton('Log Intensity')
+        sizePolicy = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(1)
+        sizePolicy.setHeightForWidth(self.logIntensityButton.sizePolicy().hasHeightForWidth())
+        self.logIntensityButton.setSizePolicy(sizePolicy)
+        self.logIntensityButton.setObjectName("logIntensity")
+        self.ui.gridLayout.addWidget(self.logIntensityButton, 3, 2, 1, 1)
+        self.logIntensityButton.setCheckable(True)
+        self.setLogScale(True)
+        self.logIntensityButton.clicked.connect(self._setLogScale)
+
+    def _setLogScale(self, value):
+        self.imageItem.logScale = value
+        self.imageItem.qimage = None
+        self.imageItem.update()
+        self.getHistogramWidget().region.setBounds([0 if value else None, None])
+
+    def setLogScale(self, value):
+        self._setLogScale(value)
+        self.logIntensityButton.setChecked(value)
