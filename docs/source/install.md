@@ -89,22 +89,22 @@ modify any code in these repos and see the changes without having to run
 **Git Bash**.)
 
 ```
-git clone https://github.com/lbl-camera/Xi-cam.core
+git clone https://github.com/synchrotrons/Xi-cam.core
 cd Xi-cam.core 
 pip install -e .
 cd ..
 
-git clone https://github.com/lbl-camera/Xi-cam.plugins
+git clone https://github.com/synchrotrons/Xi-cam.plugins
 cd Xi-cam.plugins
 pip install -e .
 cd ..
 
-git clone https://github.com/lbl-camera/Xi-cam.gui
+git clone https://github.com/synchrotrons/Xi-cam.gui
 cd Xi-cam.gui
 pip install -e .
 cd ..
 
-git clone https://github.com/lbl-camera/Xi-cam
+git clone https://github.com/synchrotrons/Xi-cam
 cd Xi-cam
 pip install -e .
 ```
