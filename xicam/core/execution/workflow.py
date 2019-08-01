@@ -305,7 +305,7 @@ class Workflow(object):
 
     def validate(self):
         """
-        Validate all of:
+        Validate all of:\
         - All required inputs are satisfied.
         - Connection is active.
         - ?
