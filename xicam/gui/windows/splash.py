@@ -10,9 +10,9 @@ from xicam.gui import static
 
 class XicamSplashScreen(QSplashScreen):
     minsplashtime = 3000
+    sigFinished = Signal()
 
-    def __init__(self, mainwindow: Callable[[], QMainWindow] = None,
-                 f: int = Qt.WindowStaysOnTopHint | Qt.SplashScreen):
+    def __init__(self, f: int = Qt.WindowStaysOnTopHint | Qt.SplashScreen):
         """
         A QSplashScreen customized to display an animated gif. The splash triggers launch when clicked.
 
@@ -40,7 +40,7 @@ class XicamSplashScreen(QSplashScreen):
         self._launching = False
         self._launchready = False
         self.timer = QTimer(self)
-        self.mainwindow = mainwindow
+        self.mainwindow = None
 
         # Start splashing
         self.setAttribute(Qt.WA_DeleteOnClose)
@@ -104,19 +104,15 @@ class XicamSplashScreen(QSplashScreen):
         if not self._launching:
             self._launching = True
 
-            app = QApplication.instance()
-
-            from xicam.gui.windows.mainwindow import XicamMainWindow
-            self.mainwindow = XicamMainWindow()
             self.timer.stop()
+
+            # Stop splashing
+            # self.hide()
+            self.movie.stop()
+            self.finish(self.mainwindow)
 
             # Show the QMainWindow
             self.mainwindow.show()
             self.mainwindow.raise_()
             self.mainwindow.activateWindow()
-            app.setActiveWindow(self.mainwindow)
-
-            # Stop splashing
-            self.hide()
-            self.movie.stop()
-            self.finish(self.mainwindow)
+            QApplication.instance().setActiveWindow(self.mainwindow)
