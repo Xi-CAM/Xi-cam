@@ -40,7 +40,17 @@ def main():
     if '-v' in sys.argv:
         QErrorMessage.qtHandler()
 
+    from xicam.gui.windows.mainwindow import XicamMainWindow
     splash = splash.XicamSplashScreen()
+
+    def start():
+        mainwindow = XicamMainWindow()
+        splash.mainwindow = mainwindow
+        mainwindow.load()
+
+    # Start loading the mainwindow within Qt mainloop
+    QTimer.singleShot(0, start)
+
     app.exec_()
 
 
