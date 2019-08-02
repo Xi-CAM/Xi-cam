@@ -9,5 +9,5 @@ pyqt5>=5.8
 pyzmq
 qtpy
 suitcase-jsonl
-tornado<5  # pinned for bluesky
+tornado
 traitlets
