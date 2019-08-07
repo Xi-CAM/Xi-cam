@@ -7,10 +7,10 @@ development.
 ## Install git and python3
 
 You will need to ensure that you have both **git** and **python3** installed on
-your system for Xi-cam development. You will also probably want to install
-a text editor or IDE (integrated development environment) for writing python 
-code. For a python IDE, we recommend
-[PyCharm Community Edition](https://www.jetbrains.com/pycharm/download/).
+your system for Xi-cam development.
+
+If you do not have familiarity with git, see the [Resources](resources.md) page for more information
+about git and GitHub.
 
 ### macOS
 
@@ -68,6 +68,13 @@ source venv/bin/actviate
 python -m venv venv
 venv\Scripts\activate
 ```
+
+### IDE
+
+If you don't already have a preferred text editor or IDE (integrated development environment), you will want to install
+one. For python, we recommend the
+[PyCharm Community Edition](https://www.jetbrains.com/pycharm/download/) IDE.
+
 
 ## Install Xi-cam and Core Dependencies
 

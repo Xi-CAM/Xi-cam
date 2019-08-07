@@ -9,11 +9,13 @@ Welcome to Xi-cam's documentation!
 .. toctree::
    :caption: Contents:
 
-   install
    intro
-   ezPlugin
-   processingPlugin
-   pluginDev
+   install
+   ez-plugin
+   processing-plugin
+   gui-plugin
+   workflow
+   resources
 
 
 Indices and tables

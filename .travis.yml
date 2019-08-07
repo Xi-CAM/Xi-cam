@@ -1,6 +1,8 @@
 language: python
 python:
 - '3.6'
+services:
+  - xvfb
 branches:
   only:
   - master
@@ -23,7 +25,6 @@ install:
 script:
 - pip install pylint
 - 'pylint xicam --errors-only || :'
-- sh -e /etc/init.d/xvfb start
 - sleep 3
 - 'pytest . || :'
 - pip install -e .[dev]
