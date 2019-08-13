@@ -7,6 +7,7 @@ from typing import Any
 import traceback
 import threading
 from collections import defaultdict
+from qtpy.QtCore import QTimer
 from xicam.core import paths
 
 """
@@ -55,7 +56,7 @@ if 'qtpy' in sys.modules:
         from qtpy.QtGui import QIcon, QPixmap
         from xicam.gui.static import path
 
-        trayicon = QSystemTrayIcon(QIcon(QPixmap(str(path('icons/xicam.gif')))))  # TODO: better icon
+        trayicon = QSystemTrayIcon(QIcon(QPixmap(str(path('icons/cpu.png')))))  # TODO: better icon
 
 _thread_count = 0
 
@@ -142,7 +143,10 @@ def notifyMessage(*args, timeout=8000, title='', level: int = INFO):
         trayicon.show()
         from .. import threads  # must be a late import
         threads.invoke_in_main_thread(trayicon.showMessage, title, ''.join(args), icon, timeout)
+        threads.invoke_in_main_thread(lambda *_: QTimer.singleShot(timeout, trayicon.hide))
         # trayicon.showMessage(title, ''.join(args), icon, timeout)  # TODO: check if title and message are swapped?
+
+    logMessage(*args)
 
 
 def showMessage(*args, timeout=5, **kwargs):
