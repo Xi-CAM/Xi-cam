@@ -352,6 +352,9 @@ class PolygonROI(ImageView):
         self._roiItem = BetterPolyLineROI(positions=positions, closed=True, scaleSnap=True, translateSnap=True)
         self.addItem(self._roiItem)
 
+    def __repr__(self):
+        return type(self).__name__ + repr(self._roiItem)
+
     def poly_mask(self):
         """
         Gets the mask array for a ROI polygon on the image.
