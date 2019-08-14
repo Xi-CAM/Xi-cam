@@ -89,6 +89,9 @@ class XicamPluginManager(PluginManager):
 
         self.observers = []
 
+        self.loading = False
+        self.loadcomplete = False
+
     def attach(self, callback, filter=None):
         self.observers.append((callback, filter))
 
@@ -150,6 +153,8 @@ class XicamPluginManager(PluginManager):
 
         Overloaded to add callback.
         """
+        self.loading = True
+
         self.setPluginPlaces(self.plugindirs + (paths or []))
 
         self.locatePlugins()
@@ -168,7 +173,10 @@ class XicamPluginManager(PluginManager):
         msg.logMessage('Candidates:')
         for candidate in self._candidates: msg.logMessage(candidate)
 
-        self.loadPlugins(callback=self.showLoading)
+        future = threads.QThreadFutureIterator(self.loadPlugins,
+                                               callback_slot=self.showLoading,
+                                               finished_slot=lambda: setattr(self, 'loadcomplete', True))
+        future.start()
 
         self.notify()
 
@@ -220,8 +228,7 @@ class XicamPluginManager(PluginManager):
         """
         return {plugin.name: plugin for plugin in self.getPluginsOfCategory(item)}
 
-    @threads.method()
-    def loadPlugins(self, callback=None):
+    def loadPlugins(self):
         """
         Load the candidate plugins that have been identified through a
         previous call to locatePlugins.  For each plugin candidate
@@ -243,11 +250,8 @@ class XicamPluginManager(PluginManager):
         initial_len = len(self.loadqueue)
 
         for candidate_infofile, candidate_filepath, plugin_info in iter(self.loadqueue.popleft, (None, None, None)):
-            # if a callback exists, call it before attempting to load
-            # the plugin so that a message can be displayed to the
-            # user
-            if callback is not None:
-                callback(plugin_info)
+            # yield a message can be displayed to the user
+            yield plugin_info
 
             self.load_plugin(candidate_infofile=candidate_infofile, candidate_filepath=candidate_filepath,
                              plugin_info=plugin_info)
