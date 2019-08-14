@@ -17,6 +17,7 @@ Clone and install.
 
    git clone https://github.com/NSLS-II/bluesky-browser
    cd bluesky-browser
+   conda create -n bluesky_browser python=3 --file=requirements.txt -c lightsource2-tag
    pip install -e .
 
 Run the demo.
