@@ -1,6 +1,6 @@
-'''
+"""
 This patch module adds color gradients like matplotlib's viridis etc. to PyQtGraph
-'''
+"""
 from pyqtgraph.graphicsItems import GradientEditorItem
 from collections import OrderedDict
 from qtpy.QtWidgets import QTreeWidgetItem, QWidget, QPushButton, QCheckBox
@@ -10,20 +10,120 @@ from xicam.gui.static import path
 
 from pyqtgraph.parametertree.parameterTypes import WidgetParameterItem
 
-GradientEditorItem.__dict__['Gradients'] = OrderedDict([
-    ('thermal', {'ticks': [(0.3333, (185, 0, 0, 255)), (0.6666, (255, 220, 0, 255)), (1, (255, 255, 255, 255)), (0, (0, 0, 0, 255))], 'mode': 'rgb'}),
-    ('flame', {'ticks': [(0.2, (7, 0, 220, 255)), (0.5, (236, 0, 134, 255)), (0.8, (246, 246, 0, 255)), (1.0, (255, 255, 255, 255)), (0.0, (0, 0, 0, 255))], 'mode': 'rgb'}),
-    ('yellowy', {'ticks': [(0.0, (0, 0, 0, 255)), (0.2328863796753704, (32, 0, 129, 255)), (0.8362738179251941, (255, 255, 0, 255)), (0.5257586450247, (115, 15, 255, 255)), (1.0, (255, 255, 255, 255))], 'mode': 'rgb'} ),
-    ('bipolar', {'ticks': [(0.0, (0, 255, 255, 255)), (1.0, (255, 255, 0, 255)), (0.5, (0, 0, 0, 255)), (0.25, (0, 0, 255, 255)), (0.75, (255, 0, 0, 255))], 'mode': 'rgb'}),
-    ('viridis', {'ticks': [(0.0, (68, 1, 84, 255)), (0.25, (58, 82, 139, 255)), (0.5, (32, 144, 140, 255)), (0.75, (94, 201, 97, 255)), (1.0, (253, 231, 36, 255))], 'mode': 'rgb'}),
-    ('inferno', {'ticks': [(0.0, (0, 0, 3, 255)), (0.25, (87, 15, 109, 255)), (0.5, (187, 55, 84, 255)), (0.75, (249, 142, 8, 255)), (1.0, (252, 254, 164, 255))], 'mode': 'rgb'}),
-    ('plasma', {'ticks': [(0.0, (12, 7, 134, 255)), (0.25, (126, 3, 167, 255)), (0.5, (203, 71, 119, 255)), (0.75, (248, 149, 64, 255)), (1.0, (239, 248, 33, 255))], 'mode': 'rgb'}),
-    ('magma', {'ticks': [(0.0, (0, 0, 3, 255)), (0.25, (80, 18, 123, 255)), (0.5, (182, 54, 121, 255)), (0.75, (251, 136, 97, 255)), (1.0, (251, 252, 191, 255))], 'mode': 'rgb'}),
-    ('spectrum', {'ticks': [(1.0, (255, 0, 255, 255)), (0.0, (255, 0, 0, 255))], 'mode': 'hsv'}),
-    ('cyclic', {'ticks': [(0.0, (255, 0, 4, 255)), (1.0, (255, 0, 0, 255))], 'mode': 'hsv'}),
-    ('greyclip', {'ticks': [(0.0, (0, 0, 0, 255)), (0.99, (255, 255, 255, 255)), (1.0, (255, 0, 0, 255))], 'mode': 'rgb'}),
-    ('grey', {'ticks': [(0.0, (0, 0, 0, 255)), (1.0, (255, 255, 255, 255))], 'mode': 'rgb'}),
-])
+GradientEditorItem.__dict__["Gradients"] = OrderedDict(
+    [
+        (
+            "thermal",
+            {
+                "ticks": [
+                    (0.3333, (185, 0, 0, 255)),
+                    (0.6666, (255, 220, 0, 255)),
+                    (1, (255, 255, 255, 255)),
+                    (0, (0, 0, 0, 255)),
+                ],
+                "mode": "rgb",
+            },
+        ),
+        (
+            "flame",
+            {
+                "ticks": [
+                    (0.2, (7, 0, 220, 255)),
+                    (0.5, (236, 0, 134, 255)),
+                    (0.8, (246, 246, 0, 255)),
+                    (1.0, (255, 255, 255, 255)),
+                    (0.0, (0, 0, 0, 255)),
+                ],
+                "mode": "rgb",
+            },
+        ),
+        (
+            "yellowy",
+            {
+                "ticks": [
+                    (0.0, (0, 0, 0, 255)),
+                    (0.2328863796753704, (32, 0, 129, 255)),
+                    (0.8362738179251941, (255, 255, 0, 255)),
+                    (0.5257586450247, (115, 15, 255, 255)),
+                    (1.0, (255, 255, 255, 255)),
+                ],
+                "mode": "rgb",
+            },
+        ),
+        (
+            "bipolar",
+            {
+                "ticks": [
+                    (0.0, (0, 255, 255, 255)),
+                    (1.0, (255, 255, 0, 255)),
+                    (0.5, (0, 0, 0, 255)),
+                    (0.25, (0, 0, 255, 255)),
+                    (0.75, (255, 0, 0, 255)),
+                ],
+                "mode": "rgb",
+            },
+        ),
+        (
+            "viridis",
+            {
+                "ticks": [
+                    (0.0, (68, 1, 84, 255)),
+                    (0.25, (58, 82, 139, 255)),
+                    (0.5, (32, 144, 140, 255)),
+                    (0.75, (94, 201, 97, 255)),
+                    (1.0, (253, 231, 36, 255)),
+                ],
+                "mode": "rgb",
+            },
+        ),
+        (
+            "inferno",
+            {
+                "ticks": [
+                    (0.0, (0, 0, 3, 255)),
+                    (0.25, (87, 15, 109, 255)),
+                    (0.5, (187, 55, 84, 255)),
+                    (0.75, (249, 142, 8, 255)),
+                    (1.0, (252, 254, 164, 255)),
+                ],
+                "mode": "rgb",
+            },
+        ),
+        (
+            "plasma",
+            {
+                "ticks": [
+                    (0.0, (12, 7, 134, 255)),
+                    (0.25, (126, 3, 167, 255)),
+                    (0.5, (203, 71, 119, 255)),
+                    (0.75, (248, 149, 64, 255)),
+                    (1.0, (239, 248, 33, 255)),
+                ],
+                "mode": "rgb",
+            },
+        ),
+        (
+            "magma",
+            {
+                "ticks": [
+                    (0.0, (0, 0, 3, 255)),
+                    (0.25, (80, 18, 123, 255)),
+                    (0.5, (182, 54, 121, 255)),
+                    (0.75, (251, 136, 97, 255)),
+                    (1.0, (251, 252, 191, 255)),
+                ],
+                "mode": "rgb",
+            },
+        ),
+        ("spectrum", {"ticks": [(1.0, (255, 0, 255, 255)), (0.0, (255, 0, 0, 255))], "mode": "hsv"}),
+        ("cyclic", {"ticks": [(0.0, (255, 0, 4, 255)), (1.0, (255, 0, 0, 255))], "mode": "hsv"}),
+        (
+            "greyclip",
+            {"ticks": [(0.0, (0, 0, 0, 255)), (0.99, (255, 255, 255, 255)), (1.0, (255, 0, 0, 255))], "mode": "rgb"},
+        ),
+        ("grey", {"ticks": [(0.0, (0, 0, 0, 255)), (1.0, (255, 255, 255, 255))], "mode": "rgb"}),
+    ]
+)
 
 from pyqtgraph.parametertree import Parameter, ParameterItem, registerParameterType
 from pyqtgraph.parametertree import parameterTypes
@@ -44,7 +144,8 @@ class ImageView(ImageView):
 
         t = slider.value()
 
-        if not hasattr(self, 'tVals'): return (0, 0)
+        if not hasattr(self, "tVals"):
+            return (0, 0)
 
         xv = self.tVals
         if xv is None:
@@ -64,7 +165,7 @@ class ImageView(ImageView):
         self.sigTimeChanged.emit(ind, time)
 
 
-pyqtgraph.__dict__['ImageView'] = ImageView
+pyqtgraph.__dict__["ImageView"] = ImageView
 
 
 class PolyLineROI(PolyLineROI):
@@ -77,10 +178,10 @@ class PolyLineROI(PolyLineROI):
         if br.width() > 1000:
             raise Exception()
         sliced = ROI.getArrayRegion(self, data, img, axes=axes, fromBoundingRect=True, **kwds)
-        if kwds.get('returnMappedCoords'):
+        if kwds.get("returnMappedCoords"):
             sliced, mapped = sliced
 
-        if img.axisOrder == 'col-major':
+        if img.axisOrder == "col-major":
             mask = self.renderShapeMask(sliced.shape[axes[0]], sliced.shape[axes[1]])
         else:
             mask = self.renderShapeMask(sliced.shape[axes[1]], sliced.shape[axes[0]])
@@ -92,13 +193,13 @@ class PolyLineROI(PolyLineROI):
         shape[axes[1]] = sliced.shape[axes[1]]
         mask = mask.reshape(shape)
 
-        if kwds.get('returnMappedCoords'):
+        if kwds.get("returnMappedCoords"):
             return sliced * mask, mapped
         else:
             return sliced * mask
 
 
-pyqtgraph.__dict__['PolyLineROI'] = PolyLineROI
+pyqtgraph.__dict__["PolyLineROI"] = PolyLineROI
 
 
 class SafeImageView(ImageView):
@@ -135,8 +236,8 @@ class ImageParameterItem(WidgetParameterItem):
         self.treeWidget().setItemWidget(self.subItem, 0, self.widget)
 
         # for now, these are copied from ParameterItem.treeWidgetChanged
-        self.setHidden(not self.param.opts.get('visible', True))
-        self.setExpanded(self.param.opts.get('expanded', True))
+        self.setHidden(not self.param.opts.get("visible", True))
+        self.setExpanded(self.param.opts.get("expanded", True))
 
     def valueChanged(self, param, val, force=False):
         ## called when the parameter's value has changed
@@ -153,7 +254,8 @@ class ImageParameter(Parameter):
     itemClass = ImageParameterItem
 
     def __init__(self, *args, **kwargs):
-        if 'expanded' not in kwargs: kwargs['expanded'] = False
+        if "expanded" not in kwargs:
+            kwargs["expanded"] = False
         super(ImageParameter, self).__init__(*args, **kwargs)
 
     def setValue(self, value, blockSignal=None):
@@ -164,9 +266,9 @@ class ImageParameter(Parameter):
         try:
             if blockSignal is not None:
                 self.sigValueChanged.disconnect(blockSignal)
-            if np.array_equal(self.opts['value'], value):
+            if np.array_equal(self.opts["value"], value):
                 return value
-            self.opts['value'] = value
+            self.opts["value"] = value
             # self.sigValueChanged.emit(self, value)
         finally:
             if blockSignal is not None:
@@ -175,23 +277,23 @@ class ImageParameter(Parameter):
         return value
 
 
-registerParameterType('ndarray', ImageParameter, override=True)
+registerParameterType("ndarray", ImageParameter, override=True)
 
 
 class FixableWidgetParameterItem(parameterTypes.WidgetParameterItem):
     def __init__(self, param, depth):
         super(FixableWidgetParameterItem, self).__init__(param, depth)
-        if param.opts.get('fixable'):
+        if param.opts.get("fixable"):
             self.fixbutton = QPushButton()
             self.fixbutton.setFixedWidth(20)
             self.fixbutton.setFixedHeight(20)
             self.fixbutton.setCheckable(True)
-            self.fixbutton.setChecked(param.opts['fixed'])
+            self.fixbutton.setChecked(param.opts["fixed"])
             self.fixbutton.toggled.connect(param.sigFixToggled)
             self.fixbutton.toggled.connect(lambda fixed: param.setOpts(fixed=fixed))
             # self.fixbutton.toggled.connect(lambda fixed: self.widgetValueChanged())
 
-            self.fixbutton.setIcon(QIcon(path('icons/anchor.png')))
+            self.fixbutton.setIcon(QIcon(path("icons/anchor.png")))
             self.layoutWidget.layout().addWidget(self.fixbutton)
 
     def optsChanged(self, param, opts):
@@ -200,15 +302,15 @@ class FixableWidgetParameterItem(parameterTypes.WidgetParameterItem):
         # print "opts changed:", opts
         ParameterItem.optsChanged(self, param, opts)
 
-        if 'readonly' in opts:
+        if "readonly" in opts:
             self.updateDefaultBtn()
             if isinstance(self.widget, (QCheckBox, ColorButton)):
-                self.widget.setEnabled(not opts['readonly'])
+                self.widget.setEnabled(not opts["readonly"])
 
         ## If widget is a SpinBox, pass options straight through
         if isinstance(self.widget, SpinBox):
-            if 'units' in opts and 'suffix' not in opts:
-                opts['suffix'] = opts['units']
+            if "units" in opts and "suffix" not in opts:
+                opts["suffix"] = opts["units"]
             try:  # patch passes silently for 'fixed'
                 self.widget.setOpts(**opts)
             except TypeError:
@@ -221,8 +323,8 @@ class FixableSimpleParameter(parameterTypes.SimpleParameter):
     sigFixToggled = Signal(bool)
 
 
-registerParameterType('int', FixableSimpleParameter, override=True)
-registerParameterType('float', FixableSimpleParameter, override=True)
+registerParameterType("int", FixableSimpleParameter, override=True)
+registerParameterType("float", FixableSimpleParameter, override=True)
 
 
 class BetterGroupParameteritem(parameterTypes.GroupParameterItem):
@@ -254,7 +356,7 @@ class BetterGroupParameter(parameterTypes.GroupParameter):
 
 
 parameterTypes.GroupParameter = BetterGroupParameter
-registerParameterType('group', BetterGroupParameter, override=True)
+registerParameterType("group", BetterGroupParameter, override=True)
 
 
 class CounterGroupParameterItem(BetterGroupParameteritem):
@@ -264,14 +366,14 @@ class CounterGroupParameterItem(BetterGroupParameteritem):
         self.param.sigChildRemoved.connect(self.updateText)
 
     def updateText(self, *_):
-        self.setText(0, f'{self.param.name()} ({self.childCount()})')
+        self.setText(0, f"{self.param.name()} ({self.childCount()})")
 
 
 class CounterGroupParameter(BetterGroupParameter):
     itemClass = CounterGroupParameterItem
 
 
-registerParameterType('countergroup', CounterGroupParameter, override=True)
+registerParameterType("countergroup", CounterGroupParameter, override=True)
 
 
 class LazyGroupParameterItem(BetterGroupParameteritem):
@@ -288,7 +390,7 @@ class LazyGroupParameterItem(BetterGroupParameteritem):
     @staticmethod
     def itemExpanded(item):
         for i in range(item.childCount()):
-            if hasattr(item.child(i), 'flushChildren'):
+            if hasattr(item.child(i), "flushChildren"):
                 item.child(i).flushChildren()
 
     def childAdded(self, *childargs):
@@ -305,4 +407,4 @@ class LazyGroupParameter(BetterGroupParameter):
     itemClass = LazyGroupParameterItem
 
 
-registerParameterType('lazygroup', LazyGroupParameter, override=True)
+registerParameterType("lazygroup", LazyGroupParameter, override=True)

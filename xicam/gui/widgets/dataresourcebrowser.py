@@ -14,12 +14,11 @@ import os, webbrowser
 from xicam.gui.widgets.tabview import ContextMenuTabBar
 
 
-
-
 class BrowserTabWidget(QTabWidget):
     def __init__(self, parent=None):
         super(BrowserTabWidget, self).__init__(parent)
-        self.setContentsMargins(0,0,0,0)
+        self.setContentsMargins(0, 0, 0, 0)
+
 
 class DataBrowser(QWidget):
     sigOpen = Signal(NonDBHeader)
@@ -30,11 +29,11 @@ class DataBrowser(QWidget):
 
         hbox = QHBoxLayout()
         vbox = QVBoxLayout()
-        vbox.setContentsMargins(0,0,0,0)
+        vbox.setContentsMargins(0, 0, 0, 0)
         vbox.setSpacing(0)
-        hbox.setContentsMargins(0,0,0,0)
+        hbox.setContentsMargins(0, 0, 0, 0)
         hbox.setSpacing(0)
-        self.setContentsMargins(0,0,0,0)
+        self.setContentsMargins(0, 0, 0, 0)
 
         self.browserview = browserview
         self.browserview.sigOpen.connect(self.sigOpen)
@@ -42,11 +41,11 @@ class DataBrowser(QWidget):
         self.browserview.sigOpenExternally.connect(self.openExternally)
         self.browserview.sigURIChanged.connect(self.uri_to_text)
         self.toolbar = QToolBar()
-        self.toolbar.addAction(QIcon(QPixmap(str(path('icons/up.png')))), 'Move up directory', self.moveUp)
+        self.toolbar.addAction(QIcon(QPixmap(str(path("icons/up.png")))), "Move up directory", self.moveUp)
         # self.toolbar.addAction(QIcon(QPixmap(str(path('icons/filter.png')))), 'Filter')
-        self.toolbar.addAction(QIcon(QPixmap(str(path('icons/refresh.png')))), 'Refresh', self.hardRefreshURI)
+        self.toolbar.addAction(QIcon(QPixmap(str(path("icons/refresh.png")))), "Refresh", self.hardRefreshURI)
         self.toolbar.setToolButtonStyle(Qt.ToolButtonIconOnly)
-        self.URILineEdit = SearchLineEdit('',clearable=False)
+        self.URILineEdit = SearchLineEdit("", clearable=False)
         self.uri_to_text()
 
         hbox.addWidget(self.toolbar)
@@ -64,7 +63,7 @@ class DataBrowser(QWidget):
     def text_to_uri(self):
         uri = parse.urlparse(self.URILineEdit.text())
         self.browserview.model().uri = uri
-        print('uri:', uri)
+        print("uri:", uri)
         return uri
 
     def uri_to_text(self):
@@ -72,7 +71,6 @@ class DataBrowser(QWidget):
         text = parse.urlunparse(uri)
         self.URILineEdit.setText(text)
         return text
-
 
     def hardRefreshURI(self, *_, **__):
         self.text_to_uri()
@@ -108,7 +106,7 @@ class BrowserTabBar(ContextMenuTabBar):
         # self.plus_button.setMaximumSize(32, 32)
         # self.plus_button.setMinimumSize(32, 32)
         # self.plus_button.clicked.connect(self.sigAddBrowser.emit)
-        tab = self.addTab(self.plusIcon, '')
+        tab = self.addTab(self.plusIcon, "")
         try:
             self.tabButton(tab, QTabBar.RightSide).resize(0, 0)
             self.tabButton(tab, QTabBar.RightSide).hide()
@@ -125,8 +123,11 @@ class BrowserTabBar(ContextMenuTabBar):
 
     def eventFilter(self, object, event):
         try:
-            if object == self and event.type() in [QEvent.MouseButtonPress,
-                                                   QEvent.MouseButtonRelease] and event.button() == Qt.LeftButton:
+            if (
+                object == self
+                and event.type() in [QEvent.MouseButtonPress, QEvent.MouseButtonRelease]
+                and event.button() == Qt.LeftButton
+            ):
 
                 if event.type() == QEvent.MouseButtonPress:
                     tabIndex = object.tabAt(event.pos())
@@ -142,7 +143,8 @@ class BrowserTabBar(ContextMenuTabBar):
         # Add all resource plugins
         self.actions = {}
         from xicam.plugins import manager as pluginmanager
-        for plugin in pluginmanager.getPluginsOfCategory('DataResourcePlugin'):
+
+        for plugin in pluginmanager.getPluginsOfCategory("DataResourcePlugin"):
             self.actions[plugin.plugin_object.name] = QAction(plugin.plugin_object.name)
             self.actions[plugin.plugin_object.name].triggered.connect(partial(self._addBrowser, plugin))
             self.menu.addAction(self.actions[plugin.plugin_object.name])
@@ -151,8 +153,7 @@ class BrowserTabBar(ContextMenuTabBar):
 
     def _addBrowser(self, plugin):
         datasource = plugin.plugin_object()
-        self.sigAddBrowser.emit(datasource.controller(datasource.view(datasource.model(datasource))),
-                                datasource.name)
+        self.sigAddBrowser.emit(datasource.controller(datasource.view(datasource.model(datasource))), datasource.name)
 
 
 class DataResourceView(QObject):
@@ -167,10 +168,12 @@ class DataResourceView(QObject):
         self.customContextMenuRequested.connect(self.menuRequested)
 
         self.menu = QMenu()
-        standardActions = [QAction('Open', self),
-                           QAction('Open Externally', self),
-                           QAction('Enable/Disable Streaming', self),
-                           QAction('Delete', self)]
+        standardActions = [
+            QAction("Open", self),
+            QAction("Open Externally", self),
+            QAction("Enable/Disable Streaming", self),
+            QAction("Delete", self),
+        ]
         self.menu.addActions(standardActions)
         standardActions[0].triggered.connect(self.open)
         standardActions[1].triggered.connect(self.openExternally)
@@ -184,7 +187,7 @@ class DataResourceView(QObject):
     def currentChanged(self, current, previous):
         pass
 
-    def openExternally(self, uri:str):
+    def openExternally(self, uri: str):
         pass
 
 
@@ -202,6 +205,7 @@ class DataResourceTree(QTreeView, DataResourceView):
         self.model().refresh()
         self.setRootIndex(self.model().index(self.model().path))
 
+
 class DataResourceList(QListView, DataResourceView):
     sigOpen = Signal(NonDBHeader)
     sigOpenPath = Signal(str)
@@ -216,9 +220,9 @@ class DataResourceList(QListView, DataResourceView):
     def open(self, _):
         indexes = self.selectionModel().selectedRows()
         if len(indexes) == 1:
-            path = os.path.join(self.model().config['path'], self.model().data(indexes[0], Qt.DisplayRole).value())
+            path = os.path.join(self.model().config["path"], self.model().data(indexes[0], Qt.DisplayRole).value())
             if self.model().isdir(indexes[0]):
-                self.model().config['path'] = path
+                self.model().config["path"] = path
                 self.sigURIChanged.emit()
                 return
         uris = [self.model().pull(index) for index in indexes]
@@ -226,13 +230,12 @@ class DataResourceList(QListView, DataResourceView):
 
 
 class LocalFileSystemTree(DataResourceTree):
-
     def __init__(self):
         super(LocalFileSystemTree, self).__init__(LocalFileSystemResourcePlugin())
 
     def open(self, _=None):
         indexes = self.selectionModel().selectedRows()
-        if len(indexes)==1:
+        if len(indexes) == 1:
             path = self.model().filePath(indexes[0])
             if os.path.isdir(path):
                 self.model().path = path
@@ -253,7 +256,7 @@ class LocalFileSystemTree(DataResourceTree):
             event.accept()
             self.open()
 
-    def openExternally(self, uri:str):
+    def openExternally(self, uri: str):
         indexes = self.selectionModel().selectedRows()
         for index in indexes:
             self.sigOpenExternally.emit(self.model().filePath(index))
@@ -267,7 +270,7 @@ class DataResourceBrowser(QWidget):
         super(DataResourceBrowser, self).__init__()
         vbox = QVBoxLayout()
         vbox.setSpacing(0)
-        vbox.setContentsMargins(0,0,0,0)
+        vbox.setContentsMargins(0, 0, 0, 0)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.setMinimumSize(QSize(250, 400))
 
@@ -277,7 +280,7 @@ class DataResourceBrowser(QWidget):
         self.browsertabbar.tabCloseRequested.connect(self.closetab)
 
         # Add the required 'Local' browser
-        self.addBrowser(DataBrowser(LocalFileSystemTree()), 'Local', closable=False)
+        self.addBrowser(DataBrowser(LocalFileSystemTree()), "Local", closable=False)
         self.browsertabbar.setCurrentIndex(0)
 
         vbox.addWidget(self.browsertabwidget)
@@ -285,14 +288,14 @@ class DataResourceBrowser(QWidget):
         self.setLayout(vbox)
 
     def closetab(self, i):
-        if hasattr(self.browsertabwidget.widget(i), 'closable'):
+        if hasattr(self.browsertabwidget.widget(i), "closable"):
             if self.browsertabwidget.widget(i).closable:
                 self.browsertabwidget.removeTab(i)
 
     def sizeHint(self):
         return QSize(250, 400)
 
-    def addBrowser(self, databrowser:DataBrowser, text:str, closable:bool=True):
+    def addBrowser(self, databrowser: DataBrowser, text: str, closable: bool = True):
         databrowser.sigOpen.connect(self.sigOpen)
         databrowser.sigPreview.connect(self.sigPreview)
         databrowser.closable = closable

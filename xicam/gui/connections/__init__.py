@@ -25,17 +25,11 @@ class ConnectionSettingsPlugin(SettingsPlugin):
 
         self.plugintoolbar = QToolBar()
         self.plugintoolbar.setOrientation(Qt.Vertical)
-        self.plugintoolbar.addAction(QIcon(str(path('icons/plus.png'))),
-                                     'Add plugin',
-                                     self.add_credential)
-        self.plugintoolbar.addAction(QIcon(str(path('icons/minus.png'))),
-                                     'Remove plugin',
-                                     self.remove_credential)
+        self.plugintoolbar.addAction(QIcon(str(path("icons/plus.png"))), "Add plugin", self.add_credential)
+        self.plugintoolbar.addAction(QIcon(str(path("icons/minus.png"))), "Remove plugin", self.remove_credential)
         self.widget.layout().addWidget(self.listview)
         self.widget.layout().addWidget(self.plugintoolbar)
-        super(ConnectionSettingsPlugin, self).__init__(QIcon(str(path('icons/server.png'))),
-                                                       'Connections',
-                                                       self.widget)
+        super(ConnectionSettingsPlugin, self).__init__(QIcon(str(path("icons/server.png"))), "Connections", self.widget)
 
     def add_credential(self):
         """
@@ -62,8 +56,8 @@ class ConnectionSettingsPlugin(SettingsPlugin):
     def toState(self):
         credentials = deepcopy(self.credentials)
         for name, credential in credentials.items():
-            if credential.get('savepassword', False):
-                credential['password'] = None
+            if credential.get("savepassword", False):
+                credential["password"] = None
         return credentials
 
     def fromState(self, state):
@@ -77,8 +71,10 @@ class ConnectionSettingsPlugin(SettingsPlugin):
 
     @property
     def credentials(self):
-        return {self.connectionsmodel.item(i).name: self.connectionsmodel.item(i).credential for i in
-                range(self.connectionsmodel.rowCount())}
+        return {
+            self.connectionsmodel.item(i).name: self.connectionsmodel.item(i).credential
+            for i in range(self.connectionsmodel.rowCount())
+        }
 
 
 class CredentialDialog(QDialog):
@@ -99,13 +95,13 @@ class CredentialDialog(QDialog):
         # Setup fields
         self.host = QLineEdit()
         self.profiles = QComboBox()
-        self.profiles.addItem('New...')
+        self.profiles.addItem("New...")
         self.profilename = QLineEdit()
         self.username = QLineEdit()
         self.password = QLineEdit()
         self.password.setEchoMode(QLineEdit.Password)
-        self.savepassword = QCheckBox('Save Password')
-        self.rememberprofile = QCheckBox('Remember Profile')
+        self.savepassword = QCheckBox("Save Password")
+        self.rememberprofile = QCheckBox("Remember Profile")
 
         # Setup dialog buttons
         self.addButton = QPushButton("&Add")
@@ -126,19 +122,18 @@ class CredentialDialog(QDialog):
         # Compose main layout
         mainLayout = QFormLayout()
         if not addmode:
-            mainLayout.addRow('Profile', self.profiles)
-        mainLayout.addRow('Profile', self.profilename)
-        mainLayout.addRow('Host', self.host)
-        mainLayout.addRow('Username', self.username)
-        mainLayout.addRow('Password', self.password)
+            mainLayout.addRow("Profile", self.profiles)
+        mainLayout.addRow("Profile", self.profilename)
+        mainLayout.addRow("Host", self.host)
+        mainLayout.addRow("Username", self.username)
+        mainLayout.addRow("Password", self.password)
         mainLayout.addRow(self.savepassword)
         if not addmode:
             mainLayout.addRow(self.rememberprofile)
         mainLayout.addRow(self.buttonboxWidget)
 
         # Populate profiles
-        for name, credential in manager.getPluginByName('Connections',
-                                                        'SettingsPlugin').plugin_object.credentials.items():
+        for name, credential in manager.getPluginByName("Connections", "SettingsPlugin").plugin_object.credentials.items():
             self.profiles.addItem(name)
 
         self.setLayout(mainLayout)
@@ -149,18 +144,18 @@ class CredentialDialog(QDialog):
 
     def loadProfile(self):
         profilename = self.profiles.currentText()
-        if profilename == 'New...':
+        if profilename == "New...":
             self.username.setEnabled(True)
             self.password.setEnabled(True)
             self.host.setEnabled(True)
             self.savepassword.setEnabled(True)
             self.rememberprofile.setVisible(True)
         else:
-            credential = manager.getPluginByName('Connections', 'SettingsPlugin').plugin_object.credentials[profilename]
-            self.username.setText(credential['username'])
-            self.host.setText(credential['host'])
-            self.password.setText(credential['password'])
-            self.savepassword.setChecked(credential['savepassword'])
+            credential = manager.getPluginByName("Connections", "SettingsPlugin").plugin_object.credentials[profilename]
+            self.username.setText(credential["username"])
+            self.host.setText(credential["host"])
+            self.password.setText(credential["password"])
+            self.savepassword.setChecked(credential["savepassword"])
             self.profilename.setText(profilename)
             self.username.setEnabled(False)
             self.password.setEnabled(False)
@@ -171,20 +166,26 @@ class CredentialDialog(QDialog):
     def add(self):
         self.sigAddCredential.emit(
             self.profilename.text(),
-            {'host': self.host.text(),
-             'username': self.username.text(),
-             'password': self.password.text(),
-             'savepassword': False})
+            {
+                "host": self.host.text(),
+                "username": self.username.text(),
+                "password": self.password.text(),
+                "savepassword": False,
+            },
+        )
         self.accept()
 
     def connect(self):
         if self.rememberprofile.isChecked():
             self.add()
         self.sigConnect.emit(
-            {'host': self.host.text(),
-             'username': self.username.text(),
-             'password': self.password.text(),
-             'savepassword': False})
+            {
+                "host": self.host.text(),
+                "username": self.username.text(),
+                "password": self.password.text(),
+                "savepassword": False,
+            }
+        )
         self.accept()  # Segfault?
 
 
@@ -195,10 +196,10 @@ class ConnectDelegate(QItemDelegate):
 
     def paint(self, painter, option, index):
         if not self._parent.indexWidget(index):
-            button = QToolButton(self.parent(), )
+            button = QToolButton(self.parent())
             button.setAutoRaise(True)
-            button.setText('Delete Operation')
-            button.setIcon(QIcon(path('icons/trash.png')))
+            button.setText("Delete Operation")
+            button.setIcon(QIcon(path("icons/trash.png")))
             sp = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
             sp.setWidthForHeight(True)
             button.setSizePolicy(sp)

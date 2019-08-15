@@ -9,7 +9,7 @@ class TabPlotWidget(QTabWidget):
 
     def plot(self, *args, **kwargs):
         plotwidget = pg.PlotWidget(*args, **kwargs)
-        self.addTab(kwargs.get('title', 'Untitled'), plotwidget)
+        self.addTab(kwargs.get("title", "Untitled"), plotwidget)
 
     @property
     def plots(self) -> List[pg.PlotWidget]:

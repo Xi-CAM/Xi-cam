@@ -7,7 +7,8 @@ from qtpy.QtCore import Qt, QObject, QEvent
 # Hack to work around PySide being imported from nowhere:
 import qtpy
 
-if 'PySide.QtCore' in sys.modules and qtpy.API != 'pyside': del sys.modules['PySide.QtCore']
+if "PySide.QtCore" in sys.modules and qtpy.API != "pyside":
+    del sys.modules["PySide.QtCore"]
 
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.inprocess import QtInProcessKernelManager
@@ -17,11 +18,10 @@ class DebuggableMenuBar(QMenuBar):
     def __init__(self, *args, **kwargs):
         super(DebuggableMenuBar, self).__init__(*args, **kwargs)
 
-        self.debugshortcut = QShortcut(QKeySequence("Ctrl+Return"), self, self.showDebugMenu,
-                                       context=Qt.ApplicationShortcut)
+        self.debugshortcut = QShortcut(QKeySequence("Ctrl+Return"), self, self.showDebugMenu, context=Qt.ApplicationShortcut)
 
-        self._debugmenu = QMenu('Debugging')
-        self._debugmenu.addAction('Debug widget', self.startDebugging)
+        self._debugmenu = QMenu("Debugging")
+        self._debugmenu.addAction("Debug widget", self.startDebugging)
 
         self.mousedebugger = MouseDebugger()
 
@@ -45,7 +45,6 @@ class MouseDebugger(QObject):
 
 
 class IPythonDebugger(RichJupyterWidget):
-
     def __init__(self, widget: QWidget):
         super(IPythonDebugger, self).__init__()
 
@@ -53,10 +52,10 @@ class IPythonDebugger(RichJupyterWidget):
         self.kernel_manager = QtInProcessKernelManager()
         self.kernel_manager.start_kernel()
         kernel = self.kernel_manager.kernel
-        kernel.gui = 'qt'
+        kernel.gui = "qt"
 
         # Push QWidget to the console
-        kernel.shell.push({'widget': widget})
+        kernel.shell.push({"widget": widget})
 
         self.kernel_client = self.kernel_manager.client()
         self.kernel_client.start_channels()
@@ -69,12 +68,12 @@ class IPythonDebugger(RichJupyterWidget):
         self.exit_requested.connect(stop)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from qtpy.QtWidgets import QApplication, QMainWindow, QLabel
 
     app = QApplication([])
     window = QMainWindow()
-    window.setCentralWidget(QLabel('test'))
+    window.setCentralWidget(QLabel("test"))
     db = DebuggableMenuBar()
     window.setMenuBar(db)
     window.show()

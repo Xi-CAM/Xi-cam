@@ -6,6 +6,4 @@ from .previewwidget import PreviewWidget
 from qtpy.QtWidgets import QApplication
 
 if QApplication.instance():
-    defaultstage = GUILayout(center=MOTD(),
-                         left=DataResourceBrowser(),
-                         lefttop=PreviewWidget())
+    defaultstage = GUILayout(center=MOTD(), left=DataResourceBrowser(), lefttop=PreviewWidget())

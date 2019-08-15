@@ -27,7 +27,7 @@ class XicamSplashScreen(QSplashScreen):
         """
 
         # Get logo movie from relative path
-        self.movie = QMovie(str(static.path('images/animated_logo.gif')))
+        self.movie = QMovie(str(static.path("images/animated_logo.gif")))
 
         # Setup drawing
         self.movie.frameChanged.connect(self.paintFrame)
@@ -48,7 +48,7 @@ class XicamSplashScreen(QSplashScreen):
         self.raise_()
         self.activateWindow()
         QApplication.instance().setActiveWindow(self)
-        if '--nosplash' in sys.argv:
+        if "--nosplash" in sys.argv:
             self.execlaunch()
         else:
             # Setup timed triggers for launching the QMainWindow

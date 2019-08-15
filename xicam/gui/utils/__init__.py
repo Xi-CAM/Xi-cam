@@ -104,7 +104,7 @@ def parameterize(func):
 
 
 def args_to_params(*args, **kwargs):
-    param = parameterTypes.GroupParameter(name='Parameters')
+    param = parameterTypes.GroupParameter(name="Parameters")
     for arg in args + tuple(kwargs.values()):
         if isinstance(arg, Parameter):
             param.addChild(arg)
@@ -125,9 +125,7 @@ class ParameterDialog(QDialog):
         self.paramtree.setParameters(children, showTop=False)
 
         # OK and Cancel buttons
-        buttons = QDialogButtonBox(
-            QDialogButtonBox.Ok | QDialogButtonBox.Cancel,
-            Qt.Horizontal, self)
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, Qt.Horizontal, self)
         buttons.accepted.connect(self.accept)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
@@ -135,4 +133,4 @@ class ParameterDialog(QDialog):
     def exec_(self, *args, **kwargs):
         result = super(ParameterDialog, self).exec_()
         if result != self.Accepted:
-            raise InterruptedError('Execution aborted by user.')
+            raise InterruptedError("Execution aborted by user.")

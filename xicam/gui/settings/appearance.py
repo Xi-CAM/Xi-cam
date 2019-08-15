@@ -28,8 +28,8 @@ def setUglyGreen():
 
 
 def setPlotWhite():
-    pg.setConfigOption('background', 'w')
-    pg.setConfigOption('foreground', 'k')
+    pg.setConfigOption("background", "w")
+    pg.setConfigOption("foreground", "k")
 
 
 def setPlotDefault():
@@ -38,21 +38,30 @@ def setPlotDefault():
 
 class AppearanceSettingsPlugin(ParameterSettingsPlugin):
     def __init__(self):
-        super(AppearanceSettingsPlugin, self).__init__(QIcon(str(path('icons/colors.png'))),
-                                                       'Appearance',
-                                                       [dict(name='Theme',
-                                                             values=OrderedDict([('Default', setDefault),
-                                                                                 ('QDarkStyle', setDark),
-                                                                                 ('QtModern', setModern),
-                                                                                 ('UglyGreen', setUglyGreen)]),
-                                                             type='list'),
-                                                        dict(name='Plot Theme (requires restart)',
-                                                             values=OrderedDict([('Default (Dark)', setPlotDefault),
-                                                                                 ('Publication (White)',
-                                                                                  setPlotWhite)]),
-                                                             type='list')]
-                                                       )
+        super(AppearanceSettingsPlugin, self).__init__(
+            QIcon(str(path("icons/colors.png"))),
+            "Appearance",
+            [
+                dict(
+                    name="Theme",
+                    values=OrderedDict(
+                        [
+                            ("Default", setDefault),
+                            ("QDarkStyle", setDark),
+                            ("QtModern", setModern),
+                            ("UglyGreen", setUglyGreen),
+                        ]
+                    ),
+                    type="list",
+                ),
+                dict(
+                    name="Plot Theme (requires restart)",
+                    values=OrderedDict([("Default (Dark)", setPlotDefault), ("Publication (White)", setPlotWhite)]),
+                    type="list",
+                ),
+            ],
+        )
 
     def apply(self):
-        self['Theme']()
-        self['Plot Theme (requires restart)']()
+        self["Theme"]()
+        self["Plot Theme (requires restart)"]()

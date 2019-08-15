@@ -7,15 +7,14 @@ class DynImageView(ImageView):
         super(DynImageView, self).__init__(*args, **kwargs)
 
         # Use Viridis by default
-        self.setPredefinedGradient('viridis')
+        self.setPredefinedGradient("viridis")
 
         # Shrink LUT
         self.getHistogramWidget().setMinimumWidth(10)
 
         # Don't invert Y axis
         self.view.invertY(False)
-        self.imageItem.setOpts(axisOrder='row-major')
-
+        self.imageItem.setOpts(axisOrder="row-major")
 
         # Setup late signal
         self.sigTimeChangeFinished = self.timeLine.sigPositionChangeFinished
@@ -24,12 +23,13 @@ class DynImageView(ImageView):
         """
         Estimate the min/max values of *data* by subsampling. MODIFIED TO USE THE 99TH PERCENTILE instead of max.
         """
-        if data is None: return 0, 0
+        if data is None:
+            return 0, 0
         ax = np.argmax(data.shape)
         sl = [slice(None)] * data.ndim
         sl[ax] = slice(None, None, max(1, int(data.size // 1e6)))
         data = data[sl]
-        return np.nanmin(data), np.nanpercentile(np.where(data < np.nanmax(data), data, np.nanmin(data)), 99)
+        return (np.nanmin(data), np.nanpercentile(np.where(data < np.nanmax(data), data, np.nanmin(data)), 99))
 
     def setImage(self, img, **kwargs):
         super(DynImageView, self).setImage(img, **kwargs)

@@ -15,21 +15,26 @@ from xicam.plugins import ParameterSettingsPlugin
 
 class ExecutionSettingsPlugin(ParameterSettingsPlugin):
     def __init__(self):
-        super(ExecutionSettingsPlugin, self).__init__(QIcon(str(path('icons/cpu.png'))),
-                                                      'Execution',
-                                                      [dict(name='Executor',
-                                                            values=OrderedDict([('Local Threaded',
-                                                                                 localexecutor.LocalExecutor()),
-                                                                                ('Local Service',
-                                                                                 daskexecutor.DaskExecutor()),
-                                                                                ('Cam-link', None), ]),
-                                                            value='Local Threaded',
-                                                            type='list'),
-                                                       ]
-                                                      )
+        super(ExecutionSettingsPlugin, self).__init__(
+            QIcon(str(path("icons/cpu.png"))),
+            "Execution",
+            [
+                dict(
+                    name="Executor",
+                    values=OrderedDict(
+                        [
+                            ("Local Threaded", localexecutor.LocalExecutor()),
+                            ("Local Service", daskexecutor.DaskExecutor()),
+                            ("Cam-link", None),
+                        ]
+                    ),
+                    value="Local Threaded",
+                    type="list",
+                )
+            ],
+        )
 
-        execution.executor = self['Executor']
-
+        execution.executor = self["Executor"]
 
     def apply(self):
-        execution.executor = self['Executor']
+        execution.executor = self["Executor"]

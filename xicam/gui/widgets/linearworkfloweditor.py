@@ -29,8 +29,7 @@ class WorkflowEditor(QSplitter):
         self.addWidget(self.processeditor)
         self.addWidget(WorkflowWidget(self.workflowview))
 
-        self.workflowview.sigShowParameter.connect(
-            lambda parameter: self.setParameters(parameter))
+        self.workflowview.sigShowParameter.connect(lambda parameter: self.setParameters(parameter))
 
         workflow.attach(partial(self.sigWorkflowChanged.emit, workflow))
 
@@ -61,18 +60,17 @@ class WorkflowWidget(QWidget):
         self.toolbar = QToolBar()
         addfunctionmenu = QToolButton()
         functionmenu = QMenu()
-        for plugin in pluginmanager.getPluginsOfCategory('ProcessingPlugin'):
-            functionmenu.addAction(plugin.name, partial(self.addProcess, plugin.plugin_object,
-                                                        autoconnectall=True))
+        for plugin in pluginmanager.getPluginsOfCategory("ProcessingPlugin"):
+            functionmenu.addAction(plugin.name, partial(self.addProcess, plugin.plugin_object, autoconnectall=True))
         addfunctionmenu.setMenu(functionmenu)
-        addfunctionmenu.setIcon(QIcon(path('icons/addfunction.png')))
-        addfunctionmenu.setText('Add Function')
+        addfunctionmenu.setIcon(QIcon(path("icons/addfunction.png")))
+        addfunctionmenu.setText("Add Function")
         addfunctionmenu.setPopupMode(QToolButton.InstantPopup)
         self.toolbar.addWidget(addfunctionmenu)
         # self.toolbar.addAction(QIcon(path('icons/up.png')), 'Move Up')
         # self.toolbar.addAction(QIcon(path('icons/down.png')), 'Move Down')
-        self.toolbar.addAction(QIcon(path('icons/folder.png')), 'Load Workflow')
-        self.toolbar.addAction(QIcon(path('icons/trash.png')), 'Delete Operation', self.deleteProcess)
+        self.toolbar.addAction(QIcon(path("icons/folder.png")), "Load Workflow")
+        self.toolbar.addAction(QIcon(path("icons/trash.png")), "Delete Operation", self.deleteProcess)
 
         v = QVBoxLayout()
         v.addWidget(self.view)
@@ -82,7 +80,7 @@ class WorkflowWidget(QWidget):
 
     def addProcess(self, process, autoconnectall=True):
         self.view.model().workflow.addProcess(process(), autoconnectall)
-        print('selected new row:', self.view.model().rowCount() - 1)
+        print("selected new row:", self.view.model().rowCount() - 1)
         self.view.setCurrentIndex(self.view.model().index(self.view.model().rowCount() - 1, 0))
 
     def deleteProcess(self):
@@ -122,17 +120,17 @@ class LinearWorkflowView(QTableView):
             process = self.model().workflow._processes[self.selectedIndexes()[0].row()]
             self.sigShowParameter.emit(process.parameter)
         else:
-            self.sigShowParameter.emit(Parameter(name='empty'))
+            self.sigShowParameter.emit(Parameter(name="empty"))
         for child in self.children():
-            if hasattr(child, 'repaint'): child.repaint()
+            if hasattr(child, "repaint"):
+                child.repaint()
 
         selectedrows = set(map(lambda index: index.row(), self.selectedIndexes()))
         for row in range(self.model().rowCount()):
             widget = self.indexWidget(self.model().index(row, 1))
-            if hasattr(widget, 'setSelectedVisibility'):
+            if hasattr(widget, "setSelectedVisibility"):
                 widget.setSelectedVisibility(row in selectedrows)
         self.resizeRowsToContents()
-
 
 
 class WorkflowModel(QAbstractTableModel):
@@ -143,7 +141,7 @@ class WorkflowModel(QAbstractTableModel):
         self.workflow.attach(partial(self.layoutChanged.emit))
 
     def mimeTypes(self):
-        return ['text/plain']
+        return ["text/plain"]
 
     def mimeData(self, indexes):
         mimedata = QMimeData()
@@ -164,8 +162,7 @@ class WorkflowModel(QAbstractTableModel):
     def flags(self, index):
         if not index.isValid():
             return Qt.ItemIsEnabled
-        return Qt.ItemIsEnabled | Qt.ItemIsSelectable | \
-               Qt.ItemIsDragEnabled | Qt.ItemIsDropEnabled
+        return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled | Qt.ItemIsDropEnabled
 
     def rowCount(self, *args, **kwargs):
         return len(self.workflow._processes)
@@ -184,7 +181,7 @@ class WorkflowModel(QAbstractTableModel):
         elif index.column() == 1:
             # return getattr(process, 'name', process.__class__.__name__)
             return None
-        return ''
+        return ""
 
     def headerData(self, col, orientation, role):
         return None
@@ -237,10 +234,10 @@ class DeleteDelegate(QItemDelegate):
 
     def paint(self, painter, option, index):
         if not self._parent.indexWidget(index):
-            button = QToolButton(self.parent(), )
+            button = QToolButton(self.parent())
             button.setAutoRaise(True)
-            button.setText('Delete Operation')
-            button.setIcon(QIcon(path('icons/trash.png')))
+            button.setText("Delete Operation")
+            button.setIcon(QIcon(path("icons/trash.png")))
             sp = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
             sp.setWidthForHeight(True)
             button.setSizePolicy(sp)
@@ -257,7 +254,7 @@ class DisableDelegate(QItemDelegate):
     def paint(self, painter, option, index):
         if not self._parent.indexWidget(index):
             button = QToolButton(self.parent())
-            button.setText('i')
+            button.setText("i")
             button.setAutoRaise(True)
 
             button.setIcon(enableicon)
@@ -271,5 +268,5 @@ class DisableDelegate(QItemDelegate):
 
 
 enableicon = QIcon()
-enableicon.addPixmap(QPixmap(path('icons/enable.png')), state=enableicon.Off)
-enableicon.addPixmap(QPixmap(path('icons/disable.png')), state=enableicon.On)
+enableicon.addPixmap(QPixmap(path("icons/enable.png")), state=enableicon.Off)
+enableicon.addPixmap(QPixmap(path("icons/disable.png")), state=enableicon.On)
