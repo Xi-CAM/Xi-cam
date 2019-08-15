@@ -25,7 +25,7 @@ class XicamMainWindow(QMainWindow):
 
     def load(self):
         # Set icon
-        self.setWindowIcon(QIcon(QPixmap(str(path('icons/xicam.gif')))))
+        self.setWindowIcon(QIcon(QPixmap(str(path("icons/xicam.gif")))))
 
         # Set size and position
         self.setGeometry(0, 0, 1000, 600)
@@ -36,11 +36,16 @@ class XicamMainWindow(QMainWindow):
         self.move(frameGm.topLeft())
 
         # Init child widgets to None
-        self.topwidget = self.leftwidget = self.rightwidget = self.bottomwidget = self.lefttopwidget = \
-            self.righttopwidget = self.leftbottomwidget = self.rightbottomwidget = None
+        self.topwidget = (
+            self.leftwidget
+        ) = (
+            self.rightwidget
+        ) = (
+            self.bottomwidget
+        ) = self.lefttopwidget = self.righttopwidget = self.leftbottomwidget = self.rightbottomwidget = None
 
         # Setup appearance
-        self.setWindowTitle('Xi-cam')
+        self.setWindowTitle("Xi-cam")
 
         # Initilize venv
         venvs.initialize_venv()
@@ -69,11 +74,11 @@ class XicamMainWindow(QMainWindow):
         # Setup menubar
         menubar = DebuggableMenuBar()
         self.setMenuBar(menubar)
-        file = QMenu('&File', parent=menubar)
+        file = QMenu("&File", parent=menubar)
         menubar.addMenu(file)
-        file.addAction('Se&ttings', self.showSettings, shortcut=QKeySequence(Qt.CTRL + Qt.ALT + Qt.Key_S))
-        file.addAction('E&xit', self.close)
-        help = QMenu('&Help', parent=menubar)
+        file.addAction("Se&ttings", self.showSettings, shortcut=QKeySequence(Qt.CTRL + Qt.ALT + Qt.Key_S))
+        file.addAction("E&xit", self.close)
+        help = QMenu("&Help", parent=menubar)
         menubar.addMenu(help)
 
         # Initialize layout with first plugin
@@ -84,16 +89,28 @@ class XicamMainWindow(QMainWindow):
         self.populate_layout()
 
         # Make F key bindings
-        fkeys = [Qt.Key_F1, Qt.Key_F2, Qt.Key_F3, Qt.Key_F4, Qt.Key_F5, Qt.Key_F6,
-                 Qt.Key_F7, Qt.Key_F8, Qt.Key_F9, Qt.Key_F10, Qt.Key_F11, Qt.Key_F12]
+        fkeys = [
+            Qt.Key_F1,
+            Qt.Key_F2,
+            Qt.Key_F3,
+            Qt.Key_F4,
+            Qt.Key_F5,
+            Qt.Key_F6,
+            Qt.Key_F7,
+            Qt.Key_F8,
+            Qt.Key_F9,
+            Qt.Key_F10,
+            Qt.Key_F11,
+            Qt.Key_F12,
+        ]
         self.Fshortcuts = [QShortcut(QKeySequence(key), self) for key in fkeys]
         for i in range(12):
             self.Fshortcuts[i].activated.connect(partial(self.setStage, i))
 
         # Wireup default widgets
-        defaultstage['left'].sigOpen.connect(self.open)
-        defaultstage['left'].sigOpen.connect(print)
-        defaultstage['left'].sigPreview.connect(defaultstage['lefttop'].preview_header)
+        defaultstage["left"].sigOpen.connect(self.open)
+        defaultstage["left"].sigOpen.connect(print)
+        defaultstage["left"].sigPreview.connect(defaultstage["lefttop"].preview_header)
 
     def open(self, header):
         self.currentGUIPlugin.plugin_object.appendHeader(header)
@@ -117,7 +134,7 @@ class XicamMainWindow(QMainWindow):
 
     @Slot(int)
     def setGUIPlugin(self, i: int):
-        self.currentGUIPlugin = pluginmanager.getPluginsOfCategory('GUIPlugin')[i]
+        self.currentGUIPlugin = pluginmanager.getPluginsOfCategory("GUIPlugin")[i]
 
     @property
     def currentGUIPlugin(self) -> PluginInfo:
@@ -175,24 +192,26 @@ class XicamMainWindow(QMainWindow):
         self.centralWidget().setCurrentWidget(stage.centerwidget)
 
         # Set visibility based on panel state and (TODO) insert default widgets when defaulted
-        for position in ['top','left','right','bottom','lefttop','righttop','leftbottom','rightbottom']:
+        for position in ["top", "left", "right", "bottom", "lefttop", "righttop", "leftbottom", "rightbottom"]:
             self.populate_hidden(stage, position)
             self.populate_position(stage, position)
 
     def populate_hidden(self, stage, position):
-        getattr(self,position+'widget').setHidden((stage[position] == PanelState.Disabled) or
-                                                  (stage[position] == PanelState.Defaulted and
-                                                   defaultstage[position] == PanelState.Defaulted))
+        getattr(self, position + "widget").setHidden(
+            (stage[position] == PanelState.Disabled)
+            or (stage[position] == PanelState.Defaulted and defaultstage[position] == PanelState.Defaulted)
+        )
 
-    def populate_position(self, stage, position:str):
+    def populate_position(self, stage, position: str):
         if isinstance(stage[position], QWidget):
-            getattr(self,position+'widget').setWidget(stage[position])
+            getattr(self, position + "widget").setWidget(stage[position])
         elif stage[position] == PanelState.Defaulted:
-            if not defaultstage[position]==PanelState.Defaulted:
-                getattr(self,position+'widget').setWidget(defaultstage[position])
+            if not defaultstage[position] == PanelState.Defaulted:
+                getattr(self, position + "widget").setWidget(defaultstage[position])
         elif isinstance(stage[position], type):
             raise TypeError(
-                f'A type is not acceptable value for stages. You must instance this class: {stage[position]}, {position}')
+                f"A type is not acceptable value for stages. You must instance this class: {stage[position]}, {position}"
+            )
 
     def mousePressEvent(self, event):
         focused_widget = QApplication.focusWidget()
@@ -205,6 +224,7 @@ class pluginModeWidget(QToolBar):
     """
     A series of styled QPushButtons with pipe characters between them. Used to switch between plugin modes.
     """
+
     sigSetStage = Signal(int)
     sigSetGUIPlugin = Signal(int)
 
@@ -214,7 +234,7 @@ class pluginModeWidget(QToolBar):
         self.GUIPluginActionGroup = QActionGroup(self)
 
         # Setup font
-        self.font = QFont('Zero Threes')
+        self.font = QFont("Zero Threes")
         self.font.setPointSize(16)
 
         # Align right
@@ -235,7 +255,7 @@ class pluginModeWidget(QToolBar):
         for action in self.actions():
             for widget in action.associatedWidgets():
                 if widget is not self:
-                    a = QPropertyAnimation(widget, b'pos', widget)
+                    a = QPropertyAnimation(widget, b"pos", widget)
                     a.setStartValue(widget.pos())
                     a.setEndValue(widget.pos() + QPoint(0, distance))
                     self._effects.append(a)
@@ -246,7 +266,7 @@ class pluginModeWidget(QToolBar):
                     effect = QGraphicsOpacityEffect(self)
                     widget.setGraphicsEffect(effect)
                     self._effects.append(effect)
-                    b = QPropertyAnimation(effect, b'opacity')
+                    b = QPropertyAnimation(effect, b"opacity")
                     self._effects.append(b)
                     b.setDuration(duration)
                     b.setStartValue(1)
@@ -255,7 +275,8 @@ class pluginModeWidget(QToolBar):
                     b.start(QPropertyAnimation.DeleteWhenStopped)
                     b.finished.connect(partial(self.removeAction, action))
                     b.finished.connect(callback)
-        if not self.actions(): callback()
+        if not self.actions():
+            callback()
 
     def fadeIn(self):
         self._effects = []
@@ -263,8 +284,9 @@ class pluginModeWidget(QToolBar):
             effect = QGraphicsOpacityEffect(self)
             self._effects.append(effect)
             for widget in action.associatedWidgets():
-                if widget is not self: widget.setGraphicsEffect(effect)
-            a = QPropertyAnimation(effect, b'opacity')
+                if widget is not self:
+                    widget.setGraphicsEffect(effect)
+            a = QPropertyAnimation(effect, b"opacity")
             self._effects.append(a)
             a.setDuration(1000)
             a.setStartValue(0)
@@ -276,14 +298,21 @@ class pluginModeWidget(QToolBar):
         self.sigSetGUIPlugin.emit(plugin)
         if len(self.parent().currentGUIPlugin.plugin_object.stages) > 1:
             names = self.parent().currentGUIPlugin.plugin_object.stages.keys()
-            self.fadeOut(callback=partial(self.mkButtons, names=names, callback=self.sigSetStage.emit,
-                                          parent=self.parent().currentGUIPlugin.plugin_object.name))
+            self.fadeOut(
+                callback=partial(
+                    self.mkButtons,
+                    names=names,
+                    callback=self.sigSetStage.emit,
+                    parent=self.parent().currentGUIPlugin.plugin_object.name,
+                )
+            )
 
     def showGUIPlugins(self, distance=20):
-        plugins = pluginmanager.getPluginsOfCategory('GUIPlugin')
+        plugins = pluginmanager.getPluginsOfCategory("GUIPlugin")
         # TODO: test deactivated plugins
-        names = [plugin.plugin_object.name for plugin in plugins if
-                 getattr(plugin, 'is_activated', True) or True]  # TODO: add plugin deactivation
+        names = [
+            plugin.plugin_object.name for plugin in plugins if getattr(plugin, "is_activated", True) or True
+        ]  # TODO: add plugin deactivation
         self.fadeOut(callback=partial(self.mkButtons, names=names, callback=self.showStages), distance=distance)
 
     def mkButtons(self, names, callback, parent=None):
@@ -293,13 +322,13 @@ class pluginModeWidget(QToolBar):
             layout.itemAt(i).widget().setParent(None)
 
         if parent:
-            action = QAction('↑', self)
+            action = QAction("↑", self)
             action.setFont(self.font)
             action.triggered.connect(self.showGUIPlugins)
-            action.setProperty('isMode', True)
+            action.setProperty("isMode", True)
             self.addAction(action)
             # Make separator pipe
-            label = QAction('|', self)
+            label = QAction("|", self)
             label.setFont(self.font)
             label.setDisabled(True)
             self.addAction(label)
@@ -309,17 +338,16 @@ class pluginModeWidget(QToolBar):
             action = QAction(name, self)
             action.triggered.connect(partial(callback, i))
             action.setFont(self.font)
-            action.setProperty('isMode', True)
+            action.setProperty("isMode", True)
             action.setCheckable(True)
             action.setActionGroup(self.GUIPluginActionGroup)
             self.addAction(action)
 
             # Make separator pipe
-            label = QAction('|', self)
+            label = QAction("|", self)
             label.setFont(self.font)
             label.setDisabled(True)
             self.addAction(label)
-
 
         # Remove last separator
         if self.layout().count():
@@ -327,14 +355,14 @@ class pluginModeWidget(QToolBar):
 
         if parent:
             # Make separator pipe
-            label = QAction('>', self)
+            label = QAction(">", self)
             label.setFont(self.font)
             label.setDisabled(True)
             self.addAction(label)
 
             action = QAction(parent, self)
             action.setFont(self.font)
-            action.setProperty('isMode', True)
+            action.setProperty("isMode", True)
             action.setDisabled(True)
             action.setActionGroup(self.GUIPluginActionGroup)
             self.addAction(action)

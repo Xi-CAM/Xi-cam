@@ -5,6 +5,7 @@ from qtpy.QtGui import QTransform, QPolygonF
 from qtpy.QtWidgets import QLabel, QErrorMessage, QSizePolicy, QPushButton
 from qtpy.QtCore import Qt, Signal, Slot, QSize, QPointF, QRectF
 import numpy as np
+
 # from pyFAI.geometry import Geometry
 from xicam.gui.widgets.elidedlabel import ElidedLabel
 from xicam.gui.widgets.ROI import BetterPolyLineROI
@@ -22,6 +23,7 @@ import enum
 #                                          z = beam
 
 # TODO: Add notification when qgrid is very wrong
+
 
 def q_from_angles(phi, alpha, wavelength):
     r = 2 * np.pi / wavelength
@@ -50,9 +52,10 @@ class PixelSpace(ImageView):
     def __init__(self, *args, **kwargs):
         # Add axes
         self.axesItem = PlotItem()
-        self.axesItem.axes['left']['item'].setZValue(10)
-        self.axesItem.axes['top']['item'].setZValue(10)
-        if 'view' not in kwargs: kwargs['view'] = self.axesItem
+        self.axesItem.axes["left"]["item"].setZValue(10)
+        self.axesItem.axes["top"]["item"].setZValue(10)
+        if "view" not in kwargs:
+            kwargs["view"] = self.axesItem
 
         self._transform = QTransform()
 
@@ -63,15 +66,9 @@ class PixelSpace(ImageView):
     def transform(self, img=None):
         # Build Quads
         shape = img.shape
-        a = [(0, shape[-2] - 1),
-             (shape[-1] - 1, shape[-2] - 1),
-             (shape[-1] - 1, 0),
-             (0, 0)]
+        a = [(0, shape[-2] - 1), (shape[-1] - 1, shape[-2] - 1), (shape[-1] - 1, 0), (0, 0)]
 
-        b = [(0, 0),
-             (shape[-1] - 1, 0),
-             (shape[-1] - 1, shape[-2] - 1),
-             (0, shape[-2] - 1)]
+        b = [(0, 0), (shape[-1] - 1, 0), (shape[-1] - 1, shape[-2] - 1), (0, shape[-2] - 1)]
 
         quad1 = QPolygonF()
         quad2 = QPolygonF()
@@ -89,9 +86,10 @@ class PixelSpace(ImageView):
         return img, transform
 
     def setImage(self, img, *args, **kwargs):
-        if img is None: return
+        if img is None:
+            return
 
-        if not kwargs.get('transform', None):
+        if not kwargs.get("transform", None):
             img, transform = self.transform(img)
             self.updateAxes()
             super(PixelSpace, self).setImage(img, *args, transform=transform, **kwargs)
@@ -103,8 +101,8 @@ class PixelSpace(ImageView):
         self.setImage(self.imageItem.image)  # this should loop back around to the respective transforms
 
     def updateAxes(self):
-        self.axesItem.setLabel('bottom', u'x (px)')  # , units='s')
-        self.axesItem.setLabel('left', u'z (px)')
+        self.axesItem.setLabel("bottom", "x (px)")  # , units='s')
+        self.axesItem.setLabel("left", "z (px)")
 
 
 class QSpace(PixelSpace):
@@ -129,10 +127,11 @@ class EwaldCorrected(QSpace):
         self.setTransform()
 
     def transform(self, img):
-        if not self._geometry: return super(EwaldCorrected, self).transform(
-            img)  # Do pixel space transform when not calibrated
+        if not self._geometry:
+            return super(EwaldCorrected, self).transform(img)  # Do pixel space transform when not calibrated
 
         from camsaxs import remesh_bbox
+
         img, q_x, q_z = remesh_bbox.remesh(np.squeeze(img), self._geometry, reflection=False, alphai=None)
 
         # Build Quads
@@ -159,12 +158,13 @@ class EwaldCorrected(QSpace):
         return img, self._transform
 
     def setImage(self, img, *args, **kwargs):
-        if img is None: return
+        if img is None:
+            return
 
         if self._geometry:
             img, transform = self.transform(img)
-            self.axesItem.setLabel('bottom', u'q_x (Å⁻¹)')  # , units='s')
-            self.axesItem.setLabel('left', u'q_z (Å⁻¹)')
+            self.axesItem.setLabel("bottom", "q_x (Å⁻¹)")  # , units='s')
+            self.axesItem.setLabel("left", "q_z (Å⁻¹)")
             super(EwaldCorrected, self).setImage(img, *args, transform=transform, **kwargs)
 
         else:
@@ -172,9 +172,8 @@ class EwaldCorrected(QSpace):
 
 
 class CenterMarker(QSpace):
-
     def __init__(self, *args, **kwargs):
-        self.centerplot = ScatterPlotItem(brush='r')
+        self.centerplot = ScatterPlotItem(brush="r")
         self.centerplot.setZValue(100)
 
         super(CenterMarker, self).__init__(*args, **kwargs)
@@ -200,7 +199,7 @@ class CenterMarker(QSpace):
 class Crosshair(ImageView):
     def __init__(self, *args, **kwargs):
         super(Crosshair, self).__init__(*args, **kwargs)
-        linepen = mkPen('#FFA500')
+        linepen = mkPen("#FFA500")
         self._vline = InfiniteLine((0, 0), angle=90, movable=False, pen=linepen)
         self._hline = InfiniteLine((0, 0), angle=0, movable=False, pen=linepen)
 
@@ -231,15 +230,17 @@ class PixelCoordinates(PixelSpace):
     def __init__(self, *args, **kwargs):
         super(PixelCoordinates, self).__init__(*args, **kwargs)
 
-        self._coordslabel = QLabel(u"<div style='font-size:12pt;background-color:#111111; "
-                                   u"text-overflow: ellipsis; width:100%;'>&nbsp;</div>")
+        self._coordslabel = QLabel(
+            "<div style='font-size:12pt;background-color:#111111; " "text-overflow: ellipsis; width:100%;'>&nbsp;</div>"
+        )
 
         # def sizeHint():
         #     sizehint = QSize(self.ui.graphicsView.width()-10, self._coordslabel.height())
         #     return sizehint
         # self._coordslabel.sizeHint = sizeHint
-        self._coordslabel.setSizePolicy(QSizePolicy.Ignored,
-                                        QSizePolicy.Ignored)  # TODO: set sizehint to take from parent, not text
+        self._coordslabel.setSizePolicy(
+            QSizePolicy.Ignored, QSizePolicy.Ignored
+        )  # TODO: set sizehint to take from parent, not text
         self.ui.gridLayout.addWidget(self._coordslabel, 2, 0, 1, 1, alignment=Qt.AlignHCenter)
 
         self.scene.sigMouseMoved.connect(self.displayCoordinates)
@@ -255,7 +256,7 @@ class PixelCoordinates(PixelSpace):
 
                 self.formatCoordinates(pxpos, pos)
             else:
-                self._coordslabel.setText(u"<div style='font-size:12pt;background-color:#111111;'>&nbsp;</div>")
+                self._coordslabel.setText("<div style='font-size:12pt;background-color:#111111;'>&nbsp;</div>")
 
     def formatCoordinates(self, pxpos, pos):
         """
@@ -267,11 +268,13 @@ class PixelCoordinates(PixelSpace):
         except IndexError:
             I = 0
 
-        self._coordslabel.setText(f"<div style='font-size: 12pt;background-color:#111111; color:#FFFFFF;"
-                                  f"text-overflow: ellipsis; width:100%;'>"
-                                  f"x={pxpos.x():0.1f}, "
-                                  f"<span style=''>y={self.imageItem.image.shape[-2] - pxpos.y():0.1f}</span>, "
-                                  f"<span style=''>I={I:0.0f}</span></div>")
+        self._coordslabel.setText(
+            f"<div style='font-size: 12pt;background-color:#111111; color:#FFFFFF;"
+            f"text-overflow: ellipsis; width:100%;'>"
+            f"x={pxpos.x():0.1f}, "
+            f"<span style=''>y={self.imageItem.image.shape[-2] - pxpos.y():0.1f}</span>, "
+            f"<span style=''>I={I:0.0f}</span></div>"
+        )
 
 
 class QCoordinates(QSpace, PixelCoordinates):
@@ -284,16 +287,18 @@ class QCoordinates(QSpace, PixelCoordinates):
             I = self.imageItem.image[int(pxpos.y()), int(pxpos.x())]
         except IndexError:
             I = 0
-        self._coordslabel.setText(f"<div style='font-size: 12pt;background-color:#111111; color:#FFFFFF; "
-                                  f"text-overflow: ellipsis; width:100%;'>"
-                                  f"x={pxpos.x():0.1f}, "
-                                  f"<span style=''>y={self.imageItem.image.shape[-2] - pxpos.y():0.1f}</span>, "
-                                  f"<span style=''>I={I:0.0f}</span>, "
-                                  f"q={np.sqrt(pos.x() ** 2 + pos.y() ** 2):0.3f} \u212B\u207B\u00B9, "
-                                  f"q<sub>z</sub>={pos.y():0.3f} \u212B\u207B\u00B9, "
-                                  f"q<sub>\u2225</sub>={pos.x():0.3f} \u212B\u207B\u00B9, "
-                                  f"d={2 * np.pi / np.sqrt(pos.x() ** 2 + pos.y() ** 2) * 10:0.3f} nm, "
-                                  f"\u03B8={np.rad2deg(np.arctan2(pos.y(), pos.x())):.2f}&#176;</div>")
+        self._coordslabel.setText(
+            f"<div style='font-size: 12pt;background-color:#111111; color:#FFFFFF; "
+            f"text-overflow: ellipsis; width:100%;'>"
+            f"x={pxpos.x():0.1f}, "
+            f"<span style=''>y={self.imageItem.image.shape[-2] - pxpos.y():0.1f}</span>, "
+            f"<span style=''>I={I:0.0f}</span>, "
+            f"q={np.sqrt(pos.x() ** 2 + pos.y() ** 2):0.3f} \u212B\u207B\u00B9, "
+            f"q<sub>z</sub>={pos.y():0.3f} \u212B\u207B\u00B9, "
+            f"q<sub>\u2225</sub>={pos.x():0.3f} \u212B\u207B\u00B9, "
+            f"d={2 * np.pi / np.sqrt(pos.x() ** 2 + pos.y() ** 2) * 10:0.3f} nm, "
+            f"\u03B8={np.rad2deg(np.arctan2(pos.y(), pos.x())):.2f}&#176;</div>"
+        )
 
 
 class BetterButtons(ImageView):
@@ -301,7 +306,7 @@ class BetterButtons(ImageView):
         super(BetterButtons, self).__init__(*args, **kwargs)
 
         # Setup axes reset button
-        self.resetAxesBtn = QPushButton('Reset Axes')
+        self.resetAxesBtn = QPushButton("Reset Axes")
         sizePolicy = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(1)
@@ -312,7 +317,7 @@ class BetterButtons(ImageView):
         self.resetAxesBtn.clicked.connect(self.autoRange)
 
         # Setup LUT reset button
-        self.resetLUTBtn = QPushButton('Reset LUT')
+        self.resetLUTBtn = QPushButton("Reset LUT")
         sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(1)
@@ -345,10 +350,12 @@ class PolygonROI(ImageView):
         """
         super(PolygonROI, self).__init__(*args, **kwargs)
         rect = self.imageItem.boundingRect()  # type: QRectF
-        positions = [(rect.bottomLeft().x(), rect.bottomLeft().y()),
-                     (rect.bottomRight().x(), rect.bottomRight().y()),
-                     (rect.topRight().x(), rect.topRight().y()),
-                     (rect.topLeft().x(), rect.topLeft().y())]
+        positions = [
+            (rect.bottomLeft().x(), rect.bottomLeft().y()),
+            (rect.bottomRight().x(), rect.bottomRight().y()),
+            (rect.topRight().x(), rect.topRight().y()),
+            (rect.topLeft().x(), rect.topLeft().y()),
+        ]
         self._roiItem = BetterPolyLineROI(positions=positions, closed=True, scaleSnap=True, translateSnap=True)
         self.addItem(self._roiItem)
 
@@ -369,7 +376,9 @@ class PolygonROI(ImageView):
             Mask array of the ROI polygon within image space (mask shape matches image shape).
 
         """
-        result, mapped = self._roiItem.getArrayRegion(np.ones_like(self.imageItem.image), self.imageItem, returnMappedCoords=True)
+        result, mapped = self._roiItem.getArrayRegion(
+            np.ones_like(self.imageItem.image), self.imageItem, returnMappedCoords=True
+        )
 
         # TODO -- move this code to own function and test
         # Reverse the result array to make indexing calculations easier, then revert back
@@ -409,7 +418,7 @@ class PolygonROI(ImageView):
         if padYAfter < 0:
             padYAfter = 0
 
-        boundingBox = np.pad(result, ((padYBefore, padYAfter), (padXBefore, padXAfter)), 'constant')
+        boundingBox = np.pad(result, ((padYBefore, padYAfter), (padXBefore, padXAfter)), "constant")
 
         # For trimming, any negative minimums need to be shifted into the image shape
         offsetX = 0
@@ -418,7 +427,7 @@ class PolygonROI(ImageView):
             offsetX = abs(minX)
         if minY < 0:
             offsetY = abs(minY)
-        trimmed = boundingBox[abs(offsetY): abs(offsetY) + height, abs(offsetX):abs(offsetX) + width]
+        trimmed = boundingBox[abs(offsetY) : abs(offsetY) + height, abs(offsetX) : abs(offsetX) + width]
 
         # Reorient the trimmed mask array
         trimmed = trimmed[::-1, ::-1]
@@ -435,7 +444,6 @@ class PolygonROI(ImageView):
         # plt.show()
         # # TODO remove the plotting code above
         return trimmed
-
 
     def _intersectsImage(self, rectangle: QRectF):
         """
@@ -480,7 +488,7 @@ class LogScaleImageItem(ImageItem):
 
         if self.logScale:
             image = self.image + 1
-            with np.errstate(invalid='ignore'):
+            with np.errstate(invalid="ignore"):
                 image = image.astype(np.float)
                 np.log(image, where=image >= 0, out=image)  # map to 0-255
         else:
@@ -498,7 +506,7 @@ class LogScaleImageItem(ImageItem):
                 return
             xds = max(1, int(1.0 / w))
             yds = max(1, int(1.0 / h))
-            axes = [1, 0] if self.axisOrder == 'row-major' else [0, 1]
+            axes = [1, 0] if self.axisOrder == "row-major" else [0, 1]
             image = fn.downsample(image, xds, axis=axes[0])
             image = fn.downsample(image, yds, axis=axes[1])
             self._lastDownsample = (xds, yds)
@@ -516,12 +524,12 @@ class LogScaleImageItem(ImageItem):
                 levdiff = maxlev - minlev
                 levdiff = 1 if levdiff == 0 else levdiff  # don't allow division by 0
                 if lut is None:
-                    efflut = fn.rescaleData(ind, scale=255. / levdiff,
-                                            offset=minlev, dtype=np.ubyte)
+                    efflut = fn.rescaleData(ind, scale=255.0 / levdiff, offset=minlev, dtype=np.ubyte)
                 else:
                     lutdtype = np.min_scalar_type(lut.shape[0] - 1)
-                    efflut = fn.rescaleData(ind, scale=(lut.shape[0] - 1) / levdiff,
-                                            offset=minlev, dtype=lutdtype, clip=(0, lut.shape[0] - 1))
+                    efflut = fn.rescaleData(
+                        ind, scale=(lut.shape[0] - 1) / levdiff, offset=minlev, dtype=lutdtype, clip=(0, lut.shape[0] - 1)
+                    )
                     efflut = lut[efflut]
 
                 self._effectiveLut = efflut
@@ -531,11 +539,11 @@ class LogScaleImageItem(ImageItem):
         # Assume images are in column-major order for backward compatibility
         # (most images are in row-major order)
 
-        if self.axisOrder == 'col-major':
-            image = image.transpose((1, 0, 2)[:image.ndim])
+        if self.axisOrder == "col-major":
+            image = image.transpose((1, 0, 2)[: image.ndim])
 
         if self.logScale:
-            with np.errstate(invalid='ignore'):
+            with np.errstate(invalid="ignore"):
                 levels = np.log(np.add(levels, 1))
             levels[0] = np.nanmax([levels[0], 0])
 
@@ -545,16 +553,16 @@ class LogScaleImageItem(ImageItem):
 
 class LogScaleIntensity(ImageView):
     def __init__(self, *args, **kwargs):
-        if kwargs.get('imageItem') and not isinstance(kwargs.get('imageItem'), LogScaleImageItem):
-            raise RuntimeError('The imageItem set to a LogScaleIntensity ImageView must be a LogScaleImageItem.')
+        if kwargs.get("imageItem") and not isinstance(kwargs.get("imageItem"), LogScaleImageItem):
+            raise RuntimeError("The imageItem set to a LogScaleIntensity ImageView must be a LogScaleImageItem.")
 
-        kwargs['imageItem'] = LogScaleImageItem()
+        kwargs["imageItem"] = LogScaleImageItem()
         super(LogScaleIntensity, self).__init__(*args, **kwargs)
 
         self.logScale = True
 
         # Setup log scale button
-        self.logIntensityButton = QPushButton('Log Intensity')
+        self.logIntensityButton = QPushButton("Log Intensity")
         sizePolicy = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(1)

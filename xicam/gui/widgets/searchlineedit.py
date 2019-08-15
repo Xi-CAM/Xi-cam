@@ -6,7 +6,7 @@ from xicam.gui.static import path
 
 
 class SearchLineEdit(QLineEdit):
-    def __init__(self, text='', clearable = True, parent=None):
+    def __init__(self, text="", clearable=True, parent=None):
         QLineEdit.__init__(self, text=text, parent=parent)
 
         searchPixmap = QPixmap(str(path("icons/search.png")))
@@ -29,30 +29,26 @@ class SearchLineEdit(QLineEdit):
         self.searchButton.setStyleSheet("QToolButton { border: none; padding: 0 px;}")
 
         frameWidth = self.style().pixelMetric(QStyle.PM_DefaultFrameWidth)
-        self.setStyleSheet("QLineEdit { padding-left: %spx; padding - right: % spx;} " %
-                           (self.searchButton.sizeHint().width() + frameWidth + 1,
-                            self.clearButton.sizeHint().width() + frameWidth + 1))
+        self.setStyleSheet(
+            "QLineEdit { padding-left: %spx; padding - right: % spx;} "
+            % (self.searchButton.sizeHint().width() + frameWidth + 1, self.clearButton.sizeHint().width() + frameWidth + 1)
+        )
         msz = self.minimumSizeHint()
-        self.setMinimumSize(max(msz.width(),
-                                self.searchButton.sizeHint().width() +
-                                self.clearButton.sizeHint().width() +
-                                frameWidth * 2 + 2),
-                            max(msz.height(), self.clearButton.sizeHint().height() + frameWidth * 2 + 2))
+        self.setMinimumSize(
+            max(msz.width(), self.searchButton.sizeHint().width() + self.clearButton.sizeHint().width() + frameWidth * 2 + 2),
+            max(msz.height(), self.clearButton.sizeHint().height() + frameWidth * 2 + 2),
+        )
 
     #        self.searchMenu = QtGui.QMenu(self.searchButton)
     #        self.searchButton.setMenu(self.searchMenu)
     #        self.searchMenu.addAction("Google")
     #        self.searchButton.setPopupMode(QtGui.QToolButton.InstantPopup)
 
-
     def resizeEvent(self, event):
         sz = self.clearButton.sizeHint()
         frameWidth = self.style().pixelMetric(QStyle.PM_DefaultFrameWidth)
-        self.clearButton.move(self.rect().right() - frameWidth -
-                              sz.width(),
-                              (self.rect().bottom() + 1 - sz.height()) / 2)
-        self.searchButton.move(self.rect().left() + 1,
-                               (self.rect().bottom() + 1 - sz.height()) / 2)
+        self.clearButton.move(self.rect().right() - frameWidth - sz.width(), (self.rect().bottom() + 1 - sz.height()) / 2)
+        self.searchButton.move(self.rect().left() + 1, (self.rect().bottom() + 1 - sz.height()) / 2)
 
     def updateCloseButton(self, text):
         if text:

@@ -39,7 +39,8 @@ class ConfigDialog(QDialog):
         self.contentsWidget.selectionModel().currentChanged.connect(self.changePage)
 
         self.buttonboxWidget = QDialogButtonBox(
-            QDialogButtonBox.Ok | QDialogButtonBox.Cancel | QDialogButtonBox.Apply | QDialogButtonBox.Help)
+            QDialogButtonBox.Ok | QDialogButtonBox.Cancel | QDialogButtonBox.Apply | QDialogButtonBox.Help
+        )
         self.buttonboxWidget.button(QDialogButtonBox.Ok).clicked.connect(self.ok)
         self.buttonboxWidget.button(QDialogButtonBox.Apply).clicked.connect(self.apply)
         self.buttonboxWidget.button(QDialogButtonBox.Cancel).clicked.connect(self.close)
@@ -71,7 +72,7 @@ class ConfigDialog(QDialog):
 
     def createIcons(self):
         self.contentsModel.clear()
-        for pluginInfo in pluginmanager.getPluginsOfCategory('SettingsPlugin'):
+        for pluginInfo in pluginmanager.getPluginsOfCategory("SettingsPlugin"):
             item = QStandardItem(pluginInfo.plugin_object.icon, pluginInfo.plugin_object.name())
             item.widget = pluginInfo.plugin_object.widget
             item.setTextAlignment(Qt.AlignHCenter)
@@ -98,7 +99,7 @@ class ConfigDialog(QDialog):
         self.createIcons()
 
     def restore(self):
-        for pluginInfo in pluginmanager.getPluginsOfCategory('SettingsPlugin'):
+        for pluginInfo in pluginmanager.getPluginsOfCategory("SettingsPlugin"):
             pluginInfo.plugin_object.restore()
 
         self.apply()
@@ -109,7 +110,7 @@ class ConfigDialog(QDialog):
         self.accept()
 
     def apply(self):
-        for pluginInfo in pluginmanager.getPluginsOfCategory('SettingsPlugin'):
+        for pluginInfo in pluginmanager.getPluginsOfCategory("SettingsPlugin"):
             pluginInfo.plugin_object.save()
 
     def close(self):

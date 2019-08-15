@@ -20,7 +20,7 @@ import functools
 
 from qtpy import QtCore, QtGui, QtWidgets
 
-__all__ = ['MenuView', 'SetDataArgs']
+__all__ = ["MenuView", "SetDataArgs"]
 
 
 class MenuView(QtWidgets.QMenu):
@@ -63,7 +63,7 @@ class MenuView(QtWidgets.QMenu):
     action_toggled = QtCore.Signal(QtCore.QModelIndex, bool)
     """Signal for when an action gets toggled"""
 
-    def __init__(self, title='', parent=None):
+    def __init__(self, title="", parent=None):
         """Initialize a new menu view with the given title
         :param title: title of the top menu
         :type title: :class:`str`
@@ -89,19 +89,21 @@ class MenuView(QtWidgets.QMenu):
         self._model = None
 
         Qt = QtCore.Qt
-        args = [SetDataArgs('setText', 'text_column', Qt.DisplayRole, str),
-                SetDataArgs('setIcon', 'icon_column', Qt.DecorationRole, self._process_icondata),
-                SetDataArgs('setIconText', 'icontext_column', Qt.DisplayRole, str),
-                SetDataArgs('setToolTip', 'tooltip_column', Qt.ToolTipRole, str),
-                SetDataArgs('setChecked', 'checked_column', Qt.CheckStateRole, self._checkconvertfunc),
-                SetDataArgs('setWhatsThis', 'whatsthis_column', Qt.WhatsThisRole, str),
-                SetDataArgs('setStatusTip', 'statustip_column', Qt.StatusTipRole, str)]
+        args = [
+            SetDataArgs("setText", "text_column", Qt.DisplayRole, str),
+            SetDataArgs("setIcon", "icon_column", Qt.DecorationRole, self._process_icondata),
+            SetDataArgs("setIconText", "icontext_column", Qt.DisplayRole, str),
+            SetDataArgs("setToolTip", "tooltip_column", Qt.ToolTipRole, str),
+            SetDataArgs("setChecked", "checked_column", Qt.CheckStateRole, self._checkconvertfunc),
+            SetDataArgs("setWhatsThis", "whatsthis_column", Qt.WhatsThisRole, str),
+            SetDataArgs("setStatusTip", "statustip_column", Qt.StatusTipRole, str),
+        ]
         self.setdataargs = args
         """A list of :class:`SetDataArgs` containers. Defines how the
         data from the model is applied to the action"""
 
     @property
-    def model(self, ):
+    def model(self,):
         """Get the model
         :returns: the current model
         :rtype: :class:`PySide.QtCore.QAbstractItemModel`
@@ -118,10 +120,12 @@ class MenuView(QtWidgets.QMenu):
         :rtype: None
         :raises: None
         """
-        signalmap = {"modelReset": self.reset,
-                     "rowsInserted": self.insert_menus,
-                     "rowsAboutToBeRemoved": self.remove_menus,
-                     "dataChanged": self.update_menus}
+        signalmap = {
+            "modelReset": self.reset,
+            "rowsInserted": self.insert_menus,
+            "rowsAboutToBeRemoved": self.remove_menus,
+            "dataChanged": self.update_menus,
+        }
         if self._model:
             for signal, callback in signalmap.items():
                 getattr(self._model, signal).disconnect(callback)
@@ -133,7 +137,7 @@ class MenuView(QtWidgets.QMenu):
         self.action_toggled.connect(functools.partial(self._model.setData, role=QtCore.Qt.CheckStateRole))
         self.reset()
 
-    def reset(self, ):
+    def reset(self,):
         """Delete and recreate all menus
         :returns: None
         :rtype: None
@@ -142,7 +146,7 @@ class MenuView(QtWidgets.QMenu):
         self.clear()
         self.create_all_menus()
 
-    def create_all_menus(self, ):
+    def create_all_menus(self,):
         """Create all menus according to the model
         :returns: None
         :rtype: None
@@ -201,9 +205,11 @@ class MenuView(QtWidgets.QMenu):
             action = self.create_action(parent)
         parent.insertAction(before, action)
         self.set_action_data(action, index)
-        signalmap = {action.triggered: self._action_triggered,
-                     action.hovered: self._action_hovered,
-                     action.toggled: self._action_toggled}
+        signalmap = {
+            action.triggered: self._action_triggered,
+            action.hovered: self._action_hovered,
+            action.toggled: self._action_toggled,
+        }
         for signal, callback in signalmap.items():
             signal.connect(functools.partial(callback, action))
 
@@ -286,9 +292,15 @@ class MenuView(QtWidgets.QMenu):
         :rtype: None
         :raises: None
         """
-        columns = [self.text_column, self.icon_column, self.icontext_column,
-                   self.tooltip_column, self.checked_column, self.whatsthis_column,
-                   self.statustip_column]
+        columns = [
+            self.text_column,
+            self.icon_column,
+            self.icontext_column,
+            self.tooltip_column,
+            self.checked_column,
+            self.whatsthis_column,
+            self.statustip_column,
+        ]
         needupdate = any([(c >= topLeft.column() and c <= bottomRight.column()) for c in columns])
         if needupdate:
             for row in range(topLeft.row(), bottomRight.row() + 1):

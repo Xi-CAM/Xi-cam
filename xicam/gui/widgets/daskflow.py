@@ -10,15 +10,13 @@ from xicam.plugins import manager as pluginmanager
 
 
 class DaskFlow(FlowchartCtrlWidget):
-
     def __init__(self):
         self.flowchart = Flowchart()
         super(DaskFlow, self).__init__(self.flowchart)
 
     def fromDask(self, workflow: Workflow):
         for process in workflow.processes:
-            node = Node(process.name, terminals={'inputTerminalName': {'io': 'in'},
-                                                 'outputTerminalName': {'io': 'out'}})
+            node = Node(process.name, terminals={"inputTerminalName": {"io": "in"}, "outputTerminalName": {"io": "out"}})
             self.flowchart.addNode(node, process.name)
 
 

@@ -1,8 +1,10 @@
 def test_threads():
     from qtpy.QtWidgets import QApplication
+
     app = QApplication([])
     from xicam.core import threads
     from qtpy.QtCore import QTimer, QObject, Signal
+
     q = QTimer()
 
     def callback(a):
@@ -24,9 +26,11 @@ def test_threads():
 
 def test_threads_iterator():
     from qtpy.QtWidgets import QApplication
+
     app = QApplication([])
     from xicam.core import threads
     from qtpy.QtCore import QTimer
+
     q = QTimer()
 
     results = []

@@ -24,17 +24,11 @@ class CamMartSettingsPlugin(SettingsPlugin):
 
         self.plugintoolbar = QToolBar()
         self.plugintoolbar.setOrientation(Qt.Vertical)
-        self.plugintoolbar.addAction(QIcon(str(path('icons/plus.png'))),
-                                     'Add plugin',
-                                     self.addplugin)
-        self.plugintoolbar.addAction(QIcon(str(path('icons/minus.png'))),
-                                     'Remove plugin',
-                                     self.removeplugin)
+        self.plugintoolbar.addAction(QIcon(str(path("icons/plus.png"))), "Add plugin", self.addplugin)
+        self.plugintoolbar.addAction(QIcon(str(path("icons/minus.png"))), "Remove plugin", self.removeplugin)
         self.widget.layout().addWidget(self.listview)
         self.widget.layout().addWidget(self.plugintoolbar)
-        super(CamMartSettingsPlugin, self).__init__(QIcon(str(path('icons/box.png'))),
-                                                    'Plugins',
-                                                    self.widget)
+        super(CamMartSettingsPlugin, self).__init__(QIcon(str(path("icons/box.png"))), "Plugins", self.widget)
 
         # Refresh packages list
         self.refresh()
@@ -70,7 +64,7 @@ class CamMartSettingsPlugin(SettingsPlugin):
         pass  # self.parameter.restoreState(state)
 
 
-repositories = ['cam.lbl.gov:5000']
+repositories = ["cam.lbl.gov:5000"]
 
 
 class CamMartInstallDialog(QDialog):
@@ -136,9 +130,9 @@ class CamMartInstallDialog(QDialog):
         for repo in repositories:
             # TODO: check behavior for >25 items (pagesize)
             # For each package
-            for packageinfo in eval(requests.get(f'http://{repo}/pluginpackages').content)["_items"]:
+            for packageinfo in eval(requests.get(f"http://{repo}/pluginpackages").content)["_items"]:
                 # Add an item to the model
-                item = QStandardItem(packageinfo['name'])
+                item = QStandardItem(packageinfo["name"])
                 item.info = packageinfo
                 self.packagesModel.appendRow(item)
 
@@ -170,4 +164,5 @@ class PackageInfoWidget(QTextEdit):
             <p>Publication: {info['documentation'].get('publication')}</p>
             <p>Reference: {info['documentation'].get('reference')}</p>
             <p>Keywords: {", ".join(info['documentation'].get('keywords'))}</p>
-            """)
+            """
+        )

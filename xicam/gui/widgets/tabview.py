@@ -7,8 +7,15 @@ from xicam.core import msg
 
 
 class TabView(QTabWidget):
-    def __init__(self, headermodel: QStandardItemModel = None, selectionmodel: QItemSelectionModel = None,
-                 widgetcls=None, field=None, bindings: List[tuple] = [], **kwargs):
+    def __init__(
+        self,
+        headermodel: QStandardItemModel = None,
+        selectionmodel: QItemSelectionModel = None,
+        widgetcls=None,
+        field=None,
+        bindings: List[tuple] = [],
+        **kwargs,
+    ):
         """
 
         Parameters
@@ -28,9 +35,11 @@ class TabView(QTabWidget):
         self.setWidgetClass(widgetcls)
         self.headermodel = None
         self.selectionmodel = None
-        if selectionmodel: self.setSelectionModel(selectionmodel)  # type: TabItemSelectionModel
+        if selectionmodel:
+            self.setSelectionModel(selectionmodel)  # type: TabItemSelectionModel
 
-        if headermodel: self.setHeaderModel(headermodel)
+        if headermodel:
+            self.setHeaderModel(headermodel)
         self.field = field
         self.bindings = bindings
 
@@ -48,8 +57,8 @@ class TabView(QTabWidget):
         self.selectionmodel = model
         self.selectionmodel.currentChanged.connect(lambda current, previous: self.setCurrentIndex(current.row()))
         self.currentChanged.connect(
-            lambda i: self.selectionmodel.setCurrentIndex(self.headermodel.index(i, 0), QItemSelectionModel.Rows))
-
+            lambda i: self.selectionmodel.setCurrentIndex(self.headermodel.index(i, 0), QItemSelectionModel.Rows)
+        )
 
     def dataChanged(self, start, end):
         for i in range(self.headermodel.rowCount()):
@@ -60,15 +69,15 @@ class TabView(QTabWidget):
             try:
                 newwidget = self.widgetcls(self.headermodel.item(i).header, self.field, **self.kwargs)
             except Exception as ex:
-                msg.logMessage(f'A widget of type {self.widgetcls} could not be initialized with args: {self.headermodel.item(i).header, self.field, self.kwargs}')
+                msg.logMessage(
+                    f"A widget of type {self.widgetcls} could not be initialized with args: {self.headermodel.item(i).header, self.field, self.kwargs}"
+                )
                 msg.logError(ex)
                 self.headermodel.removeRow(i)
                 self.dataChanged(0, 0)
                 return
 
-            self.setCurrentIndex(
-                self.insertTab(i, newwidget,
-                               self.headermodel.item(i).text()))
+            self.setCurrentIndex(self.insertTab(i, newwidget, self.headermodel.item(i).text()))
             for sender, receiver in self.bindings:
                 if isinstance(sender, str):
                     sender = getattr(newwidget, sender)
@@ -100,7 +109,8 @@ class TabViewSynchronizer(QObject):
 
     def sync(self, index, sourcetabview):
         for tabview in self.tabviews:
-            if tabview is sourcetabview: continue
+            if tabview is sourcetabview:
+                continue
             tabview.setCurrentIndex(index)
             tabview.dataChanged(None, None)
 
@@ -109,11 +119,11 @@ class ContextMenuTabBar(QTabBar):
     def __init__(self):
         super(ContextMenuTabBar, self).__init__()
         self.contextMenu = QMenu()
-        self.closeaction = QAction('&Close')
+        self.closeaction = QAction("&Close")
         self.closeaction.triggered.connect(self.close)
-        self.closeothersaction = QAction('Close &Others')
+        self.closeothersaction = QAction("Close &Others")
         self.closeothersaction.triggered.connect(self.closeothers)
-        self.closeallaction = QAction('Close &All')
+        self.closeallaction = QAction("Close &All")
         self.closeallaction.triggered.connect(self.closeall)
         self.contextMenu.addActions([self.closeaction, self.closeothersaction, self.closeallaction])
         self._rightclickedtab = None
