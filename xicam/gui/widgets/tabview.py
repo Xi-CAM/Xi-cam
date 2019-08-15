@@ -3,6 +3,7 @@ from qtpy.QtGui import *
 from qtpy.QtCore import *
 from typing import List
 from functools import partial
+from xicam.core import msg
 
 
 class TabView(QTabWidget):
@@ -56,7 +57,15 @@ class TabView(QTabWidget):
             if self.widget(i):
                 if self.widget(i).header == self.headermodel.item(i).header:
                     continue
-            newwidget = self.widgetcls(self.headermodel.item(i).header, self.field, **self.kwargs)
+            try:
+                newwidget = self.widgetcls(self.headermodel.item(i).header, self.field, **self.kwargs)
+            except Exception as ex:
+                msg.logMessage(f'A widget of type {self.widgetcls} could not be initialized with args: {self.headermodel.item(i).header, self.field, self.kwargs}')
+                msg.logError(ex)
+                self.headermodel.removeRow(i)
+                self.dataChanged(0, 0)
+                return
+
             self.setCurrentIndex(
                 self.insertTab(i, newwidget,
                                self.headermodel.item(i).text()))
