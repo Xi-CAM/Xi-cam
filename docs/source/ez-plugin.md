@@ -1,10 +1,9 @@
 # Creating an EZPlugin
 
 The EZPlugin function provides a way to create a custom GUI plugin, although the 
-customization is somewhat limited. For more advanced plugin creation,
-see [Creating a Plugin](pluginDev.md).
+customization is somewhat limited. 
 
-## What is a Xi-cam Plugin?
+*If you are interested in developing a more customizable GUI plugin, see [Creating a GUIPlugin](gui-plugin.md).*
 
 ## Creating a Simple EZPlugin
 

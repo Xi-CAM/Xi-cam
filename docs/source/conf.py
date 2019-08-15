@@ -12,8 +12,6 @@
 #
 import os
 import sys
-# sys.path.insert(0, os.path.abspath('.'))
-sys.path.insert(0, os.path.abspath('../../'))
 from recommonmark.transform import AutoStructify
 from sphinx.ext import autodoc
 import sphinx_bootstrap_theme
@@ -36,6 +34,7 @@ extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
     'recommonmark',
+    'sphinx_markdown_tables',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -167,7 +166,7 @@ def setup(app):
     app.add_stylesheet("my-styles.css")
     # Allow md files to evaluate marked sections as rst
     app.add_config_value('recommonmark_config', {
-        'enable_eval_rst': True
+        'enable_eval_rst': True,
     }, True)
     app.add_transform(AutoStructify)
 
