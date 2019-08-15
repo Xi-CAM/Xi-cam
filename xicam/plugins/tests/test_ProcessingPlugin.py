@@ -5,6 +5,7 @@ import pytest
 def with_QApplication():
     # Code that will run before your test
     from qtpy.QtWidgets import QApplication
+
     app = QApplication([])
     # A test function will be run at this point
     yield
@@ -12,11 +13,12 @@ def with_QApplication():
     # ... do something to check the existing files
     # assert QApplication.exec_() == 0
 
+
 def test_IProcessingPlugin():
     from ..ProcessingPlugin import ProcessingPlugin, Input, Output
 
     class SumProcessingPlugin(ProcessingPlugin):
-        a = Input(default=1, units='nm', min=0)
+        a = Input(default=1, units="nm", min=0)
         b = Input(default=2)
         c = Output()
 
@@ -29,9 +31,9 @@ def test_IProcessingPlugin():
     assert t1.evaluate() == 3
     t1.a.value = 100
     assert t2.a.value == 1
-    assert t1.inputs['a'].name == 'a'
-    assert t1.outputs['c'].name == 'c'
-    assert t1.outputs['c'].value == 3
+    assert t1.inputs["a"].name == "a"
+    assert t1.outputs["c"].name == "c"
+    assert t1.outputs["c"].value == 3
 
 
 def test_EZProcessingPlugin():

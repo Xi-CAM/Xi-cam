@@ -30,14 +30,14 @@ from xicam.core import threads
 import time
 
 op_sys = platform.system()
-if op_sys == 'Darwin':  # User config dir incompatible with venv on darwin (space in path name conflicts)
-    user_plugin_dir = os.path.join(user_cache_dir(appname='xicam'), 'plugins')
+if op_sys == "Darwin":  # User config dir incompatible with venv on darwin (space in path name conflicts)
+    user_plugin_dir = os.path.join(user_cache_dir(appname="xicam"), "plugins")
 else:
-    user_plugin_dir = os.path.join(user_config_dir(appname='xicam'), 'plugins')
-site_plugin_dir = os.path.join(site_config_dir(appname='xicam'), 'plugins')
+    user_plugin_dir = os.path.join(user_config_dir(appname="xicam"), "plugins")
+site_plugin_dir = os.path.join(site_config_dir(appname="xicam"), "plugins")
 
 qt_is_safe = False
-if 'qtpy' in sys.modules:
+if "qtpy" in sys.modules:
     from qtpy.QtWidgets import QApplication
 
     if QApplication.instance():
@@ -59,29 +59,33 @@ class XicamPluginManager(PluginManager):
         venvsobservers.append(self)
 
         # Link categories to base classes
-        categoriesfilter = {'DataHandlerPlugin': DataHandlerPlugin,
-                            'DataResourcePlugin': DataResourcePlugin,
-                            'ProcessingPlugin': ProcessingPlugin,
-                            'Fittable1DModelPlugin': Fittable1DModelPlugin,
-                            }
+        categoriesfilter = {
+            "DataHandlerPlugin": DataHandlerPlugin,
+            "DataResourcePlugin": DataResourcePlugin,
+            "ProcessingPlugin": ProcessingPlugin,
+            "Fittable1DModelPlugin": Fittable1DModelPlugin,
+        }
 
         # If xicam.gui is not loaded (running headless), don't load GUIPlugins or WidgetPlugins
         if qt_is_safe:
-            categoriesfilter.update({'ControllerPlugin': ControllerPlugin,
-                                     'GUIPlugin': GUIPlugin,
-                                     'WidgetPlugin': QWidgetPlugin,
-                                     'SettingsPlugin': SettingsPlugin,
-                                     'EZPlugin': _EZPlugin,
-                                     'Fittable1DModelPlugin': Fittable1DModelPlugin})
+            categoriesfilter.update(
+                {
+                    "ControllerPlugin": ControllerPlugin,
+                    "GUIPlugin": GUIPlugin,
+                    "WidgetPlugin": QWidgetPlugin,
+                    "SettingsPlugin": SettingsPlugin,
+                    "EZPlugin": _EZPlugin,
+                    "Fittable1DModelPlugin": Fittable1DModelPlugin,
+                }
+            )
 
         self.setCategoriesFilter(categoriesfilter)
 
         # Places to look for plugins
-        self.plugindirs = [user_plugin_dir,
-                           site_plugin_dir] \
-                          + list(xicam.__path__)
+        self.plugindirs = [user_plugin_dir, site_plugin_dir] + list(xicam.__path__)
+
         self.setPluginPlaces(self.plugindirs)
-        msg.logMessage('plugindirectories:', *self.plugindirs)
+        msg.logMessage("plugindirectories:", *self.plugindirs)
 
         # Loader thread
         self.loadthread = None
@@ -96,10 +100,9 @@ class XicamPluginManager(PluginManager):
         for callback, obsfilter in self.observers:
             callback()
 
-
     def loading_except_slot(self, ex):
         msg.logError(ex)
-        raise NameError(f'No plugin named {name} is in the queue or plugin manager.')
+        raise NameError(f"No plugin named {name} is in the queue or plugin manager.")
 
     def getPluginByName(self, name, category="Default", timeout=150):
         plugin = super(XicamPluginManager, self).getPluginByName(name, category)
@@ -111,9 +114,9 @@ class XicamPluginManager(PluginManager):
                     if threads.is_main_thread():
                         QApplication.processEvents()
                     else:
-                        time.sleep(.01)
+                        time.sleep(0.01)
                     if elapsed() > timeout:
-                        raise TimeoutError(f'Plugin named {name} waited too long to instanciate')
+                        raise TimeoutError(f"Plugin named {name} waited too long to instanciate")
             return plugin
 
         # if queueing
@@ -121,7 +124,7 @@ class XicamPluginManager(PluginManager):
             for load_item in list(self.loadqueue):
                 if load_item[2].name == name:
                     self.loadqueue.remove(load_item)  # remove the item from the top-level queue
-                    msg.logMessage(f'Immediately loading {load_item[2].name}.', level=msg.INFO)
+                    msg.logMessage(f"Immediately loading {load_item[2].name}.", level=msg.INFO)
                     self.load_plugin(*load_item)  # and load it immediately
                     break
 
@@ -132,9 +135,9 @@ class XicamPluginManager(PluginManager):
                     if threads.is_main_thread():
                         QApplication.processEvents()
                     else:
-                        time.sleep(.01)
+                        time.sleep(0.01)
                     if elapsed() > timeout:
-                        raise TimeoutError(f'Plugin named {name} waited too long to instanciate')
+                        raise TimeoutError(f"Plugin named {name} waited too long to instanciate")
 
         return plugin
 
@@ -160,28 +163,28 @@ class XicamPluginManager(PluginManager):
 
         for plugin in reversed(self._candidates):
             if plugin[2] not in candidatesset:
-                msg.logMessage(f'Possible duplicate plugin name "{plugin[2].name}" at {plugin[2].path}',
-                               level=msg.WARNING)
-                msg.logMessage(f'Possibly shadowed by {candidatedict[plugin[2].name].path}', level=msg.WARNING)
+                msg.logMessage(f'Possible duplicate plugin name "{plugin[2].name}" at {plugin[2].path}', level=msg.WARNING)
+                msg.logMessage(f"Possibly shadowed by {candidatedict[plugin[2].name].path}", level=msg.WARNING)
                 self._candidates.remove(plugin)
 
-        msg.logMessage('Candidates:')
-        for candidate in self._candidates: msg.logMessage(candidate)
+        msg.logMessage("Candidates:")
+        for candidate in self._candidates:
+            msg.logMessage(candidate)
 
         self.loadPlugins(callback=self.showLoading)
 
         self.notify()
 
     def instanciatePlugin(self, plugin_info, element):
-        '''
+        """
         The default behavior is that each plugin is instanciated at load time; the class is thrown away.
         Add the isSingleton = False attribute to your plugin class to prevent this behavior!
-        '''
-        msg.logMessage(f'Instanciating {plugin_info.name} plugin object.')
+        """
+        msg.logMessage(f"Instanciating {plugin_info.name} plugin object.")
 
         with load_timer() as elapsed:
             try:
-                if getattr(element, 'isSingleton', True):
+                if getattr(element, "isSingleton", True):
                     plugin_info.plugin_object = element()
                 else:
                     plugin_info.plugin_object = element
@@ -189,20 +192,19 @@ class XicamPluginManager(PluginManager):
                 exc_info = sys.exc_info()
                 msg.logMessage("Unable to instanciate plugin: %s" % plugin_info.path, msg.ERROR)
                 msg.logError(ex)
-                msg.notifyMessage(repr(ex),
-                                  title=f'An error occurred while starting the "{plugin_info.name}" plugin.',
-                                  level=msg.CRITICAL)
+                msg.notifyMessage(
+                    repr(ex), title=f'An error occurred while starting the "{plugin_info.name}" plugin.', level=msg.CRITICAL
+                )
                 plugin_info.error = exc_info
 
-        msg.logMessage(f'{int(elapsed()*1000)} ms elapsed while instanciating {plugin_info.name}',
-                       level=msg.INFO)
+        msg.logMessage(f"{int(elapsed()*1000)} ms elapsed while instanciating {plugin_info.name}", level=msg.INFO)
 
         self.notify()
 
     def showLoading(self, plugininfo: PluginInfo):
         # Indicate loading status
         name = plugininfo.name
-        msg.logMessage(f'Loading {name} from {plugininfo.path}')
+        msg.logMessage(f"Loading {name} from {plugininfo.path}")
 
     def venvChanged(self):
         self.setPluginPlaces([venvs.current_environment])
@@ -233,7 +235,7 @@ class XicamPluginManager(PluginManager):
         the callback.
         """
         # 		print "%s.loadPlugins" % self.__class__
-        if not hasattr(self, '_candidates'):
+        if not hasattr(self, "_candidates"):
             raise ValueError("locatePlugins must be called before loadPlugins")
 
         self.processed_plugins = []
@@ -249,8 +251,9 @@ class XicamPluginManager(PluginManager):
             if callback is not None:
                 callback(plugin_info)
 
-            self.load_plugin(candidate_infofile=candidate_infofile, candidate_filepath=candidate_filepath,
-                             plugin_info=plugin_info)
+            self.load_plugin(
+                candidate_infofile=candidate_infofile, candidate_filepath=candidate_filepath, plugin_info=plugin_info
+            )
 
             msg.showProgress(initial_len - len(self.loadqueue), maxval=initial_len)
 
@@ -258,17 +261,19 @@ class XicamPluginManager(PluginManager):
                 break
         # Remove candidates list since we don't need them any more and
         # don't need to take up the space
-        delattr(self, '_candidates')
+        delattr(self, "_candidates")
         return self.processed_plugins
 
     def load_plugin(self, candidate_infofile, candidate_filepath, plugin_info):
         msg.logMessage(
             f'Loading {plugin_info.name} plugin in {"main" if threads.is_main_thread() else "background"} thread.',
-            level=msg.INFO)
+            level=msg.INFO,
+        )
         # make sure to attribute a unique module name to the one
         # that is about to be loaded
-        plugin_module_name_template = NormalizePluginNameForModuleName(  # why?
-            "yapsy_loaded_plugin_" + plugin_info.name) + "_%d"
+        plugin_module_name_template = (
+            NormalizePluginNameForModuleName("yapsy_loaded_plugin_" + plugin_info.name) + "_%d"  # why?
+        )
 
         # make a uniquely numbered module name; again, why?
         for plugin_name_suffix in range(len(sys.modules)):
@@ -280,11 +285,13 @@ class XicamPluginManager(PluginManager):
             # use imp to correctly load the plugin as a module
             from importlib._bootstrap_external import _POPULATE
 
-            submodule_search_locations = os.path.dirname(plugin_info.path) if plugin_info.path.endswith(
-                "__init__.py") else _POPULATE
+            submodule_search_locations = (
+                os.path.dirname(plugin_info.path) if plugin_info.path.endswith("__init__.py") else _POPULATE
+            )
 
-            spec = importlib.util.spec_from_file_location(plugin_info.name, plugin_info.path,
-                                                          submodule_search_locations=submodule_search_locations)
+            spec = importlib.util.spec_from_file_location(
+                plugin_info.name, plugin_info.path, submodule_search_locations=submodule_search_locations
+            )
             candidate_module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(candidate_module)
 
@@ -292,29 +299,27 @@ class XicamPluginManager(PluginManager):
             exc_info = sys.exc_info()
             msg.logMessage("Unable to import plugin: %s" % plugin_info.path, msg.ERROR)
             msg.logError(ex)
-            msg.notifyMessage(repr(ex),
-                              title=f'The "{plugin_info.name}" plugin could not be loaded.',
-                              level=msg.CRITICAL)
+            msg.notifyMessage(repr(ex), title=f'The "{plugin_info.name}" plugin could not be loaded.', level=msg.CRITICAL)
             plugin_info.error = exc_info
             self.processed_plugins.append(plugin_info)
             return
         self.processed_plugins.append(plugin_info)
 
         if "__init__" in os.path.basename(plugin_info.name):  # is this necessary?
-            print('Yes, it is?')
+            print("Yes, it is?")
             sys.path.remove(plugin_info.path)
         # now try to find and initialise the first subclass of the correct plugin interface
 
         #### ADDED BY RP
 
         dirlist = dir(candidate_module)
-        if hasattr(candidate_module, '__plugin_exports__'):
+        if hasattr(candidate_module, "__plugin_exports__"):
             dirlist = candidate_module.__plugin_exports__
         ####
 
         with load_timer() as elapsed:  # cm for load timing
 
-            element_name = plugin_info.details['Core'].get('Object', None)  # Try explicitly defined element first
+            element_name = plugin_info.details["Core"].get("Object", None)  # Try explicitly defined element first
 
             success = False
             if element_name:
@@ -327,9 +332,9 @@ class XicamPluginManager(PluginManager):
                     self.load_element(element, candidate_infofile, plugin_info)
 
             if success:
-                msg.logMessage(f'{int(elapsed() * 1000)} ms elapsed while loading {plugin_info.name}', level=msg.INFO)
+                msg.logMessage(f"{int(elapsed() * 1000)} ms elapsed while loading {plugin_info.name}", level=msg.INFO)
             else:
-                msg.logMessage(f'No plugin found in indicated module: {candidate_filepath}', msg.ERROR)
+                msg.logMessage(f"No plugin found in indicated module: {candidate_filepath}", msg.ERROR)
 
     def load_element(self, element, candidate_infofile, plugin_info):
         """
@@ -360,14 +365,13 @@ class XicamPluginManager(PluginManager):
 
                         threads.invoke_in_main_thread(self.instanciatePlugin, plugin_info, element)
 
-
                     except Exception as ex:
                         exc_info = sys.exc_info()
                         msg.logError(ex)
                         msg.logMessage("Unable to create plugin object: %s" % plugin_info.path)
                         plugin_info.error = exc_info
                         # break  # If it didn't work once it wont again
-                        raise RuntimeError('An error occurred while loading plugin: %s' % plugin_info.path)
+                        raise RuntimeError("An error occurred while loading plugin: %s" % plugin_info.path)
                     else:
                         plugin_info.categories.append(current_category)
                         self.category_mapping[current_category].append(plugin_info)
@@ -391,5 +395,5 @@ manager = XicamPluginManager()
 
 from ._version import get_versions
 
-__version__ = get_versions()['version']
+__version__ = get_versions()["version"]
 del get_versions

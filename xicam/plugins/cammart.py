@@ -2,33 +2,56 @@ import collections
 import json
 from urllib import parse
 import os, sys
-
+import pkg_resources
 import requests
 import yaml
 from appdirs import user_config_dir, site_config_dir, user_cache_dir
 import platform
 import subprocess
-
-
-def pipmain(args):
-    subprocess.call([sys.executable, "-m", "pip", *args])
-
-
-# try:
-#     from pip._internal import main as pipmain
-# except ModuleNotFoundError:
-#     from pip import main as pipmain
+from xicam.core import msg
+from importlib import reload
+import pip
 
 from . import manager
 from . import venvs
 
 
+def pipmain(args):
+    old_env = os.environ.copy()
+    os.environ["PYTHONPATH"] = os.path.join(venvs.current_environment, "Lib/site-packages")
+    os.environ["PYTHONBASE"] = venvs.current_environment
+    old_prefix = sys.prefix
+    sys.prefix = venvs.current_environment
+
+    r = 1  # (error code)
+    try:
+        # Install the bundled software
+
+        try:
+            r = pip.main(args)
+        except AttributeError:
+            from pip._internal import main
+
+            r = main(args)
+    except Exception as ex:
+        msg.logError(ex)
+
+    finally:
+        os.environ = old_env
+        sys.prefix = old_prefix
+        return r
+
+    # subprocess.call([os.path.join(venvs.current_environment, 'Scripts/pip.exe'), *args], env=env)
+    # return 0  # Above subprocess typicall returns error code even though it succeeds
+
+
 op_sys = platform.system()
-if op_sys == 'Darwin':  # User config dir incompatible with venv on darwin (space in path name conflicts)
-    user_package_registry = os.path.join(user_cache_dir(appname='xicam'),'packages.yml')
+if op_sys == "Darwin":  # User config dir incompatible with venv on darwin (space in path name conflicts)
+    user_package_registry = os.path.join(user_cache_dir(appname="xicam"), "packages.yml")
 else:
-    user_package_registry = os.path.join(user_config_dir(appname='xicam'),'packages.yml')
-site_package_registry = os.path.join(site_config_dir(appname='xicam'),'packages.yml')
+    user_package_registry = os.path.join(user_config_dir(appname="xicam"), "packages.yml")
+site_package_registry = os.path.join(site_config_dir(appname="xicam"), "packages.yml")
+
 
 def install(name: str):
     """
@@ -48,18 +71,30 @@ def install(name: str):
     o = requests.get(f'http://cam.lbl.gov:5000/pluginpackages?where={{"name":"{name}"}}')
 
     # Get the uri from the plugin package information
-    uri = parse.urlparse(json.loads(o.content)['_items'][0]["installuri"])
+    uri = parse.urlparse(json.loads(o.content)["_items"][0]["installuri"])
 
     failure = True
 
-    print('Installing to:', venvs.current_environment)
+    print("Installing to:", venvs.current_environment)
 
     # Install from the uri
-    if uri.scheme == 'pipgit':  # Clones a git repo and installs with pip
-        failure = pipmain(['install', f'--target={venvs.current_environment}', 'git+https://' + ''.join(uri[1:])])
-    elif uri.scheme == 'pip':
-        failure = pipmain(['install', f'--target={venvs.current_environment}', ''.join(uri[1:])])
-    elif uri.scheme == 'conda':
+    if uri.scheme == "pipgit":  # Clones a git repo and installs with pip
+        failure = pipmain(
+            [
+                "install",
+                # f'--target={os.path.join(venvs.current_environment,"Lib/site-packages")}',
+                "git+https://" + "".join(uri[1:]),
+            ]
+        )
+    elif uri.scheme == "pip":
+        failure = pipmain(
+            [
+                "install",
+                # f'--target={os.path.join(venvs.current_environment,"Lib/site-packages")}',
+                "".join(uri[1:]),
+            ]
+        )
+    elif uri.scheme == "conda":
         raise NotImplementedError
 
     if not failure:
@@ -69,12 +104,15 @@ def install(name: str):
 
 
 def uninstall(name: str):
+    # Note: pkg_resources keeps a "working_set" that won't normally be updated when venv changes...
+    # An update may need to be forcefully triggered in the future
+    pkg_resources._initialize_master_working_set()
     failure = True
     if name in pkg_registry:
         scheme = pkg_registry[name]
-        if scheme in ['pipgit', 'pip']:
-            failure = pipmain(['uninstall', '-y', name])
-        elif scheme == 'conda':
+        if scheme in ["pipgit", "pip"]:
+            failure = pipmain(["uninstall", "-y", name])
+        elif scheme == "conda":
             raise NotImplementedError
     else:
         # TODO: Handle if name is not in the registry
@@ -84,6 +122,7 @@ def uninstall(name: str):
         del pkg_registry[name]
 
     return not failure
+
 
 class pkg_registry(collections.MutableMapping):
     def __init__(self):
@@ -114,13 +153,13 @@ class pkg_registry(collections.MutableMapping):
 
     def load(self):
         try:
-            with open(user_package_registry, 'r') as f:
+            with open(user_package_registry, "r") as f:
                 self._store = yaml.load(f.read())
         except FileNotFoundError:
             pass
 
     def save(self):
-        with open(user_package_registry, 'w') as f:
+        with open(user_package_registry, "w") as f:
             f.write(yaml.dump(self._store))
 
 

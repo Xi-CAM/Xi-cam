@@ -1,11 +1,13 @@
 def makeapp():
     from qtpy.QtWidgets import QApplication
+
     app = QApplication([])
     return app
 
 
 def mainloop():
     from qtpy.QtWidgets import QApplication
+
     app = QApplication.instance()
     app.exec_()
 
@@ -14,14 +16,19 @@ def test_IDataSourcePlugin():
     from ..DataResourcePlugin import DataResourcePlugin, DataSourceListModel
 
     class SpotDataResourcePlugin(DataResourcePlugin):
-        def __init__(self, user='anonymous', password='',
-                     query='skipnum=0&sortterm=fs.stage_date&sorttype=desc&search=end_station=bl832'):
-            scheme = 'https'
-            host = 'portal-auth.nersc.gov'
-            path = 'als/hdf/search'
-            config = {'scheme': scheme, 'host': host, 'path': path, 'query': query}
-            super(SpotDataResourcePlugin, self).__init__(flags={'canPush': False}, **config)
+        def __init__(
+            self,
+            user="anonymous",
+            password="",
+            query="skipnum=0&sortterm=fs.stage_date&sorttype=desc&search=end_station=bl832",
+        ):
+            scheme = "https"
+            host = "portal-auth.nersc.gov"
+            path = "als/hdf/search"
+            config = {"scheme": scheme, "host": host, "path": path, "query": query}
+            super(SpotDataResourcePlugin, self).__init__(flags={"canPush": False}, **config)
             from requests import Session
+
             self.session = Session()
             self.refresh()
             try:
@@ -37,8 +44,9 @@ def test_IDataSourcePlugin():
 
         def data(self, index, role):
             from qtpy.QtCore import Qt, QVariant
+
             if index.isValid() and role == Qt.DisplayRole:
-                return QVariant(self._data[index.row()]['name'])
+                return QVariant(self._data[index.row()]["name"])
             else:
                 return QVariant()
 
@@ -48,8 +56,9 @@ def test_IDataSourcePlugin():
             self._data = []
             try:
                 r = self.session.get(
-                    'https://portal-auth.nersc.gov/als/hdf/search?skipnum=0&limitnum=10&sortterm=fs.stage_date&sorttype=desc&search=end_station=bl832')
-                self._data = eval(r.content.replace(b'false', b'False'))
+                    "https://portal-auth.nersc.gov/als/hdf/search?skipnum=0&limitnum=10&sortterm=fs.stage_date&sorttype=desc&search=end_station=bl832"
+                )
+                self._data = eval(r.content.replace(b"false", b"False"))
             except ConnectionError:
                 pass  # TODO: SOMethING?
 

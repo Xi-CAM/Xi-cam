@@ -12,6 +12,7 @@ from warnings import warn
 
 # TODO allow outputs/inputs to connect
 
+
 class ProcessingPlugin(IPlugin):
     # TODO -- hints documentation
     # TODO: Categories documentation
@@ -139,13 +140,15 @@ class ProcessingPlugin(IPlugin):
         self._param = None
         self.__internal_data__ = None
         self.disabled = False
-        self._inputs = getattr(self, '_inputs', None)
-        self._outputs = getattr(self, '_outputs', None)
+        self._inputs = getattr(self, "_inputs", None)
+        self._outputs = getattr(self, "_outputs", None)
         self._inverted_vars = None
-        self.name = getattr(self, 'name', self.__class__.__name__)
+        self.name = getattr(self, "name", self.__class__.__name__)
         self._workflow = None
-        if not hasattr(self, 'hints'): self.hints = []
-        for hint in self.hints: hint.parent = self
+        if not hasattr(self, "hints"):
+            self.hints = []
+        for hint in self.hints:
+            hint.parent = self
 
     def evaluate(self):
         """
@@ -186,66 +189,59 @@ class ProcessingPlugin(IPlugin):
     @property
     def inputs(self) -> Dict:
         if not self._inputs:
-            self._inputs = {name: param for name, param in self.__dict__.items()
-                            if isinstance(param, Input)}
+            self._inputs = {name: param for name, param in self.__dict__.items() if isinstance(param, Input)}
         return self._inputs
 
     @property
     def outputs(self) -> Dict:
         if not self._outputs:
-            self._outputs = {name: param for name, param in
-                             self.__dict__.items() if isinstance(param, Output)}
+            self._outputs = {name: param for name, param in self.__dict__.items() if isinstance(param, Output)}
         return self._outputs
 
     @property
     def inverted_vars(self) -> Dict:
         if not self._inverted_vars:
-            self._inverted_vars = {param: name for name, param in
-                                   self.__class__.__dict__.items() if
-                                   isinstance(param, (Input, Output))}
+            self._inverted_vars = {
+                param: name for name, param in self.__class__.__dict__.items() if isinstance(param, (Input, Output))
+            }
         return self._inverted_vars
 
     @property
     def parameter(self):
-        if not (hasattr(self, '_param') and self._param):
+        if not (hasattr(self, "_param") and self._param):
             from pyqtgraph.parametertree.Parameter import Parameter, PARAM_TYPES
+
             children = []
             for name, input in self.inputs.items():
-                if getattr(input.type, '__name__', None) in PARAM_TYPES:
-                    childparam = Parameter.create(name=name,
-                                                  value=getattr(input, 'value',
-                                                                input.default),
-                                                  default=input.default,
-                                                  limits=input.limits,
-                                                  type=getattr(input.type,
-                                                               '__name__',
-                                                               None),
-                                                  units=input.units,
-                                                  fixed=input.fixed,
-                                                  fixable=input.fixable)
-                    childparam.sigValueChanged.connect(
-                        partial(self.setParameterValue, name))
+                if getattr(input.type, "__name__", None) in PARAM_TYPES:
+                    childparam = Parameter.create(
+                        name=name,
+                        value=getattr(input, "value", input.default),
+                        default=input.default,
+                        limits=input.limits,
+                        type=getattr(input.type, "__name__", None),
+                        units=input.units,
+                        fixed=input.fixed,
+                        fixable=input.fixable,
+                    )
+                    childparam.sigValueChanged.connect(partial(self.setParameterValue, name))
                     if input.fixable:
                         childparam.sigFixToggled.connect(input.setFixed)
                     children.append(childparam)
                     input._param = childparam
-                elif getattr(input.type, '__name__', None) == 'Enum':
-                    childparam = Parameter.create(name=name,
-                                                  value=getattr(input, 'value',
-                                                                input.default) or '---',
-                                                  values=input.limits or [
-                                                      '---'],
-                                                  default=input.default,
-                                                  type='list')
-                    childparam.sigValueChanged.connect(
-                        partial(self.setParameterValue, name))
+                elif getattr(input.type, "__name__", None) == "Enum":
+                    childparam = Parameter.create(
+                        name=name,
+                        value=getattr(input, "value", input.default) or "---",
+                        values=input.limits or ["---"],
+                        default=input.default,
+                        type="list",
+                    )
+                    childparam.sigValueChanged.connect(partial(self.setParameterValue, name))
                     children.append(childparam)
                     input._param = childparam
 
-            self._param = Parameter(
-                name=getattr(self, 'name', self.__class__.__name__),
-                children=children,
-                type='group')
+            self._param = Parameter(name=getattr(self, "name", self.__class__.__name__), children=children, type="group")
 
             self._param.sigValueChanged.connect(self.setParameterValue)
         return self._param
@@ -285,10 +281,11 @@ class ProcessingPlugin(IPlugin):
 
         """
         d = self.__dict__.copy()
-        print('reduction:', d)
-        blacklist = ['_param', '_workflow', 'parameter']
+        print("reduction:", d)
+        blacklist = ["_param", "_workflow", "parameter"]
         for key in blacklist:
-            if key in d: del d[key]
+            if key in d:
+                del d[key]
         return _ProcessingPluginRetriever(), (self.__class__.__name__, d)
 
 
@@ -304,20 +301,20 @@ class _ProcessingPluginRetriever(object):
         from xicam.plugins import manager as pluginmanager
 
         # if pluginmanager hasn't collected plugins yet, then do it
-        if not pluginmanager.loadcomplete: pluginmanager.collectPlugins()
+        if not pluginmanager.loadcomplete:
+            pluginmanager.collectPlugins()
 
         # look for the plugin matching the saved name and re-instance it
-        for plugin in pluginmanager.getPluginsOfCategory('ProcessingPlugin'):
+        for plugin in pluginmanager.getPluginsOfCategory("ProcessingPlugin"):
             if plugin.plugin_object.__name__ == pluginname:
                 p = plugin.plugin_object()
                 p.__dict__ = internaldata
                 return p
 
-        pluginlist = '\n\t'.join(
-            [plugin.plugin_object.__name__ for plugin in
-             pluginmanager.getPluginsOfCategory('ProcessingPlugin')])
-        raise ValueError(
-            f'No plugin found with name {pluginname} in list of plugins:{pluginlist}')
+        pluginlist = "\n\t".join(
+            [plugin.plugin_object.__name__ for plugin in pluginmanager.getPluginsOfCategory("ProcessingPlugin")]
+        )
+        raise ValueError(f"No plugin found with name {pluginname} in list of plugins:{pluginlist}")
 
 
 def EZProcessingPlugin(method: Callable) -> Type[ProcessingPlugin]:
@@ -345,20 +342,23 @@ def EZProcessingPlugin(method: Callable) -> Type[ProcessingPlugin]:
 
     argspec = inspect.getfullargspec(method)
     allargs = argspec.args
-    if argspec.varargs: allargs += argspec.varargs
-    if argspec.kwonlyargs: allargs += argspec.kwonlyargs
+    if argspec.varargs:
+        allargs += argspec.varargs
+    if argspec.kwonlyargs:
+        allargs += argspec.kwonlyargs
 
     _inputs = {argname: Input(name=argname) for argname in allargs}
-    _outputs = {'result': Output(name='result')}
+    _outputs = {"result": Output(name="result")}
 
-    attrs = {'__new__': __new__,
-             '__init__': __init__,
-             'evaluate': evaluate,
-             'method': method,
-             '_outputs': _inputs,
-             '_inputs': _outputs,
-             '_inverted_vars': None,
-             }
+    attrs = {
+        "__new__": __new__,
+        "__init__": __init__,
+        "evaluate": evaluate,
+        "method": method,
+        "_outputs": _inputs,
+        "_inputs": _outputs,
+        "_inverted_vars": None,
+    }
     attrs.update(_inputs)
     attrs.update(_outputs)
 
@@ -434,9 +434,19 @@ class Input(Var):
 
     """
 
-    def __init__(self, name='', description='', default=None, type=None,
-                 units=None, min=None, max=None, limits=None,
-                 fixed=False, fixable=False):
+    def __init__(
+        self,
+        name="",
+        description="",
+        default=None,
+        type=None,
+        units=None,
+        min=None,
+        max=None,
+        limits=None,
+        fixed=False,
+        fixable=False,
+    ):
 
         self.fixed = fixed
         super(Input, self).__init__()
@@ -461,7 +471,8 @@ class Input(Var):
 
     @property
     def limits(self):
-        if self._limits is None: return -np.inf, np.inf
+        if self._limits is None:
+            return -np.inf, np.inf
         if len(self._limits) == 2:
             return self._limits[0] or -np.inf, self._limits[1] or np.inf
         return self._limits
@@ -476,9 +487,7 @@ class Input(Var):
                 serialize(value)
             except:
                 # TODO: narrow except
-                msg.logMessage(
-                    f"Value '{value}'on input '{name}' could not be cloudpickled.",
-                    level=msg.WARNING)
+                msg.logMessage(f"Value '{value}'on input '{name}' could not be cloudpickled.", level=msg.WARNING)
             super().__setattr__(name, value)
         else:
             super().__setattr__(name, value)
@@ -490,7 +499,7 @@ class Input(Var):
     @value.setter
     def value(self, v):
         self._value = v
-        if hasattr(self, '_param') and self._param:
+        if hasattr(self, "_param") and self._param:
             self._param.blockSignals(True)
             self._param.setValue(v)
             self._param.blockSignals(False)
@@ -516,7 +525,7 @@ class Output(Var):
 
     """
 
-    def __init__(self, name='', description='', type=None, units=None):
+    def __init__(self, name="", description="", type=None, units=None):
         super(Output, self).__init__()
         self.name = name
         self.description = description
@@ -528,8 +537,9 @@ class InputOutput(Input, Output):
     """
     Represents a variable that acts both as in input and an output.
     """
+
     pass
 
 
 class InOut(InputOutput):
-    warn('InOut has been renamed; use InputOutput', DeprecationWarning)
+    warn("InOut has been renamed; use InputOutput", DeprecationWarning)

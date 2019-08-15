@@ -5,9 +5,7 @@ from qtpy.QtGui import *
 
 
 class _EZPlugin(GUIPlugin):
-    def __init__(self, name, toolbuttons=None, parameters=None, appendheadertest=None,
-                 centerwidget=None,
-                 bottomwidget=None):
+    def __init__(self, name, toolbuttons=None, parameters=None, appendheadertest=None, centerwidget=None, bottomwidget=None):
         self.name = name
 
         self.centerwidget = centerwidget() if callable(centerwidget) else centerwidget
@@ -16,17 +14,19 @@ class _EZPlugin(GUIPlugin):
         self.toolbar = QToolBar()
 
         if parameters:
-            self.parameters = Parameter(name='Params', type='group', children=parameters)
+            self.parameters = Parameter(name="Params", type="group", children=parameters)
             self.rightwidget.setParameters(self.parameters, showTop=False)
 
         if toolbuttons:
             for toolbutton in toolbuttons:
                 self.addToolButton(*toolbutton)
 
-        if appendheadertest: self.appendHeader = appendheadertest
+        if appendheadertest:
+            self.appendHeader = appendheadertest
 
-        self.stages = {'EZPlugin': GUILayout(self.centerwidget, right=self.rightwidget, bottom=self.bottomwidget,
-                                             top=self.toolbar)}
+        self.stages = {
+            "EZPlugin": GUILayout(self.centerwidget, right=self.rightwidget, bottom=self.bottomwidget, top=self.toolbar)
+        }
 
         super(_EZPlugin, self).__init__()
         _EZPlugin.instance = self
@@ -46,9 +46,9 @@ class _EZPlugin(GUIPlugin):
         self.toolbar.addAction(tb)
 
 
-def EZPlugin(name='TestPlugin', toolbuttons=None, parameters=None, appendheadertest=None,
-             centerwidget=None,
-             bottomwidget=None):
+def EZPlugin(
+    name="TestPlugin", toolbuttons=None, parameters=None, appendheadertest=None, centerwidget=None, bottomwidget=None
+):
     """
     Quickly create a custom Xi-cam plugin.
 
@@ -89,9 +89,17 @@ def EZPlugin(name='TestPlugin', toolbuttons=None, parameters=None, appendheadert
 
     """
     import pyqtgraph as pg
-    if centerwidget is None: centerwidget = pg.ImageView
-    if bottomwidget is None: bottomwidget = pg.PlotWidget
-    return type(name, (_EZPlugin,), {'__init__': lambda self: _EZPlugin.__init__(self, name, toolbuttons, parameters,
-                                                                                 appendheadertest, centerwidget,
-                                                                                 bottomwidget),
-                                     })
+
+    if centerwidget is None:
+        centerwidget = pg.ImageView
+    if bottomwidget is None:
+        bottomwidget = pg.PlotWidget
+    return type(
+        name,
+        (_EZPlugin,),
+        {
+            "__init__": lambda self: _EZPlugin.__init__(
+                self, name, toolbuttons, parameters, appendheadertest, centerwidget, bottomwidget
+            )
+        },
+    )

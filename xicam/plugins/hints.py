@@ -40,8 +40,10 @@ class VerticalROI(Hint):
 
     def visualize(self, canvas, **canvases):  # TODO: callables?
         from pyqtgraph import LinearRegionItem
-        canvas = canvases['imageview']
-        if callable(canvas): canvas = canvas()
+
+        canvas = canvases["imageview"]
+        if callable(canvas):
+            canvas = canvas()
         canvas.addItem(LinearRegionItem(*self.range.value, **self.kwargs))
 
     @property
@@ -50,7 +52,7 @@ class VerticalROI(Hint):
 
 
 class ButtonHint(Hint):
-    targetattribute = 'value'
+    targetattribute = "value"
 
     def __init__(self, activated: Var, iconpath: str):
         super(ButtonHint, self).__init__()
@@ -61,8 +63,10 @@ class ButtonHint(Hint):
     def visualize(self, canvas, **canvases):
         from qtpy.QtWidgets import QToolButton
         from qtpy.QtGui import QIcon
-        canvas = canvases['toolbar']  # type:QToolBar
-        if callable(canvas): canvas = canvas()
+
+        canvas = canvases["toolbar"]  # type:QToolBar
+        if callable(canvas):
+            canvas = canvas()
         button = QToolButton()
         button.setIcon(QIcon(self.iconpath))
         button.setCheckable(True)
@@ -75,7 +79,7 @@ class ButtonHint(Hint):
 
 
 class EnableHint(ButtonHint):
-    targetattribute = 'enabled'
+    targetattribute = "enabled"
 
     def __init__(self, parent: ProcessingPlugin, iconpath: str):
         super(EnableHint, self).__init__(parent, iconpath)  # Ignore typing violation
@@ -88,7 +92,6 @@ class EnableHint(ButtonHint):
 
 
 class ImageHint(Hint):
-
     def __init__(self, image: Var, xlabel: str = None, ylabel: str = None, transform=None, z: int = None, **kwargs):
         super(ImageHint, self).__init__()
         self.image = image
@@ -104,7 +107,7 @@ class ImageHint(Hint):
         return f"Image of {image.name}"
 
     def visualize(self, canvas, **canvases):
-        canvas = canvases['imageview']
+        canvas = canvases["imageview"]
         if canvas:
             canvas.setImage(self.image.value, **self.kwargs)
 

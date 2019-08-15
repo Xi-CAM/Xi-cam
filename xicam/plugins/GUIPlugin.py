@@ -8,10 +8,10 @@ from yapsy.IPlugin import IPlugin
 
 
 class GUIPlugin(IPlugin):
-    '''
+    """
     GUIPlugins are left uninstanciated until all plugins are loaded so that all dependent widgets are loaded before
     the UI is setup. They DO become singletons.
-    '''
+    """
 
     def __init__(self):
         super(GUIPlugin, self).__init__()
@@ -52,6 +52,7 @@ class PanelState(Enum):
     these widgets, PanelState.Disabled must be set to those panels.
 
     """
+
     Disabled = 1
     Defaulted = 2
     Customized = 3
@@ -94,9 +95,18 @@ class GUILayout(object):
 
     """
 
-    def __init__(self, center, left=PanelState.Defaulted, right=PanelState.Defaulted, bottom=PanelState.Defaulted,
-                 top=PanelState.Defaulted, lefttop=PanelState.Defaulted, righttop=PanelState.Defaulted,
-                 leftbottom=PanelState.Defaulted, rightbottom=PanelState.Defaulted):
+    def __init__(
+        self,
+        center,
+        left=PanelState.Defaulted,
+        right=PanelState.Defaulted,
+        bottom=PanelState.Defaulted,
+        top=PanelState.Defaulted,
+        lefttop=PanelState.Defaulted,
+        righttop=PanelState.Defaulted,
+        leftbottom=PanelState.Defaulted,
+        rightbottom=PanelState.Defaulted,
+    ):
         self.topwidget = top
         self.leftwidget = left
         self.rightwidget = right
@@ -107,6 +117,7 @@ class GUILayout(object):
         self.leftbottomwidget = leftbottom
         self.rightbottomwidget = rightbottom
 
-    def __getitem__(self, item:str):
-        if not item.endswith('widget'): item += 'widget'
+    def __getitem__(self, item: str):
+        if not item.endswith("widget"):
+            item += "widget"
         return getattr(self, item, PanelState.Defaulted)

@@ -5,12 +5,14 @@ import pytest
 def with_QApplication():
     # Code that will run before your test
     from qtpy.QtWidgets import QApplication
+
     app = QApplication([])
     # A test function will be run at this point
     yield
     # Code that will run after your test, for example:
     # ... do something to check the existing files
     # assert QApplication.exec_() == 0
+
 
 def test_IFittableModelPlugin():
     from ..FittableModelPlugin import Fittable1DModelPlugin
@@ -29,7 +31,7 @@ def test_IFittableModelPlugin():
             """
             Gaussian1D model function.
             """
-            return amplitude * np.exp(- 0.5 * (x - mean) ** 2 / stddev ** 2)
+            return amplitude * np.exp(-0.5 * (x - mean) ** 2 / stddev ** 2)
 
         @staticmethod
         def fit_deriv(x, amplitude, mean, stddev):
@@ -44,11 +46,12 @@ def test_IFittableModelPlugin():
 
     # Generate fake data
     np.random.seed(0)
-    x = np.linspace(-5., 5., 200)
-    m_ref = Gaussian1D(amplitude=2., mean=1, stddev=3)
+    x = np.linspace(-5.0, 5.0, 200)
+    m_ref = Gaussian1D(amplitude=2.0, mean=1, stddev=3)
     from astropy.modeling.models import Gaussian1D
+
     Gaussian1D()(x)
-    y = m_ref(x) + np.random.normal(0., 0.1, x.shape)
+    y = m_ref(x) + np.random.normal(0.0, 0.1, x.shape)
 
     # Fit model to data
     m_init = Gaussian1D()

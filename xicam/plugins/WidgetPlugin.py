@@ -6,7 +6,6 @@ from yapsy.IPlugin import IPlugin
 # TODO: make classes usable without qt
 
 
-
 # class _metaQWidgetPlugin(type(QObject), type(IPlugin)):
 #     pass
 #
@@ -21,6 +20,7 @@ class QWidgetPlugin(QWidget, IPlugin):
 
 def test_QWidgetPlugin():
     from pyqtgraph import ImageView
+
     class ImageViewPlugin(QWidgetPlugin, ImageView):
         pass
 

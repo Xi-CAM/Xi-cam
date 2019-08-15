@@ -1,12 +1,11 @@
 from yapsy.IPlugin import IPlugin
+
 viewTypes = ["ListView", "TreeView", ""]
 
 try:
     from qtpy.QtCore import *
 
-
     class DataSourceListModel(QAbstractListModel):
-
         def __init__(self, dataresource):
             super(DataSourceListModel, self).__init__()
             self.dataresource = dataresource
@@ -42,13 +41,14 @@ except ImportError:
 
 class DataResourcePlugin(IPlugin):
     from xicam.gui.widgets.dataresourcebrowser import DataResourceList, DataBrowser
+
     model = DataSourceListModel
     view = DataResourceList
     controller = DataBrowser
 
     isSingleton = False
 
-    name = ''
+    name = ""
 
     def __init__(self, flags: dict = None, **config):
         """
@@ -62,7 +62,7 @@ class DataResourcePlugin(IPlugin):
         super(DataResourcePlugin, self).__init__()
         # self.model = None
         self.config = config
-        self.flags = flags if flags else {'isFlat': True, 'canPush': False}
+        self.flags = flags if flags else {"isFlat": True, "canPush": False}
         # self.uri=''
 
     def pushData(self, *args, **kwargs):
@@ -91,11 +91,14 @@ class DataResourcePlugin(IPlugin):
         raise NotImplementedError
 
     @property
-    def host(self): return self.config['host']
+    def host(self):
+        return self.config["host"]
 
     @property
-    def path(self): return self.config['path']
+    def path(self):
+        return self.config["path"]
 
-    def refresh(self): pass
+    def refresh(self):
+        pass
 
     # TODO: convenience properties for each config

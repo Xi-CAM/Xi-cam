@@ -9,12 +9,14 @@ class ControllerPlugin(QWidget, IPlugin):
     def __init__(self, device, parent=None, *args):
         self.device = device
         IPlugin.__init__(self)
-        QWidget.__init__(self, parent,
-                         *args)  # TODO: Strange MRO, not sure why QWidget init isn't being called; replaced by IPlugin init twice?
+        QWidget.__init__(
+            self, parent, *args
+        )  # TODO: Strange MRO, not sure why QWidget init isn't being called; replaced by IPlugin init twice?
 
 
 def test_QWidgetPlugin():
     from pyqtgraph import ImageView
+
     class ImageViewPlugin(ControllerPlugin, ImageView):
         pass
 
