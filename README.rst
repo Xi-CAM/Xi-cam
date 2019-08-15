@@ -24,6 +24,7 @@ Create a custom conda environment.
 Clone and install.
 
 .. code-block:: bash
+
    git clone https://github.com/NSLS-II/bluesky-browser
    cd bluesky-browser
    pip install -e .
