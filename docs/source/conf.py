@@ -18,27 +18,22 @@ import sphinx_bootstrap_theme
 
 # -- Project information -----------------------------------------------------
 
-project = 'Xi-cam'
-copyright = '2019, Ronald Pandolfi'
-author = 'Ronald Pandolfi'
+project = "Xi-cam"
+copyright = "2019, Ronald Pandolfi"
+author = "Ronald Pandolfi"
 
 # The full version, including alpha/beta/rc tags
-release = '0.1.0'
+release = "0.1.0"
 
 # -- General configuration ---------------------------------------------------
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.napoleon',
-    'recommonmark',
-    'sphinx_markdown_tables',
-]
+extensions = ["sphinx.ext.autodoc", "sphinx.ext.napoleon", "recommonmark", "sphinx_markdown_tables"]
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ["_templates"]
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -50,7 +45,7 @@ exclude_patterns = []
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'bootstrap'
+html_theme = "bootstrap"
 html_theme_path = sphinx_bootstrap_theme.get_html_theme_path()
 
 # Theme options are theme-specific and customize the look and feel of a theme
@@ -68,13 +63,10 @@ html_theme_options = {
     # "footerbgcolor":"#333",
     # "headbgcolor":"#555",
     # "headtextcolor":"#0dd"
-
     # Navigation bar title. (Default: ``project`` value)
     # 'navbar_title': "COSMIC XPCS Documentation",
-
     # Tab name for entire site. (Default: "Site")
     # 'navbar_site_name': "Site",
-
     # A list of tuples containing pages or urls to link to.
     # Valid tuples should be in the following forms:
     #    (name, page)                 # a link to a page
@@ -86,20 +78,15 @@ html_theme_options = {
     #     ("Examples", "examples"),
     #     ("Link", "http://example.com", True),
     # ],
-
     # Render the next and previous page links in navbar. (Default: true)
-    'navbar_sidebarrel': True,
-
+    "navbar_sidebarrel": True,
     # Render the current pages TOC in the navbar. (Default: true)
-    'navbar_pagenav': True,
-
+    "navbar_pagenav": True,
     # Tab name for the current pages TOC. (Default: "Page")
-    'navbar_pagenav_name': "Page",
-
+    "navbar_pagenav_name": "Page",
     # Global TOC depth for "site" navbar tab. (Default: 1)
     # Switching to -1 shows all levels.
-    'globaltoc_depth': 2,
-
+    "globaltoc_depth": 2,
     # Include hidden TOCs in Site navbar?
     #
     # Note: If this is "false", you cannot have mixed ``:hidden:`` and
@@ -107,20 +94,16 @@ html_theme_options = {
     # will break.
     #
     # Values: "true" (default) or "false"
-    'globaltoc_includehidden': "true",
-
+    "globaltoc_includehidden": "true",
     # HTML navbar class (Default: "navbar") to attach to <div> element.
     # For black navbar, do "navbar navbar-inverse"
-    'navbar_class': "navbar navbar-inverse",
-
+    "navbar_class": "navbar navbar-inverse",
     # Fix navigation bar to top of page?
     # Values: "true" (default) or "false"
-    'navbar_fixed_top': "true",
-
+    "navbar_fixed_top": "true",
     # Location of link to source.
     # Options are "nav" (default), "footer" or anything else to exclude.
-    'source_link_position': "nav",
-
+    "source_link_position": "nav",
     # Bootswatch (http://bootswatch.com/) theme.
     #
     # Options are nothing (default) or the name of a valid theme
@@ -132,17 +115,16 @@ html_theme_options = {
     # Currently, the supported themes are:
     # - Bootstrap 2: https://bootswatch.com/2
     # - Bootstrap 3: https://bootswatch.com/3
-    'bootswatch_theme': "cyborg",
-
+    "bootswatch_theme": "cyborg",
     # Choose Bootstrap version.
     # Values: "3" (default) or "2" (in quotes)
-    'bootstrap_version': "3",
+    "bootstrap_version": "3",
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_static_path = ["_static"]
 
 
 class SimpleClassDocumenter(autodoc.ClassDocumenter):
@@ -165,9 +147,7 @@ class SimpleFunctionDocumenter(autodoc.FunctionDocumenter):
 def setup(app):
     app.add_stylesheet("my-styles.css")
     # Allow md files to evaluate marked sections as rst
-    app.add_config_value('recommonmark_config', {
-        'enable_eval_rst': True,
-    }, True)
+    app.add_config_value("recommonmark_config", {"enable_eval_rst": True}, True)
     app.add_transform(AutoStructify)
 
     app.add_autodocumenter(SimpleClassDocumenter)
