@@ -3,9 +3,9 @@ import numpy as np
 
 
 class NPYPlugin(DataHandlerPlugin):
-    name = 'NPYPlugin'
+    name = "NPYPlugin"
 
-    DEFAULT_EXTENTIONS = ['.npy']
+    DEFAULT_EXTENTIONS = [".npy"]
 
     def __call__(self, *args, **kwargs):
         return np.load(self.path, allow_pickle=True)
@@ -16,4 +16,4 @@ class NPYPlugin(DataHandlerPlugin):
 
     @classmethod
     def getStartDoc(cls, paths, start_uid):
-        return start_doc(start_uid=start_uid, metadata={'paths': paths})
+        return start_doc(start_uid=start_uid, metadata={"paths": paths})

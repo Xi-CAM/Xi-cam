@@ -8,7 +8,7 @@ from appdirs import user_config_dir
 try:
     from camlink.services import graph as task_graph
 except ImportError:
-    print('CAMLINK is not installed; functionally coming soon™...')
+    print("CAMLINK is not installed; functionally coming soon™...")
 import distributed
 from .daskexecutor import DaskExecutor
 
@@ -19,8 +19,8 @@ class CamLinkExecutor(DaskExecutor):
     def execute(self, wf, client=None):
         # global client, graph
 
-        services = {"machines":
-            [
+        services = {
+            "machines": [
                 {
                     "name": "freyja",
                     "address": "freyja.nsls2.bnl.gov",
@@ -28,23 +28,12 @@ class CamLinkExecutor(DaskExecutor):
                     "username": "rp",
                     "password": "keyfile:/home/rp/.ssh/id_rsa",
                     "environment": {"PYTHONUSERBASE": "/tmp"},
-                    "config_dir": "/tmp/camera"
+                    "config_dir": "/tmp/camera",
                 }
             ],
-            "graph":
-                {
-                    "configure":
-                        [
-                            {
-                                "machine": "freyja",
-                                "apps":
-                                    [
-                                        {"name": "dask/dask-scheduler"}
-                                    ],
-                                "tasks": ["dask-cluster"]
-                            }
-                        ]
-                }
+            "graph": {
+                "configure": [{"machine": "freyja", "apps": [{"name": "dask/dask-scheduler"}], "tasks": ["dask-cluster"]}]
+            },
         }
 
         services = json.dumps(services)

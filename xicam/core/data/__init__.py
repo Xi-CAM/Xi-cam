@@ -10,6 +10,7 @@ from warnings import warn
 
 # extension_map = {EDFPlugin: ['edf']}
 
+
 def load_header(uris: List[Union[str, Path]] = None, uuid: str = None):
     """
     Load a document object, either from a file source or a databroker source, by uuid. If loading from a filename, the
@@ -25,16 +26,18 @@ def load_header(uris: List[Union[str, Path]] = None, uuid: str = None):
     NonDBHeader
 
     """
-    from xicam.plugins import manager as pluginmanager # must be a late import
+    from xicam.plugins import manager as pluginmanager  # must be a late import
+
     # ext = Path(filename).suffix[1:]
     # for cls, extensions in extension_map.items():
     #     if ext in extensions:
     handlercandidates = []
     ext = Path(uris[0]).suffix
-    for plugin in pluginmanager.getPluginsOfCategory('DataHandlerPlugin'):
+    for plugin in pluginmanager.getPluginsOfCategory("DataHandlerPlugin"):
         if ext in plugin.plugin_object.DEFAULT_EXTENTIONS:
             handlercandidates.append(plugin)
-    if not handlercandidates: return NonDBHeader({}, [], [], {})
+    if not handlercandidates:
+        return NonDBHeader({}, [], [], {})
     # try:
     return NonDBHeader(**handlercandidates[0].plugin_object.ingest(uris))
     # except (IsADirectoryError, TypeError):
@@ -55,16 +58,17 @@ class NonDBHeader(object):
 
     ### dict-like methods ###
 
-    def __init__(self, start: dict = None, descriptors: List[dict] = None, events: List[dict] = None,
-                 stop: dict = None):
-        self._documents = {'start': [start] if start else [],
-                           'descriptor': descriptors or [],
-                           'event': events or [],
-                           'stop': [stop] if stop else []}
+    def __init__(self, start: dict = None, descriptors: List[dict] = None, events: List[dict] = None, stop: dict = None):
+        self._documents = {
+            "start": [start] if start else [],
+            "descriptor": descriptors or [],
+            "event": events or [],
+            "stop": [stop] if stop else [],
+        }
 
     def append(self, docname, doc):
-        if docname in ['start', 'stop'] and self._documents[docname]:
-            raise KeyError(f'A {docname} document already exists within this header.')
+        if docname in ["start", "stop"] and self._documents[docname]:
+            raise KeyError(f"A {docname} document already exists within this header.")
         self._documents[docname].append(doc)
 
     def __getitem__(self, k):
@@ -75,16 +79,16 @@ class NonDBHeader(object):
 
     @property
     def startdoc(self):
-        startdocs = self._documents['start']
+        startdocs = self._documents["start"]
         return startdocs[0] if startdocs else {}
 
     @property
     def eventdocs(self):
-        return self._documents['event']
+        return self._documents["event"]
 
     @property
     def descriptordocs(self):
-        return self._documents['descriptor']
+        return self._documents["descriptor"]
 
     def get(self, *args, **kwargs):
         return getattr(self, *args, **kwargs)
@@ -117,8 +121,7 @@ class NonDBHeader(object):
 
     @property
     def descriptors(self):
-        yield from self._documents['descriptor']
-
+        yield from self._documents["descriptor"]
 
     @property
     def stream_names(self):
@@ -150,7 +153,7 @@ class NonDBHeader(object):
         --------
         :meth:`Header.devices`
         """
-        return {key for event in self['eventdocs'] for key in event['data'].keys()}
+        return {key for event in self["eventdocs"] for key in event["data"].keys()}
 
     def devices(self, stream_name=ALL):
         """
@@ -180,8 +183,8 @@ class NonDBHeader(object):
         """
         result = set()
         for d in self.descriptors:
-            if stream_name is ALL or stream_name == d.get('name', 'primary'):
-                result.update(d['object_keys'])
+            if stream_name is ALL or stream_name == d.get("name", "primary"):
+                result.update(d["object_keys"])
         return result
 
     def config_data(self, device_name):
@@ -233,10 +236,10 @@ class NonDBHeader(object):
         {'eiger', 'cs700'}
         """
         result = defaultdict(list)
-        for d in sorted(self.descriptors, key=lambda d: d['time']):
-            config = d['configuration'].get(device_name)
+        for d in sorted(self.descriptors, key=lambda d: d["time"]):
+            config = d["configuration"].get(device_name)
             if config:
-                result[d['name']].append(config['data'])
+                result[d["name"]].append(config["data"])
         return dict(result)  # strip off defaultdict behavior
 
     def documents(self, stream_name=ALL, fields=None, fill=False):
@@ -271,13 +274,11 @@ class NonDBHeader(object):
                 yield docname, doc
 
     def stream(self, *args, **kwargs):
-        warn("The 'stream' method been renamed to 'documents'. The old name "
-             "will be removed in the future.")
+        warn("The 'stream' method been renamed to 'documents'. The old name " "will be removed in the future.")
         yield from self.documents(*args, **kwargs)
 
-    def table(self, stream_name='primary', fields=None, fill=False,
-              timezone=None, convert_times=True, localize_times=True):
-        '''
+    def table(self, stream_name="primary", fields=None, fill=False, timezone=None, convert_times=True, localize_times=True):
+        """
         Load the data from one event stream as a table (``pandas.DataFrame``).
 
         Parameters
@@ -352,10 +353,10 @@ class NonDBHeader(object):
                                     time temperature
         0  2017-07-16 12:12:35.128515999         273
         1  2017-07-16 12:12:40.128515999         274
-        '''
+        """
         raise NotImplementedError
 
-    def events(self, stream_name='primary', fields=None, fill=False):
+    def events(self, stream_name="primary", fields=None, fill=False):
         """
         Load all Event documents from one event stream.
 
@@ -403,11 +404,11 @@ class NonDBHeader(object):
         # ev_gen = self.db.get_events([self], stream_name=stream_name,
         #                             fields=fields, fill=fill)
 
-        for ev in self._documents['event']:
-            if not set(fields).isdisjoint(set(ev['data'].keys())) or not fields:
+        for ev in self._documents["event"]:
+            if not set(fields).isdisjoint(set(ev["data"].keys())) or not fields:
                 yield ev
 
-    def data(self, field, stream_name='primary', fill=True):
+    def data(self, field, stream_name="primary", fill=True):
         """
         Extract data for one field. This is convenient for loading image data.
 
@@ -428,10 +429,8 @@ class NonDBHeader(object):
         """
         if fill:
             fill = {field}
-        for event in self.events(stream_name=stream_name,
-                                 fields=[field],
-                                 fill=fill):
-            yield event['data'][field].asarray()
+        for event in self.events(stream_name=stream_name, fields=[field], fill=fill):
+            yield event["data"][field].asarray()
 
     def meta_array(self, field=None):
         return DocMetaArray(self, field)
@@ -448,6 +447,7 @@ class QNonDBHeader(QObject, NonDBHeader):
 from functools import lru_cache
 import numpy as np
 from xicam.core import msg
+
 
 class DocMetaArray(object):
     def __init__(self, header: NonDBHeader, field: str = None):
@@ -502,8 +502,9 @@ class DocMetaArray(object):
             fields = list(self.header.fields())
             if len(fields) > 1:
                 msg.logError(
-                    ValueError('Unspecified field for document stream with >1 field. Potentially unexpected behavior.'))
-                self.field = next(iter(self.header.eventdocs[0]['data'].keys()))
+                    ValueError("Unspecified field for document stream with >1 field. Potentially unexpected behavior.")
+                )
+                self.field = next(iter(self.header.eventdocs[0]["data"].keys()))
             else:
                 self.field = fields[0]
 
@@ -529,8 +530,8 @@ class DocMetaArray(object):
         if not self.events:
             return None
 
-        arr = self.events[i]['data'][self.field]
-        if hasattr(arr, 'asarray'):
+        arr = self.events[i]["data"][self.field]
+        if hasattr(arr, "asarray"):
             arr = arr.asarray()
         if not isinstance(arr, np.ndarray):
             arr = np.array(arr)
@@ -539,7 +540,7 @@ class DocMetaArray(object):
         return arr
 
     def __getitem__(self, item: Union[List[slice], int]):
-        if isinstance(item, list) or isinstance(item, tuple) and len(item)>1:
+        if isinstance(item, list) or isinstance(item, tuple) and len(item) > 1:
             rmin = item[0].start if item[0].start is not None else 0
             rmax = item[0].stop if item[0].stop is not None else self.shape[0]
             rstep = item[0].step if item[0].step is not None else 1
@@ -547,7 +548,7 @@ class DocMetaArray(object):
             return np.array([self.slice(i)[item[1:]] for i in r])
         return self.slice(item)
 
-    def transpose(self,ax):
+    def transpose(self, ax):
         # if ax != [0,1,2]:
         #     raise ValueError('A DocMetaArray cannot actually be transposed; the transpose method is provided for '
         #                      'compatibility with pyqtgraph''s ImageView')
@@ -574,12 +575,11 @@ class lazyfield(object):
         return self._handler
 
     def implements(self, t):
-        if t == 'MetaArray': return True
+        if t == "MetaArray":
+            return True
 
     def asarray(self):
         return self.handler(**self.resource_kwargs)
 
+
 # TODO: Eliminate lazyfield and use only handler in doc?
-
-
-

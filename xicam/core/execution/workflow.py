@@ -7,7 +7,8 @@ from xicam.core.threads import QThreadFuture, QThreadFutureIterator
 
 # TODO: add debug flag that checks mutations by hashing inputs
 
-class WorkflowProcess():
+
+class WorkflowProcess:
     def __init__(self, node, named_args, islocal=False):
         self.node = node
         self.named_args = named_args
@@ -37,10 +38,11 @@ class WorkflowProcess():
 
 
 class Workflow(object):
-    def __init__(self, name='', processes=None):
+    def __init__(self, name="", processes=None):
         self._processes = []
         self._observers = set()
-        if name: self.name = name
+        if name:
+            self.name = name
 
         if processes:
             self._processes.extend(processes)
@@ -63,7 +65,7 @@ class Workflow(object):
 
         end_tasks = set(self.processes) - dependent_tasks
 
-        msg.logMessage('End tasks:', *[task.name for task in end_tasks], msg.DEBUG)
+        msg.logMessage("End tasks:", *[task.name for task in end_tasks], msg.DEBUG)
         return end_tasks
 
     def generateGraph(self, dsk, node, mapped_node):
@@ -123,21 +125,25 @@ class Workflow(object):
         """
         self._processes.append(process)
         process._workflow = self
-        if autoconnectall: self.autoConnectAll()
+        if autoconnectall:
+            self.autoConnectAll()
         self.update()
 
     def insertProcess(self, index: int, process: ProcessingPlugin, autoconnectall: bool = False):
         self._processes.insert(index, process)
         process._workflow = self
         self.update()
-        if autoconnectall: self.autoConnectAll()
+        if autoconnectall:
+            self.autoConnectAll()
 
     def removeProcess(self, process: ProcessingPlugin = None, index=None, autoconnectall=False):
-        if not process: process = self._processes[index]
+        if not process:
+            process = self._processes[index]
         self._processes.remove(process)
         process.detach()
         process._workflow = None
-        if autoconnectall: self.autoConnectAll()
+        if autoconnectall:
+            self.autoConnectAll()
         self.update()
 
     def autoConnectAll(self):
@@ -151,7 +157,7 @@ class Workflow(object):
                 bestmatch = None
                 matchness = 0
                 # Parse backwards from the given process, looking for matching outputs
-                for outputprocess in reversed(self.processes[:self.processes.index(inputprocess)]):
+                for outputprocess in reversed(self.processes[: self.processes.index(inputprocess)]):
                     # check each output
                     for output in outputprocess.outputs.values():
                         # if matching name
@@ -168,8 +174,9 @@ class Workflow(object):
                 if bestmatch:
                     bestmatch.connect(input)
                     msg.logMessage(
-                        f'connected {bestmatch.parent.__class__.__name__}:{bestmatch.name} to {input.parent.__class__.__name__}:{input.name}',
-                        level=msg.DEBUG)
+                        f"connected {bestmatch.parent.__class__.__name__}:{bestmatch.name} to {input.parent.__class__.__name__}:{input.name}",
+                        level=msg.DEBUG,
+                    )
 
                     # # for each output of given process
                     # for output in process.outputs.values():
@@ -200,7 +207,8 @@ class Workflow(object):
     def toggleDisableProcess(self, process, autoconnectall=False):
         process.disabled = not process.disabled
         process.clearConnections()
-        if autoconnectall: self.autoConnectAll()
+        if autoconnectall:
+            self.autoConnectAll()
         self.update()
 
     @property
@@ -232,8 +240,18 @@ class Workflow(object):
         # TODO: check if data is accessible from compute resource; if not -> copy data to compute resource
         # TODO: use cam-link to mirror installation of plugin packages
 
-    def execute(self, connection=None, callback_slot=None, finished_slot=None, except_slot=None, default_exhandle=True,
-                lock=None, fill_kwargs=True, threadkey=None, **kwargs):
+    def execute(
+        self,
+        connection=None,
+        callback_slot=None,
+        finished_slot=None,
+        except_slot=None,
+        default_exhandle=True,
+        lock=None,
+        fill_kwargs=True,
+        threadkey=None,
+        **kwargs,
+    ):
         """
         Execute this workflow on the specified host. Connection will be a Connection object (WIP) keeping a connection
         to a compute resource, include connection.hostname, connection.username...
@@ -250,17 +268,30 @@ class Workflow(object):
         if fill_kwargs:
             self.fillKwargs(**kwargs)
 
-        future = QThreadFuture(execution.executor.execute, self,
-                               callback_slot=callback_slot,
-                               finished_slot=finished_slot,
-                               default_exhandle=default_exhandle,
-                               lock=lock,
-                               threadkey=threadkey)
+        future = QThreadFuture(
+            execution.executor.execute,
+            self,
+            callback_slot=callback_slot,
+            finished_slot=finished_slot,
+            default_exhandle=default_exhandle,
+            lock=lock,
+            threadkey=threadkey,
+        )
         future.start()
         return future
 
-    def execute_all(self, connection, callback_slot=None, finished_slot=None, except_slot=None, default_exhandle=True,
-                    lock=None, fill_kwargs=True, threadkey=None, **kwargs):
+    def execute_all(
+        self,
+        connection,
+        callback_slot=None,
+        finished_slot=None,
+        except_slot=None,
+        default_exhandle=True,
+        lock=None,
+        fill_kwargs=True,
+        threadkey=None,
+        **kwargs,
+    ):
         """
         Execute this workflow on the specified host. Connection will be a Connection object (WIP) keeping a connection
         to a compute resource, include connection.hostname, connection.username...
@@ -284,12 +315,15 @@ class Workflow(object):
                     self.fillKwargs(**zipkwargs)
                 yield execution.executor.execute(workflow)
 
-        future = QThreadFutureIterator(executeiterator, self,
-                                       callback_slot=callback_slot,
-                                       finished_slot=finished_slot,
-                                       default_exhandle=default_exhandle,
-                                       lock=lock,
-                                       threadkey=threadkey)
+        future = QThreadFutureIterator(
+            executeiterator,
+            self,
+            callback_slot=callback_slot,
+            finished_slot=finished_slot,
+            default_exhandle=default_exhandle,
+            lock=lock,
+            threadkey=threadkey,
+        )
         future.start()
         return future
 
@@ -301,7 +335,6 @@ class Workflow(object):
             for key, input in process.inputs.items():
                 if not input._map_inputs and key in kwargs:
                     input.value = kwargs[key]
-
 
     def validate(self):
         """
