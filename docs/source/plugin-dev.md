@@ -1,6 +1,6 @@
 # Creating a Plugin
 
-*For a simpler way to create plugins, please see* [Creating an EZPlugin](ezPlugin.md).
+*For a simpler way to create plugins, please see* [Creating an EZPlugin](ez-plugin.md).
 
 For those more familiar with Python, it is possible to create more complex plugins by deriving a
 plugin provided by the *xicam.plugins* module.

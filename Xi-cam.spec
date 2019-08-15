@@ -21,6 +21,7 @@ import xicam
 import setuptools
 import distutils
 import six
+import site
 
 block_cipher = None
 
@@ -107,7 +108,7 @@ print(*list(zip(datas_src, datas_dst)), sep="\n")
 
 a = Analysis(
     ["run_xicam.py"],
-    pathex=[os.getcwd(), "C:\\Windows\\System32\\downlevel"],
+    pathex=[os.getcwd(), "C:\\Windows\\System32\\downlevel", site.getsitepackages()],
     binaries=[],
     datas=zip(datas_src, datas_dst),
     hiddenimports=[

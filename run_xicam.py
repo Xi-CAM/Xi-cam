@@ -7,6 +7,7 @@ import trace
 print("args:", sys.argv)
 print("path:", sys.path)
 print("cwd:", os.getcwd())
+
 if sys.argv[0].endswith("Xi-cam"):
     root = os.path.dirname(sys.argv[0])
     sys.path = [
