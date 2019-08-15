@@ -11,17 +11,21 @@ libraries.
 Launching the demo
 ==================
 
-Clone and install.
+Create a custom conda environment.
 
 .. code-block:: bash
 
-   git clone https://github.com/NSLS-II/bluesky-browser
-   cd bluesky-browser
    conda create -n bluesky_browser python=3 \
        bluesky jsonschema matplotlib ophyd pyqt \
        pyzmq qtpy suitcase-jsonl tornado traitlets  \
        -c lightsource2-tag
    conda activate bluesky_browser
+
+Clone and install.
+
+.. code-block:: bash
+   git clone https://github.com/NSLS-II/bluesky-browser
+   cd bluesky-browser
    pip install -e .
 
 Run the demo.
