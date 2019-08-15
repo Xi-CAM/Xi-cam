@@ -17,6 +17,7 @@ class ThreadManager(QStandardItemModel):
     """
     A global thread manager that holds on to threads with 'keepalive'
     """
+
     ThreadRole = Qt.UserRole
 
     def __init__(self):
@@ -67,13 +68,27 @@ class QThreadFuture(QThread):
     """
     A future-like QThread, with many conveniences.
     """
+
     sigCallback = Signal()
     sigFinished = Signal()  # redundant?
     sigExcept = Signal(Exception)
 
-    def __init__(self, method, *args, callback_slot=None, finished_slot=None, except_slot=None, default_exhandle=True,
-                 lock=None, threadkey: str = None, showBusy=True, keepalive=True, priority=QThread.InheritPriority,
-                 timeout=0, **kwargs):
+    def __init__(
+        self,
+        method,
+        *args,
+        callback_slot=None,
+        finished_slot=None,
+        except_slot=None,
+        default_exhandle=True,
+        lock=None,
+        threadkey: str = None,
+        showBusy=True,
+        keepalive=True,
+        priority=QThread.InheritPriority,
+        timeout=0,
+        **kwargs,
+    ):
         super(QThreadFuture, self).__init__()
 
         # Auto-Kill other threads with same threadkey
@@ -86,8 +101,10 @@ class QThreadFuture(QThread):
         self.callback_slot = callback_slot
         self.except_slot = except_slot
         # if callback_slot: self.sigCallback.connect(callback_slot)
-        if finished_slot: self.sigFinished.connect(finished_slot)
-        if except_slot: self.sigExcept.connect(except_slot)
+        if finished_slot:
+            self.sigFinished.connect(finished_slot)
+        if except_slot:
+            self.sigExcept.connect(except_slot)
         QApplication.instance().aboutToQuit.connect(self.quit)
         self.method = method
         self.args = args
@@ -117,7 +134,7 @@ class QThreadFuture(QThread):
         Starts the thread
         """
         if self.running:
-            raise ValueError('Thread could not be started; it is already running.')
+            raise ValueError("Thread could not be started; it is already running.")
         super(QThreadFuture, self).start(self.priority)
         if self.timeout:
             self._timeout_timer = QTimer.singleShot(self.timeout, self.cancel)
@@ -128,19 +145,25 @@ class QThreadFuture(QThread):
         """
         self.cancelled = False
         self.exception = None
-        if self.showBusy: invoke_in_main_thread(show_busy)
+        if self.showBusy:
+            invoke_in_main_thread(show_busy)
         try:
             for self._result in self._run(*args, **kwargs):
-                if not isinstance(self._result, tuple): self._result = (self._result,)
-                if self.callback_slot: invoke_in_main_thread(self.callback_slot, *self._result)
+                if not isinstance(self._result, tuple):
+                    self._result = (self._result,)
+                if self.callback_slot:
+                    invoke_in_main_thread(self.callback_slot, *self._result)
 
         except Exception as ex:
             self.exception = ex
             self.sigExcept.emit(ex)
-            log(f'Error in thread: '
+            log(
+                f"Error in thread: "
                 f'Method: {getattr(self.method, "__name__", "UNKNOWN")}\n'
-                f'Args: {self.args}\n'
-                f'Kwargs: {self.kwargs}', level=logging.ERROR)
+                f"Args: {self.args}\n"
+                f"Kwargs: {self.kwargs}",
+                level=logging.ERROR,
+            )
             log_error(ex)
         else:
             self.sigFinished.emit()
@@ -156,14 +179,15 @@ class QThreadFuture(QThread):
         if not self.running:
             self.start()
         while not self.done and not self.exception:
-            time.sleep(.01)
-        if self.exception: return self.exception
+            time.sleep(0.01)
+        if self.exception:
+            return self.exception
         return self._result
 
     def cancel(self):
         self.cancelled = True
         if self.except_slot:
-            invoke_in_main_thread(self.except_slot, InterruptedError('Thread cancelled.'))
+            invoke_in_main_thread(self.except_slot, InterruptedError("Thread cancelled."))
         self.quit()
         self.wait()
 
@@ -181,6 +205,7 @@ class InvokeEvent(QEvent):
     """
     Generic callable containing QEvent
     """
+
     EVENT_TYPE = QEvent.Type(QEvent.registerEventType())
 
     def __init__(self, fn, *args, **kwargs):
@@ -193,13 +218,13 @@ class InvokeEvent(QEvent):
 class Invoker(QObject):
     def event(self, event):
         try:
-            if hasattr(event.fn, 'signal'):  # check if invoking a signal or a callable
+            if hasattr(event.fn, "signal"):  # check if invoking a signal or a callable
                 event.fn.emit(*event.args, *event.kwargs.values())
             else:
                 event.fn(*event.args, **event.kwargs)
             return True
         except Exception as ex:
-            log('QThreadFuture callback could not be invoked.', level=logging.ERROR)
+            log("QThreadFuture callback could not be invoked.", level=logging.ERROR)
             log_error(ex)
         return False
 
@@ -222,9 +247,19 @@ def is_main_thread():
     return threading.current_thread() is threading.main_thread()
 
 
-def method(callback_slot=None, finished_slot=None, except_slot=None, default_exhandle=True, lock=None,
-           threadkey: str = None, showBusy=True, priority=QThread.InheritPriority, keepalive=True, timeout=0,
-           block=False):
+def method(
+    callback_slot=None,
+    finished_slot=None,
+    except_slot=None,
+    default_exhandle=True,
+    lock=None,
+    threadkey: str = None,
+    showBusy=True,
+    priority=QThread.InheritPriority,
+    keepalive=True,
+    timeout=0,
+    block=False,
+):
     """
     Decorator for functions/methods to run as RunnableMethods on background QT threads
     Use it as any python decorator to decorate a function with @decorator syntax or at runtime:
@@ -251,12 +286,21 @@ def method(callback_slot=None, finished_slot=None, except_slot=None, default_exh
     def wrap_runnable_method(func):
         @wraps(func)
         def _runnable_method(*args, **kwargs):
-            future = QThreadFuture(func, *args,
-                                   callback_slot=callback_slot, finished_slot=finished_slot,
-                                   except_slot=except_slot, default_exhandle=default_exhandle, lock=lock,
-                                   threadkey=threadkey, showBusy=showBusy, priority=priority, keepalive=keepalive,
-                                   timeout=timeout,
-                                   **kwargs)
+            future = QThreadFuture(
+                func,
+                *args,
+                callback_slot=callback_slot,
+                finished_slot=finished_slot,
+                except_slot=except_slot,
+                default_exhandle=default_exhandle,
+                lock=lock,
+                threadkey=threadkey,
+                showBusy=showBusy,
+                priority=priority,
+                keepalive=keepalive,
+                timeout=timeout,
+                **kwargs,
+            )
             future.start()
             if block:
                 return future.result()
@@ -266,9 +310,18 @@ def method(callback_slot=None, finished_slot=None, except_slot=None, default_exh
     return wrap_runnable_method
 
 
-def iterator(callback_slot=None, finished_slot=None, interrupt_signal=None, except_slot=None, default_exhandle=True,
-             lock=None,
-             threadkey: str = None, showBusy=True, priority=QThread.InheritPriority, keepalive=True):
+def iterator(
+    callback_slot=None,
+    finished_slot=None,
+    interrupt_signal=None,
+    except_slot=None,
+    default_exhandle=True,
+    lock=None,
+    threadkey: str = None,
+    showBusy=True,
+    priority=QThread.InheritPriority,
+    keepalive=True,
+):
     """
     Decorator for iterators/generators to run as RunnableIterators on background QT threads
     Use it as any python decorator to decorate a function with @decorator syntax or at runtime:
@@ -297,12 +350,20 @@ def iterator(callback_slot=None, finished_slot=None, interrupt_signal=None, exce
     def wrap_runnable_method(func):
         @wraps(func)
         def _runnable_method(*args, **kwargs):
-            future = QThreadFutureIterator(func, *args,
-                                           callback_slot=callback_slot, finished_slot=finished_slot,
-                                           except_slot=except_slot, default_exhandle=default_exhandle, lock=lock,
-                                           threadkey=threadkey, showBusy=showBusy, priority=priority,
-                                           keepalive=keepalive,
-                                           **kwargs)
+            future = QThreadFutureIterator(
+                func,
+                *args,
+                callback_slot=callback_slot,
+                finished_slot=finished_slot,
+                except_slot=except_slot,
+                default_exhandle=default_exhandle,
+                lock=lock,
+                threadkey=threadkey,
+                showBusy=showBusy,
+                priority=priority,
+                keepalive=keepalive,
+                **kwargs,
+            )
             future.start()
 
         return _runnable_method
