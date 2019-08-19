@@ -23,7 +23,6 @@ class XicamMainWindow(QMainWindow):
     def __init__(self):
         super(XicamMainWindow, self).__init__()
 
-    def load(self):
         # Set icon
         self.setWindowIcon(QIcon(QPixmap(str(path("icons/xicam.gif")))))
 
