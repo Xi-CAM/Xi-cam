@@ -32,7 +32,6 @@ typemap = {
     np.int: "int",
 }
 
-reservedkeys = []
 
 
 class MetadataWidgetBase(ParameterTree):
@@ -99,10 +98,9 @@ class MetadataWidgetBase(ParameterTree):
                 )
         return children
 
-    @staticmethod
-    def _strip_reserved(metadata: dict):
+    def _strip_reserved(self, metadata: dict):
         metadata = metadata.copy()
-        for key in reservedkeys:
+        for key in self.kwargs.get('reservedkeys', []):
             if key in metadata:
                 del metadata[key]
         return metadata
