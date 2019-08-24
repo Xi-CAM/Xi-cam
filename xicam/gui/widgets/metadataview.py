@@ -100,7 +100,7 @@ class MetadataWidgetBase(ParameterTree):
         return children
 
     @staticmethod
-    def _strip_reserved(self, metadata: dict, reservedkeys=None):
+    def _strip_reserved(metadata: dict, reservedkeys=None):
         if not reservedkeys:
             reservedkeys = []
         metadata = metadata.copy()
