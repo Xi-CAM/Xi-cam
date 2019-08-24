@@ -38,6 +38,7 @@ class MetadataWidgetBase(ParameterTree):
     def __init__(self, *args, **kwargs):
         super(MetadataWidgetBase, self).__init__(*args, **kwargs)
         LazyGroupParameter.itemClass.initialize_treewidget(self)
+        self.kwargs = kwargs
 
     def insert(self, doctype: str, document, groups: dict):
         if doctype == "start":
@@ -45,7 +46,7 @@ class MetadataWidgetBase(ParameterTree):
                 group.clearChildren()
 
         try:
-            new_children = MetadataView._from_dict(document)
+            new_children = MetadataView._from_dict(document, self.kwargs.get('reservedkeys', []))
         except Exception as ex:
             msg.logError(ex)
             print(f"failed to make children for {doctype}")
@@ -61,11 +62,11 @@ class MetadataWidgetBase(ParameterTree):
             )
 
     @staticmethod
-    def _from_dict(metadata: Iterable):
+    def _from_dict(metadata: Iterable, reservedkeys=None):
         if isinstance(metadata, Sequence):
             metadata = OrderedDict(enumerate(metadata))
 
-        metadata = MetadataView._strip_reserved(metadata)
+        metadata = MetadataView._strip_reserved(metadata, reservedkeys)
         children = []
         for key, value in metadata.items():
             subchildren = []
@@ -98,9 +99,12 @@ class MetadataWidgetBase(ParameterTree):
                 )
         return children
 
-    def _strip_reserved(self, metadata: dict):
+    @staticmethod
+    def _strip_reserved(self, metadata: dict, reservedkeys=None):
+        if not reservedkeys:
+            reservedkeys = []
         metadata = metadata.copy()
-        for key in self.kwargs.get('reservedkeys', []):
+        for key in reservedkeys:
             if key in metadata:
                 del metadata[key]
         return metadata
