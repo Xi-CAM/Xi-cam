@@ -1,4 +1,4 @@
-from xicam.plugins.DataHandlerPlugin import DataHandlerPlugin, start_doc
+from xicam.plugins.datahandlerplugin import DataHandlerPlugin, start_doc
 import numpy as np
 
 

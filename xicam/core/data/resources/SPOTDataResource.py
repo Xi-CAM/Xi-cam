@@ -1,4 +1,4 @@
-from xicam.plugins.DataResourcePlugin import DataResourcePlugin
+from xicam.plugins.dataresourceplugin import DataResourcePlugin
 from urllib import parse
 
 
