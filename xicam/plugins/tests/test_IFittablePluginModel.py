@@ -15,7 +15,7 @@ def with_QApplication():
 
 
 def test_IFittableModelPlugin():
-    from ..FittableModelPlugin import Fittable1DModelPlugin
+    from ..fittablemodelplugin import Fittable1DModelPlugin
     import numpy as np
     from astropy.modeling.fitting import LevMarLSQFitter
     from astropy.modeling import Parameter

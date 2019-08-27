@@ -13,7 +13,7 @@ def mainloop():
 
 
 def test_IDataSourcePlugin():
-    from ..DataResourcePlugin import DataResourcePlugin, DataSourceListModel
+    from ..dataresourceplugin import DataResourcePlugin, DataSourceListModel
 
     class SpotDataResourcePlugin(DataResourcePlugin):
         def __init__(

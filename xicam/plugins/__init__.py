@@ -8,17 +8,17 @@ from yapsy import PluginInfo
 from yapsy.PluginManager import PluginManager
 
 from xicam.core import msg
-from .DataHandlerPlugin import DataHandlerPlugin
-from .GUIPlugin import GUIPlugin, GUILayout
-from .ProcessingPlugin import ProcessingPlugin, EZProcessingPlugin, Input, Output, InOut, InputOutput
-from .SettingsPlugin import SettingsPlugin, ParameterSettingsPlugin
-from .DataResourcePlugin import DataResourcePlugin
-from .ControllerPlugin import ControllerPlugin
-from .WidgetPlugin import QWidgetPlugin
+from .datahandlerplugin import DataHandlerPlugin
+from .guiplugin import GUIPlugin, GUILayout
+from .processingplugin import ProcessingPlugin, EZProcessingPlugin, Input, Output, InOut, InputOutput
+from .settingsplugin import SettingsPlugin, ParameterSettingsPlugin
+from .dataresourceplugin import DataResourcePlugin
+from .controllerpugin import ControllerPlugin
+from .widgetplugin import QWidgetPlugin
 from .venvs import observers as venvsobservers
-from .DataResourcePlugin import DataResourcePlugin
-from .FittableModelPlugin import Fittable1DModelPlugin
-from .EZPlugin import _EZPlugin, EZPlugin
+from .dataresourceplugin import DataResourcePlugin
+from .fittablemodelplugin import Fittable1DModelPlugin
+from .ezplugin import _EZPlugin, EZPlugin
 from .hints import PlotHint, Hint
 from yapsy.PluginManager import NormalizePluginNameForModuleName, imp, log
 import xicam
@@ -375,7 +375,7 @@ class XicamPluginManager(PluginManager):
                         msg.logMessage("Unable to create plugin object: %s" % plugin_info.path)
                         plugin_info.error = exc_info
                         # break  # If it didn't work once it wont again
-                        raise RuntimeError("An error occurred while loading plugin: %s" % plugin_info.path)
+                        msg.logError(RuntimeError("An error occurred while loading plugin: %s" % plugin_info.path))
                     else:
                         plugin_info.categories.append(current_category)
                         self.category_mapping[current_category].append(plugin_info)

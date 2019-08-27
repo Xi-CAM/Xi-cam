@@ -15,7 +15,7 @@ def with_QApplication():
 
 
 def test_IProcessingPlugin():
-    from ..ProcessingPlugin import ProcessingPlugin, Input, Output
+    from ..processingplugin import ProcessingPlugin, Input, Output
 
     class SumProcessingPlugin(ProcessingPlugin):
         a = Input(default=1, units="nm", min=0)

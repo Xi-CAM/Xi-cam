@@ -1,4 +1,5 @@
 from yapsy.IPlugin import IPlugin
+from xicam.gui.widgets.dataresourcebrowser import DataResourceList, DataBrowser
 
 viewTypes = ["ListView", "TreeView", ""]
 
@@ -40,7 +41,6 @@ except ImportError:
 
 
 class DataResourcePlugin(IPlugin):
-    from xicam.gui.widgets.dataresourcebrowser import DataResourceList, DataBrowser
 
     model = DataSourceListModel
     view = DataResourceList
@@ -64,6 +64,9 @@ class DataResourcePlugin(IPlugin):
         self.config = config
         self.flags = flags if flags else {"isFlat": True, "canPush": False}
         # self.uri=''
+
+        import warnings
+        warnings.warn("The DataResourcePlugin is being deprecated in favor of CatalogPlugin.", DeprecationWarning)
 
     def pushData(self, *args, **kwargs):
         raise NotImplementedError

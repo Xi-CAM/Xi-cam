@@ -1,4 +1,4 @@
-from .ProcessingPlugin import Var, Input, ProcessingPlugin
+from .processingplugin import Var, Input, ProcessingPlugin
 from typing import List
 
 
