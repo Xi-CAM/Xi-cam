@@ -3,7 +3,7 @@ from functools import partial
 from qtpy.QtCore import *
 from qtpy.QtGui import *
 from qtpy.QtWidgets import *
-from xicam.plugins.GUIPlugin import PanelState
+from xicam.plugins.guiplugin import PanelState
 from yapsy import PluginInfo
 
 from xicam.plugins import manager as pluginmanager

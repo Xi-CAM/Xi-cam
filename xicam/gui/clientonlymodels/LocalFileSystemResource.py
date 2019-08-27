@@ -1,4 +1,3 @@
-from xicam.plugins import DataResourcePlugin
 import sys, os
 from xicam.core.data import load_header
 from urllib import parse

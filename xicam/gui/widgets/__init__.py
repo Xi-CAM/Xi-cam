@@ -1,4 +1,4 @@
-from xicam.plugins.GUIPlugin import GUILayout
+from xicam.plugins.guiplugin import GUILayout
 from .motd import MOTD
 from .dataresourcebrowser import DataResourceBrowser
 from .previewwidget import PreviewWidget
