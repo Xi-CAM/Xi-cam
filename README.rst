@@ -11,6 +11,16 @@ libraries.
 Launching the demo
 ==================
 
+Create a custom conda environment.
+
+.. code-block:: bash
+
+   conda create -n bluesky_browser python=3 \
+       bluesky jsonschema matplotlib ophyd pyqt \
+       pyzmq qtpy suitcase-jsonl tornado traitlets  \
+       -c lightsource2-tag
+   conda activate bluesky_browser
+
 Clone and install.
 
 .. code-block:: bash
