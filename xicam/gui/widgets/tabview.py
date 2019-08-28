@@ -59,6 +59,9 @@ class TabView(QTabWidget):
         self.currentChanged.connect(
             lambda i: self.selectionmodel.setCurrentIndex(self.headermodel.index(i, 0), QItemSelectionModel.Rows)
         )
+        self.currentChanged.connect(
+            lambda _: self.selectionmodel.setCurrentIndex(self.headermodel.index(self.currentIndex(), 0),
+                                                          QItemSelectionModel.ClearAndSelect))
 
     def dataChanged(self, start, end):
         for i in range(self.headermodel.rowCount()):
@@ -95,8 +98,13 @@ class TabView(QTabWidget):
         return self.headermodel.item(self.currentIndex())
 
     def closeTab(self, i):
+        newindex = self.currentIndex()
+        if i <= self.currentIndex():
+            newindex -= 1
+
         self.removeTab(i)
         self.headermodel.removeRow(i)
+        self.selectionmodel.setCurrentIndex(self.headermodel.index(newindex, 0), QItemSelectionModel.Rows)
 
 
 class TabViewSynchronizer(QObject):
