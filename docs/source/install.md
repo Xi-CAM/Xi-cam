@@ -53,13 +53,13 @@ Create a virtual environment for installing the Xi-cam components and
 dependencies. You will then want to activate the virtual environment you
 created so that any packages you install with python's package manager, **pip**,
 will be installed into that active virtual environment. In the commands below,
-create a virtual environment called **venv** and activate it:
+create a virtual environment called **venv_Xi-cam** and activate it:
 
-### macOS
+### Linux/macOS
 
 ```
-python3 -m venv venv
-source venv/bin/actviate
+python3 -m venv venv_Xi-cam
+source venv_Xi-cam/bin/actviate
 ```
 
 ### Windows

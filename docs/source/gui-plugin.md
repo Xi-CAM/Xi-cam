@@ -251,7 +251,7 @@ When you click it, you should see the text *Stage 1* in the middle of the main w
 After verifying that your plugin is loading in Xi-cam, we can begin to extend the GUIPlugin with custom
 functionality.
 
-### Example 1 - A Cropping Plugin
+### Example 1 - A Inverting Plugin
 
 This example illustrates a simple GUIPlugin that can invert the values of an input image array.
 Here, *invert* will mean taking the difference between the max integer value and the image pixel values.
@@ -317,11 +317,10 @@ The action’s PySide.QtGui.QAction.triggered() signal is connected to member in
 ```
 
 We will need to provide text for the action that is created as well as the receiver (slot) method.
-This method will be responsible for creating a Workflow, adding the InvertProcessPlugin to the Workflow,
-executing the Workflow, then calling a method to grab the results of the Workflow (the inverted data)
+This method will be responsible for executing the Workflow, then calling a method to grab the results of the Workflow (the inverted data)
 and update the image.
 
-For an input image, we will use on of Xi-cam's gui widgets, `DynImageView`, to display the image.
+For an input image, we will use one of Xi-cam's gui widgets, `DynImageView`, to display the image.
 We will use numpy to generate our input image. We will create a 128x128 size image with each row
 having values from 0 to 127.
 
@@ -379,18 +378,19 @@ class mydemo(GUIPlugin):
         self.stages = {
             'Invert': GUILayout(self.imageViewer, top=self.toolBar)
         }
+		
+        # Create a Workfow, add our Invert ProcessingPlugin to it
+        self.workflow = Workflow()
+        self.workflow.addProcess(Invert())
 
         super(mydemo, self).__init__(*args, **kwargs)
 
     def doInvertWorkflow(self):
-        # Create a Workfow, add our Invert ProcessingPlugin to it
-        workflow = Workflow()
-        workflow.addProcess(Invert())
         # Pass the first ProcessingPlugin's Inputs here:
         # in our case, set the Invert ProcessingPlugin's 'data' Input.
         # When the processes are finished (just Invert in our case),
         # we can grab the results (Outputs) in the callback_slot.
-        workflow.execute(data=self.imageViewer.image,
+        self.workflow.execute(data=self.imageViewer.image,
                          callback_slot=self.updateImageView)
 
     def updateImageView(self, results):

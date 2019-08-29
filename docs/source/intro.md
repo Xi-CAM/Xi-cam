@@ -13,7 +13,7 @@ how to extend its functionality.
 You can also read the [ProcessingPlugin Guide](processing-plugin.md) to learn more about developing
 ProcessingPlugins, which are key to performing processes (operations, algorithms) on your data.
 
-*Alternatively, for a quicker way to develop a plugin, you can read the [EZPlugin Guide].
+*Alternatively, for a quicker way to develop a plugin, you can read the [EZPlugin Guide](ez-plugin.md).
 Although creating plugins with this is simpler, it is much more limited in how you can customize the plugin.*
 
 The [Resources](resources.md) section has useful links to tutorials, examples, and documentation
