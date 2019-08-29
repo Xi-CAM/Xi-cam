@@ -1,39 +1,65 @@
-language: python
-python:
-- '3.6'
-services:
-  - xvfb
+matrix:
+  include:
+    - os: linux
+      language: python
+      python: 3.7
+      services:
+        - xvfb
+      before_install:
+        - pip install --upgrade pip  # doesn't work on windows
+      after_install:
+        - pip install .[docs] # only build docs on linux
+        - (cd docs && make html)
+    - os: windows
+      language: shell
+      before_install:
+        - choco install python
+        - python -m venv $HOME/venv
+        - dir ..
+        - source $HOME/venv/Scripts/activate
+      after_script:
+        - pyinstaller --clean --onefile --noconsole --paths C:\Windows\System32\downlevel Xi-cam.spec
+      env: PATH=/c/Python37:/c/Python37/Scripts:$PATH
+
+
 branches:
   only:
-  - master
+    - master
+
 sudo: false
+
 cache:
   apt: true
   pip: true
-  directories: 
+
 addons:
   apt:
     packages:
-    - qtbase5-dev
+      - qtbase5-dev
+
+before_install:
+  - python --version
+
 install:
-- pip install --upgrade attrs>=17.4.0 # travis python3.6 has attrs 17.3.0 installed
-- pip install cx_freeze==6.0b1
-- pip install git+https://github.com/lbl-camera/Xi-cam.core.git
-- pip install git+https://github.com/lbl-camera/Xi-cam.plugins.git
-- pip install git+https://github.com/lbl-camera/Xi-cam.gui.git
-- pip install .[pyqt5,docs,tests]
+  - pip install --upgrade attrs>=17.4.0 # travis python3.6 has attrs 17.3.0 installed
+  - pip install --upgrade setuptools wheel
+  - git clone https://github.com/lbl-camera/Xi-cam.core.git
+  - git clone https://github.com/lbl-camera/Xi-cam.plugins.git
+  - git clone https://github.com/lbl-camera/Xi-cam.gui.git
+  - pip install Xi-cam.core/
+  - pip install Xi-cam.plugins/
+  - pip install Xi-cam.gui/
+  - pip install .[pyqt5,tests,freeze]
+
 script:
-- pip install pylint
-- 'pylint xicam --errors-only || :'
-- sleep 3
-- 'pytest . || :'
-- pip install -e .[dev]
-- (cd docs && make html)
-- python setup.py install
+  - 'pylint xicam --errors-only || :'
+  - 'pytest . || :'
+  - python setup.py install
+
 after_success:
-  - cd /home/travis/build/lbl-camera/Xi-cam
   - codecov
   - coveralls
+
 deploy:
   provider: pypi
   user: ronpandolfi
@@ -42,3 +68,4 @@ deploy:
   distributions: sdist bdist_wheel bdist_egg
   on:
     tags: true
+    os: linux
