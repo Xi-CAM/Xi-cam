@@ -47,8 +47,8 @@ class Viewer(ConfigurableMoveableTabContainer):
 
         self._live_run_router = RunRouter([self.route_live_stream])
 
-        self._containers = [TabbedViewingArea(self, menuBar=menuBar) for _ in
-                            range(self.num_viewing_areas)]
+        self._containers = [TabbedViewingArea(viewer=self, menuBar=menuBar)
+                            for _ in range(self.num_viewing_areas)]
         layout = QVBoxLayout()
         splitter = QSplitter(Qt.Vertical)
         layout.addWidget(splitter)
@@ -197,14 +197,15 @@ class TabbedViewingArea(MoveableTabWidget):
     """
     Contains RunViewers
     """
-    def __init__(self, *args, menuBar, **kwargs):
+    def __init__(self, *args, menuBar, viewer, **kwargs):
         super().__init__(*args, **kwargs)
+        self.viewer = viewer
         self.setTabsClosable(True)
         self.tabCloseRequested.connect(self.close_tab)
 
     def close_tab(self, index):
         widget = self.widget(index)
-        self.parent().close_run_viewer(widget)
+        self.viewer.close_run_viewer(widget)
         self.removeTab(index)
 
 
