@@ -5,7 +5,7 @@ import itertools
 import logging
 
 from event_model import RunRouter, Filler
-from intake_bluesky.core import parse_handler_registry
+from databroker.core import parse_handler_registry
 from qtpy.QtCore import Signal, Qt, QThread
 from qtpy.QtWidgets import (
     QAction,
@@ -47,8 +47,8 @@ class Viewer(ConfigurableMoveableTabContainer):
 
         self._live_run_router = RunRouter([self.route_live_stream])
 
-        self._containers = [TabbedViewingArea(self, menuBar=menuBar) for _ in
-                            range(self.num_viewing_areas)]
+        self._containers = [TabbedViewingArea(viewer=self, menuBar=menuBar)
+                            for _ in range(self.num_viewing_areas)]
         layout = QVBoxLayout()
         splitter = QSplitter(Qt.Vertical)
         layout.addWidget(splitter)
@@ -197,14 +197,15 @@ class TabbedViewingArea(MoveableTabWidget):
     """
     Contains RunViewers
     """
-    def __init__(self, *args, menuBar, **kwargs):
+    def __init__(self, *args, menuBar, viewer, **kwargs):
         super().__init__(*args, **kwargs)
+        self.viewer = viewer
         self.setTabsClosable(True)
         self.tabCloseRequested.connect(self.close_tab)
 
     def close_tab(self, index):
         widget = self.widget(index)
-        self.parent().close_run_viewer(widget)
+        self.viewer.close_run_viewer(widget)
         self.removeTab(index)
 
 
@@ -225,7 +226,8 @@ class RunViewer(ConfigurableQTabWidget):
         self._active_loaders = set()
 
         def filler_factory(name, doc):
-            filler = Filler(parse_handler_registry(self.handler_registry))
+            filler = Filler(parse_handler_registry(self.handler_registry),
+                            inplace=True)
             filler('start', doc)
             return [filler], []
 
@@ -242,7 +244,7 @@ class RunViewer(ConfigurableQTabWidget):
         return self._uids
 
     def load_entry(self, entry):
-        "Load all documents from intake and push them through the RunRouter."
+        "Load all documents from databroker and push them through the RunRouter."
         self._entries.append(entry)
         self._uids.append(entry.describe()['metadata']['start']['uid'])
         entry_loader = EntryLoader(entry, self._active_loaders)

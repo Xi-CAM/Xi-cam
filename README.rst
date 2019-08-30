@@ -57,8 +57,8 @@ with other standard locations.)
 Intended Scope
 ==============
 
-* Search saved data from any intake-bluesky Catalog (backed by MongoDB or
-  JSONL or ....).
+* Search saved data from any databroker Catalog (backed by MongoDB or JSONL or
+  ....).
 * View and compare data from runs. Use "hints" as defaults to guide how to view
   a given run, and let the user adjust from there.
 * Perform basic plot manipulations, not rising to the level of a full data
