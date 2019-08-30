@@ -8,7 +8,6 @@ from ophyd.sim import det, det4, noisy_det, motor, motor1, motor2, img
 from bluesky.plans import scan, count, grid_scan
 from bluesky.preprocessors import SupplementalData
 from event_model import RunRouter
-import intake_bluesky.jsonl  # noqa; to force intake registration
 from ophyd.sim import SynSignal
 import numpy as np
 
@@ -58,13 +57,10 @@ def generate_example_catalog(data_path):
     catalog_filepath = data_path / 'catalog.yml'
     with open(catalog_filepath, 'w') as file:
         file.write(f'''
-plugins:
-  source:
-    - module: intake_bluesky
 sources:
   abc:
     description: Some imaginary beamline
-    driver: intake_bluesky.jsonl.BlueskyJSONLCatalog
+    driver: bluesky-jsonl-catalog
     container: catalog
     args:
       paths: {Path(data_path) / 'abc' / '*.jsonl'}
@@ -74,7 +70,7 @@ sources:
       beamline: "00-ID"
   xyz:
     description: Some imaginary beamline
-    driver: intake_bluesky.jsonl.BlueskyJSONLCatalog
+    driver: bluesky-jsonl-catalog
     container: catalog
     args:
       paths: {Path(data_path) / 'xyz' / '*.jsonl'}

@@ -4,8 +4,8 @@ import os
 import pkg_resources
 import sys
 import time
-from . import __version__
 
+from intake import Catalog
 from qtpy.QtCore import QDateTime, Qt
 from qtpy.QtWidgets import (
     QApplication,
@@ -13,10 +13,12 @@ from qtpy.QtWidgets import (
     QMainWindow,
     QHBoxLayout,
     QSplitter)
+
 from .search import SearchWidget, SearchState
 from .summary import SummaryWidget
 from .viewer.viewer import Viewer
 from .zmq import ConsumerThread
+from . import __version__
 
 
 log = logging.getLogger('bluesky_browser')
@@ -130,7 +132,6 @@ def main():
 
 
 def build_app(catalog_uri, zmq_address=None):
-    from intake import Catalog
     catalog = Catalog(catalog_uri)
 
     app = QApplication([b'Bluesky Browser'])

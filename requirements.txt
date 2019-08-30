@@ -1,7 +1,7 @@
 bluesky
-event-model >=1.9.0a3
-intake >=0.5.1
-intake-bluesky >=0.1.0a5
+event-model >=1.11.1
+databroker >=1.0.0a1
+intake
 jsonschema
 matplotlib
 ophyd  # for demo's example data generator -- maybe should be optional?

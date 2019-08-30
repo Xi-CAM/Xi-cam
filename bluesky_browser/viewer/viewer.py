@@ -5,7 +5,7 @@ import itertools
 import logging
 
 from event_model import RunRouter, Filler
-from intake_bluesky.core import parse_handler_registry
+from databroker.core import parse_handler_registry
 from qtpy.QtCore import Signal, Qt, QThread
 from qtpy.QtWidgets import (
     QAction,
@@ -242,7 +242,7 @@ class RunViewer(ConfigurableQTabWidget):
         return self._uids
 
     def load_entry(self, entry):
-        "Load all documents from intake and push them through the RunRouter."
+        "Load all documents from databroker and push them through the RunRouter."
         self._entries.append(entry)
         self._uids.append(entry.describe()['metadata']['start']['uid'])
         entry_loader = EntryLoader(entry, self._active_loaders)
