@@ -226,7 +226,8 @@ class RunViewer(ConfigurableQTabWidget):
         self._active_loaders = set()
 
         def filler_factory(name, doc):
-            filler = Filler(parse_handler_registry(self.handler_registry))
+            filler = Filler(parse_handler_registry(self.handler_registry),
+                            inplace=True)
             filler('start', doc)
             return [filler], []
 
