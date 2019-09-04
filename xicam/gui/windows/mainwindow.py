@@ -112,13 +112,12 @@ class XicamMainWindow(QMainWindow):
         defaultstage["left"].sigPreview.connect(defaultstage["lefttop"].preview_header)
 
     def open(self, header):
-        self.currentGUIPlugin.plugin_object.appendHeader(header)
+        self.currentGUIPlugin.appendHeader(header)
 
     def showSettings(self):
         self._configdialog.show()
 
-    @Slot(int)
-    def setStage(self, i: int):
+    def setStage(self, stage):
         """
         Set the current Stage/Layout/Plugin mode to number i in its sequence. Triggered by menu (TODO) or F keybindings.
 
@@ -126,23 +125,21 @@ class XicamMainWindow(QMainWindow):
         ----------
         i   : int
         """
-        plugin = self.currentGUIPlugin.plugin_object
-        if i < len(plugin.stages):
-            plugin.stage = list(plugin.stages.values())[i]
-            self.populate_layout()
+        plugin = self.currentGUIPlugin
+        plugin.stage = stage
+        self.populate_layout()
 
-    @Slot(int)
-    def setGUIPlugin(self, i: int):
-        self.currentGUIPlugin = pluginmanager.getPluginsOfCategory("GUIPlugin")[i]
+    def setGUIPlugin(self, guiplugin):
+        self.currentGUIPlugin = guiplugin
 
     @property
     def currentGUIPlugin(self) -> PluginInfo:
         return self._currentGUIPlugin
 
     @currentGUIPlugin.setter
-    def currentGUIPlugin(self, plugininfo: PluginInfo):
-        if plugininfo != self._currentGUIPlugin:
-            self._currentGUIPlugin = plugininfo
+    def currentGUIPlugin(self, guiplugin):
+        if guiplugin != self._currentGUIPlugin:
+            self._currentGUIPlugin = guiplugin
             self.populate_layout()
 
     def build_layout(self):
@@ -182,7 +179,7 @@ class XicamMainWindow(QMainWindow):
     def populate_layout(self):
         # Get current stage
         if self.currentGUIPlugin:
-            stage = self.currentGUIPlugin.plugin_object.stage
+            stage = self.currentGUIPlugin.stage
         else:
             stage = defaultstage
 
@@ -219,13 +216,20 @@ class XicamMainWindow(QMainWindow):
         super(XicamMainWindow, self).mousePressEvent(event)
 
 
+class Node(object):
+    def __init__(self, object, name, children=None, parent=None):
+        self.object = object
+        self.name = name
+        self.children = children or []
+        self.parent = parent
+
 class pluginModeWidget(QToolBar):
     """
     A series of styled QPushButtons with pipe characters between them. Used to switch between plugin modes.
     """
 
-    sigSetStage = Signal(int)
-    sigSetGUIPlugin = Signal(int)
+    sigSetStage = Signal(object)
+    sigSetGUIPlugin = Signal(object)
 
     def __init__(self):
         super(pluginModeWidget, self).__init__()
@@ -242,11 +246,70 @@ class pluginModeWidget(QToolBar):
         # Subscribe to plugins
         pluginmanager.attach(self.pluginsChanged)
 
+        self._nodes = []
+
         # Build children
         self.pluginsChanged()
 
+    def _build_nodes(self):
+        self._nodes = []
+        for plugin in pluginmanager.getPluginsOfCategory("GUIPlugin"):
+
+            node = Node(plugin, plugin.plugin_object.name)
+
+            for name, stage in plugin.plugin_object.stages.items():
+                node.children.append(self._build_subnodes(name, stage, parent=node))
+
+            self._nodes.append(node)
+
+    def _build_subnodes(self, name, stage, parent):
+        node = Node(stage, name, parent=parent)
+        if isinstance(stage, dict):
+            for subname, substage in stage.items():
+                node.children.append(self._build_subnodes(subname, substage, parent=node))
+
+        self._nodes.append(node)
+
+        return node
+
+
     def pluginsChanged(self):
-        self.showGUIPlugins(distance=0)
+        self._build_nodes()
+        self.showNode()
+
+    def showNode(self, node=None, direction=None):
+        if node is None:  # toplevel
+            plugin_nodes = [node for node in self._nodes if node.parent is None]
+            # TODO: add plugin deactivation
+            nodes = [node for node in plugin_nodes if getattr(node.object, "is_activated", True) or True]
+            self._showNodes(nodes, direction)
+            # self.fadeOut(callback=partial(self.mkButtons, names=names, callback=self.showStages), distance=0)
+
+        elif isinstance(node.object, (dict, PluginInfo.PluginInfo)):
+            nodes = node.children
+            self._showNodes(nodes, direction)
+
+        # elif isinstance(node.object, dict): # midlevel
+        #     self._showNodes(node.object.keys(), node.object.values(), direction)
+
+        else:  # bottomlevel
+            parent_node = node.parent
+            while parent_node.parent is not None:
+                parent_node = parent_node.parent
+            self.sigSetGUIPlugin.emit(parent_node.object.plugin_object)
+            self.setStage(node.object)
+
+            # self.fadeOut(callback=partial(self.mkButtons, names=names, callback=self.showStages), distance=0)
+
+    def _showNodes(self, nodes, direction=None):
+        if direction == 'up':
+            distance = 20
+        elif direction == 'down':
+            distance = -20
+        else:
+            distance = 0
+
+        self.fadeOut(callback=partial(self.mkButtons, nodes=nodes), distance=distance)
 
     def fadeOut(self, callback, distance=-20):
         duration = 200
@@ -293,37 +356,55 @@ class pluginModeWidget(QToolBar):
             a.setEasingCurve(QEasingCurve.OutBack)
             a.start(QPropertyAnimation.DeleteWhenStopped)
 
-    def showStages(self, plugin):
-        self.sigSetGUIPlugin.emit(plugin)
-        if len(self.parent().currentGUIPlugin.plugin_object.stages) > 1:
-            names = self.parent().currentGUIPlugin.plugin_object.stages.keys()
-            self.fadeOut(
-                callback=partial(
-                    self.mkButtons,
-                    names=names,
-                    callback=self.sigSetStage.emit,
-                    parent=self.parent().currentGUIPlugin.plugin_object.name,
-                )
-            )
+    # def showStages(self, plugin, *, parent_stage=None):
+    #     if not parent_stage:
+    #         self.sigSetGUIPlugin.emit(plugin)
+    #     if len(self.parent().currentGUIPlugin.plugin_object.stages) > 1:
+    #         if parent_stage:
+    #             names = self.parent().currentGUIPlugin.plugin_object.stages[parent_stage].keys()
+    #         else:
+    #             names = self.parent().currentGUIPlugin.plugin_object.stages.keys()
+    #
+    #         parent = self.parent().currentGUIPlugin.plugin_object.name
+    #         if parent_stage:
+    #             parent += f' > {parent_stage}'
+    #
+    #         self.fadeOut(
+    #             callback=partial(
+    #                 self.mkButtons,
+    #                 names=names,
+    #                 callback=self.setStage,#self.sigSetStage.emit,
+    #                 parent=parent,
+    #             )
+    #         )
 
-    def showGUIPlugins(self, distance=20):
-        plugins = pluginmanager.getPluginsOfCategory("GUIPlugin")
-        # TODO: test deactivated plugins
-        names = [
-            plugin.plugin_object.name for plugin in plugins if getattr(plugin, "is_activated", True) or True
-        ]  # TODO: add plugin deactivation
-        self.fadeOut(callback=partial(self.mkButtons, names=names, callback=self.showStages), distance=distance)
+    def setStage(self, stage):
+        self.sigSetStage.emit(stage)
+        # if isinstance(list(self.parent().currentGUIPlugin.plugin_object.stages.values())[i], dict):
+        #     self.showStages(self.parent().currentGUIPlugin.plugin_object, parent_stage=list(self.parent().currentGUIPlugin.plugin_object.stages.keys())[i])
 
-    def mkButtons(self, names, callback, parent=None):
+    # def showGUIPlugins(self, distance=20):
+    #     plugins = pluginmanager.getPluginsOfCategory("GUIPlugin")
+    #     # TODO: test deactivated plugins
+    #     names = [
+    #         plugin.plugin_object.name for plugin in plugins if getattr(plugin, "is_activated", True) or True
+    #     ]  # TODO: add plugin deactivation
+    #     self.fadeOut(callback=partial(self.mkButtons, names=names, callback=self.showStages), distance=distance)
+
+    def mkButtons(self, nodes):
         # Remove+delete previous children
         layout = self.layout()
         for i in reversed(range(layout.count())):
             layout.itemAt(i).widget().setParent(None)
 
-        if parent:
+        if not nodes: return
+
+        parent = nodes[0].parent
+
+        if parent is not None:
             action = QAction("↑", self)
             action.setFont(self.font)
-            action.triggered.connect(self.showGUIPlugins)
+            action.triggered.connect(partial(self.showNode, parent.parent, direction='up'))
             action.setProperty("isMode", True)
             self.addAction(action)
             # Make separator pipe
@@ -333,9 +414,9 @@ class pluginModeWidget(QToolBar):
             self.addAction(label)
 
         # Loop over each "GUIPlugin" plugin
-        for i, name in zip(reversed(range(len(names))), reversed(list(names))):
-            action = QAction(name, self)
-            action.triggered.connect(partial(callback, i))
+        for node in reversed(list(nodes)):
+            action = QAction(node.name, self)
+            action.triggered.connect(partial(self.showNode, node, direction='down'))
             action.setFont(self.font)
             action.setProperty("isMode", True)
             action.setCheckable(True)
@@ -352,14 +433,14 @@ class pluginModeWidget(QToolBar):
         if self.layout().count():
             self.layout().takeAt(self.layout().count() - 1).widget().deleteLater()  # Delete the last pipe symbol
 
-        if parent:
+        if parent is not None:
             # Make separator pipe
             label = QAction(">", self)
             label.setFont(self.font)
             label.setDisabled(True)
             self.addAction(label)
 
-            action = QAction(parent, self)
+            action = QAction(parent.name, self)
             action.setFont(self.font)
             action.setProperty("isMode", True)
             action.setDisabled(True)
