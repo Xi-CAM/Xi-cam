@@ -5,6 +5,7 @@ from qtpy.QtGui import *
 from qtpy.QtWidgets import *
 from xicam.plugins.guiplugin import PanelState
 from yapsy import PluginInfo
+from intake.catalog import Catalog
 
 from xicam.plugins import manager as pluginmanager
 from xicam.plugins import venvs
@@ -13,6 +14,7 @@ from xicam.core import msg
 from ..widgets import defaultstage
 from .settings import ConfigDialog
 from ..static import path
+from intake.catalog.entry import CatalogEntry
 
 
 class XicamMainWindow(QMainWindow):
@@ -112,7 +114,10 @@ class XicamMainWindow(QMainWindow):
         defaultstage["left"].sigPreview.connect(defaultstage["lefttop"].preview_header)
 
     def open(self, header):
-        self.currentGUIPlugin.appendHeader(header)
+        if isinstance(header, CatalogEntry):
+            self.currentGUIPlugin.appendCatalog(header)
+        else:
+            self.currentGUIPlugin.appendHeader(header)
 
     def showSettings(self):
         self._configdialog.show()
