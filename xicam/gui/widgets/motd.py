@@ -1,6 +1,4 @@
-from qtpy.QtGui import *
-from qtpy.QtWidgets import *
-from qtpy.QtCore import *
+from qtpy.QtWidgets import QScrollArea, QLabel
 
 from xicam.gui.static import path
 

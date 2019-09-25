@@ -1,8 +1,8 @@
 from functools import partial
 
-from qtpy.QtCore import *
-from qtpy.QtGui import *
-from qtpy.QtWidgets import *
+from qtpy.QtCore import QPropertyAnimation, QPoint, QEasingCurve, Qt, Slot, Signal
+from qtpy.QtGui import QIcon, QPixmap, QKeySequence, QFont
+from qtpy.QtWidgets import QMainWindow, QApplication, QStatusBar, QProgressBar, QStackedWidget, QMenu, QShortcut, QDockWidget, QWidget, QToolBar, QActionGroup, QGraphicsOpacityEffect, QAction, QSpinBox
 from xicam.plugins.guiplugin import PanelState
 from yapsy import PluginInfo
 from intake.catalog import Catalog

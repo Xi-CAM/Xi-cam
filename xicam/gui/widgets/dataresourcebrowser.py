@@ -1,8 +1,8 @@
+from qtpy.QtWidgets import QTabWidget, QHBoxLayout, QVBoxLayout, QToolBar, QMenu, QAction, QTreeView, QListView, QWidget, QSizePolicy, QTabBar
+from qtpy.QtCore import QObject, QAbstractItemModel, QSize, Qt, QEvent, Signal
+from qtpy.QtGui import QIcon, QPixmap, QKeyEvent
 from intake.catalog.base import Catalog
 from intake.catalog.entry import CatalogEntry
-from qtpy.QtWidgets import *
-from qtpy.QtCore import *
-from qtpy.QtGui import *
 from ..clientonlymodels.LocalFileSystemResource import LocalFileSystemResourcePlugin
 from xicam.gui.static import path
 from xicam.core.data import NonDBHeader, load_header
