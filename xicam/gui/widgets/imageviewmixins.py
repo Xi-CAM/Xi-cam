@@ -187,8 +187,8 @@ class CenterMarker(QSpace):
         except (TypeError, AttributeError):
             pass
         else:
-            x = 0  # fit2d['centerX']
-            y = 0  # fit2d['centerY']
+            x = fit2d['centerX']
+            y = fit2d['centerY']
             self.centerplot.setData(x=[x], y=[y])
 
     def setGeometry(self, geometry):

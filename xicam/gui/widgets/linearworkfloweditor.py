@@ -1,13 +1,12 @@
 import pickle
-from qtpy.QtCore import *
-from qtpy.QtGui import *
-from qtpy.QtWidgets import *
+from qtpy.QtCore import QAbstractTableModel, QMimeData, Qt, Signal
+from qtpy.QtGui import QIcon, QPixmap
+from qtpy.QtWidgets import QSplitter, QApplication, QWidget, QAbstractItemView, QToolBar, QToolButton, QMenu, QVBoxLayout, QTableView, QItemDelegate, QGridLayout, QLabel, QPushButton, QSizePolicy, QHeaderView
 from xicam.core.execution.workflow import Workflow
 from pyqtgraph.parametertree import ParameterTree, Parameter
 from xicam.gui.static import path
 from xicam.plugins import manager as pluginmanager
 from functools import partial
-
 
 # WorkflowEditor
 #  WorkflowProcessEditor
@@ -60,8 +59,18 @@ class WorkflowWidget(QWidget):
         self.toolbar = QToolBar()
         addfunctionmenu = QToolButton()
         functionmenu = QMenu()
+        sortingDict = {}
         for plugin in pluginmanager.getPluginsOfCategory("ProcessingPlugin"):
-            functionmenu.addAction(plugin.name, partial(self.addProcess, plugin.plugin_object, autoconnectall=True))
+            typeOfProcessingPlugin = plugin.plugin_object.getCategory()
+            if not typeOfProcessingPlugin in sortingDict.keys():
+                sortingDict[typeOfProcessingPlugin] = []
+            sortingDict[typeOfProcessingPlugin].append(plugin)
+        for key in sortingDict.keys():
+            functionmenu.addSeparator()
+            functionmenu.addAction(key)
+            functionmenu.addSeparator()
+            for plugin in sortingDict[key]:
+                functionmenu.addAction(plugin.name, partial(self.addProcess, plugin.plugin_object, autoconnectall=True))
         addfunctionmenu.setMenu(functionmenu)
         addfunctionmenu.setIcon(QIcon(path("icons/addfunction.png")))
         addfunctionmenu.setText("Add Function")

@@ -1,9 +1,9 @@
 from typing import Callable
 import sys
 
-from qtpy.QtCore import *
-from qtpy.QtGui import *
-from qtpy.QtWidgets import *
+from qtpy.QtCore import QTimer, Qt
+from qtpy.QtGui import QMovie, QPixmap
+from qtpy.QtWidgets import QSplashScreen, QApplication, QMainWindow
 
 from xicam.gui import static
 
