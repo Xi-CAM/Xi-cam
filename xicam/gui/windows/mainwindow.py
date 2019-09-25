@@ -8,7 +8,7 @@ from yapsy import PluginInfo
 from intake.catalog import Catalog
 
 from xicam.plugins import manager as pluginmanager
-from xicam.plugins import venvs
+from xicam.plugins import venvs, EntryPointPluginInfo
 from xicam.gui.widgets.debugmenubar import DebuggableMenuBar
 from xicam.core import msg
 from ..widgets import defaultstage
@@ -290,7 +290,7 @@ class pluginModeWidget(QToolBar):
             self._showNodes(nodes, direction)
             # self.fadeOut(callback=partial(self.mkButtons, names=names, callback=self.showStages), distance=0)
 
-        elif isinstance(node.object, (dict, PluginInfo.PluginInfo)):
+        elif isinstance(node.object, (dict, PluginInfo.PluginInfo, EntryPointPluginInfo)):
             nodes = node.children
             self._showNodes(nodes, direction)
 
