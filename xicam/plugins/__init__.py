@@ -196,7 +196,7 @@ class XicamPluginManager(PluginManager):
         The default behavior is that each plugin is instanciated at load time; the class is thrown away.
         Add the isSingleton = False attribute to your plugin class to prevent this behavior!
         """
-        msg.logMessage(f"Instanciating {plugin_info.name} plugin object.")
+        msg.logMessage(f"Instanciating {plugin_info.name} plugin object.", level=msg.INFO)
 
         with load_timer() as elapsed:
             try:
@@ -369,8 +369,9 @@ class XicamPluginManager(PluginManager):
             if not success:
                 for element in (getattr(candidate_module, name) for name in dirlist):  # add filtering?
 
-                    self.load_element(element, candidate_infofile, plugin_info)
-
+                    success = self.load_element(element, candidate_infofile, plugin_info)
+                    if success:
+                        break
             if success:
                 msg.logMessage(f"{int(elapsed() * 1000)} ms elapsed while loading {plugin_info.name}", level=msg.INFO)
             else:
