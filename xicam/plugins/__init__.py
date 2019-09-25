@@ -1,13 +1,19 @@
 import sys
 import os
 import platform
-from pathlib import Path
+import pkg_resources
+import itertools
+import warnings
 
+import entrypoints
 from appdirs import user_config_dir, site_config_dir, user_cache_dir
 from yapsy import PluginInfo
 from yapsy.PluginManager import PluginManager
 
+import xicam
 from xicam.core import msg
+from xicam.core import threads
+
 from .datahandlerplugin import DataHandlerPlugin
 from .catalogplugin import CatalogPlugin
 from .guiplugin import GUIPlugin, GUILayout
@@ -21,13 +27,13 @@ from .dataresourceplugin import DataResourcePlugin
 from .fittablemodelplugin import Fittable1DModelPlugin
 from .ezplugin import _EZPlugin, EZPlugin
 from .hints import PlotHint, Hint
+
 from yapsy.PluginManager import NormalizePluginNameForModuleName, imp, log
-import xicam
 import importlib.util
 from collections import deque
 from contextlib import contextmanager
 from timeit import default_timer
-from xicam.core import threads
+
 import time
 
 op_sys = platform.system()
@@ -130,7 +136,7 @@ class XicamPluginManager(PluginManager):
                 if load_item[2].name == name:
                     self.loadqueue.remove(load_item)  # remove the item from the top-level queue
                     msg.logMessage(f"Immediately loading {load_item[2].name}.", level=msg.INFO)
-                    self.load_plugin(*load_item)  # and load it immediately
+                    self.load_marked_plugin(*load_item)  # and load it immediately
                     break
 
             # Run a wait loop until the plugin element is instanciated by main thread
@@ -185,7 +191,7 @@ class XicamPluginManager(PluginManager):
 
         self.notify()
 
-    def instanciatePlugin(self, plugin_info, element):
+    def instanciatePlugin(self, plugin_info, element, category_name):
         """
         The default behavior is that each plugin is instanciated at load time; the class is thrown away.
         Add the isSingleton = False attribute to your plugin class to prevent this behavior!
@@ -206,6 +212,9 @@ class XicamPluginManager(PluginManager):
                     repr(ex), title=f'An error occurred while starting the "{plugin_info.name}" plugin.', level=msg.CRITICAL
                 )
                 plugin_info.error = exc_info
+            else:
+                plugin_info.categories.append(category_name)
+                self.category_mapping[category_name].append(plugin_info)
 
         msg.logMessage(f"{int(elapsed()*1000)} ms elapsed while instanciating {plugin_info.name}", level=msg.INFO)
 
@@ -257,7 +266,7 @@ class XicamPluginManager(PluginManager):
             # yield a message can be displayed to the user
             yield plugin_info
 
-            self.load_plugin(
+            self.load_marked_plugin(
                 candidate_infofile=candidate_infofile, candidate_filepath=candidate_filepath, plugin_info=plugin_info
             )
 
@@ -268,9 +277,34 @@ class XicamPluginManager(PluginManager):
         # Remove candidates list since we don't need them any more and
         # don't need to take up the space
         delattr(self, "_candidates")
+
+        # Load entry points
+        self.load_entry_point_plugins()
+
         return self.processed_plugins
 
-    def load_plugin(self, candidate_infofile, candidate_filepath, plugin_info):
+    def load_entry_point_plugins(self):
+        for category_name, plugins in self.category_mapping.items():
+            group = entrypoints.get_group_named(f'xicam.plugins.{category_name}')
+            group_all = entrypoints.get_group_all(f'xicam.plugins.{category_name}')
+
+            # Warn the user if entrypoint names may shadow each other
+            if len(group_all) != len(group):
+                # There are some name collisions. Let's go digging for them.
+                for name, matches in itertools.groupby(group_all, lambda ep: ep.name):
+                    matches = list(matches)
+                    if len(matches) != 1:
+                        winner = group[name]
+                        warnings.warn(
+                            f"There are {len(matches)} entrypoints which share the name {name!r}: {matches}. "
+                            f"This may cause shadowing or other unexpected behavior in the future. "
+                            f"It is suggested to rename one of these entrypoints.")
+
+            entry_point_plugins = [EntryPointPluginInfo(entry_point) for entry_point in group_all]
+            for plugin_info in entry_point_plugins:
+                self.load_element_entry_point(category_name, plugin_info)
+
+    def load_marked_plugin(self, candidate_infofile, candidate_filepath, plugin_info):
         msg.logMessage(
             f'Loading {plugin_info.name} plugin in {"main" if threads.is_main_thread() else "background"} thread.',
             level=msg.INFO,
@@ -342,6 +376,44 @@ class XicamPluginManager(PluginManager):
             else:
                 msg.logMessage(f"No plugin found in indicated module: {candidate_filepath}", msg.ERROR)
 
+    def load_element_entry_point(self, category_name, plugin_info):
+        """
+
+        Parameters
+        ----------
+        element
+        candidate_infofile
+        plugin_info
+
+        Returns
+        -------
+        bool
+            True if the element matched a category, and will be accepted as a plugin
+
+        """
+        target_plugin_info = None
+
+        element = plugin_info.plugin_object
+
+        if element is not self.categories_interfaces[category_name]:
+            # we found a new plugin: initialise it and search for the next one
+            try:
+
+                threads.invoke_in_main_thread(self.instanciatePlugin, plugin_info, element, category_name)
+
+            except Exception as ex:
+                exc_info = sys.exc_info()
+                msg.logError(ex)
+                msg.logMessage("Unable to create plugin object: %s" % plugin_info.path)
+                plugin_info.error = exc_info
+                # break  # If it didn't work once it wont again
+                msg.logError(RuntimeError("An error occurred while loading plugin: %s" % plugin_info.path))
+            else:
+                # plugin_info.categories.append(category_name)
+                # self.category_mapping[category_name].append(plugin_info)
+
+                return True
+
     def load_element(self, element, candidate_infofile, plugin_info):
         """
 
@@ -369,7 +441,7 @@ class XicamPluginManager(PluginManager):
                     # we found a new plugin: initialise it and search for the next one
                     try:
 
-                        threads.invoke_in_main_thread(self.instanciatePlugin, plugin_info, element)
+                        threads.invoke_in_main_thread(self.instanciatePlugin, plugin_info, element, current_category)
 
                     except Exception as ex:
                         exc_info = sys.exc_info()
@@ -379,11 +451,18 @@ class XicamPluginManager(PluginManager):
                         # break  # If it didn't work once it wont again
                         msg.logError(RuntimeError("An error occurred while loading plugin: %s" % plugin_info.path))
                     else:
-                        plugin_info.categories.append(current_category)
-                        self.category_mapping[current_category].append(plugin_info)
+                        # plugin_info.categories.append(current_category)
+                        # self.category_mapping[current_category].append(plugin_info)
                         self._category_file_mapping[current_category].append(candidate_infofile)
 
                         return True
+
+
+class EntryPointPluginInfo():
+    def __init__(self, entry_point):
+        self.plugin_object = entry_point.load()
+        self.name = entry_point.name
+        self.categories = []
 
 
 # Setup plugin manager

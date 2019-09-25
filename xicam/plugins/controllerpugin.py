@@ -12,27 +12,3 @@ class ControllerPlugin(QWidget, IPlugin):
         QWidget.__init__(
             self, parent, *args
         )  # TODO: Strange MRO, not sure why QWidget init isn't being called; replaced by IPlugin init twice?
-
-
-def test_QWidgetPlugin():
-    from pyqtgraph import ImageView
-
-    class ImageViewPlugin(ControllerPlugin, ImageView):
-        pass
-
-    app = makeapp()
-    i = ImageViewPlugin()
-    i.show()
-    t = QTimer()
-    t.singleShot(1000, i.close)
-    mainloop()
-
-
-def makeapp():
-    app = QApplication([])
-    return app
-
-
-def mainloop():
-    app = QApplication.instance()
-    app.exec_()
