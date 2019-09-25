@@ -9,11 +9,12 @@ from yapsy.PluginManager import PluginManager
 
 from xicam.core import msg
 from .datahandlerplugin import DataHandlerPlugin
+from .catalogplugin import CatalogPlugin
 from .guiplugin import GUIPlugin, GUILayout
 from .processingplugin import ProcessingPlugin, EZProcessingPlugin, Input, Output, InOut, InputOutput
 from .settingsplugin import SettingsPlugin, ParameterSettingsPlugin
 from .dataresourceplugin import DataResourcePlugin
-from .controllerpugin import ControllerPlugin
+from .controllerplugin import ControllerPlugin
 from .widgetplugin import QWidgetPlugin
 from .venvs import observers as venvsobservers
 from .dataresourceplugin import DataResourcePlugin
@@ -62,6 +63,7 @@ class XicamPluginManager(PluginManager):
         categoriesfilter = {
             "DataHandlerPlugin": DataHandlerPlugin,
             "DataResourcePlugin": DataResourcePlugin,
+            "CatalogPlugin": CatalogPlugin,
             "ProcessingPlugin": ProcessingPlugin,
             "Fittable1DModelPlugin": Fittable1DModelPlugin,
         }
