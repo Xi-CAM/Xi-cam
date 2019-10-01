@@ -187,8 +187,8 @@ class CenterMarker(QSpace):
         except (TypeError, AttributeError):
             pass
         else:
-            x = 0  # fit2d['centerX']
-            y = 0  # fit2d['centerY']
+            x = fit2d['centerX']
+            y = fit2d['centerY']
             self.centerplot.setData(x=[x], y=[y])
 
     def setGeometry(self, geometry):
@@ -583,3 +583,16 @@ class LogScaleIntensity(ImageView):
     def setLogScale(self, value):
         self._setLogScale(value)
         self.logIntensityButton.setChecked(value)
+
+
+class CatalogView(ImageView):
+    def quickMinMax(self, data):
+        """
+        Estimate the min/max values of *data* by subsampling. MODIFIED TO USE THE 99TH PERCENTILE instead of max.
+        """
+        if data is None:
+            return 0, 0
+
+        sl = slice(None, None, max(1, int(data.size // 1e6)))
+        data = np.asarray(data[sl])
+        return (np.nanmin(data), np.nanpercentile(np.where(data < np.nanmax(data), data, np.nanmin(data)), 99))

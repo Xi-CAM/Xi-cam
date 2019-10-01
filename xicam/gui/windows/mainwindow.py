@@ -1,18 +1,20 @@
 from functools import partial
 
-from qtpy.QtCore import *
-from qtpy.QtGui import *
-from qtpy.QtWidgets import *
+from qtpy.QtCore import QPropertyAnimation, QPoint, QEasingCurve, Qt, Slot, Signal
+from qtpy.QtGui import QIcon, QPixmap, QKeySequence, QFont
+from qtpy.QtWidgets import QMainWindow, QApplication, QStatusBar, QProgressBar, QStackedWidget, QMenu, QShortcut, QDockWidget, QWidget, QToolBar, QActionGroup, QGraphicsOpacityEffect, QAction, QSpinBox
 from xicam.plugins.guiplugin import PanelState
 from yapsy import PluginInfo
+from intake.catalog import Catalog
 
 from xicam.plugins import manager as pluginmanager
-from xicam.plugins import venvs
+from xicam.plugins import venvs, EntryPointPluginInfo
 from xicam.gui.widgets.debugmenubar import DebuggableMenuBar
 from xicam.core import msg
 from ..widgets import defaultstage
 from .settings import ConfigDialog
 from ..static import path
+from intake.catalog.entry import CatalogEntry
 
 
 class XicamMainWindow(QMainWindow):
@@ -112,7 +114,10 @@ class XicamMainWindow(QMainWindow):
         defaultstage["left"].sigPreview.connect(defaultstage["lefttop"].preview_header)
 
     def open(self, header):
-        self.currentGUIPlugin.appendHeader(header)
+        if isinstance(header, CatalogEntry):
+            self.currentGUIPlugin.appendCatalog(header)
+        else:
+            self.currentGUIPlugin.appendHeader(header)
 
     def showSettings(self):
         self._configdialog.show()
@@ -285,7 +290,7 @@ class pluginModeWidget(QToolBar):
             self._showNodes(nodes, direction)
             # self.fadeOut(callback=partial(self.mkButtons, names=names, callback=self.showStages), distance=0)
 
-        elif isinstance(node.object, (dict, PluginInfo.PluginInfo)):
+        elif isinstance(node.object, (dict, PluginInfo.PluginInfo, EntryPointPluginInfo)):
             nodes = node.children
             self._showNodes(nodes, direction)
 
