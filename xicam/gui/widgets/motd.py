@@ -18,8 +18,7 @@ class MOTD(QScrollArea):
            </h1>
            <br />
            Please cite Xi-cam in published work: <br />
-           Pandolfi, R., Kumar, D., Venkatakrishnan, S., Krishnan, H., Hexemer, A.
-           (under preparation)
+           <a href="http://scripts.iucr.org/cgi-bin/paper?S1600577518005787" style="color:white;">Pandolfi, R. J., et al. (2018). J. Synchrotron Rad. <b>25</b>, 1261-1270.</a>
     
         </div>
         
