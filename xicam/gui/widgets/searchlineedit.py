@@ -1,6 +1,6 @@
-from qtpy.QtCore import *
-from qtpy.QtGui import *
-from qtpy.QtWidgets import *
+from qtpy.QtCore import QSize, Qt
+from qtpy.QtGui import QPixmap, QIcon
+from qtpy.QtWidgets import QLineEdit, QToolButton, QStyle
 
 from xicam.gui.static import path
 

@@ -1,6 +1,6 @@
-from qtpy.QtWidgets import *
-from qtpy.QtGui import *
-from qtpy.QtCore import *
+from qtpy.QtWidgets import QTabBar, QMenu, QAction, QTabWidget
+from qtpy.QtGui import QStandardItemModel, QMouseEvent
+from qtpy.QtCore import QItemSelectionModel, QObject, Qt
 from typing import List
 from functools import partial
 from xicam.core import msg
