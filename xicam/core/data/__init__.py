@@ -449,6 +449,38 @@ import numpy as np
 from xicam.core import msg
 
 
+class MetaXArray(object):
+    def __init__(self, dataarray):
+        self.dataarray = dataarray
+
+        for attr in ['__len__', 'size', 'ndim', 'shape', 'dtype']:
+            setattr(self, attr, getattr(self.dataarray, attr))
+
+    def xvals(self):
+        return range(len(self))
+
+    def min(self):
+        return self.dtype.type(self.dataarray.min())
+
+    def max(self):
+        return self.dtype.type(self.dataarray.max())
+
+    def __getitem__(self, item: Union[List[slice], int]):
+        return np.asarray(self.dataarray[item])
+
+    def transpose(self, ax):
+        if ax != [0, 1, 2]:
+            raise ValueError('A MetaXArray cannot actually be transposed; the transpose method is provided for '
+                             'compatibility with pyqtgraph''s ImageView')
+        return self
+
+    def view(self, _):
+        return self
+
+    def implements(self, _):
+        return False
+
+
 class DocMetaArray(object):
     def __init__(self, header: NonDBHeader, field: str = None):
         self._dtype = None
@@ -502,7 +534,8 @@ class DocMetaArray(object):
             fields = list(self.header.fields())
             if len(fields) > 1:
                 msg.logError(
-                    ValueError("Unspecified field for document stream with >1 field. Potentially unexpected behavior.")
+                    ValueError(
+                        "Unspecified field for document stream with >1 field. Potentially unexpected behavior.")
                 )
                 self.field = next(iter(self.header.eventdocs[0]["data"].keys()))
             else:
@@ -557,7 +590,8 @@ class DocMetaArray(object):
     def view(self, _):
         return self
 
-    # TODO: Add asarray
+
+# TODO: Add asarray
 
 
 class lazyfield(object):
