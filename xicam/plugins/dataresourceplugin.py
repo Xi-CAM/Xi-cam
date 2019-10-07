@@ -1,5 +1,4 @@
 from yapsy.IPlugin import IPlugin
-from xicam.gui.widgets.dataresourcebrowser import DataResourceList, DataBrowser
 
 viewTypes = ["ListView", "TreeView", ""]
 
@@ -41,6 +40,7 @@ except ImportError:
 
 
 class DataResourcePlugin(IPlugin):
+    from xicam.gui.widgets.dataresourcebrowser import DataResourceList, DataBrowser
 
     model = DataSourceListModel
     view = DataResourceList

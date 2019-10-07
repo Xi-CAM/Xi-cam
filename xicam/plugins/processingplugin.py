@@ -51,9 +51,9 @@ class ProcessingPlugin(IPlugin):
     The description briefly describes the variable.
     The type represents what kind of data the variable will hold.
 
-    The Input variables are `data` and `masked_data`. These are the inputs to
+    The Input variables are `data` and `min_threshold`. These are the inputs to
     be evaluated. The `data` variable is the pixel data that we will be applying
-    some mask to. The `minimum_threshold` defines the minimum value that a pixel
+    some mask to. The `min_threshold` defines the minimum value that a pixel
     value must be; otherwise it will be masked.
 
     The InputOutput variable is `mask`. The mask is an input because we can
