@@ -262,6 +262,10 @@ class ProcessingPlugin(IPlugin):
 
         self._workflow.update()
 
+    @staticmethod
+    def getCategory() -> str:
+        return "default"
+
     def clearConnections(self):
         for input in self.inputs.values():
             input._map_inputs = []
