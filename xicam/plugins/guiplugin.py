@@ -3,6 +3,7 @@ from enum import Enum
 from typing import Dict, List, Union
 from xicam.core.data import NonDBHeader
 from qtpy.QtGui import *
+from databroker.core import BlueskyRun
 
 from yapsy.IPlugin import IPlugin
 
@@ -18,6 +19,13 @@ class GUIPlugin(IPlugin):
         self.stage = list(self.stages.values())[0]
 
     def appendHeader(self, header: NonDBHeader, **kwargs):
+        # kwargs can include flags for how the data append operation is handled, i.e.:
+        #   - as a new doc
+        #   - merged into the current doc (stream)
+        #   - as a new doc, flattened by some operation (average)
+        pass
+
+    def appendCatalog(self, catalog: BlueskyRun, **kwargs):
         # kwargs can include flags for how the data append operation is handled, i.e.:
         #   - as a new doc
         #   - merged into the current doc (stream)
