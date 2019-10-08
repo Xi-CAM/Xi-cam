@@ -16,9 +16,9 @@ from qtpy.QtWidgets import (
 
 from .search import SearchWidget, SearchState
 from .summary import SummaryWidget
-from .viewer.viewer import Viewer
-from .zmq import ConsumerThread
-from . import __version__
+from .viewer import Viewer
+from ...zmq import ConsumerThread
+from ... import __version__
 
 
 log = logging.getLogger('bluesky_browser')
@@ -170,7 +170,7 @@ class _DemoAction(argparse.Action):
         log.addHandler(handler)
         log.setLevel('DEBUG')
 
-        from .demo import generate_example_catalog, stream_example_data
+        from ...demo import generate_example_catalog, stream_example_data
         from tempfile import TemporaryDirectory
         with TemporaryDirectory() as directory:
             catalog_filepath = generate_example_catalog(directory)

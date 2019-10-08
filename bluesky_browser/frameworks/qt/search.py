@@ -28,7 +28,8 @@ from qtpy.QtWidgets import (
     QWidget,
     QTableView,
     )
-from .utils import load_config, ConfigurableQObject, Callable
+from .utils import ConfigurableQObject
+from ...utils import load_config, Callable
 
 
 MAX_SEARCH_RESULTS = 100  # TODO Use fetchMore instead of a hard limit.
