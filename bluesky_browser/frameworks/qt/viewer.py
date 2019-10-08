@@ -19,11 +19,12 @@ from traitlets.traitlets import List, Dict, DottedObjectName, Integer
 from .header_tree import HeaderTreeFactory
 from .baseline import BaselineFactory
 from .figures import FigureManager
-from ..utils import (
+from .utils import (
     MoveableTabWidget,
     ConfigurableMoveableTabContainer,
     ConfigurableQTabWidget,
-    load_config)
+)
+from ...utils import load_config
 
 
 log = logging.getLogger('bluesky_browser')

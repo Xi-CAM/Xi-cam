@@ -46,7 +46,9 @@ setup(
     packages=find_packages(exclude=['docs', 'tests']),
     entry_points={
         'console_scripts': [
-            'bluesky-browser = bluesky_browser.main:main',
+            'bluesky-browser-qt = bluesky_browser.frameworks.qt.main:main',
+            # for back-compat, may be removed:
+            'bluesky-browser = bluesky_browser.frameworks.qt.main:main',
             ],
         },
     include_package_data=True,

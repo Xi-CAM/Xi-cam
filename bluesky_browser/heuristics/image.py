@@ -1,13 +1,12 @@
-import logging
 import functools
+import logging
 
-from event_model import DocumentRouter
-import numpy as np
+import numpy
+from traitlets import default
+from traitlets.traitlets import Dict, Type
 from traitlets.config import Configurable
-from traitlets.traitlets import Dict
 
 from ..utils import load_config, Callable
-
 
 log = logging.getLogger('bluesky_browser')
 
@@ -17,7 +16,7 @@ def first_frame(event_page, image_key):
     Extract the first frame image data to plot out of an EventPage.
     """
     if event_page['seq_num'][0] == 1:
-        data = np.asarray(event_page['data'][image_key])
+        data = numpy.asarray(event_page['data'][image_key])
         log.debug('Image from %s has shape %r', image_key, data.shape)
         if data.ndim == 3:
             # Axes are event axis, y, x. Slice out the first event.
@@ -39,7 +38,7 @@ def latest_frame(event_page, image_key):
     """
     Extract the most recent frame of image data to plot out of an EventPage.
     """
-    data = np.asarray(event_page['data'][image_key])
+    data = numpy.asarray(event_page['data'][image_key])
     if event_page['seq_num'][0] == 1:
         # Just log once per event stream.
         log.debug('Image from %s has shape %r', image_key, data.shape)
@@ -62,6 +61,15 @@ class BaseImageManager(Configurable):
     Manage the image plots for one FigureManager.
     """
     imshow_options = Dict({}, config=True)
+    image_class = Type()
+
+    @default('image_class')
+    def default_image_class(self):
+        # By defining the default value of image_class dynamically here, we
+        # avoid importing matplotlib if some non-matplotlib image_class is
+        # specfied by configuration.
+        from ..artists.mpl.image import Image
+        return Image
 
     def __init__(self, fig_manager, dimensions):
         self.update_config(load_config())
@@ -95,6 +103,7 @@ class BaseImageManager(Configurable):
                     object_keys = descriptor_doc.get('object_keys', {})
                     for object_name, data_keys in object_keys.items():
                         if key in data_keys:
+                            object_name = object_name  # used below
                             break
                     else:
                         log.debug("Couldn't find %s in object_keys %r", key, object_keys)
@@ -132,7 +141,7 @@ class BaseImageManager(Configurable):
 
             func = functools.partial(self.func, image_key=image_key)
 
-            image = Image(func, shape=shape, ax=ax, **self.imshow_options)
+            image = self.image_class(func, shape=shape, ax=ax, **self.imshow_options)
             callbacks.append(image)
 
         for callback in callbacks:
@@ -147,62 +156,3 @@ class FirstFrameImageManager(BaseImageManager):
 
 class LatestFrameImageManager(BaseImageManager):
     func = Callable(latest_frame, config=True)
-
-
-class Image(DocumentRouter):
-    """
-    Draw a matplotlib Image Arist update it for each Event.
-
-    Parameters
-    ----------
-    func : callable
-        This must accept an EventPage and return two lists of floats
-        (x points and y points). The two lists must contain an equal number of
-        items, but that number is arbitrary. That is, a given document may add
-        one new point to the plot, no new points, or multiple new points.
-    label_template : string
-        This string will be formatted with the RunStart document. Any missing
-        values will be filled with '?'. If the keyword argument 'label' is
-        given, this argument will be ignored.
-    ax : matplotlib Axes, optional
-        If None, a new Figure and Axes are created.
-    **kwargs
-        Passed through to :meth:`Axes.plot` to style Line object.
-    """
-    def __init__(self, func, shape, *, label_template='{scan_id} [{uid:.8}]', ax=None, **kwargs):
-        self.func = func
-        if ax is None:
-            import matplotlib.pyplot as plt
-            _, ax = plt.subplots()
-        self.ax = ax
-        if len(self.ax.images) == 1:
-            self.image, = self.ax.images
-        elif len(self.ax.images) == 0:
-            self.image = ax.imshow(np.zeros(shape), **kwargs)
-            self.ax.figure.colorbar(self.image, ax=self.ax)
-            self.label_template = label_template
-        else:
-            raise ValueError(f"Expected ax to be an axis with no image "
-                             f"artists or one image artist. Found "
-                             f"ax.images={self.ax.images}")
-
-    def event_page(self, doc):
-        data = self.func(doc)
-        if data is not None:
-            self._update(data)
-
-    def _update(self, arr):
-        """
-        Takes in new array data and redraws plot if they are not empty.
-        """
-        if arr.ndim != 2:
-            raise ValueError(
-                f'The number of dimensions must be 2, but received array '
-                f'has {arr.ndim} number of dimensions.')
-        self.image.set_array(arr)
-        new_clim = self.infer_clim(self.image.get_clim(), arr)
-        self.image.set_clim(*new_clim)
-        self.ax.figure.canvas.draw_idle()
-
-    def infer_clim(self, current_clim, arr):
-        return (min(current_clim[0], arr.min()), max(current_clim[1], arr.max()))
