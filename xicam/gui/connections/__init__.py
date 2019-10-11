@@ -7,7 +7,6 @@ from xicam.gui.widgets.searchlineedit import SearchLineEdit
 from copy import deepcopy
 
 from xicam.plugins import SettingsPlugin, manager
-from xicam.plugins import cammart
 
 
 class ConnectionSettingsPlugin(SettingsPlugin):
