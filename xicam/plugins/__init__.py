@@ -22,7 +22,8 @@ from .settingsplugin import SettingsPlugin, ParameterSettingsPlugin
 from .dataresourceplugin import DataResourcePlugin
 from .controllerplugin import ControllerPlugin
 from .widgetplugin import QWidgetPlugin
-from .venvs import observers as venvsobservers
+from xicam.gui.cammart.venvs import observers as venvsobservers
+from xicam.gui.cammart import venvs
 from .dataresourceplugin import DataResourcePlugin
 from .fittablemodelplugin import Fittable1DModelPlugin
 from .ezplugin import _EZPlugin, EZPlugin
@@ -86,6 +87,10 @@ class XicamPluginManager(PluginManager):
                     "Fittable1DModelPlugin": Fittable1DModelPlugin,
                 }
             )
+
+        self.blacklist = []
+        if "--no-cammart" in sys.argv:
+            self.blacklist.extend(['cammart', 'venvs'])
 
         self.setCategoriesFilter(categoriesfilter)
 
@@ -200,6 +205,9 @@ class XicamPluginManager(PluginManager):
 
         with load_timer() as elapsed:
             try:
+                if list(filter(lambda plugin: plugin.name == plugin_info.name, self.category_mapping[category_name])):
+                    msg.logMessage(f'A plugin named "{plugin_info.name}" has already been loaded.')
+                    return
                 if getattr(element, "isSingleton", True):
                     plugin_info.plugin_object = element()
                 else:
@@ -216,9 +224,10 @@ class XicamPluginManager(PluginManager):
                 plugin_info.categories.append(category_name)
                 self.category_mapping[category_name].append(plugin_info)
 
-        msg.logMessage(f"{int(elapsed()*1000)} ms elapsed while instanciating {plugin_info.name}", level=msg.INFO)
+                msg.logMessage(f"{int(elapsed() * 1000)} ms elapsed while instanciating {plugin_info.name}",
+                               level=msg.INFO)
 
-        self.notify()
+                self.notify()
 
     def showLoading(self, plugininfo: PluginInfo):
         # Indicate loading status
@@ -300,7 +309,8 @@ class XicamPluginManager(PluginManager):
                             f"This may cause shadowing or other unexpected behavior in the future. "
                             f"It is suggested to rename one of these entrypoints.")
 
-            entry_point_plugins = [EntryPointPluginInfo(entry_point) for entry_point in group_all]
+            entry_point_plugins = [EntryPointPluginInfo(entry_point) for entry_point in group_all if
+                                   entry_point.name not in self.blacklist]
             for plugin_info in entry_point_plugins:
                 self.load_element_entry_point(category_name, plugin_info)
 
@@ -464,6 +474,7 @@ class EntryPointPluginInfo():
         self.plugin_object = entry_point.load()
         self.name = entry_point.name
         self.categories = []
+        self.path = 'module_name'
 
 
 # Setup plugin manager
