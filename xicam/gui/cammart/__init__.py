@@ -6,7 +6,7 @@ from xicam.gui.static import path
 from xicam.gui.widgets.searchlineedit import SearchLineEdit
 
 from xicam.plugins import SettingsPlugin
-from xicam.plugins import cammart
+from xicam.gui.cammart import packagemanager
 
 
 class CamMartSettingsPlugin(SettingsPlugin):
@@ -38,7 +38,7 @@ class CamMartSettingsPlugin(SettingsPlugin):
         Refresh the list of packages by updating the model
         """
         self.packagesmodel.clear()
-        for name, scheme in cammart.pkg_registry.items():
+        for name, scheme in packagemanager.pkg_registry.items():
             self.packagesmodel.appendRow(QStandardItem(name))
 
     def addplugin(self):
@@ -54,7 +54,7 @@ class CamMartSettingsPlugin(SettingsPlugin):
         Uninstalls a plugin
         """
         if self.listview.selectedIndexes():
-            cammart.uninstall(self.packagesmodel.itemFromIndex(self.listview.selectedIndexes()[0]).text())
+            packagemanager.uninstall(self.packagesmodel.itemFromIndex(self.listview.selectedIndexes()[0]).text())
             self.refresh()
 
     def toState(self):  # This class has no settings to save, it is driven by the packages list
@@ -138,7 +138,7 @@ class CamMartInstallDialog(QDialog):
 
     def install(self):
         # Install the selected package using cammart
-        cammart.install(self.packagesModel.itemFromIndex(self.packagesWidget.selectedIndexes()[0]).text())
+        packagemanager.install(self.packagesModel.itemFromIndex(self.packagesWidget.selectedIndexes()[0]).text())
 
     def manage(self):
         pass
