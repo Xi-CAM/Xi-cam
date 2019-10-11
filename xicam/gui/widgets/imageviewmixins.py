@@ -188,7 +188,7 @@ class CenterMarker(QSpace):
             pass
         else:
             x = fit2d['centerX']
-            y = fit2d['centerY']
+            y = self.imageItem.image.shape[-2] - fit2d['centerY']
             self.centerplot.setData(x=[x], y=[y])
 
     def setGeometry(self, geometry):
