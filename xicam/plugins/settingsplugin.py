@@ -46,7 +46,11 @@ class SettingsPlugin(QObject, IPlugin):
 
     def restore(self):
         try:
-            self.fromState(pickle.loads(QSettings().value(self.name())))
+            state = QSettings().value(self.name())
+            if state != pickle.dumps(self.toState()):
+                self.fromState(pickle.loads(state))
+            else:
+                msg.logMessage(f'skipped restoring {self.name}')
         except (AttributeError, TypeError, SystemError, KeyError, ModuleNotFoundError) as ex:
             # No settings saved
             msg.logError(ex)
