@@ -1,5 +1,6 @@
 from .processingplugin import Var, Input, ProcessingPlugin
-from typing import List
+from typing import Dict, List
+import copy
 
 
 class Hint(object):
@@ -11,6 +12,10 @@ class Hint(object):
     @property
     def name(self):
         raise NotImplementedError
+
+    def selective_copy(self, var_mapping: Dict):
+        #TODO raise
+        return self
 
 
 class PlotHint(Hint):
@@ -26,6 +31,12 @@ class PlotHint(Hint):
 
     def visualize(self, canvas, **canvases):
         canvas.plot(self.x.value, self.y.value, **self.kwargs)
+
+    def selective_copy(self, var_mapping: Dict):
+        new_plot_hint = copy.copy(self)
+        new_plot_hint.x = var_mapping[self.x]
+        new_plot_hint.y = var_mapping[self.y]
+        return new_plot_hint
 
 
 class VerticalROI(Hint):
@@ -104,12 +115,17 @@ class ImageHint(Hint):
 
     @property
     def name(self):
-        return f"Image of {image.name}"
+        return f"Image of {self.image.name}"
 
     def visualize(self, canvas, **canvases):
         canvas = canvases["imageview"]
         if canvas:
             canvas.setImage(self.image.value, **self.kwargs)
+
+    def selective_copy(self, var_mapping: Dict):
+        new_plot_hint = copy.copy(self)
+        new_plot_hint.image = var_mapping[self.image]
+        return new_plot_hint
 
 
 class CoPlotHint(Hint):

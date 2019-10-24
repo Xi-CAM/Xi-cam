@@ -106,10 +106,13 @@ class ProcessingPlugin(IPlugin):
 
     """
     isSingleton = False
+    hints = []
 
     def __new__(cls, *args, **kwargs):
+        from xicam.XPCS.processing.twotime import TwoTimeCorrelation
         instance = super(ProcessingPlugin, cls).__new__(cls)
         instance.__init__(*args, **kwargs)
+        var_mapping = dict()
         for name, param in cls.__dict__.items():
             if isinstance(param, (InOut)):
                 param.name = instance.inverted_vars[param]
@@ -119,6 +122,7 @@ class ProcessingPlugin(IPlugin):
                 instance.inputs[param.name] = clone
                 instance.outputs[param.name] = clone
                 setattr(instance, param.name, clone)
+                var_mapping[param] = clone
             elif isinstance(param, (Output)):
                 param.name = instance.inverted_vars[param]
                 clone = param.__class__()
@@ -126,6 +130,7 @@ class ProcessingPlugin(IPlugin):
                 clone.parent = instance
                 instance.outputs[param.name] = clone
                 setattr(instance, param.name, clone)
+                var_mapping[param] = clone
             elif isinstance(param, (Input)):
                 param.name = instance.inverted_vars[param]
                 clone = param.__class__()
@@ -133,6 +138,13 @@ class ProcessingPlugin(IPlugin):
                 clone.parent = instance
                 instance.inputs[param.name] = clone
                 setattr(instance, param.name, clone)
+                var_mapping[param] = clone
+
+        instance.hints = []
+        for hint in cls.hints:
+            clone = hint.selective_copy(var_mapping)
+            instance.hints.append(clone)
+
         return instance
 
     def __init__(self, *args, **kwargs):
@@ -145,8 +157,6 @@ class ProcessingPlugin(IPlugin):
         self._inverted_vars = None
         self.name = getattr(self, "name", self.__class__.__name__)
         self._workflow = None
-        if not hasattr(self, "hints"):
-            self.hints = []
         for hint in self.hints:
             hint.parent = self
 
