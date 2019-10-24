@@ -22,8 +22,6 @@ import enum
 #                                          y = right
 #                                          z = beam
 
-# TODO: Add notification when qgrid is very wrong
-
 
 def q_from_angles(phi, alpha, wavelength):
     r = 2 * np.pi / wavelength
@@ -43,9 +41,9 @@ def phi(x, y, z):
 
 
 class DisplayMode(enum.Enum):
-    raw = enum.auto
-    cake = enum.auto
-    remesh = enum.auto
+    raw = enum.auto()
+    cake = enum.auto()
+    remesh = enum.auto()
 
 
 class PixelSpace(ImageView):
@@ -58,6 +56,7 @@ class PixelSpace(ImageView):
             kwargs["view"] = self.axesItem
 
         self._transform = QTransform()
+        self._raw_image = None
 
         super(PixelSpace, self).__init__(*args, **kwargs)
 
@@ -89,6 +88,9 @@ class PixelSpace(ImageView):
         if img is None:
             return
 
+        if getattr(self, 'displaymode', DisplayMode.raw) == DisplayMode.raw:
+            self._raw_image = img
+
         if not kwargs.get("transform", None):
             img, transform = self.transform(img)
             self.updateAxes()
@@ -98,7 +100,7 @@ class PixelSpace(ImageView):
             super(PixelSpace, self).setImage(img, *args, **kwargs)
 
     def setTransform(self):
-        self.setImage(self.imageItem.image)  # this should loop back around to the respective transforms
+        self.setImage(self._raw_image)  # this should loop back around to the respective transforms
 
     def updateAxes(self):
         self.axesItem.setLabel("bottom", "x (px)")  # , units='s')
@@ -124,10 +126,12 @@ class QSpace(PixelSpace):
 class EwaldCorrected(QSpace):
     def setDisplayMode(self, mode):
         self.displaymode = mode
+        if hasattr(self, 'drawCenter'):
+            self.drawCenter()
         self.setTransform()
 
-    def transform(self, img):
-        if not self._geometry:
+    def transform(self, img=None):
+        if not self._geometry or not self.displaymode == DisplayMode.remesh:
             return super(EwaldCorrected, self).transform(img)  # Do pixel space transform when not calibrated
 
         from camsaxs import remesh_bbox
@@ -136,16 +140,16 @@ class EwaldCorrected(QSpace):
 
         # Build Quads
         shape = img.shape
-        a = 0, shape[-2] - 1
-        b = shape[-1] - 1, shape[-2] - 1
-        c = shape[-1] - 1, 0
-        d = 0, 0
+        a = shape[-2] - 1, 0  # bottom-left
+        b = shape[-2] - 1, shape[-1] - 1  # bottom-right
+        c = 0, shape[-1] - 1  # top-right
+        d = 0, 0  # top-left
 
         quad1 = QPolygonF()
         quad2 = QPolygonF()
         for p, q in zip([a, b, c, d], [a, b, c, d]):  # the zip does the flip :P
-            quad1.append(QPointF(*p))
-            quad2.append(QPointF(q_x[q[::-1]], q_z[q[::-1]]))
+            quad1.append(QPointF(*p[::-1]))
+            quad2.append(QPointF(q_x[q], q_z[q]))
 
         transform = QTransform()
         QTransform.quadToQuad(quad1, quad2, transform)
@@ -161,14 +165,21 @@ class EwaldCorrected(QSpace):
         if img is None:
             return
 
+        self._raw_image = img
+
         if self._geometry:
-            img, transform = self.transform(img)
-            self.axesItem.setLabel("bottom", "q_x (Å⁻¹)")  # , units='s')
-            self.axesItem.setLabel("left", "q_z (Å⁻¹)")
-            super(EwaldCorrected, self).setImage(img, *args, transform=transform, **kwargs)
+            transform_img, transform = self.transform(img)
+            super(EwaldCorrected, self).setImage(transform_img, *args, transform=transform, **kwargs)
 
         else:
             super(EwaldCorrected, self).setImage(img, *args, **kwargs)
+
+    def updateAxes(self):
+        if self.displaymode == DisplayMode.remesh:
+            self.axesItem.setLabel("bottom", "q<sub>x</sub> (Å⁻¹)")  # , units='s')
+            self.axesItem.setLabel("left", "q<sub>z</sub> (Å⁻¹)")
+        else:
+            super(EwaldCorrected, self).updateAxes()
 
 
 class CenterMarker(QSpace):
@@ -187,9 +198,13 @@ class CenterMarker(QSpace):
         except (TypeError, AttributeError):
             pass
         else:
-            x = fit2d['centerX']
-            y = self.imageItem.image.shape[-2] - fit2d['centerY']
-            self.centerplot.setData(x=[x], y=[y])
+            if self.imageItem.image is not None:
+                if self.displaymode == DisplayMode.raw:
+                    x = fit2d['centerX']
+                    y = self._raw_image.shape[-2] - fit2d['centerY']
+                    self.centerplot.setData(x=[x], y=[y])
+                elif self.displaymode == DisplayMode.remesh:
+                    self.centerplot.setData(x=[0], y=[0])
 
     def setGeometry(self, geometry):
         super(CenterMarker, self).setGeometry(geometry)
