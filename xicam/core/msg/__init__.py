@@ -279,7 +279,10 @@ import sys
 
 sys._excepthook = sys.excepthook = logError
 
-faulthandler.enable()
+try:
+    faulthandler.enable()
+except RuntimeError:
+    faulthandler.enable(file=open(os.path.join(paths.user_cache_dir, "logs", "crash_log.log"), 'w'))
 
 # The above enables printing tracebacks during hard crashes. To see it in action, try the following lines
 # import ctypes
