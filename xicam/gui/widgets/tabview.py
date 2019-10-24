@@ -103,7 +103,9 @@ class TabView(QTabWidget):
             newindex -= 1
 
         self.removeTab(i)
+        index = self.headermodel.item(i, 0).index()
         self.headermodel.removeRow(i)
+        self.headermodel.dataChanged.emit(index, index)
         self.selectionmodel.setCurrentIndex(self.headermodel.index(newindex, 0), QItemSelectionModel.Rows)
 
 
