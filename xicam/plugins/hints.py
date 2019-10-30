@@ -20,6 +20,8 @@ class Hint(object):
 
 class PlotHint(Hint):
     def __init__(self, x: Var, y: Var, **kwargs):
+        if kwargs.get("name"):
+            self._name = kwargs["name"]
         super(PlotHint, self).__init__()
         self.x = x
         self.y = y
@@ -27,7 +29,9 @@ class PlotHint(Hint):
 
     @property
     def name(self):
-        return f"{self.y.name} vs. {self.x.name}"
+        if not self._name:
+            self._name = f"{self.y.name} vs. {self.x.name}"
+        return self._name
 
     def visualize(self, canvas, **canvases):
         canvas.plot(self.x.value, self.y.value, **self.kwargs)
@@ -104,6 +108,8 @@ class EnableHint(ButtonHint):
 
 class ImageHint(Hint):
     def __init__(self, image: Var, xlabel: str = None, ylabel: str = None, transform=None, z: int = None, **kwargs):
+        if kwargs.get("name"):
+            self._name = kwargs["name"]
         super(ImageHint, self).__init__()
         self.image = image
         self.xlabel = xlabel
@@ -115,7 +121,9 @@ class ImageHint(Hint):
 
     @property
     def name(self):
-        return f"Image of {self.image.name}"
+        if not self._name:
+            self._name = f"Image of {self.image.name}"
+        return self._name
 
     def visualize(self, canvas, **canvases):
         canvas = canvases["imageview"]
@@ -130,13 +138,17 @@ class ImageHint(Hint):
 
 class CoPlotHint(Hint):
     def __init__(self, *plothints: List[PlotHint], **kwargs):
+        if kwargs.get("name"):
+            self._name = kwargs["name"]
         super(CoPlotHint, self).__init__()
         self.plothints = plothints  # type: List[PlotHint]
         self.kwargs = kwargs
 
     @property
     def name(self):
-        return f"Plot of " + ", ".join([hint.name for hint in self.plothints])
+        if not self._name:
+            self._name = f"Plot of " + ", ".join([hint.name for hint in self.plothints])
+        return self._name
 
     def visualize(self, canvas, **canvases):
         for plothint in self.plothints:
