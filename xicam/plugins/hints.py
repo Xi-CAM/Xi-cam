@@ -15,6 +15,7 @@ class Hint(object):
         self.parent = None
         self.checked = False
         self.enabled = True
+        self._name = None
 
     def init_canvas(self, **kwargs):
         return self.canvas_cls()
