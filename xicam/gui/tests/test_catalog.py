@@ -1,7 +1,7 @@
 from qtpy.QtWidgets import QLabel
 from xicam.plugins import GUIPlugin, GUILayout
 from xicam.gui.widgets.dynimageview import DynImageView
-from xicam.gui.widgets.imageviewmixins import CatalogView
+from xicam.gui.widgets.imageviewmixins import XArrayView
 from xicam.core.data import MetaXArray
 
 
@@ -9,7 +9,7 @@ class TestPlugin(GUIPlugin):
     name = 'catalogtest'
 
     def __init__(self):
-        self.imageview = CatalogView()
+        self.imageview = XArrayView()
 
         self.stages = {'Stage 1': GUILayout(self.imageview), }
 

@@ -600,7 +600,7 @@ class LogScaleIntensity(ImageView):
         self.logIntensityButton.setChecked(value)
 
 
-class CatalogView(ImageView):
+class XArrayView(ImageView):
     def quickMinMax(self, data):
         """
         Estimate the min/max values of *data* by subsampling. MODIFIED TO USE THE 99TH PERCENTILE instead of max.
@@ -611,3 +611,18 @@ class CatalogView(ImageView):
         sl = slice(None, None, max(1, int(data.size // 1e6)))
         data = np.asarray(data[sl])
         return (np.nanmin(data), np.nanpercentile(np.where(data < np.nanmax(data), data, np.nanmin(data)), 99))
+
+
+class CatalogView(ImageView):
+    def setCatalog(self, catalog, stream, field, *args, **kwargs):
+        self.catalog = catalog
+        self.stream = stream
+        self.field = field
+        self.xarray = getattr(self.catalog, self.stream)[self.field]
+        self.setImage(img=self.xarray, *args, **kwargs)
+
+    def streamChanged(self, stream):
+        self.setCatalog(self.catalog, stream, self.field)
+
+    def fieldChanged(self, field):
+        self.setCatalog(self.catalog, self.stream, field)
