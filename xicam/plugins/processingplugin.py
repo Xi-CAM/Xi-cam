@@ -109,7 +109,6 @@ class ProcessingPlugin(IPlugin):
     hints = []
 
     def __new__(cls, *args, **kwargs):
-        from xicam.XPCS.processing.twotime import TwoTimeCorrelation
         instance = super(ProcessingPlugin, cls).__new__(cls)
         instance.__init__(*args, **kwargs)
         var_mapping = dict()
