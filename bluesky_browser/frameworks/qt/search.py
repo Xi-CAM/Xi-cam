@@ -84,12 +84,13 @@ class SearchState(ConfigurableQObject):
         self._subcatalogs = []  # to support lookup by item's positional index
         self._results = []  # to support lookup by item's positional index
         self._results_catalog = None
+        self._new_entries = queue.Queue(maxsize=MAX_SEARCH_RESULTS)
         self.list_subcatalogs()
         self.set_selected_catalog(0)
         self.query_queue = queue.Queue()
         self.show_results_event = threading.Event()
         self.reload_event = threading.Event()
-
+        self.run_catalogs = {}
         search_state = self
 
         super().__init__()
@@ -121,6 +122,14 @@ class SearchState(ConfigurableQObject):
 
         self.process_queries_thread = ProcessQueriesThread()
         self.process_queries_thread.start()
+
+        class IterateCatalogsThread(QThread):
+            def run(self):
+                while True:
+                    search_state.iterate_catalogs()
+
+        self.iterate_catalogs_thread = IterateCatalogsThread()
+        self.iterate_catalogs_thread.start()
 
     def request_reload(self):
         self._results_catalog.force_reload()
@@ -204,16 +213,24 @@ class SearchState(ConfigurableQObject):
         query.update(**self.search_results_model.custom_query)
         self.query_queue.put(query)
 
+    def iterate_catalogs(self):
+        if self._results_catalog is None:
+            return
+        for uid, entry in itertools.islice(self._results_catalog.items(), MAX_SEARCH_RESULTS):
+            if uid in self._results:
+                continue
+
+            self._results.append(uid)
+            self._new_entries.put(entry)
+
     def show_results(self):
         header_labels_set = False
         self.show_results_event.clear()
         t0 = time.monotonic()
         counter = 0
-        for uid, entry in itertools.islice(self._results_catalog.items(), MAX_SEARCH_RESULTS):
-            if uid in self._results:
-                continue
-            counter += 1
-            self._results.append(uid)
+
+        while not self._new_entries.empty():
+            entry = self._new_entries.get()
             row = []
             try:
                 row_data = self.apply_search_result_row(entry)
