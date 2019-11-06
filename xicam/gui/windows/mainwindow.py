@@ -1,6 +1,9 @@
 from functools import partial
 import sys
 
+from databroker.core import BlueskyRun
+from intake.catalog.entry import CatalogEntry
+
 from qtpy.QtCore import QPropertyAnimation, QPoint, QEasingCurve, Qt, Slot, Signal
 from qtpy.QtGui import QIcon, QPixmap, QKeySequence, QFont
 from qtpy.QtWidgets import QMainWindow, QApplication, QStatusBar, QProgressBar, QStackedWidget, QMenu, QShortcut, QDockWidget, QWidget, QToolBar, QActionGroup, QGraphicsOpacityEffect, QAction, QSpinBox
@@ -16,7 +19,6 @@ from xicam.core import msg
 from ..widgets import defaultstage
 from .settings import ConfigDialog
 from ..static import path
-from intake.catalog.entry import CatalogEntry
 
 
 class XicamMainWindow(QMainWindow):
@@ -110,10 +112,10 @@ class XicamMainWindow(QMainWindow):
         # Wireup default widgets
         defaultstage["left"].sigOpen.connect(self.open)
         defaultstage["left"].sigOpen.connect(print)
-        defaultstage["left"].sigPreview.connect(defaultstage["lefttop"].preview_header)
+        defaultstage["left"].sigPreview.connect(defaultstage["lefttop"].preview)
 
     def open(self, header):
-        if isinstance(header, CatalogEntry):
+        if isinstance(header, (CatalogEntry, BlueskyRun)):
             self.currentGUIPlugin.appendCatalog(header)
         else:
             self.currentGUIPlugin.appendHeader(header)

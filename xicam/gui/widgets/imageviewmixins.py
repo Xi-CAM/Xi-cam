@@ -7,11 +7,14 @@ from qtpy.QtCore import Qt, Signal, Slot, QSize, QPointF, QRectF
 import numpy as np
 
 # from pyFAI.geometry import Geometry
+from xicam.core import msg
+from xicam.core.data import MetaXArray
 from xicam.gui.widgets.elidedlabel import ElidedLabel
 from xicam.gui.widgets.ROI import BetterPolyLineROI
-from xicam.core import msg
 import enum
 
+from xicam.plugins import manager as pluginmanager
+import inspect
 
 # from pyFAI import AzimuthalIntegrator
 
@@ -110,10 +113,10 @@ class PixelSpace(ImageView):
 class QSpace(PixelSpace):
     def __init__(self, *args, geometry=None, **kwargs):
         self.displaymode = DisplayMode.raw
+        self._geometry = None  # type: AzimuthalIntegrator
 
         super(QSpace, self).__init__(*args, **kwargs)
 
-        self._geometry = None  # type: AzimuthalIntegrator
         self.setGeometry(geometry)
 
     def setGeometry(self, geometry):
@@ -614,11 +617,18 @@ class XArrayView(ImageView):
 
 
 class CatalogView(ImageView):
+    def __init__(self, catalog, stream, field, *args, **kwargs):
+        self.catalog = catalog
+        self.stream = stream
+        self.field = field
+        super(CatalogView, self).__init__(*args, **kwargs)
+        self.setCatalog(self.catalog, self.stream, self.field)
+
     def setCatalog(self, catalog, stream, field, *args, **kwargs):
         self.catalog = catalog
         self.stream = stream
         self.field = field
-        self.xarray = getattr(self.catalog, self.stream)[self.field]
+        self.xarray = MetaXArray(getattr(self.catalog, self.stream).to_dask()[self.field])
         self.setImage(img=self.xarray, *args, **kwargs)
 
     def streamChanged(self, stream):
@@ -626,3 +636,6 @@ class CatalogView(ImageView):
 
     def fieldChanged(self, field):
         self.setCatalog(self.catalog, self.stream, field)
+        # TODO -- figure out where to put the geometry update
+        if QSpace in inspect.getmro(type(self)):
+            self.setGeometry(pluginmanager.getPluginByName('xicam.SAXS.calibration', 'SettingsPlugin').plugin_object.AI(field))

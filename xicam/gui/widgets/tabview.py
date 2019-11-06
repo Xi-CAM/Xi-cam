@@ -80,20 +80,20 @@ class TabView(QTabWidget):
                 itemdata = self.catalogmodel.item(i).data(Qt.UserRole)
 
             if self.widget(i):
-                if self.widget(i).header == self.headermodel.item(i).header:
+                if self.widget(i).catalog == itemdata:
                     continue
             try:
-                newwidget = self.widgetcls(self.headermodel.item(i).header, self.field, **self.kwargs)
+                newwidget = self.widgetcls(itemdata, stream=self.stream, field=self.field, **self.kwargs)
             except Exception as ex:
                 msg.logMessage(
-                    f"A widget of type {self.widgetcls} could not be initialized with args: {self.headermodel.item(i).header, self.field, self.kwargs}"
+                    f"A widget of type {self.widgetcls} could not be initialized with args: {itemdata, self.field, self.kwargs}"
                 )
                 msg.logError(ex)
                 self.catalogmodel.removeRow(i)
                 self.dataChanged(0, 0)
                 return
 
-            self.setCurrentIndex(self.insertTab(i, newwidget, self.headermodel.item(i).text()))
+            self.setCurrentIndex(self.insertTab(i, newwidget, self.catalogmodel.item(i).text()))
             for sender, receiver in self.bindings:
                 if isinstance(sender, str):
                     sender = getattr(newwidget, sender)
