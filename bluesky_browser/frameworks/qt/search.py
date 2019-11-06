@@ -90,7 +90,7 @@ class SearchState(ConfigurableQObject):
         self.query_queue = queue.Queue()
         self.show_results_event = threading.Event()
         self.reload_event = threading.Event()
-        self.run_catalogs = {}
+
         search_state = self
 
         super().__init__()
@@ -206,7 +206,6 @@ class SearchState(ConfigurableQObject):
         self.query_queue.put(query)
 
     def show_results(self):
-        print("in show_results")
         header_labels_set = False
         self.show_results_event.clear()
         t0 = time.monotonic()
@@ -243,7 +242,6 @@ class SearchState(ConfigurableQObject):
                 self._results.append(uid)
                 self._new_entries.put(entry)
             duration = time.monotonic() - t0
-            print("Reloaded search results (%.3f s).", duration)
             log.debug("Reloaded search results (%.3f s).", duration)
             self.new_results_catalog.emit()
 
