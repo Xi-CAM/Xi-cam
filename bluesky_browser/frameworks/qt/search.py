@@ -212,6 +212,7 @@ class SearchState(ConfigurableQObject):
         counter = 0
 
         while not self._new_entries.empty():
+            counter += 1
             entry = self._new_entries.get()
             row = []
             try:
