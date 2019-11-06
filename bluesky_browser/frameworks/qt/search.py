@@ -123,14 +123,6 @@ class SearchState(ConfigurableQObject):
         self.process_queries_thread = ProcessQueriesThread()
         self.process_queries_thread.start()
 
-        class IterateCatalogsThread(QThread):
-            def run(self):
-                while True:
-                    search_state.iterate_catalogs()
-
-        self.iterate_catalogs_thread = IterateCatalogsThread()
-        self.iterate_catalogs_thread.start()
-
     def request_reload(self):
         self._results_catalog.force_reload()
         self.reload_event.set()
@@ -213,17 +205,8 @@ class SearchState(ConfigurableQObject):
         query.update(**self.search_results_model.custom_query)
         self.query_queue.put(query)
 
-    def iterate_catalogs(self):
-        if self._results_catalog is None:
-            return
-        for uid, entry in itertools.islice(self._results_catalog.items(), MAX_SEARCH_RESULTS):
-            if uid in self._results:
-                continue
-
-            self._results.append(uid)
-            self._new_entries.put(entry)
-
     def show_results(self):
+        print("in show_results")
         header_labels_set = False
         self.show_results_event.clear()
         t0 = time.monotonic()
@@ -254,7 +237,13 @@ class SearchState(ConfigurableQObject):
         t0 = time.monotonic()
         if self._results_catalog is not None:
             self._results_catalog.reload()
+            for uid, entry in itertools.islice(self._results_catalog.items(), MAX_SEARCH_RESULTS):
+                if uid in self._results:
+                    continue
+                self._results.append(uid)
+                self._new_entries.put(entry)
             duration = time.monotonic() - t0
+            print("Reloaded search results (%.3f s).", duration)
             log.debug("Reloaded search results (%.3f s).", duration)
             self.new_results_catalog.emit()
 
