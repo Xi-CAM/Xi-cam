@@ -374,4 +374,4 @@ class Workflow(object):
         canvasinstances = {name: canvas() if callable(canvas) else canvas for name, canvas in canvases.items()}
         for process in self._processes:
             for hint in process.hints:
-                hint.visualize(canvas, **canvasinstances)
+                hint.visualize(canvas)
