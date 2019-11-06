@@ -563,8 +563,11 @@ class MetaXArray(object):
     def __init__(self, dataarray):
         self.dataarray = dataarray
 
-        for attr in ['__len__', 'size', 'ndim', 'shape', 'dtype']:
+        for attr in ['size', 'ndim', 'shape', 'dtype']:
             setattr(self, attr, getattr(self.dataarray, attr))
+
+    def __len__(self):
+        return self.shape[0]
 
     def xvals(self):
         return range(len(self))
@@ -574,6 +577,9 @@ class MetaXArray(object):
 
     def max(self):
         return self.dtype.type(self.dataarray.max())
+
+    def ravel(self):
+        return self.dataarray.values.ravel()
 
     def __getitem__(self, item: Union[List[slice], int]):
         if isinstance(item, List):
