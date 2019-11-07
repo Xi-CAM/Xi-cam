@@ -1,12 +1,11 @@
 from functools import partial
 import sys
 
-from qtpy.QtCore import QPropertyAnimation, QPoint, QEasingCurve, Qt, Slot, Signal
+from qtpy.QtCore import QPropertyAnimation, QPoint, QEasingCurve, Qt, Slot, Signal, QSettings
 from qtpy.QtGui import QIcon, QPixmap, QKeySequence, QFont
 from qtpy.QtWidgets import QMainWindow, QApplication, QStatusBar, QProgressBar, QStackedWidget, QMenu, QShortcut, QDockWidget, QWidget, QToolBar, QActionGroup, QGraphicsOpacityEffect, QAction, QSpinBox
 from xicam.plugins.guiplugin import PanelState
 from yapsy import PluginInfo
-from intake.catalog import Catalog
 
 from xicam.plugins import manager as pluginmanager
 from xicam.gui.cammart import venvs
@@ -16,7 +15,7 @@ from xicam.core import msg
 from ..widgets import defaultstage
 from .settings import ConfigDialog
 from ..static import path
-from intake.catalog.entry import CatalogEntry
+from databroker.core import BlueskyRun
 
 
 class XicamMainWindow(QMainWindow):
@@ -107,13 +106,18 @@ class XicamMainWindow(QMainWindow):
         for i in range(12):
             self.Fshortcuts[i].activated.connect(partial(self.setStage, i))
 
+
+        self.readSettings()
         # Wireup default widgets
         defaultstage["left"].sigOpen.connect(self.open)
         defaultstage["left"].sigOpen.connect(print)
         defaultstage["left"].sigPreview.connect(defaultstage["lefttop"].preview_header)
 
+
     def open(self, header):
-        if isinstance(header, CatalogEntry):
+        if self.currentGUIPlugin is None:
+            return
+        if isinstance(header, BlueskyRun):
             self.currentGUIPlugin.appendCatalog(header)
         else:
             self.currentGUIPlugin.appendHeader(header)
@@ -218,6 +222,15 @@ class XicamMainWindow(QMainWindow):
         if isinstance(focused_widget, QSpinBox):
             focused_widget.clearFocus()
         super(XicamMainWindow, self).mousePressEvent(event)
+
+    def closeEvent(self, event):
+        QSettings().setValue("geometry", self.saveGeometry())
+        QMainWindow.closeEvent(self, event)
+
+    def readSettings(self):
+        settings = QSettings()
+        if settings.value("geometry") is not None:
+            self.restoreGeometry(settings.value("geometry"))
 
 
 class Node(object):
