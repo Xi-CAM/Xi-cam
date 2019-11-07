@@ -1,7 +1,7 @@
 from appdirs import user_config_dir, site_config_dir, user_cache_dir
 import os
 import platform
-from xicam.core import msg
+
 
 user_cache_dir = user_cache_dir(appname='xicam')
 site_config_dir = site_config_dir(appname='xicam')
@@ -20,9 +20,8 @@ def init_dir(path):
         os.makedirs(path)
     except FileExistsError:
         pass
-    except Exception as ex:
-        msg.logError(ex)
 
 
-for path in [user_cache_dir, user_config_dir, user_plugin_dir, user_dev_dir]:
-    init_dir(path)
+def init_dirs():
+    for path in [user_cache_dir, user_config_dir, user_plugin_dir, user_dev_dir]:
+        init_dir(path)
