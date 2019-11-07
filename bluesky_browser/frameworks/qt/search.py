@@ -90,7 +90,7 @@ class SearchState(ConfigurableQObject):
         self.query_queue = queue.Queue()
         self.show_results_event = threading.Event()
         self.reload_event = threading.Event()
-        self.run_catalogs = {}
+
         search_state = self
 
         super().__init__()
@@ -172,6 +172,14 @@ class SearchState(ConfigurableQObject):
         self.selected_catalog = self.catalog[name]()
         self.search()
 
+    def check_for_new_entries(self):
+        # check for any new results and add them to the queue for later processing
+        for uid, entry in itertools.islice(self._results_catalog.items(), MAX_SEARCH_RESULTS):
+            if uid in self._results:
+                continue
+            self._results.append(uid)
+            self._new_entries.put(entry)
+
     def process_queries(self):
         # If there is a backlog, process only the newer query.
         block = True
@@ -186,6 +194,7 @@ class SearchState(ConfigurableQObject):
         log.debug('Submitting query %r', query)
         t0 = time.monotonic()
         self._results_catalog = self.selected_catalog.search(query)
+        self.check_for_new_entries()
         duration = time.monotonic() - t0
         log.debug('Query yielded %r results (%.3f s).',
                   len(self._results_catalog), duration)
@@ -206,13 +215,13 @@ class SearchState(ConfigurableQObject):
         self.query_queue.put(query)
 
     def show_results(self):
-        print("in show_results")
         header_labels_set = False
         self.show_results_event.clear()
         t0 = time.monotonic()
         counter = 0
 
         while not self._new_entries.empty():
+            counter += 1
             entry = self._new_entries.get()
             row = []
             try:
@@ -237,13 +246,8 @@ class SearchState(ConfigurableQObject):
         t0 = time.monotonic()
         if self._results_catalog is not None:
             self._results_catalog.reload()
-            for uid, entry in itertools.islice(self._results_catalog.items(), MAX_SEARCH_RESULTS):
-                if uid in self._results:
-                    continue
-                self._results.append(uid)
-                self._new_entries.put(entry)
+            self.check_for_new_entries()
             duration = time.monotonic() - t0
-            print("Reloaded search results (%.3f s).", duration)
             log.debug("Reloaded search results (%.3f s).", duration)
             self.new_results_catalog.emit()
 
