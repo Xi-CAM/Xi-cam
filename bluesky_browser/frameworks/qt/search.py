@@ -104,10 +104,12 @@ class SearchState(ConfigurableQObject):
                     # Never reload until the last reload finished being
                     # displayed.
                     search_state.show_results_event.wait()
+                    print("reload_thread unwaited 0")
                     # Wait for RELOAD_INTERVAL to pass or until we are poked,
                     # whichever happens first.
                     search_state.reload_event.wait(
                         max(0, RELOAD_INTERVAL - (time.monotonic() - t0)))
+                    print("reload_thread unwaited 1")
                     search_state.reload_event.clear()
                     # Reload the catalog to show any new results.
                     search_state.reload()
@@ -186,9 +188,17 @@ class SearchState(ConfigurableQObject):
         log.debug('Submitting query %r', query)
         t0 = time.monotonic()
         self._results_catalog = self.selected_catalog.search(query)
+        #check for any new results and add them to the queue for later processing
+        for uid, entry in itertools.islice(self._results_catalog.items(), MAX_SEARCH_RESULTS):
+            if uid in self._results:
+                continue
+            print("new catalog")
+            self._results.append(uid)
+            self._new_entries.put(entry)
         duration = time.monotonic() - t0
         log.debug('Query yielded %r results (%.3f s).',
                   len(self._results_catalog), duration)
+        print("emit new_results_catalog)")
         self.new_results_catalog.emit()
 
     def search(self):
@@ -234,14 +244,10 @@ class SearchState(ConfigurableQObject):
         self.show_results_event.set()
 
     def reload(self):
+        print("in reload")
         t0 = time.monotonic()
         if self._results_catalog is not None:
             self._results_catalog.reload()
-            for uid, entry in itertools.islice(self._results_catalog.items(), MAX_SEARCH_RESULTS):
-                if uid in self._results:
-                    continue
-                self._results.append(uid)
-                self._new_entries.put(entry)
             duration = time.monotonic() - t0
             log.debug("Reloaded search results (%.3f s).", duration)
             self.new_results_catalog.emit()
