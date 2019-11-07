@@ -291,7 +291,8 @@ class pluginModeWidget(QToolBar):
 
         elif isinstance(node.object, (dict, PluginInfo.PluginInfo, EntryPointPluginInfo)):
             nodes = node.children
-            self._showNodes(nodes, direction)
+            if len(nodes) > 1:
+                self._showNodes(nodes, direction)
             self.sigSetGUIPlugin.emit(node.object.plugin_object)
             self.setStage(node.object.plugin_object.stage)
 
