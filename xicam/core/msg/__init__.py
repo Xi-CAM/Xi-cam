@@ -1,5 +1,7 @@
 import inspect
 import logging
+import faulthandler
+import signal
 import sys
 import os
 import time
@@ -264,6 +266,8 @@ def logError(exception: Exception, value=None, tb=None, **kwargs):
     if not tb:
         tb = exception.__traceback__
     kwargs["level"] = ERROR
+    if 'loggername' not in kwargs:
+        kwargs['loggername'] = inspect.stack()[1][3]
     logMessage("\n", "The following error was handled safely by Xi-cam. It is displayed here for debugging.", **kwargs)
     try:
         logMessage("\n", *traceback.format_exception(exception, value, tb), **kwargs)
@@ -274,3 +278,12 @@ def logError(exception: Exception, value=None, tb=None, **kwargs):
 import sys
 
 sys._excepthook = sys.excepthook = logError
+
+try:
+    faulthandler.enable()
+except RuntimeError:
+    faulthandler.enable(file=open(os.path.join(paths.user_cache_dir, "logs", "crash_log.log"), 'w'))
+
+# The above enables printing tracebacks during hard crashes. To see it in action, try the following lines
+# import ctypes
+# ctypes.string_at(0)
