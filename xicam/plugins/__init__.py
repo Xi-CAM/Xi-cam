@@ -22,8 +22,15 @@ from .settingsplugin import SettingsPlugin, ParameterSettingsPlugin
 from .dataresourceplugin import DataResourcePlugin
 from .controllerplugin import ControllerPlugin
 from .widgetplugin import QWidgetPlugin
-from xicam.gui.cammart.venvs import observers as venvsobservers
-from xicam.gui.cammart import venvs
+
+try:
+    # try to find the venvs entrypoint
+    if 'cammart' in entrypoints.get_group_named(f'xicam.plugins.SettingsPlugin') and not '--no-cammart' in sys.argv:
+        from xicam.gui.cammart.venvs import observers as venvsobservers
+    else:
+        raise ImportError
+except ImportError:
+    venvsobservers = None
 from .dataresourceplugin import DataResourcePlugin
 from .fittablemodelplugin import Fittable1DModelPlugin
 from .ezplugin import _EZPlugin, EZPlugin
@@ -64,7 +71,8 @@ def load_timer():
 class XicamPluginManager(PluginManager):
     def __init__(self):
         super(XicamPluginManager, self).__init__()
-        venvsobservers.append(self)
+        if venvsobservers is not None:
+            venvsobservers.append(self)
 
         # Link categories to base classes
         categoriesfilter = {
