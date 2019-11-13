@@ -1,6 +1,6 @@
 import sys
 import os
-
+import signal
 import trace
 
 
@@ -35,6 +35,7 @@ def main():
     # app = QApplication([])
     # app = pydm.PyDMApplication()
     app = QApplication([])
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     from xicam.gui.windows import splash
 
