@@ -27,6 +27,7 @@ try:
     # try to find the venvs entrypoint
     if 'cammart' in entrypoints.get_group_named(f'xicam.plugins.SettingsPlugin') and not '--no-cammart' in sys.argv:
         from xicam.gui.cammart.venvs import observers as venvsobservers
+        from xicam.gui.cammart import venvs
     else:
         raise ImportError
 except ImportError:
@@ -243,7 +244,8 @@ class XicamPluginManager(PluginManager):
         msg.logMessage(f"Loading {name} from {plugininfo.path}")
 
     def venvChanged(self):
-        self.setPluginPlaces([venvs.current_environment])
+        if venvsobservers is not None:
+            self.setPluginPlaces([venvs.current_environment])
         self.collectPlugins()
 
     def __getitem__(self, item: str):
