@@ -617,7 +617,7 @@ class XArrayView(ImageView):
 
 
 class CatalogView(ImageView):
-    def __init__(self, catalog, stream, field, *args, **kwargs):
+    def __init__(self, catalog=None, stream=None, field=None, *args, **kwargs):
         self.catalog = catalog
         self.stream = stream
         self.field = field
@@ -628,8 +628,12 @@ class CatalogView(ImageView):
         self.catalog = catalog
         self.stream = stream
         self.field = field
-        self.xarray = MetaXArray(getattr(self.catalog, self.stream).to_dask()[self.field])
-        self.setImage(img=self.xarray, *args, **kwargs)
+        if all(self.catalog, self.stream, self.field):
+            self.xarray = getattr(self.catalog, self.stream)[self.field]
+            self.setImage(img=self.xarray, *args, **kwargs)
+        else:
+            # TODO -- clear the current image
+            pass
 
     def streamChanged(self, stream):
         self.setCatalog(self.catalog, stream, self.field)
