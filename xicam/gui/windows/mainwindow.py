@@ -308,7 +308,12 @@ class pluginModeWidget(QToolBar):
             self._showNodes(nodes, direction)
             # self.fadeOut(callback=partial(self.mkButtons, names=names, callback=self.showStages), distance=0)
 
-        elif isinstance(node.object, (dict, PluginInfo.PluginInfo, EntryPointPluginInfo)):
+        elif isinstance(node.object, dict):
+            nodes = node.children
+            if len(nodes) > 1:
+                self._showNodes(nodes, direction)
+
+        elif isinstance(node.object, (PluginInfo.PluginInfo, EntryPointPluginInfo)):
             nodes = node.children
             if len(nodes) > 1:
                 self._showNodes(nodes, direction)
