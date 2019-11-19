@@ -445,7 +445,7 @@ class PolygonROI(ImageView):
             offsetX = abs(minX)
         if minY < 0:
             offsetY = abs(minY)
-        trimmed = boundingBox[abs(offsetY) : abs(offsetY) + height, abs(offsetX) : abs(offsetX) + width]
+        trimmed = boundingBox[abs(offsetY): abs(offsetY) + height, abs(offsetX): abs(offsetX) + width]
 
         # Reorient the trimmed mask array
         trimmed = trimmed[::-1, ::-1]
@@ -486,6 +486,16 @@ import collections
 from pyqtgraph import functions as fn
 from pyqtgraph import debug
 from pyqtgraph import Point
+
+
+class ComposableItemImageView(ImageView):
+    """
+    Used to compose together different image view mixins that may use different ItemImage subclasses.
+    See LogScaleIntensity, LogScaleImageItem, ImageViewHistogramOverflowFIx, ImageItemHistorgramOverflowFix.
+    Note that any imageItem named argument passed into the ImageView mixins above will discard the item and instead
+    create a composition of imageItem_bases with their respective ImageItem class.
+    """
+    imageItem_bases = tuple()
 
 
 class LogScaleImageItem(ImageItem):
@@ -546,7 +556,8 @@ class LogScaleImageItem(ImageItem):
                 else:
                     lutdtype = np.min_scalar_type(lut.shape[0] - 1)
                     efflut = fn.rescaleData(
-                        ind, scale=(lut.shape[0] - 1) / levdiff, offset=minlev, dtype=lutdtype, clip=(0, lut.shape[0] - 1)
+                        ind, scale=(lut.shape[0] - 1) / levdiff, offset=minlev, dtype=lutdtype,
+                        clip=(0, lut.shape[0] - 1)
                     )
                     efflut = lut[efflut]
 
@@ -569,13 +580,16 @@ class LogScaleImageItem(ImageItem):
         self.qimage = fn.makeQImage(argb, alpha, transpose=False)
 
 
-class LogScaleIntensity(ImageView):
-    def __init__(self, *args, **kwargs):
-        if kwargs.get("imageItem") and not isinstance(kwargs.get("imageItem"), LogScaleImageItem):
-            raise RuntimeError("The imageItem set to a LogScaleIntensity ImageView must be a LogScaleImageItem.")
+class LogScaleIntensity(ComposableItemImageView):
 
-        kwargs["imageItem"] = LogScaleImageItem()
-        super(LogScaleIntensity, self).__init__(*args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        # Composes a new type consisting of any ImageItem types in imageItem_bases with this classes's helper ImageItem
+        # class (LogScaleImageItem)
+        self.imageItem_bases += (LogScaleImageItem,)
+        imageItem = type("DynamicImageItem", tuple(self.imageItem_bases), {})()
+        if "imageItem" in kwargs:
+            del kwargs["imageItem"]
+        super(LogScaleIntensity, self).__init__(imageItem=imageItem, *args, **kwargs)
 
         self.logScale = True
 
@@ -628,8 +642,8 @@ class CatalogView(ImageView):
         self.catalog = catalog
         self.stream = stream
         self.field = field
-        if all(self.catalog, self.stream, self.field):
-            self.xarray = getattr(self.catalog, self.stream)[self.field]
+        if all([self.catalog, self.stream, self.field]):
+            self.xarray = MetaXArray(getattr(self.catalog, self.stream).to_dask()[self.field])
             self.setImage(img=self.xarray, *args, **kwargs)
         else:
             # TODO -- clear the current image
@@ -643,3 +657,62 @@ class CatalogView(ImageView):
         # TODO -- figure out where to put the geometry update
         if QSpace in inspect.getmro(type(self)):
             self.setGeometry(pluginmanager.getPluginByName('xicam.SAXS.calibration', 'SettingsPlugin').plugin_object.AI(field))
+
+
+class ImageItemHistogramOverflowFix(ImageItem):
+    def getHistogram(self, bins='auto', step='auto', targetImageSize=200, targetHistogramSize=500, **kwds):
+        """Returns x and y arrays containing the histogram values for the current image.
+                For an explanation of the return format, see numpy.histogram().
+
+                The *step* argument causes pixels to be skipped when computing the histogram to save time.
+                If *step* is 'auto', then a step is chosen such that the analyzed data has
+                dimensions roughly *targetImageSize* for each axis.
+
+                The *bins* argument and any extra keyword arguments are passed to
+                np.histogram(). If *bins* is 'auto', then a bin number is automatically
+                chosen based on the image characteristics:
+
+                * Integer images will have approximately *targetHistogramSize* bins,
+                  with each bin having an integer width.
+                * All other types will have *targetHistogramSize* bins.
+
+                This method is also used when automatically computing levels.
+                """
+        if self.image is None:
+            return None, None
+        if step == 'auto':
+            step = (int(np.ceil(self.image.shape[0] / targetImageSize)),
+                    int(np.ceil(self.image.shape[1] / targetImageSize)))
+        if np.isscalar(step):
+            step = (step, step)
+        stepData = self.image[::step[0], ::step[1]]
+
+        if bins == 'auto':
+            if stepData.dtype.kind in "ui":
+                mn = stepData.min()
+                mx = stepData.max()
+                # print(f"\n*** mx, mn: {mx}, {mn} ({type(mx)}, {type(mn)})***\n")
+                # PATCH -- explicit subtract with np.int to avoid overflow
+                step = np.ceil(np.subtract(mx, mn, dtype=np.int) / 500.)
+                bins = np.arange(mn, mx + 1.01 * step, step, dtype=np.int)
+                if len(bins) == 0:
+                    bins = [mn, mx]
+            else:
+                bins = 500
+
+        kwds['bins'] = bins
+        stepData = stepData[np.isfinite(stepData)]
+        hist = np.histogram(stepData, **kwds)
+
+        return hist[1][:-1], hist[0]
+
+
+class ImageViewHistogramOverflowFix(ComposableItemImageView):
+    def __init__(self, *args, **kwargs):
+        self.imageItem_bases += (ImageItemHistogramOverflowFix,)
+        # Create a dynamic image item type, composing existing ImageItem classes with this classes's appropriate
+        # ImageItem class (ImageItemHistogramOverflowFix)
+        imageItem = type("DynamicImageItem", tuple(self.imageItem_bases), {})()
+        if "imageItem" in kwargs:
+            del kwargs["imageItem"]
+        super(ImageViewHistogramOverflowFix, self).__init__(imageItem=imageItem, *args, **kwargs)
