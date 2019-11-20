@@ -1,24 +1,57 @@
-from pyqtgraph import ROI, PolyLineROI, Point
+from pyqtgraph import ROI, PolyLineROI
 from pyqtgraph.graphicsItems.ROI import Handle
 from qtpy.QtCore import QRectF, QPointF, Qt
 from qtpy.QtGui import QPen, QColor, QPainter, QPainterPath, QVector2D, QTransform, QBrush
 import numpy as np
+from itertools import count
+
+from xicam.plugins import ProcessingPlugin, Input, Output
+from pyqtgraph.parametertree import Parameter, parameterTypes
+
+
+class ROIProcessingPlugin(ProcessingPlugin):
+    data = Input()
+    image = Input()
+    roi = Output()
+    region = Output()
+
+    def __init__(self, ROI: ROI):
+        super(ROIProcessingPlugin, self).__init__()
+        self.ROI = ROI
+        self._param = None  # type: Parameter
+
+        self.name = f"ROI #{self.ROI.index}"
+
+    def evaluate(self):
+        self.region.value = self.ROI.getArrayRegion(self.data.value, self.image.value)
+        self.roi.value = self.region.value.astype(np.bool)
+
+    @property
+    def parameter(self):
+        if not self._param:
+            self._param = self.ROI.parameter()
+        return self._param
+
+
+class WorkflowableROI(ROI):
+
+    def __init__(self, *args, **kwargs):
+        super(WorkflowableROI, self).__init__(*args, **kwargs)
+        self.process = ROIProcessingPlugin(self)
+
+    def parameter(self) -> Parameter:
+        raise NotImplementedError
 
 
 # MIXIN!~
 # Now with 100% more ROI!
-class BetterROI(ROI):
-    roi_count = 0
+class BetterROI(WorkflowableROI):
+    roi_count = count(0)
     index = None
-
-    def __new__(cls, *args, **kwargs):
-        BetterROI.roi_count += 1
-        instance = ROI.__new__(cls, *args, **kwargs)
-        instance.index = cls.roi_count
-        return instance
 
     def __init__(self, *args, **kwargs):
         super(BetterROI, self).__init__(*args, **kwargs)
+        self.index = next(self.roi_count)
         self._restyle()
 
     def _restyle(self):
@@ -27,14 +60,13 @@ class BetterROI(ROI):
         for handledict in self.handles:  # type: dict
             handle = handledict["item"]  # type: Handle
             handle.radius = handle.radius * 2
-            handle.pen.setWidth(2)
             handle.buildPath()
 
 
 class BetterPolyLineROI(BetterROI, PolyLineROI):
     def __repr__(self):
         return f"ROI #{self.index}"
-      
+
 
 class QCircRectF(QRectF):
     def __init__(self, center=(0., 0.), radius=1., rect=None):
@@ -105,12 +137,14 @@ class ArcROI(BetterROI):
         self.innerradius = .5 * radius
         self.outerradius = radius
         self.thetawidth = 120.
+        self.thetacenter = 90.
 
         self.innerhandle = self.addFreeHandle([0., self.innerradius / self.outerradius], [0, 0])
         self.outerhandle = self.addFreeHandle([0., 1], [0, 0])
         self.widthhandle = self.addFreeHandle(np.array([-.433 * 2, .25 * 2]))
 
         self.path = None
+        self._param = None  # type: Parameter
         self._restyle()
 
     def boundingRect(self):
@@ -124,22 +158,28 @@ class ArcROI(BetterROI):
         if handle in [self.innerhandle, self.outerhandle]:
             self.innerradius = self.innerhandle.pos().length()
             self.outerradius = self.outerhandle.pos().length()
+            self.thetacenter = self.outerhandle.pos().angle(Point(1, 0))
 
         elif handle is self.widthhandle:
             self.thetawidth = 2 * self.widthhandle.pos().angle(self.innerhandle.pos())
 
+        self.handleChanged()
+
     def paint(self, p, opt, widget):
 
         # Enforce constraints on handles
-        r2 = self.outerhandle.pos().norm()
-        l = min(self.outerhandle.pos().length(), self.innerhandle.pos().length())
-        self.innerhandle.setPos(
-            r2 * l)  # constrain innerhandle to be parallel to outerhandle, and shorter than outerhandle
-        widthangle = np.radians(self.thetawidth / 2 + self.outerhandle.pos().angle(Point(1, 0)))
+        r2 = Point(np.cos(np.radians(self.thetacenter)),
+                   np.sin(np.radians(self.thetacenter)))  # chi center direction vector
+        # constrain innerhandle to be parallel to outerhandle, and shorter than outerhandle
+        self.innerhandle.setPos(r2 * self.innerradius)
         # constrain widthhandle to be counter-clockwise from innerhandle
-        widthv = Point(np.cos(widthangle), np.sin(widthangle)) if self.thetawidth > 0 else self.innerhandle.pos().norm()
+        widthangle = np.radians(self.thetawidth / 2 + self.thetacenter)
+        widthv = Point(np.cos(widthangle), np.sin(widthangle)) if self.thetawidth > 0 else r2
         # constrain widthhandle to half way between inner and outerhandles
-        self.widthhandle.setPos(widthv * (self.innerhandle.pos() + self.outerhandle.pos()).length() / 2)
+        self.widthhandle.setPos(widthv * (self.innerradius + self.outerradius) / 2)
+        # constrain handles to base values
+        self.outerhandle.setPos(r2 * self.outerradius)
+
 
         pen = self.currentPen
         pen.setColor(QColor(0, 255, 255))
@@ -228,6 +268,34 @@ class ArcROI(BetterROI):
         path.lineTo(-1. * self.widthhandle.pos() + 2 * self.widthhandle.pos().dot(r1v) * r1v)
         return path
 
+    def parameter(self):
+        if not self._param:
+            self._param = parameterTypes.GroupParameter(name='Arc ROI', children=[
+                parameterTypes.SimpleParameter(title='Q Minimum', name='innerradius', value=self.innerradius,
+                                               type='float', units='Å⁻¹'),
+                parameterTypes.SimpleParameter(title='Q Maximum', name='outerradius', value=self.outerradius,
+                                               type='float', units='Å⁻¹'),
+                parameterTypes.SimpleParameter(title='χ Width', name='thetawidth', value=self.thetawidth, type='float',
+                                               units='°'),
+                parameterTypes.SimpleParameter(title='χ Center', name='thetacenter', value=self.thetacenter,
+                                               type='float', siSuffix='°')
+            ])
+
+            self._param.sigTreeStateChanged.connect(self.valueChanged)
+
+        return self._param
+
+    def valueChanged(self, sender, changes):
+        for change in changes:
+            setattr(self, change[0].name(), change[2])
+        self.stateChanged()
+
+    def handleChanged(self):
+        self.parameter().child('innerradius').setValue(self.innerradius)
+        self.parameter().child('outerradius').setValue(self.outerradius)
+        self.parameter().child('thetawidth').setValue(self.thetawidth)
+        self.parameter().child('thetacenter').setValue(self.thetacenter)
+        
 
 if __name__ == '__main__':
     from qtpy.QtWidgets import QApplication
