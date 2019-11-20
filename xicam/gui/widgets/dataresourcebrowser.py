@@ -311,6 +311,7 @@ class DataResourceBrowser(QWidget):
         databrowser.sigPreview.connect(self.sigPreview)
         databrowser.closable = closable
         tab = self.browsertabwidget.addTab(databrowser, text)
+        self.browsertabwidget.setCurrentIndex(tab)
         # self.browsertabbar.addTab(text)
         if closable is False:
             try:
