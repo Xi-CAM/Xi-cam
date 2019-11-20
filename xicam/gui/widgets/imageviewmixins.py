@@ -16,7 +16,6 @@ import enum
 from xicam.plugins import manager as pluginmanager
 import inspect
 
-# from pyFAI import AzimuthalIntegrator
 
 
 # NOTE: PyQt widget mixins have pitfalls; note #2 here: http://trevorius.com/scrapbook/python/pyqt-multiple-inheritance/
@@ -643,7 +642,11 @@ class CatalogView(ImageView):
         self.stream = stream
         self.field = field
         if all([self.catalog, self.stream, self.field]):
-            self.xarray = MetaXArray(getattr(self.catalog, self.stream).to_dask()[self.field])
+            eventStream = getattr(self.catalog, self.stream).to_dask()[self.field]
+            # Trim off event dimension (so transpose works)
+            if eventStream.ndim > 3:
+                eventStream = eventStream[0]
+            self.xarray = MetaXArray(eventStream)
             self.setImage(img=self.xarray, *args, **kwargs)
         else:
             # TODO -- clear the current image
