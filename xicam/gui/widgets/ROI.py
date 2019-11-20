@@ -1,4 +1,4 @@
-from pyqtgraph import ROI, PolyLineROI
+from pyqtgraph import ROI, PolyLineROI, Point
 from pyqtgraph.graphicsItems.ROI import Handle
 from qtpy.QtCore import QRectF, QPointF, Qt
 from qtpy.QtGui import QPen, QColor, QPainter, QPainterPath, QVector2D, QTransform, QBrush
