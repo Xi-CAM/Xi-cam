@@ -30,7 +30,7 @@ class WorkflowEditor(QSplitter):
 
         self.workflowview.sigShowParameter.connect(lambda parameter: self.setParameters(parameter))
 
-        workflow.attach(partial(self.sigWorkflowChanged.emit, workflow))
+        workflow.attach(self.sigWorkflowChanged.emit)
 
     def setParameters(self, parameter: Parameter):
 
