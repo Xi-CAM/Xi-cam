@@ -152,8 +152,8 @@ def notifyMessage(*args, timeout=8000, title="", level: int = INFO):
             icon = trayicon.Critical
         if icon is None:
             raise ValueError("Invalid message level.")
-        trayicon.show()
         from .. import threads  # must be a late import
+        threads.invoke_in_main_thread(trayicon.show)
 
         threads.invoke_in_main_thread(trayicon.showMessage, title, "".join(args), icon, timeout)
         threads.invoke_in_main_thread(lambda *_: QTimer.singleShot(timeout, trayicon.hide))
