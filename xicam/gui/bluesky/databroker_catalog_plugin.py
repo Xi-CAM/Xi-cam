@@ -14,8 +14,6 @@ import logging
 
 from xicam.gui.bluesky.central import CentralWidget
 
-# from bluesky_browser.frameworks.qt.main import CentralWidget
-
 logger = logging.getLogger('BlueskyPlugin')
 
 
