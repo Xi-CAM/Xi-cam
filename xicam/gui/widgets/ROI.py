@@ -1,5 +1,5 @@
 from pyqtgraph import ROI, PolyLineROI, Point
-from pyqtgraph.graphicsItems.ROI import Handle
+from pyqtgraph.graphicsItems.ROI import Handle, RectROI
 from qtpy.QtCore import QRectF, QPointF, Qt
 from qtpy.QtGui import QPen, QColor, QPainter, QPainterPath, QVector2D, QTransform, QBrush
 import numpy as np
@@ -7,6 +7,7 @@ from itertools import count
 
 from xicam.plugins import ProcessingPlugin, Input, Output
 from pyqtgraph.parametertree import Parameter, parameterTypes
+import pyqtgraph as pg
 
 
 class ROIProcessingPlugin(ProcessingPlugin):
@@ -38,6 +39,7 @@ class WorkflowableROI(ROI):
     def __init__(self, *args, **kwargs):
         super(WorkflowableROI, self).__init__(*args, **kwargs)
         self.process = ROIProcessingPlugin(self)
+        self._param = None
 
     def parameter(self) -> Parameter:
         raise NotImplementedError
@@ -60,7 +62,23 @@ class BetterROI(WorkflowableROI):
         for handledict in self.handles:  # type: dict
             handle = handledict["item"]  # type: Handle
             handle.radius = handle.radius * 2
+            handle.pen.setWidth(2)
             handle.buildPath()
+
+    def hoverEvent(self, ev):
+        hover = False
+        if not ev.isExit():
+            if ev.acceptDrags(Qt.LeftButton):
+                hover = True
+            for btn in [Qt.LeftButton, Qt.RightButton, Qt.MidButton]:
+                if int(self.acceptedMouseButtons() & btn) > 0 and ev.acceptClicks(btn):
+                    hover = True
+
+        if hover:
+            self.currentPen = pg.mkPen(255, 255, 0, width=2)
+        else:
+            self.currentPen = self.pen
+        self.update()
 
 
 class BetterPolyLineROI(BetterROI, PolyLineROI):
@@ -295,7 +313,115 @@ class ArcROI(BetterROI):
         self.parameter().child('outerradius').setValue(self.outerradius)
         self.parameter().child('thetawidth').setValue(self.thetawidth)
         self.parameter().child('thetacenter').setValue(self.thetacenter)
-        
+
+
+class RectROI(BetterROI, RectROI):
+    def __init__(self, *args, pen=pg.mkPen(QColor(0, 255, 255)), **kwargs):
+        super(RectROI, self).__init__(*args, pen=pen, **kwargs)
+        self.handle = self.handles[0]
+
+    def movePoint(self, handle, pos, modifiers=Qt.KeyboardModifier(), finish=True, coords='parent'):
+        super(RectROI, self).movePoint(handle, pos, modifiers, finish, coords)
+
+        self.width = self.handle['pos'].x() * self.size().x()
+        self.height = self.handle['pos'].y() * self.size().y()
+
+        self.handleChanged()
+
+    def parameter(self) -> Parameter:
+        if not self._param:
+            self._param = parameterTypes.GroupParameter(name='Rectangular ROI', children=[
+                parameterTypes.SimpleParameter(title='Width', name='width', value=self.width,
+                                               type='float', units='px'),
+                parameterTypes.SimpleParameter(title='Height', name='height', value=self.height,
+                                               type='float', units='px'),
+            ])
+
+            self._param.sigTreeStateChanged.connect(self.valueChanged)
+
+        return self._param
+
+    def valueChanged(self, sender, changes):
+        for change in changes:
+            setattr(self, change[0].name(), change[2])
+        self.stateChanged()
+
+    def handleChanged(self):
+        self.parameter().child('width').setValue(self.width)
+        self.parameter().child('height').setValue(self.height)
+
+
+class SegmentedRectROI(RectROI):
+    def __init__(self, *args, **kwargs):
+        self.segments_h = 2
+        self.segments_v = 2
+        super(SegmentedRectROI, self).__init__(*args, **kwargs)
+
+    def parameter(self) -> Parameter:
+        if not self._param:
+            self._param = parameterTypes.GroupParameter(name='Rectangular ROI', children=[
+                parameterTypes.SimpleParameter(title='Width', name='width', value=self.width,
+                                               type='float', units='px'),
+                parameterTypes.SimpleParameter(title='Height', name='height', value=self.height,
+                                               type='float', units='px'),
+                parameterTypes.SimpleParameter(title='Horizontal Segments', name='segments_h', value=self.segments_h,
+                                               type='int'),
+                parameterTypes.SimpleParameter(title='Vertical Segments', name='segments_v', value=self.segments_v,
+                                               type='int')
+            ])
+
+            self._param.sigTreeStateChanged.connect(self.valueChanged)
+
+        return self._param
+
+    def getLabelArray(self, arr, img=None):
+        """
+        Return the result of ROI.getArrayRegion() masked by the arc shape
+        of the ROI. Regions outside the arc are set to 0.
+        """
+        w, h = arr.shape
+
+        min_x = self.pos().x()
+        min_y = self.pos().y()
+        max_x = self.size().x() + min_x
+        max_y = self.size().y() + min_y
+        segment_bin_x = (max_x - min_x) / self.segments_h
+        segment_bin_y = (max_y - min_y) / self.segments_v
+
+        mask = np.zeros_like(arr)
+
+        for i in range(self.segments_h):
+            for j in range(self.segments_v):
+                # generate an square max
+                label_mask = np.fromfunction(lambda x, y: (x + .5 > min_x + i * segment_bin_x) &
+                                                          (x + .5 < min_x + (i + 1) * segment_bin_x) &
+                                                          (y + .5 > min_y + j * segment_bin_y) &
+                                                          (y + .5 < min_y + (j + 1) * segment_bin_y), (w, h))
+                mask[label_mask] = 1 + i + j * self.segments_h
+
+        return mask
+
+    def paint(self, p, opt, widget):
+        super(SegmentedRectROI, self).paint(p, opt, widget)
+
+        min_x = self.pos().x()
+        min_y = self.pos().y()
+        max_x = self.size().x() + min_x
+        max_y = self.size().y() + min_y
+        segment_bin_x = (max_x - min_x) / self.segments_h
+        segment_bin_y = (max_y - min_y) / self.segments_v
+
+        self.currentPen.setStyle(Qt.DashLine)
+        p.setPen(self.currentPen)
+
+        for i in range(1, self.segments_h):
+            p.drawLine(QPointF(1. / self.segments_h * i, 0), QPointF(1 / self.segments_h * i, 1))
+
+        for j in range(1, self.segments_v):
+            p.drawLine(QPointF(0, 1 / self.segments_v * j), QPointF(1, 1 / self.segments_v * j))
+
+        self.currentPen.setStyle(Qt.SolidLine)
+
 
 if __name__ == '__main__':
     from qtpy.QtWidgets import QApplication
@@ -308,7 +434,8 @@ if __name__ == '__main__':
     data = np.random.random((10, 10))
     imageview.setImage(data)
 
-    roi = ArcROI(center=(5, 5), radius=5)
+    # roi = ArcROI(center=(5, 5), radius=5)
+    roi = SegmentedRectROI(pos=(0, 0), size=(10, 10))
     imageview.view.addItem(roi)
 
     imageview2 = pg.ImageView()
@@ -316,7 +443,7 @@ if __name__ == '__main__':
 
 
     def showroi(*_, **__):
-        imageview2.setImage(roi.getArrayRegion(data))
+        imageview2.setImage(roi.getLabelArray(data, imageview.imageItem))
 
 
     roi.sigRegionChanged.connect(showroi)
