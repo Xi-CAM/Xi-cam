@@ -34,6 +34,9 @@ def detect_mimetype(filename):
     """
     # First rely on custom "sniffers" that can employ file signatures (magic
     # numbers) or any other format-specific tricks to extract a mimetype.
+    if Path(filename).is_dir():
+        return None  # TODO: do directories have mime-type?
+
     with open(filename, 'rb') as file:
         # The choice of 64 bytes is arbitrary. We may increase this in the
         # future if we discover reason to. Therefore, sniffers should not
@@ -125,13 +128,17 @@ def load_header(uris: List[Union[str, Path]] = None, uuid: str = None):
     try:
         mimetype = detect_mimetype(filename)
     except UnknownFileType as e:
-        warn(f"{e}")
-        # TODO -- handle mimetypes appropriately
-        mimetype = "application/edf"
+        msg.logMessage(f"{e}", msg.WARNING)
+    else:
+        msg.logMessage(f'Mimetype detected: {mimetype}')
+
     try:
         ingestor = choose_ingestor(filename, mimetype)
     except NoIngestor as e:
         warn(f"{e}. Falling-back to DataHandlers")
+    else:
+        msg.logMessage(f'Ingestor selected: {ingestor}')
+
     if ingestor:
         document = list(ingestor(uris))
         uid = document[0][1]["uid"]
@@ -149,6 +156,7 @@ def load_header(uris: List[Union[str, Path]] = None, uuid: str = None):
     if not handlercandidates:
         return NonDBHeader({}, [], [], {})
     # try:
+    msg.logMessage(f'Handler selected: {handlercandidates[0]}')
     return NonDBHeader(**handlercandidates[0].plugin_object.ingest(uris))
     # except (IsADirectoryError, TypeError):
     #     # TODO: add Header ingestor for directory
