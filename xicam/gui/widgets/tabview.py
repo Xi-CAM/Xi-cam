@@ -80,7 +80,8 @@ class TabView(QTabWidget):
                 itemdata = self.catalogmodel.item(i).data(Qt.UserRole)
 
             if self.widget(i):
-                if self.widget(i).catalog == itemdata:
+                if (hasattr(self.widget(i), 'catalog') and self.widget(i).catalog == itemdata) or \
+                        (hasattr(self.widget(i), 'header') and self.widget(i).header == itemdata):
                     continue
             try:
                 newwidget = self.widgetcls(itemdata, stream=self.stream, field=self.field, **self.kwargs)
@@ -108,10 +109,10 @@ class TabView(QTabWidget):
         self.widgetcls = cls
 
     def currentCatalog(self):
-        return self.catalogmodel.item(self.currentIndex())
+        return self.catalogmodel.item(self.currentIndex()).data(Qt.UserRole)
 
     def currentHeader(self):
-        self.currentCatalog()
+        return self.catalogmodel.item(self.currentIndex()).header
         warn(DeprecationWarning())
 
     def closeTab(self, i):
