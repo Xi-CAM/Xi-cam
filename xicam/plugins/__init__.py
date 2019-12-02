@@ -13,6 +13,7 @@ from yapsy.PluginManager import PluginManager
 import xicam
 from xicam.core import msg
 from xicam.core import threads
+from xicam.args import args
 
 from .datahandlerplugin import DataHandlerPlugin
 from .catalogplugin import CatalogPlugin
@@ -89,7 +90,7 @@ class XicamPluginManager(PluginManager):
             )
 
         self.blacklist = []
-        if "--no-cammart" in sys.argv:
+        if args.nocammart:
             self.blacklist.extend(['cammart', 'venvs'])
 
         self.setCategoriesFilter(categoriesfilter)
