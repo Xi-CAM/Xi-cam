@@ -6,6 +6,7 @@ from qtpy.QtGui import QMovie, QPixmap
 from qtpy.QtWidgets import QSplashScreen, QApplication, QMainWindow
 
 from xicam.gui import static
+from xicam.args import args
 
 
 class XicamSplashScreen(QSplashScreen):
@@ -42,15 +43,15 @@ class XicamSplashScreen(QSplashScreen):
         self.timer = QTimer(self)
         self.mainwindow = mainwindow
 
-        # Start splashing
-        self.setAttribute(Qt.WA_DeleteOnClose)
-        self.show()
-        self.raise_()
-        self.activateWindow()
-        QApplication.instance().setActiveWindow(self)
-        if "--nosplash" in sys.argv:
+        if args.nosplash:
             self.execlaunch()
         else:
+            # Start splashing
+            self.setAttribute(Qt.WA_DeleteOnClose)
+            self.show()
+            self.raise_()
+            self.activateWindow()
+            QApplication.instance().setActiveWindow(self)
             # Setup timed triggers for launching the QMainWindow
             self.timer.singleShot(self.minsplashtime, self.launchwindow)
 
