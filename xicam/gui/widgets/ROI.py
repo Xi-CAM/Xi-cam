@@ -5,7 +5,7 @@ from qtpy.QtGui import QPen, QColor, QPainter, QPainterPath, QVector2D, QTransfo
 import numpy as np
 from itertools import count
 
-from xicam.plugins import ProcessingPlugin, Input, Output
+from xicam.plugins import ProcessingPlugin, Input, Output, InputOutput
 from pyqtgraph.parametertree import Parameter, parameterTypes
 
 
@@ -31,6 +31,13 @@ class ROIProcessingPlugin(ProcessingPlugin):
         if not self._param:
             self._param = self.ROI.parameter()
         return self._param
+
+
+class LabelArrayProcessingPlugin(ProcessingPlugin):
+    roi = InputOutput()
+
+    def evaluate(self):
+        self.roi.value = self.roi.value
 
 
 class WorkflowableROI(ROI):
