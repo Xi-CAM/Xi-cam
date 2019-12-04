@@ -104,7 +104,6 @@ class VerticalROI(Hint):
         return f"{self.parent.name} Vertical ROI"
 
 
-
 class ButtonHint(Hint):
     # TODO -- activated should not be a Var
     targetattribute = "value"
@@ -152,9 +151,8 @@ class ImageHint(Hint):
     canvas_cls = pg.ImageView
     ref_count = count(0)
 
-    def __init__(self, image, name=None, xlabel: str = None, ylabel: str = None, transform=None, z: int = None, **kwargs):
-        if kwargs.get("name"):
-            self._name = kwargs["name"]
+    def __init__(self, image, name="", xlabel: str = None, ylabel: str = None, transform=None, z: int = None, **kwargs):
+        self._name = name
         super(ImageHint, self).__init__()
         next(self.ref_count)
         self.image = image
@@ -164,7 +162,6 @@ class ImageHint(Hint):
         self.z = z
         self.kwargs = kwargs
         self.enabled = False
-        self._name = name
         self.canvas = None
 
     def init_canvas(self):
@@ -197,7 +194,7 @@ class CoPlotHint(Hint):
         if kwargs.get("name"):
             self._name = kwargs["name"]
         super(CoPlotHint, self).__init__()
-        self.plothints = plothints  # type: List[PlotHint]
+        self.plothints = [*plothints]  # type: List[PlotHint]
         self.kwargs = kwargs
         self.canvas = None
 
@@ -207,7 +204,13 @@ class CoPlotHint(Hint):
             self._name = f"Plot of " + ", ".join([hint.name for hint in self.plothints])
         return self._name
 
+    def remove(self):
+        for plothint in self.plothints:
+            plothint.remove()
+
     def visualize(self, canvas):
         self.canvas = canvas
         for plothint in self.plothints:
-            self.canvas.plot(plothint.x, plothint.y, **{**plothint.kwargs, **self.kwargs})
+            # TODO: should this rely on the contained plothints' visualize? or should we directly plot on the canvas?
+            plothint.visualize(self.canvas)
+            # self.canvas.plot(plothint.x, plothint.y, **{**plothint.kwargs, **self.kwargs})
