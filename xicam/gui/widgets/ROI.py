@@ -64,7 +64,9 @@ class BetterROI(WorkflowableROI):
     index = None
 
     def __init__(self, *args, **kwargs):
-        super(BetterROI, self).__init__(*args, removable=True, **kwargs)
+        # BetterROI removable by default
+        kwargs["removable"] = kwargs.get("removable", True)
+        super(BetterROI, self).__init__(*args, **kwargs)
         self.index = next(self.roi_count)
         self._restyle()
         self.sigRemoveRequested.connect(lambda roi: self._viewBox().removeItem(roi))
@@ -155,7 +157,7 @@ class ArcROI(BetterROI):
     def __init__(self, center, radius, **kwargs):
         # QtGui.QGraphicsRectItem.__init__(self, 0, 0, size[0], size[1])
         r = QCircRectF(center, radius)
-        super(ArcROI, self).__init__(r.center, radius, removable=True, **kwargs)
+        super(ArcROI, self).__init__(r.center, radius, **kwargs)
         # self.addRotateHandle([1.0, 0.5], [0.5, 0.5])
         # self.addScaleHandle([0.5*2.**-0.5 + 0.5, 0.5*2.**-0.5 + 0.5], [0.5, 0.5])
 
