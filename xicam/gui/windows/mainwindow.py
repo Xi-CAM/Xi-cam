@@ -117,7 +117,7 @@ class XicamMainWindow(QMainWindow):
     def open(self, header):
         if self.currentGUIPlugin is None:
             return
-        if isinstance(header, BlueskyRun):
+        if isinstance(header, (Catalog, CatalogEntry)):
             self.currentGUIPlugin.appendCatalog(header)
         else:
             self.currentGUIPlugin.appendHeader(header)

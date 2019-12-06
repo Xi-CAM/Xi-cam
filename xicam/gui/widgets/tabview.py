@@ -12,6 +12,7 @@ class TabView(QTabWidget):
         headermodel: QStandardItemModel = None,
         selectionmodel: QItemSelectionModel = None,
         widgetcls=None,
+        stream=None,
         field=None,
         bindings: List[tuple] = [],
         **kwargs,
@@ -22,6 +23,7 @@ class TabView(QTabWidget):
         ----------
         model
         widgetcls
+        stream
         field
         bindings
             A list of tuples with pairs of bindings, s.t. the one item is the name of the attribute on widget cls holding a
@@ -40,6 +42,7 @@ class TabView(QTabWidget):
 
         if headermodel:
             self.setHeaderModel(headermodel)
+        self.stream = stream
         self.field = field
         self.bindings = bindings
 
@@ -65,22 +68,27 @@ class TabView(QTabWidget):
 
     def dataChanged(self, start, end):
         for i in range(self.headermodel.rowCount()):
+            itemdata = None
+            if hasattr(self.headermodel.item(i), "header"):
+                itemdata = self.headermodel.item(i).header
+            else:
+                itemdata = self.headermodel.item(i).data(Qt.UserRole)
 
             if self.widget(i):
-                if self.widget(i).header == self.headermodel.item(i).header:
+                if self.widget(i).header == itemdata:
                     continue
             try:
-                newwidget = self.widgetcls(self.headermodel.item(i).header, self.field, **self.kwargs)
+                newwidget = self.widgetcls(itemdata, self.stream, self.field, **self.kwargs)
             except Exception as ex:
                 msg.logMessage(
-                    f"A widget of type {self.widgetcls} could not be initialized with args: {self.headermodel.item(i).header, self.field, self.kwargs}"
+                    f"A widget of type {self.widgetcls} could not be initialized with args: {itemdata, self.stream, self.field, self.kwargs}"
                 )
                 msg.logError(ex)
                 self.headermodel.removeRow(i)
                 self.dataChanged(0, 0)
                 return
 
-            self.setCurrentIndex(self.insertTab(i, newwidget, self.headermodel.item(i).text()))
+            self.setCurrentIndex(self.insertTab(i, newwidget, itemdata.text()))
             for sender, receiver in self.bindings:
                 if isinstance(sender, str):
                     sender = getattr(newwidget, sender)
