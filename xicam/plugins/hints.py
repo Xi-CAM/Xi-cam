@@ -1,11 +1,13 @@
 from .processingplugin import Var, Input, ProcessingPlugin
 from typing import Dict, List
 import copy
+from itertools import count
 
 import numpy as np
 import pyqtgraph as pg
+from qtpy.QtGui import QTransform
 
-from itertools import count
+from xicam.gui.widgets.dynimageview import DynImageView
 
 
 class Hint(object):
@@ -38,7 +40,7 @@ class Hint(object):
 class PlotHint(Hint):
     canvas_cls = pg.PlotWidget
 
-    def __init__(self, x: np.ndarray, y: np.ndarray, **kwargs):
+    def __init__(self, x: np.ndarray, y: np.ndarray, xLog: bool = False, yLog: bool = False, **kwargs):
         super(PlotHint, self).__init__()
         if kwargs.get("name"):
             self._name = kwargs["name"]
@@ -47,6 +49,8 @@ class PlotHint(Hint):
         self.kwargs = kwargs
         self.item = None
         self.canvas = None
+        self.xLog = xLog
+        self.yLog = yLog
 
     @property
     def name(self):
@@ -61,6 +65,7 @@ class PlotHint(Hint):
 
     def visualize(self, canvas):
         self.item = canvas.plot(self.x, self.y, **self.kwargs)
+        self.item.setLogMode(xMode=self.xLog, yMode=self.yLog)
         self.canvas = canvas
 
     def remove(self):
@@ -84,7 +89,6 @@ class VerticalROI(Hint):
 
     def __init__(self, range: Var, **kwargs):
         super(VerticalROI, self).__init__()
-        self.ref_count.next()
         self.range = range
         self.kwargs = kwargs
         self.canvas = None
@@ -148,24 +152,33 @@ class EnableHint(ButtonHint):
 
 
 class ImageHint(Hint):
-    canvas_cls = pg.ImageView
+    # TODO -- change to DynImageView (address quickMinMax when resizing the two-time image)
+    canvas_cls = pg.ImageView #DynImageView
     ref_count = count(0)
 
-    def __init__(self, image, name="", xlabel: str = None, ylabel: str = None, transform=None, z: int = None, **kwargs):
+    def __init__(self, image, name="", invertY=False, xlabel: str = None, ylabel: str = None, transform=None, z: int = None, **kwargs):
         self._name = name
         super(ImageHint, self).__init__()
         self.count = next(self.ref_count)
         self.image = image
+        self.invertY = invertY
         self.xlabel = xlabel
         self.ylabel = ylabel
         self.transform = transform
+        if transform is None:
+            transform = QTransform()
+            transform.translate(0, -1)
+            transform.scale(0, -1)
+            self.transform = transform
         self.z = z
         self.kwargs = kwargs
         self.enabled = False
         self.canvas = None
 
     def init_canvas(self):
-        return self.canvas_cls(view=pg.PlotItem(labels=dict(left=self.xlabel, bottom=self.ylabel)))
+        self.canvas = self.canvas_cls(view=pg.PlotItem(labels=dict(left=self.xlabel, bottom=self.ylabel)))
+        self.canvas.view.invertY(self.invertY)
+        return self.canvas
 
     @property
     def name(self):
