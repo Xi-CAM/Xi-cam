@@ -154,7 +154,7 @@ class ImageHint(Hint):
     def __init__(self, image, name="", xlabel: str = None, ylabel: str = None, transform=None, z: int = None, **kwargs):
         self._name = name
         super(ImageHint, self).__init__()
-        next(self.ref_count)
+        self.count = next(self.ref_count)
         self.image = image
         self.xlabel = xlabel
         self.ylabel = ylabel
@@ -170,7 +170,7 @@ class ImageHint(Hint):
     @property
     def name(self):
         if not self._name:
-            self._name = "Image " + str(self.ref_count)
+            self._name = "Image " + str(self.count)
         return self._name
 
     def visualize(self, canvas):
