@@ -1,7 +1,7 @@
 from pyqtgraph import ROI, PolyLineROI, Point
-from pyqtgraph.graphicsItems.ROI import Handle, RectROI
+from pyqtgraph.graphicsItems.ROI import Handle, RectROI, LineROI
 from qtpy.QtCore import QRectF, QPointF, Qt
-from qtpy.QtGui import QPen, QColor, QPainter, QPainterPath, QVector2D, QTransform, QBrush
+from qtpy.QtGui import QColor, QPainter, QPainterPath, QBrush
 import numpy as np
 from itertools import count
 
@@ -24,6 +24,11 @@ class ROIProcessingPlugin(ProcessingPlugin):
         self.name = f"ROI #{self.ROI.index}"
 
     def evaluate(self):
+        # TODO -- don't need to do scene matching if we are not using ROI.getArrayRegion
+        # Add ROI to same scene as image
+        # (workflow serialization changes the obj refs, they need to be the same for ROI.getArrayRegion)
+        image_scene = self.image.value.scene()
+        image_scene.addItem(self.ROI)
         self.region.value = self.ROI.getArrayRegion(self.data.value, self.image.value)
         self.roi.value = self.region.value.astype(np.bool)
 
@@ -86,6 +91,11 @@ class BetterROI(WorkflowableROI):
         else:
             self.currentPen = self.pen
         self.update()
+
+    def valueChanged(self, sender, changes):
+        for change in changes:
+            setattr(self, change[0].name(), change[2])
+        self.stateChanged()
 
 
 class BetterPolyLineROI(BetterROI, PolyLineROI):
@@ -310,11 +320,6 @@ class ArcROI(BetterROI):
 
         return self._param
 
-    def valueChanged(self, sender, changes):
-        for change in changes:
-            setattr(self, change[0].name(), change[2])
-        self.stateChanged()
-
     def handleChanged(self):
         self.parameter().child('innerradius').setValue(self.innerradius)
         self.parameter().child('outerradius').setValue(self.outerradius)
@@ -348,14 +353,64 @@ class RectROI(BetterROI, RectROI):
 
         return self._param
 
-    def valueChanged(self, sender, changes):
-        for change in changes:
-            setattr(self, change[0].name(), change[2])
-        self.stateChanged()
-
     def handleChanged(self):
         self.parameter().child('width').setValue(self.width)
         self.parameter().child('height').setValue(self.height)
+
+
+class LineROI(BetterROI, LineROI):
+    def __init__(self, *args, pen=pg.mkPen(QColor(0, 255, 255)), **kwargs):
+        super(LineROI, self).__init__(*args, pen=pen, **kwargs)
+        self._update_state()
+
+    def _update_state(self):
+        self.width = self.size().y()
+        self.length = self.size().x()
+        self.rotation = self.angle()
+        self.center_x = self.pos().x()
+        self.center_y = self.pos().y()
+
+    def movePoint(self, handle, pos, modifiers=Qt.KeyboardModifier(), finish=True, coords='parent'):
+        super(LineROI, self).movePoint(handle, pos, modifiers, finish, coords)
+
+        self._update_state()
+        self.handleChanged()
+
+    def mouseDragEvent(self, ev):
+        super(LineROI, self).mouseDragEvent(ev)
+        self._update_state()
+
+    def paint(self, p, opt, widget):
+        self.setSize(QPointF(self.length, self.width))
+        self.setAngle(self.rotation)
+        self.setPos(QPointF(self.center_x, self.center_y))
+        super(LineROI, self).paint(p, opt, widget)
+
+    def parameter(self) -> Parameter:
+        if not self._param:
+            self._param = parameterTypes.GroupParameter(name='Line ROI', children=[
+                parameterTypes.SimpleParameter(title='Center X', name='center_x', value=self.center_x,
+                                               type='float', units='px'),
+                parameterTypes.SimpleParameter(title='Center Y', name='center_y', value=self.center_y,
+                                               type='float', units='px'),
+                parameterTypes.SimpleParameter(title='Rotation Angle', name='rotation', value=self.rotation,
+                                               type='float', units='px'),
+                parameterTypes.SimpleParameter(title='Length', name='length', value=self.length,
+                                               type='float', units='px'),
+                parameterTypes.SimpleParameter(title='Width', name='width', value=self.width,
+                                               type='float', units='px'),
+            ])
+
+            self._param.sigTreeStateChanged.connect(self.valueChanged)
+
+        return self._param
+
+    def handleChanged(self):
+        self.parameter().child('center_x').setValue(self.center_x)
+        self.parameter().child('center_y').setValue(self.center_y)
+        self.parameter().child('rotation').setValue(self.rotation)
+        self.parameter().child('width').setValue(self.width)
+        self.parameter().child('length').setValue(self.length)
 
 
 class SegmentedRectROI(RectROI):
