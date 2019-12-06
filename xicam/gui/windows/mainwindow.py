@@ -8,7 +8,6 @@ from xicam.plugins.guiplugin import PanelState
 from yapsy import PluginInfo
 
 from xicam.plugins import manager as pluginmanager
-from xicam.gui.cammart import venvs
 from xicam.plugins import EntryPointPluginInfo
 from xicam.gui.widgets.debugmenubar import DebuggableMenuBar
 from xicam.core import msg
