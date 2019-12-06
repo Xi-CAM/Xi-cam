@@ -64,9 +64,10 @@ class BetterROI(WorkflowableROI):
     index = None
 
     def __init__(self, *args, **kwargs):
-        super(BetterROI, self).__init__(*args, **kwargs)
+        super(BetterROI, self).__init__(*args, removable=True, **kwargs)
         self.index = next(self.roi_count)
         self._restyle()
+        self.sigRemoveRequested.connect(lambda roi: self._viewBox().removeItem(roi))
 
     def _restyle(self):
         self.currentPen.setWidth(2)
