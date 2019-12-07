@@ -70,7 +70,7 @@ class QThreadFuture(QThread):
     """
 
     sigCallback = Signal()
-    sigFinished = Signal()  # redundant?
+    sigFinished = Signal()
     sigExcept = Signal(Exception)
 
     def __init__(
