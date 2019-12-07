@@ -203,10 +203,10 @@ class DataResourceView(QObject):
 
 
 class DataResourceTree(QTreeView, DataResourceView):
-    sigOpen = Signal(NonDBHeader)
+    sigOpen = Signal(object)
     sigOpenPath = Signal(str)
     sigOpenExternally = Signal(str)
-    sigPreview = Signal(NonDBHeader)
+    sigPreview = Signal(object)
     sigURIChanged = Signal()
 
     def __init__(self, *args):
@@ -218,10 +218,10 @@ class DataResourceTree(QTreeView, DataResourceView):
 
 
 class DataResourceList(QListView, DataResourceView):
-    sigOpen = Signal(NonDBHeader)
+    sigOpen = Signal(object)
     sigOpenPath = Signal(str)
     sigOpenExternally = Signal(str)
-    sigPreview = Signal(NonDBHeader)
+    sigPreview = Signal(object)
     sigURIChanged = Signal()
 
     def refresh(self):

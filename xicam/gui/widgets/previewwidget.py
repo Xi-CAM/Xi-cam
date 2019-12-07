@@ -1,10 +1,11 @@
+from databroker.core import BlueskyRun
+from pyqtgraph import ImageItem, TextItem, GraphicsLayoutWidget
+import numpy as np
 from qtpy.QtCore import QSize
 from qtpy.QtGui import QFont, QTransform
 from qtpy.QtWidgets import QSizePolicy
-from pyqtgraph import ImageItem, TextItem, GraphicsLayoutWidget
-import os
+
 from xicam.core.data import NonDBHeader
-import numpy as np
 
 
 class PreviewWidget(GraphicsLayoutWidget):
@@ -36,6 +37,26 @@ class PreviewWidget(GraphicsLayoutWidget):
 
     def sizeHint(self):
         return QSize(250, 250)
+
+    def preview(self, data):
+        if isinstance(data, NonDBHeader):
+            self.preview_header(data)
+        else:
+            self.preview_catalog(data)
+
+    def preview_catalog(self, catalog: BlueskyRun):
+        try:
+            dask_array = catalog.primary.to_dask()
+            fields = dask_array.keys()
+            # Filter out seq num and uid
+            field = next(field for field in fields if not field in ["seq_num", "uid"])
+            data = dask_array[field]
+            for i in range(len(data.shape) - 2):
+                data = data[0]
+            self.setImage(np.asarray(data.compute()))
+        except IndexError:
+            self.imageitem.clear()
+            self.setText("UNKNOWN DATA FORMAT")
 
     def preview_header(self, header: NonDBHeader):
         try:

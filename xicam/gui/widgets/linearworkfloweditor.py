@@ -30,7 +30,7 @@ class WorkflowEditor(QSplitter):
 
         self.workflowview.sigShowParameter.connect(lambda parameter: self.setParameters(parameter))
 
-        workflow.attach(partial(self.sigWorkflowChanged.emit, workflow))
+        workflow.attach(self.sigWorkflowChanged.emit)
 
     def setParameters(self, parameter: Parameter):
 
@@ -57,25 +57,16 @@ class WorkflowWidget(QWidget):
         self.view = workflowview
 
         self.toolbar = QToolBar()
-        addfunctionmenu = QToolButton()
-        functionmenu = QMenu()
-        sortingDict = {}
-        for plugin in pluginmanager.getPluginsOfCategory("ProcessingPlugin"):
-            typeOfProcessingPlugin = plugin.plugin_object.getCategory()
-            if not typeOfProcessingPlugin in sortingDict.keys():
-                sortingDict[typeOfProcessingPlugin] = []
-            sortingDict[typeOfProcessingPlugin].append(plugin)
-        for key in sortingDict.keys():
-            functionmenu.addSeparator()
-            functionmenu.addAction(key)
-            functionmenu.addSeparator()
-            for plugin in sortingDict[key]:
-                functionmenu.addAction(plugin.name, partial(self.addProcess, plugin.plugin_object, autoconnectall=True))
-        addfunctionmenu.setMenu(functionmenu)
-        addfunctionmenu.setIcon(QIcon(path("icons/addfunction.png")))
-        addfunctionmenu.setText("Add Function")
-        addfunctionmenu.setPopupMode(QToolButton.InstantPopup)
-        self.toolbar.addWidget(addfunctionmenu)
+        self.addfunctionmenu = QToolButton()
+        self.addfunctionmenu.setIcon(QIcon(path("icons/addfunction.png")))
+        self.addfunctionmenu.setText("Add Function")
+        # Defer menu population to once the plugins have been loaded; otherwise, the menu may not contain anything
+        # if this widget is init'd before all plugins have been loaded.
+        self.functionmenu = QMenu()
+        self.functionmenu.aboutToShow.connect(self.populateFunctionMenu)
+        self.addfunctionmenu.setMenu(self.functionmenu)
+        self.addfunctionmenu.setPopupMode(QToolButton.InstantPopup)
+        self.toolbar.addWidget(self.addfunctionmenu)
         # self.toolbar.addAction(QIcon(path('icons/up.png')), 'Move Up')
         # self.toolbar.addAction(QIcon(path('icons/down.png')), 'Move Down')
         self.toolbar.addAction(QIcon(path("icons/folder.png")), "Load Workflow")
@@ -86,6 +77,21 @@ class WorkflowWidget(QWidget):
         v.addWidget(self.toolbar)
         v.setContentsMargins(0, 0, 0, 0)
         self.setLayout(v)
+
+    def populateFunctionMenu(self):
+        self.functionmenu.clear()
+        sortingDict = {}
+        for plugin in pluginmanager.getPluginsOfCategory("ProcessingPlugin"):
+            typeOfProcessingPlugin = plugin.plugin_object.getCategory()
+            if not typeOfProcessingPlugin in sortingDict.keys():
+                sortingDict[typeOfProcessingPlugin] = []
+            sortingDict[typeOfProcessingPlugin].append(plugin)
+        for key in sortingDict.keys():
+            self.functionmenu.addSeparator()
+            self.functionmenu.addAction(key)
+            self.functionmenu.addSeparator()
+            for plugin in sortingDict[key]:
+                self.functionmenu.addAction(plugin.name, partial(self.addProcess, plugin.plugin_object, autoconnectall=True))
 
     def addProcess(self, process, autoconnectall=True):
         self.view.model().workflow.addProcess(process(), autoconnectall)
