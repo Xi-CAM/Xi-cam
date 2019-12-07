@@ -40,7 +40,7 @@ class Hint(object):
 class PlotHint(Hint):
     canvas_cls = pg.PlotWidget
 
-    def __init__(self, x: np.ndarray, y: np.ndarray, xLog: bool = False, yLog: bool = False, **kwargs):
+    def __init__(self, x: np.ndarray, y: np.ndarray, xLog: bool = False, yLog: bool = False, labels=None, **kwargs):
         super(PlotHint, self).__init__()
         if kwargs.get("name"):
             self._name = kwargs["name"]
@@ -51,6 +51,7 @@ class PlotHint(Hint):
         self.canvas = None
         self.xLog = xLog
         self.yLog = yLog
+        self.labels = labels
 
     @property
     def name(self):
@@ -64,8 +65,10 @@ class PlotHint(Hint):
         return self._name
 
     def visualize(self, canvas):
+        plotItem = canvas.plotItem
+        plotItem.setLabels(**(self.labels or {}))
+        plotItem.setLogMode(x=self.xLog, y=self.yLog)
         self.item = canvas.plot(self.x, self.y, **self.kwargs)
-        self.item.setLogMode(xMode=self.xLog, yMode=self.yLog)
         self.canvas = canvas
 
     def remove(self):
@@ -153,7 +156,7 @@ class EnableHint(ButtonHint):
 
 class ImageHint(Hint):
     # TODO -- change to DynImageView (address quickMinMax when resizing the two-time image)
-    canvas_cls = pg.ImageView #DynImageView
+    canvas_cls = DynImageView
     ref_count = count(0)
 
     def __init__(self, image, name="", invertY=False, xlabel: str = None, ylabel: str = None, transform=None, z: int = None, **kwargs):
