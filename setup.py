@@ -65,7 +65,7 @@ setup(
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=["yapsy", "astropy", "signalslot", "virtualenv", "requests", "appdirs", "xicam.core",
-                      "entrypoints"],
+                      "entrypoints", "databroker"],
     setup_requires=[],
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
