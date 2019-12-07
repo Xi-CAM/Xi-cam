@@ -25,6 +25,7 @@ class TabView(QTabWidget):
         ----------
         model
         widgetcls
+        stream
         field
         bindings
             A list of tuples with pairs of bindings, s.t. the one item is the name of the attribute on widget cls holding a
@@ -43,6 +44,7 @@ class TabView(QTabWidget):
 
         if catalogmodel:
             self.setCatalogModel(catalogmodel)
+
         self.stream = stream
         self.field = field
         self.bindings = bindings
@@ -95,6 +97,7 @@ class TabView(QTabWidget):
                 return
 
             self.setCurrentIndex(self.insertTab(i, newwidget, self.catalogmodel.item(i).text()))
+
             for sender, receiver in self.bindings:
                 if isinstance(sender, str):
                     sender = getattr(newwidget, sender)
