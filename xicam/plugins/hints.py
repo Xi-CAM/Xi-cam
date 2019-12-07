@@ -1,11 +1,13 @@
 from .processingplugin import Var, Input, ProcessingPlugin
 from typing import Dict, List
 import copy
+from itertools import count
 
 import numpy as np
 import pyqtgraph as pg
+from qtpy.QtGui import QTransform
 
-from itertools import count
+from xicam.gui.widgets.dynimageview import DynImageView
 
 
 class Hint(object):
@@ -38,7 +40,7 @@ class Hint(object):
 class PlotHint(Hint):
     canvas_cls = pg.PlotWidget
 
-    def __init__(self, x: np.ndarray, y: np.ndarray, **kwargs):
+    def __init__(self, x: np.ndarray, y: np.ndarray, xLog: bool = False, yLog: bool = False, labels=None, **kwargs):
         super(PlotHint, self).__init__()
         if kwargs.get("name"):
             self._name = kwargs["name"]
@@ -47,6 +49,9 @@ class PlotHint(Hint):
         self.kwargs = kwargs
         self.item = None
         self.canvas = None
+        self.xLog = xLog
+        self.yLog = yLog
+        self.labels = labels
 
     @property
     def name(self):
@@ -60,6 +65,9 @@ class PlotHint(Hint):
         return self._name
 
     def visualize(self, canvas):
+        plotItem = canvas.plotItem
+        plotItem.setLabels(**(self.labels or {}))
+        plotItem.setLogMode(x=self.xLog, y=self.yLog)
         self.item = canvas.plot(self.x, self.y, **self.kwargs)
         self.canvas = canvas
 
@@ -84,7 +92,6 @@ class VerticalROI(Hint):
 
     def __init__(self, range: Var, **kwargs):
         super(VerticalROI, self).__init__()
-        self.ref_count.next()
         self.range = range
         self.kwargs = kwargs
         self.canvas = None
@@ -102,7 +109,6 @@ class VerticalROI(Hint):
     @property
     def name(self):
         return f"{self.parent.name} Vertical ROI"
-
 
 
 class ButtonHint(Hint):
@@ -149,31 +155,38 @@ class EnableHint(ButtonHint):
 
 
 class ImageHint(Hint):
-    canvas_cls = pg.ImageView
+    # TODO -- change to DynImageView (address quickMinMax when resizing the two-time image)
+    canvas_cls = DynImageView
     ref_count = count(0)
 
-    def __init__(self, image, name=None, xlabel: str = None, ylabel: str = None, transform=None, z: int = None, **kwargs):
-        if kwargs.get("name"):
-            self._name = kwargs["name"]
+    def __init__(self, image, name="", invertY=False, xlabel: str = None, ylabel: str = None, transform=None, z: int = None, **kwargs):
+        self._name = name
         super(ImageHint, self).__init__()
-        next(self.ref_count)
+        self.count = next(self.ref_count)
         self.image = image
+        self.invertY = invertY
         self.xlabel = xlabel
         self.ylabel = ylabel
         self.transform = transform
+        if transform is None:
+            transform = QTransform()
+            transform.translate(0, -1)
+            transform.scale(0, -1)
+            self.transform = transform
         self.z = z
         self.kwargs = kwargs
         self.enabled = False
-        self._name = name
         self.canvas = None
 
     def init_canvas(self):
-        return self.canvas_cls(view=pg.PlotItem(labels=dict(left=self.xlabel, bottom=self.ylabel)))
+        self.canvas = self.canvas_cls(view=pg.PlotItem(labels=dict(left=self.xlabel, bottom=self.ylabel)))
+        self.canvas.view.invertY(self.invertY)
+        return self.canvas
 
     @property
     def name(self):
         if not self._name:
-            self._name = "Image " + str(self.ref_count)
+            self._name = "Image " + str(self.count)
         return self._name
 
     def visualize(self, canvas):
@@ -197,7 +210,7 @@ class CoPlotHint(Hint):
         if kwargs.get("name"):
             self._name = kwargs["name"]
         super(CoPlotHint, self).__init__()
-        self.plothints = plothints  # type: List[PlotHint]
+        self.plothints = [*plothints]  # type: List[PlotHint]
         self.kwargs = kwargs
         self.canvas = None
 
@@ -207,7 +220,13 @@ class CoPlotHint(Hint):
             self._name = f"Plot of " + ", ".join([hint.name for hint in self.plothints])
         return self._name
 
+    def remove(self):
+        for plothint in self.plothints:
+            plothint.remove()
+
     def visualize(self, canvas):
         self.canvas = canvas
         for plothint in self.plothints:
-            self.canvas.plot(plothint.x, plothint.y, **{**plothint.kwargs, **self.kwargs})
+            # TODO: should this rely on the contained plothints' visualize? or should we directly plot on the canvas?
+            plothint.visualize(self.canvas)
+            # self.canvas.plot(plothint.x, plothint.y, **{**plothint.kwargs, **self.kwargs})

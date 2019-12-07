@@ -3,6 +3,8 @@ from yapsy.IPlugin import IPlugin
 from qtpy.QtWidgets import QListView, QWidget, QVBoxLayout
 from qtpy.QtCore import Signal, QAbstractItemModel, QModelIndex, Qt, QObject
 from intake.catalog.base import Catalog
+from xicam.core import msg
+from collections import OrderedDict
 
 
 # from intake_bluesky.in_memory import SafeLocalCatalogEntry
@@ -11,6 +13,10 @@ from intake.catalog.base import Catalog
 class CatalogModel(QAbstractItemModel):
     """
     This model binds to a Catalog, and represents its contents in a paginated way, configurable by `pagination_size`
+
+    Its expected use is either
+    - uniquely bound to a static Catalog
+    - dynamically rebound to catalogs (i.e. as a datasource is filtered) with `.setCatalog`
     """
 
     pagination_size = 10
@@ -19,7 +25,8 @@ class CatalogModel(QAbstractItemModel):
         self.catalog = catalog
         super(CatalogModel, self).__init__()
 
-        # A cache of just the uids seen by this model
+        # Note: both of these caches are used so that indexing by row is performant
+        # A cache of the RunCatalogs seen by this model
         self._cache = []
 
         # For iterating over the catalog as needed
@@ -42,9 +49,7 @@ class CatalogModel(QAbstractItemModel):
 
     def data(self, index, role=Qt.DisplayRole):
         if role == Qt.DisplayRole:
-            # In the trivial case, this is equivalent to self._cache[index.row()]
-            # This extended version is maintained in case .name is improved/extended
-            return self.catalog[self._cache[index.row()]].name
+            return self._cache[index.row()].name
 
     def canFetchMore(self, parent):
         if parent.isValid():
@@ -58,13 +63,28 @@ class CatalogModel(QAbstractItemModel):
         # prevent fetching more items than the catalog currently has
         to_fetch = min(len(self.catalog) - self._rowcount, self.pagination_size)
 
-        # pre-fetch more uids from the catalog
-        self._cache.extend(itertools.islice(self._run_iterator, to_fetch))
+        # print(f'Fetching next {to_fetch} runs')
+
+        # pre-fetch more uids from the datasource
+        new_uids = itertools.islice(self._run_iterator, to_fetch)
+
+        # fetch more RunCatalogs from the datasource
+        self._cache.extend(self.catalog[uid] for uid in new_uids)
 
         self.beginInsertRows(QModelIndex(), self._rowcount, self._rowcount + to_fetch)
         self._rowcount += to_fetch  # Tell the model it now has more rows
         self.endInsertRows()
 
+    # NOTE: the following methods are expected to be called by an external controller
+
+    def setCatalog(self, catalog):
+        self.catalog = catalog
+        self.reset()
+
+    def reset(self):
+        self._cache = []
+        self._rowcount = 0
+        self._run_iterator = self.catalog.__iter__()
 
 class CatalogController(QWidget):
     # TODO: Make a desicion what we want these signal objects to be
