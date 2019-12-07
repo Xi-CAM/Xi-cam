@@ -1,7 +1,6 @@
 from functools import partial
-import sys
 
-from databroker.core import BlueskyRun
+from intake.catalog import Catalog
 from intake.catalog.entry import CatalogEntry
 
 from qtpy.QtCore import QPropertyAnimation, QPoint, QEasingCurve, Qt, Slot, Signal, QSettings
@@ -118,7 +117,7 @@ class XicamMainWindow(QMainWindow):
         if self.currentGUIPlugin is None:
             msg.notifyMessage("Please select a gui plugin from the top before trying to open an image.")
             return
-        if isinstance(header, (Catalog, CatalogEntry)):
+        if isinstance(header, Catalog):
             self.currentGUIPlugin.appendCatalog(header)
         elif isinstance(header, CatalogEntry):
             self.currentGUIPlugin.appendCatalog(header())
