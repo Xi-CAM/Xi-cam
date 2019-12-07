@@ -2,7 +2,7 @@ import sys
 import os
 import signal
 import trace
-
+from xicam.args import args
 
 print("args:", sys.argv)
 print("path:", sys.path)
@@ -39,7 +39,7 @@ def main():
 
     from xicam.gui.windows import splash
 
-    if "-v" in sys.argv:
+    if args.verbose in sys.argv:
         QErrorMessage.qtHandler()
 
     splash = splash.XicamSplashScreen()
@@ -47,7 +47,7 @@ def main():
 
 
 if __name__ == "__main__":
-    if "-v" in sys.argv:
+    if args.verbose > 1:
         tracer = trace.Trace(count=False, trace=True)
         tracer.run("main()")
     else:
