@@ -1,4 +1,3 @@
-# from intake_bluesky.jsonl import BlueskyJSONLCatalog
 from xicam.plugins import CatalogPlugin
 from qtpy.QtWidgets import QFileDialog
 import os

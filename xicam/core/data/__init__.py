@@ -4,12 +4,101 @@ from typing import Union, List
 from qtpy.QtCore import Signal, QObject
 
 from databroker.utils import ALL
+from databroker.in_memory import BlueskyInMemoryCatalog
 from databroker.core import Header
 from warnings import warn
 
 
 # extension_map = {EDFPlugin: ['edf']}
 
+
+import mimetypes
+import warnings
+
+import entrypoints
+
+
+def ingest_file(filename):
+    """
+    Take in a file name; return a generator that yields (name, doc) pairs.
+    """
+    mimetype = detect_mimetype(filename)
+    ingestor = choose_ingestor(filename, mimetype)
+    generator_instance = ingestor(filename)
+    return generator_instance
+
+
+def detect_mimetype(filename):
+    """
+    Take in a filename; return a mimetype string like 'image/tiff'.
+    """
+    # First rely on custom "sniffers" that can employ file signatures (magic
+    # numbers) or any other format-specific tricks to extract a mimetype.
+    if Path(filename).is_dir():
+        return None  # TODO: do directories have mime-type?
+
+    with open(filename, 'rb') as file:
+        # The choice of 64 bytes is arbitrary. We may increase this in the
+        # future if we discover reason to. Therefore, sniffers should not
+        # assume that they will receive this exact number of bytes.
+        first_bytes = file.read(64)
+    for ep in entrypoints.get_group_all('databroker.sniffers'):
+        content_sniffer = ep.load()
+        mimetype = content_sniffer(filename, first_bytes)
+        if mimetype is not None:
+            return mimetype
+            # TODO Instead of bailing when we get the first match, we might
+            # keep going to check for *conflicting* assessments and warn if
+            # that happens.
+    else:
+        # None of the sniffers found a match. Fall back to guessing based on
+        # file extension.
+        mimetype, _ = mimetypes.guess_type(filename)
+        if mimetype is None:
+            raise UnknownFileType(f"Could not identify the MIME type of {filename}")
+        return mimetype
+
+
+def applicable_ingestors(filename, mimetype):
+    """
+    Take in a filename and its mimetype; return a list of compatible ingestors.
+    """
+    # Find ingestor(s) for this mimetype.
+    ingestors = []
+    for ep in entrypoints.get_group_all('databroker.ingestors'):
+        if ep.name == mimetype:
+            ingestors.append(ep.load())
+    # Let each ingestor look at the content of this file and decide if it
+    # thinks it can handle it. An ingestor *may* implement 'is_applicable' to
+    # do this. If it does not implement 'is_applicable', it is assumed to be
+    # suitable for *all* files of this mimetype.
+    for ingestor in list(ingestors):
+        if hasattr(ingestor, 'is_applicable'):
+            if not ingestor.is_applicable(filename):
+                ingestors.remove(ingestor)
+    return ingestors
+
+
+def choose_ingestor(filename, mimetype):
+    """
+    Take in a filename and its mimetype; return an ingestor.
+    If multiple are found, return the first one (deterministic but arbitrary).
+    If none are found, raise.
+    """
+    ingestors = applicable_ingestors(filename, mimetype)
+    if not ingestors:
+        raise NoIngestor(f"No ingestors were applicable to {filename}")
+    elif len(ingestors) > 1:
+        warnings.warn("More than one ingestor was applicable.")
+    return ingestors[0]
+
+
+class UnknownFileType(ValueError):
+    ...
+
+
+class NoIngestor(ValueError):
+    ...
 
 def load_header(uris: List[Union[str, Path]] = None, uuid: str = None):
     """
@@ -31,6 +120,34 @@ def load_header(uris: List[Union[str, Path]] = None, uuid: str = None):
     # ext = Path(filename).suffix[1:]
     # for cls, extensions in extension_map.items():
     #     if ext in extensions:
+
+    # First try to see if we have a databroker ingestor, then fall-back to Xi-cam DataHandlers
+    ingestor = None
+    filename = str(Path(uris[0]))
+    mimetype = None
+    try:
+        mimetype = detect_mimetype(filename)
+    except UnknownFileType as e:
+        msg.logMessage(f"{e}", msg.WARNING)
+    else:
+        msg.logMessage(f'Mimetype detected: {mimetype}')
+
+    try:
+        ingestor = choose_ingestor(filename, mimetype)
+    except NoIngestor as e:
+        warn(f"{e}. Falling-back to DataHandlers")
+    else:
+        msg.logMessage(f'Ingestor selected: {ingestor}')
+
+    if ingestor:
+        document = list(ingestor(uris))
+        uid = document[0][1]["uid"]
+        catalog = BlueskyInMemoryCatalog()
+        # TODO -- change upsert signature to put start and stop as kwargs
+        # TODO -- ask about more convenient way to get a BlueskyRun from a document generator
+        catalog.upsert(document[0][1], document[-1][1], ingestor, [uris], {})
+        return catalog[uid]
+
     handlercandidates = []
     ext = Path(uris[0]).suffix
     for plugin in pluginmanager.getPluginsOfCategory("DataHandlerPlugin"):
@@ -39,6 +156,7 @@ def load_header(uris: List[Union[str, Path]] = None, uuid: str = None):
     if not handlercandidates:
         return NonDBHeader({}, [], [], {})
     # try:
+    msg.logMessage(f'Handler selected: {handlercandidates[0]}')
     return NonDBHeader(**handlercandidates[0].plugin_object.ingest(uris))
     # except (IsADirectoryError, TypeError):
     #     # TODO: add Header ingestor for directory
@@ -453,8 +571,11 @@ class MetaXArray(object):
     def __init__(self, dataarray):
         self.dataarray = dataarray
 
-        for attr in ['__len__', 'size', 'ndim', 'shape', 'dtype']:
+        for attr in ['size', 'ndim', 'shape', 'dtype']:
             setattr(self, attr, getattr(self.dataarray, attr))
+
+    def __len__(self):
+        return self.shape[0]
 
     def xvals(self):
         return range(len(self))
@@ -465,8 +586,14 @@ class MetaXArray(object):
     def max(self):
         return self.dtype.type(self.dataarray.max())
 
+    def ravel(self):
+        return self.dataarray.values.ravel()
+
     def __getitem__(self, item: Union[List[slice], int]):
-        return np.asarray(self.dataarray[item])
+        if isinstance(item, List):
+            return np.asarray(self.dataarray[tuple(item)])
+        else:
+            return np.asarray(self.dataarray[item])
 
     def transpose(self, ax):
         if ax != [0, 1, 2]:
