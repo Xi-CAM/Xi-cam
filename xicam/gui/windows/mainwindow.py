@@ -1,5 +1,7 @@
 from functools import partial
-import sys
+
+from intake.catalog import Catalog
+from intake.catalog.entry import CatalogEntry
 
 from qtpy.QtCore import QPropertyAnimation, QPoint, QEasingCurve, Qt, Slot, Signal, QSettings
 from qtpy.QtGui import QIcon, QPixmap, QKeySequence, QFont
@@ -8,14 +10,13 @@ from xicam.plugins.guiplugin import PanelState
 from yapsy import PluginInfo
 
 from xicam.plugins import manager as pluginmanager
-from xicam.gui.cammart import venvs
 from xicam.plugins import EntryPointPluginInfo
 from xicam.gui.widgets.debugmenubar import DebuggableMenuBar
 from xicam.core import msg
+from xicam.core.data import NonDBHeader
 from ..widgets import defaultstage
 from .settings import ConfigDialog
 from ..static import path
-from databroker.core import BlueskyRun
 
 
 class XicamMainWindow(QMainWindow):
@@ -106,21 +107,24 @@ class XicamMainWindow(QMainWindow):
         for i in range(12):
             self.Fshortcuts[i].activated.connect(partial(self.setStage, i))
 
-
         self.readSettings()
         # Wireup default widgets
         defaultstage["left"].sigOpen.connect(self.open)
         defaultstage["left"].sigOpen.connect(print)
-        defaultstage["left"].sigPreview.connect(defaultstage["lefttop"].preview_header)
-
+        defaultstage["left"].sigPreview.connect(defaultstage["lefttop"].preview)
 
     def open(self, header):
         if self.currentGUIPlugin is None:
+            msg.notifyMessage("Please select a gui plugin from the top before trying to open an image.")
             return
-        if isinstance(header, BlueskyRun):
+        if isinstance(header, Catalog):
             self.currentGUIPlugin.appendCatalog(header)
-        else:
+        elif isinstance(header, CatalogEntry):
+            self.currentGUIPlugin.appendCatalog(header())
+        elif isinstance(header, NonDBHeader):
             self.currentGUIPlugin.appendHeader(header)
+        else:
+            raise TypeError(f"Cannot open {header}.")
 
     def showSettings(self):
         self._configdialog.show()
@@ -302,7 +306,12 @@ class pluginModeWidget(QToolBar):
             self._showNodes(nodes, direction)
             # self.fadeOut(callback=partial(self.mkButtons, names=names, callback=self.showStages), distance=0)
 
-        elif isinstance(node.object, (dict, PluginInfo.PluginInfo, EntryPointPluginInfo)):
+        elif isinstance(node.object, dict):
+            nodes = node.children
+            if len(nodes) > 1:
+                self._showNodes(nodes, direction)
+
+        elif isinstance(node.object, (PluginInfo.PluginInfo, EntryPointPluginInfo)):
             nodes = node.children
             if len(nodes) > 1:
                 self._showNodes(nodes, direction)

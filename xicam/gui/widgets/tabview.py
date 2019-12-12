@@ -1,3 +1,5 @@
+from warnings import warn
+
 from qtpy.QtWidgets import QTabBar, QMenu, QAction, QTabWidget
 from qtpy.QtGui import QStandardItemModel, QMouseEvent
 from qtpy.QtCore import QItemSelectionModel, QObject, Qt
@@ -8,13 +10,14 @@ from xicam.core import msg
 
 class TabView(QTabWidget):
     def __init__(
-        self,
-        headermodel: QStandardItemModel = None,
-        selectionmodel: QItemSelectionModel = None,
-        widgetcls=None,
-        field=None,
-        bindings: List[tuple] = [],
-        **kwargs,
+            self,
+            catalogmodel: QStandardItemModel = None,
+            selectionmodel: QItemSelectionModel = None,
+            widgetcls=None,
+            stream=None,
+            field=None,
+            bindings: List[tuple] = [],
+            **kwargs,
     ):
         """
 
@@ -22,6 +25,7 @@ class TabView(QTabWidget):
         ----------
         model
         widgetcls
+        stream
         field
         bindings
             A list of tuples with pairs of bindings, s.t. the one item is the name of the attribute on widget cls holding a
@@ -33,13 +37,15 @@ class TabView(QTabWidget):
         self.kwargs = kwargs
 
         self.setWidgetClass(widgetcls)
-        self.headermodel = None
+        self.catalogmodel = None
         self.selectionmodel = None
         if selectionmodel:
             self.setSelectionModel(selectionmodel)  # type: TabItemSelectionModel
 
-        if headermodel:
-            self.setHeaderModel(headermodel)
+        if catalogmodel:
+            self.setCatalogModel(catalogmodel)
+
+        self.stream = stream
         self.field = field
         self.bindings = bindings
 
@@ -47,40 +53,51 @@ class TabView(QTabWidget):
         self.setDocumentMode(True)
         self.tabCloseRequested.connect(self.closeTab)
 
-    def setHeaderModel(self, model: QStandardItemModel):
-        self.headermodel = model
+    def setCatalogModel(self, model: QStandardItemModel):
+        self.catalogmodel = model
         if not self.selectionmodel:
             self.selectionmodel = TabItemSelectionModel(self)
         model.dataChanged.connect(self.dataChanged)
+
+    def setHeaderModel(self, model):
+        self.setCatalogModel(model)
+        warn(DeprecationWarning())
 
     def setSelectionModel(self, model: QItemSelectionModel):
         self.selectionmodel = model
         self.selectionmodel.currentChanged.connect(lambda current, previous: self.setCurrentIndex(current.row()))
         self.currentChanged.connect(
-            lambda i: self.selectionmodel.setCurrentIndex(self.headermodel.index(i, 0), QItemSelectionModel.Rows)
+            lambda i: self.selectionmodel.setCurrentIndex(self.catalogmodel.index(i, 0), QItemSelectionModel.Rows)
         )
         self.currentChanged.connect(
-            lambda _: self.selectionmodel.setCurrentIndex(self.headermodel.index(self.currentIndex(), 0),
+            lambda _: self.selectionmodel.setCurrentIndex(self.catalogmodel.index(self.currentIndex(), 0),
                                                           QItemSelectionModel.ClearAndSelect))
 
     def dataChanged(self, start, end):
-        for i in range(self.headermodel.rowCount()):
+        for i in range(self.catalogmodel.rowCount()):
+            itemdata = None
+            if hasattr(self.catalogmodel.item(i), "header"):
+                itemdata = self.catalogmodel.item(i).header
+            else:
+                itemdata = self.catalogmodel.item(i).data(Qt.UserRole)
 
             if self.widget(i):
-                if self.widget(i).header == self.headermodel.item(i).header:
+                if (hasattr(self.widget(i), 'catalog') and self.widget(i).catalog == itemdata) or \
+                        (hasattr(self.widget(i), 'header') and self.widget(i).header == itemdata):
                     continue
             try:
-                newwidget = self.widgetcls(self.headermodel.item(i).header, self.field, **self.kwargs)
+                newwidget = self.widgetcls(itemdata, stream=self.stream, field=self.field, **self.kwargs)
             except Exception as ex:
                 msg.logMessage(
-                    f"A widget of type {self.widgetcls} could not be initialized with args: {self.headermodel.item(i).header, self.field, self.kwargs}"
+                    f"A widget of type {self.widgetcls} could not be initialized with args: {itemdata, self.field, self.kwargs}"
                 )
                 msg.logError(ex)
-                self.headermodel.removeRow(i)
+                self.catalogmodel.removeRow(i)
                 self.dataChanged(0, 0)
                 return
 
-            self.setCurrentIndex(self.insertTab(i, newwidget, self.headermodel.item(i).text()))
+            self.setCurrentIndex(self.insertTab(i, newwidget, self.catalogmodel.item(i).text()))
+
             for sender, receiver in self.bindings:
                 if isinstance(sender, str):
                     sender = getattr(newwidget, sender)
@@ -88,14 +105,18 @@ class TabView(QTabWidget):
                     receiver = getattr(newwidget, receiver)
                 sender.connect(receiver)
 
-        for i in reversed(range(self.headermodel.rowCount(), self.count())):
+        for i in reversed(range(self.catalogmodel.rowCount(), self.count())):
             self.removeTab(i)
 
     def setWidgetClass(self, cls):
         self.widgetcls = cls
 
+    def currentCatalog(self):
+        return self.catalogmodel.item(self.currentIndex()).data(Qt.UserRole)
+
     def currentHeader(self):
-        return self.headermodel.item(self.currentIndex())
+        return self.catalogmodel.item(self.currentIndex()).header
+        warn(DeprecationWarning())
 
     def closeTab(self, i):
         newindex = self.currentIndex()
@@ -103,10 +124,8 @@ class TabView(QTabWidget):
             newindex -= 1
 
         self.removeTab(i)
-        index = self.headermodel.item(i, 0).index()
-        self.headermodel.removeRow(i)
-        self.headermodel.dataChanged.emit(index, index)
-        self.selectionmodel.setCurrentIndex(self.headermodel.index(newindex, 0), QItemSelectionModel.Rows)
+        self.catalogmodel.removeRow(i)
+        self.selectionmodel.setCurrentIndex(self.catalogmodel.index(newindex, 0), QItemSelectionModel.Rows)
 
 
 class TabViewSynchronizer(QObject):
@@ -160,7 +179,7 @@ class ContextMenuTabBar(QTabBar):
 
 class TabItemSelectionModel(QItemSelectionModel):
     def __init__(self, tabview: TabView):
-        super(TabItemSelectionModel, self).__init__(tabview.headermodel)
+        super(TabItemSelectionModel, self).__init__(tabview.catalogmodel)
         self.tabview = tabview
 
     def currentIndex(self):

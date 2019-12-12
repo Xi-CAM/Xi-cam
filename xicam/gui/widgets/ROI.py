@@ -1,25 +1,75 @@
 from pyqtgraph import ROI, PolyLineROI, Point
-from pyqtgraph.graphicsItems.ROI import Handle
+from pyqtgraph.graphicsItems.ROI import Handle, RectROI, LineROI
 from qtpy.QtCore import QRectF, QPointF, Qt
-from qtpy.QtGui import QPen, QColor, QPainter, QPainterPath, QVector2D, QTransform, QBrush
+from qtpy.QtGui import QColor, QPainter, QPainterPath, QBrush
 import numpy as np
+from itertools import count
+
+from xicam.plugins import ProcessingPlugin, Input, Output, InputOutput
+from pyqtgraph.parametertree import Parameter, parameterTypes
+import pyqtgraph as pg
+
+
+class ROIProcessingPlugin(ProcessingPlugin):
+    data = Input()
+    image = Input()
+    roi = Output()
+    region = Output()
+
+    def __init__(self, ROI: ROI):
+        super(ROIProcessingPlugin, self).__init__()
+        self.ROI = ROI
+        self._param = None  # type: Parameter
+
+        self.name = f"ROI #{self.ROI.index}"
+
+    def evaluate(self):
+        # TODO -- don't need to do scene matching if we are not using ROI.getArrayRegion
+        # Add ROI to same scene as image
+        # (workflow serialization changes the obj refs, they need to be the same for ROI.getArrayRegion)
+        image_scene = self.image.value.scene()
+        image_scene.addItem(self.ROI)
+        self.region.value = self.ROI.getArrayRegion(self.data.value, self.image.value)
+        self.roi.value = self.region.value.astype(np.bool)
+
+    @property
+    def parameter(self):
+        if not self._param:
+            self._param = self.ROI.parameter()
+        return self._param
+
+
+class LabelArrayProcessingPlugin(ProcessingPlugin):
+    roi = InputOutput()
+
+    def evaluate(self):
+        self.roi.value = self.roi.value
+
+
+class WorkflowableROI(ROI):
+
+    def __init__(self, *args, **kwargs):
+        super(WorkflowableROI, self).__init__(*args, **kwargs)
+        self.process = ROIProcessingPlugin(self)
+        self._param = None
+
+    def parameter(self) -> Parameter:
+        raise NotImplementedError
 
 
 # MIXIN!~
 # Now with 100% more ROI!
-class BetterROI(ROI):
-    roi_count = 0
+class BetterROI(WorkflowableROI):
+    roi_count = count(0)
     index = None
 
-    def __new__(cls, *args, **kwargs):
-        BetterROI.roi_count += 1
-        instance = ROI.__new__(cls, *args, **kwargs)
-        instance.index = cls.roi_count
-        return instance
-
-    def __init__(self, *args, **kwargs):
-        super(BetterROI, self).__init__(*args, **kwargs)
+    def __init__(self, *args, removable=True, **kwargs):
+        # BetterROI removable by default
+        super(BetterROI, self).__init__(*args, removable=removable, **kwargs)
+        self.index = next(self.roi_count)
         self._restyle()
+        # Remove the roi from the view when requested to be removed
+        self.sigRemoveRequested.connect(lambda roi: self._viewBox().removeItem(roi))
 
     def _restyle(self):
         self.currentPen.setWidth(2)
@@ -30,11 +80,31 @@ class BetterROI(ROI):
             handle.pen.setWidth(2)
             handle.buildPath()
 
+    def hoverEvent(self, ev):
+        hover = False
+        if not ev.isExit():
+            if ev.acceptDrags(Qt.LeftButton):
+                hover = True
+            for btn in [Qt.LeftButton, Qt.RightButton, Qt.MidButton]:
+                if int(self.acceptedMouseButtons() & btn) > 0 and ev.acceptClicks(btn):
+                    hover = True
+
+        if hover:
+            self.currentPen = pg.mkPen(255, 255, 0, width=2)
+        else:
+            self.currentPen = self.pen
+        self.update()
+
+    def valueChanged(self, sender, changes):
+        for change in changes:
+            setattr(self, change[0].name(), change[2])
+        self.stateChanged()
+
 
 class BetterPolyLineROI(BetterROI, PolyLineROI):
     def __repr__(self):
         return f"ROI #{self.index}"
-      
+
 
 class QCircRectF(QRectF):
     def __init__(self, center=(0., 0.), radius=1., rect=None):
@@ -87,7 +157,7 @@ class ArcROI(BetterROI):
     def __init__(self, center, radius, **kwargs):
         # QtGui.QGraphicsRectItem.__init__(self, 0, 0, size[0], size[1])
         r = QCircRectF(center, radius)
-        super(ArcROI, self).__init__(r.center, radius, removable=True, **kwargs)
+        super(ArcROI, self).__init__(r.center, radius, **kwargs)
         # self.addRotateHandle([1.0, 0.5], [0.5, 0.5])
         # self.addScaleHandle([0.5*2.**-0.5 + 0.5, 0.5*2.**-0.5 + 0.5], [0.5, 0.5])
 
@@ -105,12 +175,14 @@ class ArcROI(BetterROI):
         self.innerradius = .5 * radius
         self.outerradius = radius
         self.thetawidth = 120.
+        self.thetacenter = 90.
 
         self.innerhandle = self.addFreeHandle([0., self.innerradius / self.outerradius], [0, 0])
         self.outerhandle = self.addFreeHandle([0., 1], [0, 0])
         self.widthhandle = self.addFreeHandle(np.array([-.433 * 2, .25 * 2]))
 
         self.path = None
+        self._param = None  # type: Parameter
         self._restyle()
 
     def boundingRect(self):
@@ -124,22 +196,28 @@ class ArcROI(BetterROI):
         if handle in [self.innerhandle, self.outerhandle]:
             self.innerradius = self.innerhandle.pos().length()
             self.outerradius = self.outerhandle.pos().length()
+            self.thetacenter = self.outerhandle.pos().angle(Point(1, 0))
 
         elif handle is self.widthhandle:
             self.thetawidth = 2 * self.widthhandle.pos().angle(self.innerhandle.pos())
 
+        self.handleChanged()
+
     def paint(self, p, opt, widget):
 
         # Enforce constraints on handles
-        r2 = self.outerhandle.pos().norm()
-        l = min(self.outerhandle.pos().length(), self.innerhandle.pos().length())
-        self.innerhandle.setPos(
-            r2 * l)  # constrain innerhandle to be parallel to outerhandle, and shorter than outerhandle
-        widthangle = np.radians(self.thetawidth / 2 + self.outerhandle.pos().angle(Point(1, 0)))
+        r2 = Point(np.cos(np.radians(self.thetacenter)),
+                   np.sin(np.radians(self.thetacenter)))  # chi center direction vector
+        # constrain innerhandle to be parallel to outerhandle, and shorter than outerhandle
+        self.innerhandle.setPos(r2 * self.innerradius)
         # constrain widthhandle to be counter-clockwise from innerhandle
-        widthv = Point(np.cos(widthangle), np.sin(widthangle)) if self.thetawidth > 0 else self.innerhandle.pos().norm()
+        widthangle = np.radians(self.thetawidth / 2 + self.thetacenter)
+        widthv = Point(np.cos(widthangle), np.sin(widthangle)) if self.thetawidth > 0 else r2
         # constrain widthhandle to half way between inner and outerhandles
-        self.widthhandle.setPos(widthv * (self.innerhandle.pos() + self.outerhandle.pos()).length() / 2)
+        self.widthhandle.setPos(widthv * (self.innerradius + self.outerradius) / 2)
+        # constrain handles to base values
+        self.outerhandle.setPos(r2 * self.outerradius)
+
 
         pen = self.currentPen
         pen.setColor(QColor(0, 255, 255))
@@ -228,6 +306,187 @@ class ArcROI(BetterROI):
         path.lineTo(-1. * self.widthhandle.pos() + 2 * self.widthhandle.pos().dot(r1v) * r1v)
         return path
 
+    def parameter(self):
+        if not self._param:
+            self._param = parameterTypes.GroupParameter(name='Arc ROI', children=[
+                parameterTypes.SimpleParameter(title='Q Minimum', name='innerradius', value=self.innerradius,
+                                               type='float', units='Å⁻¹'),
+                parameterTypes.SimpleParameter(title='Q Maximum', name='outerradius', value=self.outerradius,
+                                               type='float', units='Å⁻¹'),
+                parameterTypes.SimpleParameter(title='χ Width', name='thetawidth', value=self.thetawidth, type='float',
+                                               units='°'),
+                parameterTypes.SimpleParameter(title='χ Center', name='thetacenter', value=self.thetacenter,
+                                               type='float', siSuffix='°')
+            ])
+
+            self._param.sigTreeStateChanged.connect(self.valueChanged)
+
+        return self._param
+
+    def handleChanged(self):
+        self.parameter().child('innerradius').setValue(self.innerradius)
+        self.parameter().child('outerradius').setValue(self.outerradius)
+        self.parameter().child('thetawidth').setValue(self.thetawidth)
+        self.parameter().child('thetacenter').setValue(self.thetacenter)
+
+
+class RectROI(BetterROI, RectROI):
+    def __init__(self, *args, pen=pg.mkPen(QColor(0, 255, 255)), **kwargs):
+        super(RectROI, self).__init__(*args, pen=pen, **kwargs)
+        self.handle = self.handles[0]
+
+    def movePoint(self, handle, pos, modifiers=Qt.KeyboardModifier(), finish=True, coords='parent'):
+        super(RectROI, self).movePoint(handle, pos, modifiers, finish, coords)
+
+        self.width = self.handle['pos'].x() * self.size().x()
+        self.height = self.handle['pos'].y() * self.size().y()
+
+        self.handleChanged()
+
+    def parameter(self) -> Parameter:
+        if not self._param:
+            self._param = parameterTypes.GroupParameter(name='Rectangular ROI', children=[
+                parameterTypes.SimpleParameter(title='Width', name='width', value=self.width,
+                                               type='float', units='px'),
+                parameterTypes.SimpleParameter(title='Height', name='height', value=self.height,
+                                               type='float', units='px'),
+            ])
+
+            self._param.sigTreeStateChanged.connect(self.valueChanged)
+
+        return self._param
+
+    def handleChanged(self):
+        self.parameter().child('width').setValue(self.width)
+        self.parameter().child('height').setValue(self.height)
+
+
+class LineROI(BetterROI, LineROI):
+    def __init__(self, *args, pen=pg.mkPen(QColor(0, 255, 255)), **kwargs):
+        super(LineROI, self).__init__(*args, pen=pen, **kwargs)
+        self._update_state()
+
+    def _update_state(self):
+        self.width = self.size().y()
+        self.length = self.size().x()
+        self.rotation = self.angle()
+        self.center_x = self.pos().x()
+        self.center_y = self.pos().y()
+
+    def movePoint(self, handle, pos, modifiers=Qt.KeyboardModifier(), finish=True, coords='parent'):
+        super(LineROI, self).movePoint(handle, pos, modifiers, finish, coords)
+
+        self._update_state()
+        self.handleChanged()
+
+    def mouseDragEvent(self, ev):
+        super(LineROI, self).mouseDragEvent(ev)
+        self._update_state()
+
+    def paint(self, p, opt, widget):
+        self.setSize(QPointF(self.length, self.width))
+        self.setAngle(self.rotation)
+        self.setPos(QPointF(self.center_x, self.center_y))
+        super(LineROI, self).paint(p, opt, widget)
+
+    def parameter(self) -> Parameter:
+        if not self._param:
+            self._param = parameterTypes.GroupParameter(name='Line ROI', children=[
+                parameterTypes.SimpleParameter(title='Center X', name='center_x', value=self.center_x,
+                                               type='float', units='px'),
+                parameterTypes.SimpleParameter(title='Center Y', name='center_y', value=self.center_y,
+                                               type='float', units='px'),
+                parameterTypes.SimpleParameter(title='Rotation Angle', name='rotation', value=self.rotation,
+                                               type='float', units='px'),
+                parameterTypes.SimpleParameter(title='Length', name='length', value=self.length,
+                                               type='float', units='px'),
+                parameterTypes.SimpleParameter(title='Width', name='width', value=self.width,
+                                               type='float', units='px'),
+            ])
+
+            self._param.sigTreeStateChanged.connect(self.valueChanged)
+
+        return self._param
+
+    def handleChanged(self):
+        self.parameter().child('center_x').setValue(self.center_x)
+        self.parameter().child('center_y').setValue(self.center_y)
+        self.parameter().child('rotation').setValue(self.rotation)
+        self.parameter().child('width').setValue(self.width)
+        self.parameter().child('length').setValue(self.length)
+
+
+class SegmentedRectROI(RectROI):
+    def __init__(self, *args, **kwargs):
+        self.segments_h = 2
+        self.segments_v = 2
+        super(SegmentedRectROI, self).__init__(*args, **kwargs)
+
+    def parameter(self) -> Parameter:
+        if not self._param:
+            self._param = parameterTypes.GroupParameter(name='Rectangular ROI', children=[
+                parameterTypes.SimpleParameter(title='Width', name='width', value=self.width,
+                                               type='float', units='px'),
+                parameterTypes.SimpleParameter(title='Height', name='height', value=self.height,
+                                               type='float', units='px'),
+                parameterTypes.SimpleParameter(title='Horizontal Segments', name='segments_h', value=self.segments_h,
+                                               type='int'),
+                parameterTypes.SimpleParameter(title='Vertical Segments', name='segments_v', value=self.segments_v,
+                                               type='int')
+            ])
+
+            self._param.sigTreeStateChanged.connect(self.valueChanged)
+
+        return self._param
+
+    def getLabelArray(self, arr, img=None):
+        """
+        Return the result of ROI.getArrayRegion() masked by the arc shape
+        of the ROI. Regions outside the arc are set to 0.
+        """
+        w, h = arr.shape
+
+        min_x = self.pos().x()
+        min_y = self.pos().y()
+        max_x = self.size().x() + min_x
+        max_y = self.size().y() + min_y
+        segment_bin_x = (max_x - min_x) / self.segments_h
+        segment_bin_y = (max_y - min_y) / self.segments_v
+
+        mask = np.zeros_like(arr)
+
+        for i in range(self.segments_h):
+            for j in range(self.segments_v):
+                # generate an square max
+                label_mask = np.fromfunction(lambda x, y: (x + .5 > min_x + i * segment_bin_x) &
+                                                          (x + .5 < min_x + (i + 1) * segment_bin_x) &
+                                                          (y + .5 > min_y + j * segment_bin_y) &
+                                                          (y + .5 < min_y + (j + 1) * segment_bin_y), (w, h))
+                mask[label_mask] = 1 + i + j * self.segments_h
+
+        return mask
+
+    def paint(self, p, opt, widget):
+        super(SegmentedRectROI, self).paint(p, opt, widget)
+
+        min_x = self.pos().x()
+        min_y = self.pos().y()
+        max_x = self.size().x() + min_x
+        max_y = self.size().y() + min_y
+        segment_bin_x = (max_x - min_x) / self.segments_h
+        segment_bin_y = (max_y - min_y) / self.segments_v
+
+        self.currentPen.setStyle(Qt.DashLine)
+        p.setPen(self.currentPen)
+
+        for i in range(1, self.segments_h):
+            p.drawLine(QPointF(1. / self.segments_h * i, 0), QPointF(1 / self.segments_h * i, 1))
+
+        for j in range(1, self.segments_v):
+            p.drawLine(QPointF(0, 1 / self.segments_v * j), QPointF(1, 1 / self.segments_v * j))
+
+        self.currentPen.setStyle(Qt.SolidLine)
+
 
 if __name__ == '__main__':
     from qtpy.QtWidgets import QApplication
@@ -240,7 +499,8 @@ if __name__ == '__main__':
     data = np.random.random((10, 10))
     imageview.setImage(data)
 
-    roi = ArcROI(center=(5, 5), radius=5)
+    # roi = ArcROI(center=(5, 5), radius=5)
+    roi = SegmentedRectROI(pos=(0, 0), size=(10, 10))
     imageview.view.addItem(roi)
 
     imageview2 = pg.ImageView()
@@ -248,7 +508,7 @@ if __name__ == '__main__':
 
 
     def showroi(*_, **__):
-        imageview2.setImage(roi.getArrayRegion(data))
+        imageview2.setImage(roi.getLabelArray(data, imageview.imageItem))
 
 
     roi.sigRegionChanged.connect(showroi)
