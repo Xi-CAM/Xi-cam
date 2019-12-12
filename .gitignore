@@ -7,4 +7,4 @@
 *.tif
 build/
 dist/
-xicam.gui.egg-info/
+*.egg-info/
