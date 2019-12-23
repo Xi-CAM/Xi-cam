@@ -49,9 +49,8 @@ _validate = functools.partial(jsonschema.validate, types={'array': (list, tuple)
 
 
 def default_search_result_row(entry):
-    metadata = entry.describe()['metadata']
-    start = metadata['start']
-    stop = metadata['stop']
+    start = entry._get_run_start()
+    stop = entry._get_run_stop()
     start_time = datetime.fromtimestamp(start['time'])
     if stop is None:
         str_duration = '-'
@@ -122,7 +121,7 @@ class SearchState(ConfigurableQObject):
                         search_state.process_queries()
                     except Exception as e:
                         log.error(e)
-                  
+
 
         self.process_queries_thread = ProcessQueriesThread()
         self.process_queries_thread.start()
