@@ -30,7 +30,7 @@ from qtpy.QtWidgets import (
     )
 from .utils import ConfigurableQObject
 from .top_utils import load_config, Callable
-
+from xicam.core import msg
 
 MAX_SEARCH_RESULTS = 100  # TODO Use fetchMore instead of a hard limit.
 log = logging.getLogger('bluesky_browser')
@@ -77,7 +77,7 @@ class SearchState(ConfigurableQObject):
 
     def __init__(self, catalog):
         self.update_config(load_config())
-        self.catalog = catalog
+        self.root_catalog = self.flatten_remote_catalogs(catalog)
         self.enabled = False  # to block searches during initial configuration
         self.catalog_selection_model = CatalogSelectionModel()
         self.search_results_model = SearchResultsModel(self)
@@ -122,10 +122,33 @@ class SearchState(ConfigurableQObject):
                         search_state.process_queries()
                     except Exception as e:
                         log.error(e)
-                  
+                        msg.showMessage("Unable to query: ", str(e))
+
 
         self.process_queries_thread = ProcessQueriesThread()
         self.process_queries_thread.start()
+
+    def flatten_remote_catalogs(self, catalog):
+        from intake.catalog.base import Catalog
+        cat_dict = {}
+
+        for name in catalog:
+            from intake.catalog.base import RemoteCatalog
+            sub_cat = catalog[name]
+            # @TODO remote catalogs are one level too high. This check is
+            # pretty rough. Would rather check that a catalog's children
+            # should be top-level.
+            # This is making the terrible assumption that children
+            # of a RemoteCatalog be treated as top-level. But until
+            # we figure out how to tell that a catalog is a real catalog
+            # with data, it's as good as we can get
+            if isinstance(sub_cat(), RemoteCatalog):
+                for name in sub_cat:
+                    cat_dict[name] = sub_cat[name]
+            else:
+                cat_dict[name] = sub_cat
+
+        return Catalog.from_dict(cat_dict)
 
     def request_reload(self):
         self._results_catalog.force_reload()
@@ -167,14 +190,19 @@ class SearchState(ConfigurableQObject):
     def list_subcatalogs(self):
         self._subcatalogs.clear()
         self.catalog_selection_model.clear()
-        for name in self.catalog:
+        from intake.catalog.base import RemoteCatalog
+        for name in self.root_catalog:
             self._subcatalogs.append(name)
             self.catalog_selection_model.appendRow(QStandardItem(str(name)))
 
     def set_selected_catalog(self, item):
         name = self._subcatalogs[item]
-        self.selected_catalog = self.catalog[name]()
-        self.search()
+        try:
+            self.selected_catalog = self.root_catalog[name]()
+            self.search()
+        except Exception as e:
+            log.error(e)
+            msg.showMessage("Unable to contact catalog: ", str(e))
 
     def check_for_new_entries(self):
         # check for any new results and add them to the queue for later processing
@@ -195,7 +223,6 @@ class SearchState(ConfigurableQObject):
                 if block:
                     query = self.query_queue.get()
                 break
-        print(query)
         log.debug('Submitting query %r', query)
         t0 = time.monotonic()
         self._results_catalog = self.selected_catalog.search(query)
@@ -224,7 +251,7 @@ class SearchState(ConfigurableQObject):
         self.show_results_event.clear()
         t0 = time.monotonic()
         counter = 0
-
+        msg.showBusy()
         while not self._new_entries.empty():
             counter += 1
             entry = self._new_entries.get()
@@ -246,6 +273,7 @@ class SearchState(ConfigurableQObject):
             duration = time.monotonic() - t0
             log.debug("Displayed %d new results (%.3f s).", counter, duration)
         self.show_results_event.set()
+        msg.hideBusy()
 
     def reload(self):
         t0 = time.monotonic()
