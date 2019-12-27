@@ -208,6 +208,7 @@ class SearchState(ConfigurableQObject):
         self.search_results_model.clear()
         self.search_results_model.selected_rows.clear()
         self._results.clear()
+        self._results_set.clear()
         if not self.enabled:
             return
         query = {'time': {}}
