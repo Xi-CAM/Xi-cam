@@ -81,7 +81,7 @@ class SearchState(ConfigurableQObject):
         self.catalog_selection_model = CatalogSelectionModel()
         self.search_results_model = SearchResultsModel(self)
         self._subcatalogs = []  # to support lookup by item's positional index
-        self._results = set()  # to support lookup by item's positional index
+        self._results = set()
         self._results_catalog = None
         self._new_entries = queue.Queue(maxsize=MAX_SEARCH_RESULTS)
         self.list_subcatalogs()
