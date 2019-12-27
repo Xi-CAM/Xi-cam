@@ -47,15 +47,6 @@ QLineEdit {
 RELOAD_INTERVAL = 11
 _validate = functools.partial(jsonschema.validate, types={'array': (list, tuple)})
 
-def timeit(f):
-    def wrap(*args):
-        time1 = time.time()
-        ret = f(*args)
-        time2 = time.time()
-        print('{:s} function took {:.3f} ms'.format(f.__name__, (time2-time1)*1000.0))
-        return ret
-    return wrap
-
 
 def default_search_result_row(entry):
     start = entry.metadata['start']
@@ -183,7 +174,6 @@ class SearchState(ConfigurableQObject):
         self.selected_catalog = self.catalog[name]()
         self.search()
 
-    @timeit
     def check_for_new_entries(self):
         # check for any new results and add them to the queue for later processing
         for uid in list(self._results_catalog)[:MAX_SEARCH_RESULTS]:
@@ -191,7 +181,6 @@ class SearchState(ConfigurableQObject):
                 self._results.add(uid)
                 self._new_entries.put(self._results_catalog[uid])
 
-    @timeit
     def process_queries(self):
         # If there is a backlog, process only the newer query.
         block = True
@@ -209,7 +198,6 @@ class SearchState(ConfigurableQObject):
         self._results_catalog = self.selected_catalog.search(query)
         self.check_for_new_entries()
         duration = time.monotonic() - t0
-        print("Query duration:", duration)
         log.debug('Query yielded %r results (%.3f s).',
                   len(self._results_catalog), duration)
         self.new_results_catalog.emit()
@@ -228,7 +216,6 @@ class SearchState(ConfigurableQObject):
         query.update(**self.search_results_model.custom_query)
         self.query_queue.put(query)
 
-    @timeit
     def show_results(self):
         header_labels_set = False
         self.show_results_event.clear()
