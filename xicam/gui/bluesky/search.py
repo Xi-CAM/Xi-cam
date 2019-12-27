@@ -81,7 +81,8 @@ class SearchState(ConfigurableQObject):
         self.catalog_selection_model = CatalogSelectionModel()
         self.search_results_model = SearchResultsModel(self)
         self._subcatalogs = []  # to support lookup by item's positional index
-        self._results = set()
+        self._results = []  # to support lookup by item's positional index
+        self._results_set = set()  # to speed up checking if an item is in self._results
         self._results_catalog = None
         self._new_entries = queue.Queue(maxsize=MAX_SEARCH_RESULTS)
         self.list_subcatalogs()
@@ -177,8 +178,9 @@ class SearchState(ConfigurableQObject):
     def check_for_new_entries(self):
         # check for any new results and add them to the queue for later processing
         for uid in list(self._results_catalog)[:MAX_SEARCH_RESULTS]:
-            if uid not in self._results:
-                self._results.add(uid)
+            if uid not in self._results_set:
+                self._results_set.add(uid)
+                self._results.append(uid)
                 self._new_entries.put(self._results_catalog[uid])
 
     def process_queries(self):
