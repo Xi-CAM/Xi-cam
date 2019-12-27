@@ -58,8 +58,8 @@ def timeit(f):
 
 
 def default_search_result_row(entry):
-    start = entry._get_run_start()
-    stop = entry._get_run_stop()
+    start = entry.metadata['start']
+    stop = entry.metadata['stop']
     start_time = datetime.fromtimestamp(start['time'])
     if stop is None:
         str_duration = '-'
@@ -190,7 +190,6 @@ class SearchState(ConfigurableQObject):
             if uid not in self._results:
                 self._results.add(uid)
                 self._new_entries.put(self._results_catalog[uid])
-
 
     @timeit
     def process_queries(self):
