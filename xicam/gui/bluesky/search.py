@@ -131,7 +131,6 @@ class SearchState(ConfigurableQObject):
                     except Exception as e:
                         log.error(e)
 
-
         self.process_queries_thread = ProcessQueriesThread()
         self.process_queries_thread.start()
 
@@ -187,11 +186,11 @@ class SearchState(ConfigurableQObject):
     @timeit
     def check_for_new_entries(self):
         # check for any new results and add them to the queue for later processing
-        for uid, entry in itertools.islice(self._results_catalog.items(), MAX_SEARCH_RESULTS):
-            if uid in self._results:
-                continue
-            self._results.add(uid)
-            self._new_entries.put(entry)
+        for uid in list(self._results_catalog)[:MAX_SEARCH_RESULTS]:
+            if uid not in self._results:
+                self._results.add(uid)
+                self._new_entries.put(self._results_catalog[uid])
+
 
     @timeit
     def process_queries(self):
@@ -211,6 +210,7 @@ class SearchState(ConfigurableQObject):
         self._results_catalog = self.selected_catalog.search(query)
         self.check_for_new_entries()
         duration = time.monotonic() - t0
+        print("Query duration:", duration)
         log.debug('Query yielded %r results (%.3f s).',
                   len(self._results_catalog), duration)
         self.new_results_catalog.emit()
@@ -229,6 +229,7 @@ class SearchState(ConfigurableQObject):
         query.update(**self.search_results_model.custom_query)
         self.query_queue.put(query)
 
+    @timeit
     def show_results(self):
         header_labels_set = False
         self.show_results_event.clear()
