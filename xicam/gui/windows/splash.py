@@ -6,14 +6,15 @@ from qtpy.QtGui import QMovie, QPixmap
 from qtpy.QtWidgets import QSplashScreen, QApplication, QMainWindow
 
 from xicam.gui import static
-from xicam.args import args
 
 
 class XicamSplashScreen(QSplashScreen):
     minsplashtime = 3000
 
     def __init__(self, mainwindow: Callable[[], QMainWindow] = None,
-                 f: int = Qt.WindowStaysOnTopHint | Qt.SplashScreen):
+                 f: int = Qt.WindowStaysOnTopHint | Qt.SplashScreen,
+                 *,
+                 args):
         """
         A QSplashScreen customized to display an animated gif. The splash triggers launch when clicked.
 
