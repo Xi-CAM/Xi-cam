@@ -131,24 +131,28 @@ class SearchState(ConfigurableQObject):
     def flatten_remote_catalogs(self, catalog):
         from intake.catalog.base import Catalog
         cat_dict = {}
+        try:
+            for name in catalog:
+                from intake.catalog.base import RemoteCatalog
+                sub_cat = catalog[name]
+                # @TODO remote catalogs are one level too high. This check is
+                # pretty rough. Would rather check that a catalog's children
+                # should be top-level.
+                # This is making the terrible assumption that children
+                # of a RemoteCatalog be treated as top-level. But until
+                # we figure out how to tell that a catalog is a real catalog
+                # with data, it's as good as we can get
+                if isinstance(sub_cat(), RemoteCatalog):
+                    for name in sub_cat:
+                        cat_dict[name] = sub_cat[name]
+                else:
+                    cat_dict[name] = sub_cat
 
-        for name in catalog:
-            from intake.catalog.base import RemoteCatalog
-            sub_cat = catalog[name]
-            # @TODO remote catalogs are one level too high. This check is
-            # pretty rough. Would rather check that a catalog's children
-            # should be top-level.
-            # This is making the terrible assumption that children
-            # of a RemoteCatalog be treated as top-level. But until
-            # we figure out how to tell that a catalog is a real catalog
-            # with data, it's as good as we can get
-            if isinstance(sub_cat(), RemoteCatalog):
-                for name in sub_cat:
-                    cat_dict[name] = sub_cat[name]
-            else:
-                cat_dict[name] = sub_cat
-
-        return Catalog.from_dict(cat_dict)
+            return Catalog.from_dict(cat_dict)
+        except Exception as e:
+            log.error(e)
+            msg.showMessage("Unable to query top level catalogs: ", str(e))
+            return None
 
     def request_reload(self):
         self._results_catalog.force_reload()
@@ -190,12 +194,16 @@ class SearchState(ConfigurableQObject):
     def list_subcatalogs(self):
         self._subcatalogs.clear()
         self.catalog_selection_model.clear()
-        from intake.catalog.base import RemoteCatalog
+        if not self.root_catalog:
+            return
+
         for name in self.root_catalog:
             self._subcatalogs.append(name)
             self.catalog_selection_model.appendRow(QStandardItem(str(name)))
 
     def set_selected_catalog(self, item):
+        if len(self._subcatalogs) == 0:
+            return
         name = self._subcatalogs[item]
         try:
             self.selected_catalog = self.root_catalog[name]()
