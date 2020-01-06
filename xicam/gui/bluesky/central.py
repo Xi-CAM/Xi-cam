@@ -74,6 +74,8 @@ class CentralWidget(QWidget):
             self.summary_widget.set_entries)
         search_state.search_results_model.valid_custom_query.connect(
             self.search_widget.search_input_widget.mark_custom_query)
+        search_state.sig_update_header.connect(
+            self.search_widget.search_results_widget.hide_hidden_columns)
         search_state.enabled = True
         search_state.search()
 

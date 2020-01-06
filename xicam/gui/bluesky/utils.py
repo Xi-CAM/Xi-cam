@@ -6,77 +6,6 @@ from PyQt5.QtCore import Qt, QMimeData, QObject, QPoint
 from traitlets import HasTraits, TraitType
 from traitlets.config import Configurable
 
-
-class MoveableTabWidget(QTabWidget):
-    """
-    Adapted from https://stackoverflow.com/a/46719634/1221924
-    """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.setAcceptDrops(True)
-        self.tabBar().setMouseTracking(True)
-        self.indexTab = None
-        self.setMovable(True)
-
-    def mouseMoveEvent(self, e):
-        if e.buttons() != Qt.RightButton:
-            return
-
-        globalPos = self.mapToGlobal(e.pos())
-        tabBar = self.tabBar()
-        posInTab = tabBar.mapFromGlobal(globalPos)
-        self.indexTab = tabBar.tabAt(e.pos())
-        tabRect = tabBar.tabRect(self.indexTab)
-
-        pixmap = QPixmap(tabRect.size())
-        tabBar.render(pixmap, QPoint(), QRegion(tabRect))
-        mimeData = QMimeData()
-        drag = QDrag(tabBar)
-        drag.setMimeData(mimeData)
-        drag.setPixmap(pixmap)
-        cursor = QCursor(Qt.OpenHandCursor)
-        drag.setHotSpot(e.pos() - posInTab)
-        drag.setDragCursor(cursor.pixmap(), Qt.MoveAction)
-        drag.exec_(Qt.MoveAction)
-
-    def dragEnterEvent(self, e):
-        e.accept()
-        if e.source().parentWidget() != self:
-            return
-
-        # print(self.indexOf(self.widget(self.indexTab)))
-        self.parent().tab_index = self.indexOf(self.widget(self.indexTab))
-
-    def dragLeaveEvent(self, e):
-        e.accept()
-
-    def dropEvent(self, e):
-        if e.source().parentWidget() == self:
-            return
-
-        e.setDropAction(Qt.MoveAction)
-        e.accept()
-        counter = self.count()
-
-        if counter == 0:
-            self.addTab(e.source().parentWidget().widget(self.parent().tab_index),
-                        e.source().tabText(self.parent().tab_index))
-        else:
-            self.insertTab(counter + 1,
-                           e.source().parentWidget().widget(self.parent().tab_index),
-                           e.source().tabText(self.parent().tab_index))
-
-
-class MoveableTabContainer(QWidget):
-    """
-    Adapted from https://stackoverflow.com/a/46719634/1221924
-    """
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.tab_index = 0
-        self.moveWidget = None  # not needed?
-
-
 # These classes integrate Qt and traitlets so that we can subclass both.
 # They are copied from Jupyter's qtconsole.util package. The only edits made
 # here are removing PY2 support.
@@ -145,7 +74,3 @@ def superQ(QClass):
 SuperQObject = superQ(QObject)
 ConfigurableQObject = MetaQObjectHasTraits(
     'NewBase', (Configurable, SuperQObject), {})
-ConfigurableQTabWidget = MetaQObjectHasTraits(
-    'NewBase', (Configurable, QTabWidget, SuperQObject), {})
-ConfigurableMoveableTabContainer = MetaQObjectHasTraits(
-    'NewBase', (Configurable, MoveableTabContainer, SuperQObject), {})
