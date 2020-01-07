@@ -131,8 +131,9 @@ class SearchState(ConfigurableQObject):
     def flatten_remote_catalogs(self, catalog):
         from intake.catalog.base import Catalog
         cat_dict = {}
-        try:
-            for name in catalog:
+
+        for name in catalog:
+            try:
                 from intake.catalog.base import RemoteCatalog
                 sub_cat = catalog[name]
                 # @TODO remote catalogs are one level too high. This check is
@@ -147,12 +148,12 @@ class SearchState(ConfigurableQObject):
                         cat_dict[name] = sub_cat[name]
                 else:
                     cat_dict[name] = sub_cat
+            except Exception as e:
+                log.error(e)
+                msg.showMessage("Unable to query top level catalogs: ", str(e))
 
-            return Catalog.from_dict(cat_dict)
-        except Exception as e:
-            log.error(e)
-            msg.showMessage("Unable to query top level catalogs: ", str(e))
-            return None
+        return Catalog.from_dict(cat_dict)
+
 
     def request_reload(self):
         self._results_catalog.force_reload()
