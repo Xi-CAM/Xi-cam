@@ -31,6 +31,7 @@ from qtpy.QtWidgets import (
 from .utils import ConfigurableQObject
 from .top_utils import load_config, Callable
 from xicam.core import msg
+from xicam.core.threads import invoke_in_main_thread
 
 MAX_SEARCH_RESULTS = 100  # TODO Use fetchMore instead of a hard limit.
 log = logging.getLogger('bluesky_browser')
@@ -234,8 +235,11 @@ class SearchState(ConfigurableQObject):
                 break
         log.debug('Submitting query %r', query)
         t0 = time.monotonic()
+        invoke_in_main_thread(lambda: msg.showMessage("Running Query"))
+        invoke_in_main_thread(lambda: msg.showBusy())
         self._results_catalog = self.selected_catalog.search(query)
         self.check_for_new_entries()
+        invoke_in_main_thread(lambda: msg.hideBusy())
         duration = time.monotonic() - t0
         log.debug('Query yielded %r results (%.3f s).',
                   len(self._results_catalog), duration)
@@ -287,12 +291,15 @@ class SearchState(ConfigurableQObject):
     def reload(self):
         t0 = time.monotonic()
         if self._results_catalog is not None:
-            self._results_catalog.reload()
-            self.check_for_new_entries()
-            duration = time.monotonic() - t0
-            log.debug("Reloaded search results (%.3f s).", duration)
-            self.new_results_catalog.emit()
-
+            try:
+                self._results_catalog.reload()
+                self.check_for_new_entries()
+                duration = time.monotonic() - t0
+                log.debug("Reloaded search results (%.3f s).", duration)
+                self.new_results_catalog.emit()
+            except Exception as e:
+                log.error(e)
+                msg.showMessage("Unable to query top level catalogs: ", str(e))
 
 class CatalogSelectionModel(QStandardItemModel):
     """
@@ -318,14 +325,19 @@ class SearchResultsModel(QStandardItemModel):
         self.selected_rows = set()
 
     def emit_selected_result(self, selected, deselected):
-        self.selected_rows |= set(index.row() for index in selected.indexes())
-        self.selected_rows -= set(index.row() for index in deselected.indexes())
-        entries = []
-        for row in sorted(self.selected_rows):
-            uid = self.search_state._results[row]
-            entry = self.search_state._results_catalog[uid]
-            entries.append(entry)
-        self.selected_result.emit(entries)
+        try:
+            self.selected_rows |= set(index.row() for index in selected.indexes())
+            self.selected_rows -= set(index.row() for index in deselected.indexes())
+            entries = []
+            for row in sorted(self.selected_rows):
+                uid = self.search_state._results[row]
+                #TODO this takes  a long time if the catalog is remote
+                entry = self.search_state._results_catalog[uid]
+                entries.append(entry)
+            self.selected_result.emit(entries)
+        except Exception as e:
+            log.error("Error emitting selected rows", e)
+            msg.showMessage("Problem getting info about for selected row")
 
     def emit_open_entries(self, target, indexes):
         rows = set(index.row() for index in indexes)
