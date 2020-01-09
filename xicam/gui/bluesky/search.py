@@ -81,10 +81,9 @@ class SearchState(ConfigurableQObject):
         self.catalog_selection_model = CatalogSelectionModel()
         self.search_results_model = SearchResultsModel(self)
         self._subcatalogs = []  # to support lookup by item's positional index
-        self._results = []  # to support lookup by item's positional index
-        self._results_set = set()  # to speed up checking if an item is in self._results
+        self.open_uids = set()  # to support quick lookup that a catalog is open
         self._results_catalog = None
-        self._new_entries = queue.Queue(maxsize=MAX_SEARCH_RESULTS)
+        self._new_uids_queue = queue.Queue(maxsize=MAX_SEARCH_RESULTS) #to pass reference of new catalogs across threads
         self.list_subcatalogs()
         self.set_selected_catalog(0)
         self.query_queue = queue.Queue()
@@ -177,11 +176,11 @@ class SearchState(ConfigurableQObject):
 
     def check_for_new_entries(self):
         # check for any new results and add them to the queue for later processing
-        for uid in list(self._results_catalog)[:MAX_SEARCH_RESULTS]:
-            if uid not in self._results_set:
-                self._results_set.add(uid)
-                self._results.append(uid)
-                self._new_entries.put(self._results_catalog[uid])
+        for uid in itertools.islice(self._results_catalog, MAX_SEARCH_RESULTS):
+            if uid in self.open_uids:
+                continue
+            self.open_uids.add(uid)
+            self._new_uids_queue.put(uid)
 
     def process_queries(self):
         # If there is a backlog, process only the newer query.
@@ -207,8 +206,7 @@ class SearchState(ConfigurableQObject):
     def search(self):
         self.search_results_model.clear()
         self.search_results_model.selected_rows.clear()
-        self._results.clear()
-        self._results_set.clear()
+        self.open_uids.clear()
         if not self.enabled:
             return
         query = {'time': {}}
@@ -225,9 +223,10 @@ class SearchState(ConfigurableQObject):
         t0 = time.monotonic()
         counter = 0
 
-        while not self._new_entries.empty():
+        while not self._new_uids_queue.empty():
             counter += 1
-            entry = self._new_entries.get()
+            new_uid = self._new_uids_queue.get()
+            entry = self._results_catalog[new_uid]
             row = []
             try:
                 row_data = self.apply_search_result_row(entry)
@@ -240,6 +239,7 @@ class SearchState(ConfigurableQObject):
             for value in row_data.values():
                 item = QStandardItem()
                 item.setData(value, Qt.DisplayRole)
+                item.setData(new_uid, Qt.UserRole)
                 row.append(item)
             self.search_results_model.appendRow(row)
         if counter:
@@ -285,7 +285,7 @@ class SearchResultsModel(QStandardItemModel):
         self.selected_rows -= set(index.row() for index in deselected.indexes())
         entries = []
         for row in sorted(self.selected_rows):
-            uid = self.search_state._results[row]
+            uid = self.data(self.index(row, 0), Qt.UserRole)
             entry = self.search_state._results_catalog[uid]
             entries.append(entry)
         self.selected_result.emit(entries)
@@ -294,7 +294,7 @@ class SearchResultsModel(QStandardItemModel):
         rows = set(index.row() for index in indexes)
         entries = []
         for row in rows:
-            uid = self.search_state._results[row]
+            uid = self.data(self.index(row, 0), Qt.UserRole)
             entry = self.search_state._results_catalog[uid]
             entries.append(entry)
         self.open_entries.emit(target, entries)
