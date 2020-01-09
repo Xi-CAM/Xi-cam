@@ -12,7 +12,7 @@ import queue
 import threading
 import time
 
-from qtpy.QtCore import Qt, Signal, QThread
+from qtpy.QtCore import Qt, Signal, QThread, QSettings
 from qtpy.QtGui import QStandardItemModel, QStandardItem
 from qtpy.QtWidgets import (
     QAbstractItemView,
@@ -27,7 +27,11 @@ from qtpy.QtWidgets import (
     QVBoxLayout,
     QWidget,
     QTableView,
+    QMenu,
     )
+
+from xicam.core import msg
+
 from .utils import ConfigurableQObject
 from .top_utils import load_config, Callable
 from xicam.core import msg
@@ -50,9 +54,8 @@ _validate = functools.partial(jsonschema.validate, types={'array': (list, tuple)
 
 
 def default_search_result_row(entry):
-    metadata = entry.describe()['metadata']
-    start = metadata['start']
-    stop = metadata['stop']
+    start = entry.metadata['start']
+    stop = entry.metadata['stop']
     start_time = datetime.fromtimestamp(start['time'])
     if stop is None:
         str_duration = '-'
@@ -74,6 +77,7 @@ class SearchState(ConfigurableQObject):
     """
     new_results_catalog = Signal([])
     new_results_catalog = Signal([])
+    sig_update_header = Signal()
     search_result_row = Callable(default_search_result_row, config=True)
 
     def __init__(self, catalog):
@@ -83,15 +87,14 @@ class SearchState(ConfigurableQObject):
         self.catalog_selection_model = CatalogSelectionModel()
         self.search_results_model = SearchResultsModel(self)
         self._subcatalogs = []  # to support lookup by item's positional index
-        self._results = []  # to support lookup by item's positional index
+        self.open_uids = set()  # to support quick lookup that a catalog is open
         self._results_catalog = None
-        self._new_entries = queue.Queue(maxsize=MAX_SEARCH_RESULTS)
+        self._new_uids_queue = queue.Queue(maxsize=MAX_SEARCH_RESULTS) #to pass reference of new catalogs across threads
         self.list_subcatalogs()
         self.set_selected_catalog(0)
         self.query_queue = queue.Queue()
         self.show_results_event = threading.Event()
         self.reload_event = threading.Event()
-
         search_state = self
 
         super().__init__()
@@ -124,7 +127,6 @@ class SearchState(ConfigurableQObject):
                     except Exception as e:
                         log.error(e)
                         msg.showMessage("Unable to query: ", str(e))
-
 
         self.process_queries_thread = ProcessQueriesThread()
         self.process_queries_thread.start()
@@ -216,11 +218,11 @@ class SearchState(ConfigurableQObject):
 
     def check_for_new_entries(self):
         # check for any new results and add them to the queue for later processing
-        for uid, entry in itertools.islice(self._results_catalog.items(), MAX_SEARCH_RESULTS):
-            if uid in self._results:
+        for uid in itertools.islice(self._results_catalog, MAX_SEARCH_RESULTS):
+            if uid in self.open_uids:
                 continue
-            self._results.append(uid)
-            self._new_entries.put(entry)
+            self.open_uids.add(uid)
+            self._new_uids_queue.put(uid)
 
     def process_queries(self):
         # If there is a backlog, process only the newer query.
@@ -234,21 +236,26 @@ class SearchState(ConfigurableQObject):
                     query = self.query_queue.get()
                 break
         log.debug('Submitting query %r', query)
-        t0 = time.monotonic()
-        invoke_in_main_thread(lambda: msg.showMessage("Running Query"))
-        invoke_in_main_thread(lambda: msg.showBusy())
-        self._results_catalog = self.selected_catalog.search(query)
-        self.check_for_new_entries()
-        invoke_in_main_thread(lambda: msg.hideBusy())
-        duration = time.monotonic() - t0
-        log.debug('Query yielded %r results (%.3f s).',
-                  len(self._results_catalog), duration)
-        self.new_results_catalog.emit()
+        try:
+            t0 = time.monotonic()
+            msg.showMessage("Running Query")
+            msg.showBusy()
+            self._results_catalog = self.selected_catalog.search(query)
+            self.check_for_new_entries()
+            duration = time.monotonic() - t0
+            log.debug('Query yielded %r results (%.3f s).',
+                    len(self._results_catalog), duration)
+            self.new_results_catalog.emit()
+        except Exception as e:
+            msg.logError(e)
+            msg.showMessage("Problem running query")
+        finally:
+            msg.hideBusy()
 
     def search(self):
         self.search_results_model.clear()
         self.search_results_model.selected_rows.clear()
-        self._results.clear()
+        self.open_uids.clear()
         if not self.enabled:
             return
         query = {'time': {}}
@@ -264,29 +271,39 @@ class SearchState(ConfigurableQObject):
         self.show_results_event.clear()
         t0 = time.monotonic()
         counter = 0
-        msg.showBusy()
-        while not self._new_entries.empty():
-            counter += 1
-            entry = self._new_entries.get()
-            row = []
-            try:
-                row_data = self.apply_search_result_row(entry)
-            except SkipRow:
-                continue
-            if not header_labels_set:
-                # Set header labels just once.
-                self.search_results_model.setHorizontalHeaderLabels(list(row_data))
-                header_labels_set = True
-            for value in row_data.values():
-                item = QStandardItem()
-                item.setData(value, Qt.DisplayRole)
-                row.append(item)
-            self.search_results_model.appendRow(row)
-        if counter:
-            duration = time.monotonic() - t0
-            log.debug("Displayed %d new results (%.3f s).", counter, duration)
-        self.show_results_event.set()
-        msg.hideBusy()
+        
+        try:
+            msg.showBusy()
+            while not self._new_uids_queue.empty():
+                counter += 1
+                new_uid = self._new_uids_queue.get()
+                entry = self._results_catalog[new_uid]
+                row = []
+                try:
+                    row_data = self.apply_search_result_row(entry)
+                except SkipRow:
+                    continue
+                if not header_labels_set:
+                    # Set header labels just once.
+                    self.search_results_model.setHorizontalHeaderLabels(list(row_data))
+                    header_labels_set = True
+                for value in row_data.values():
+                    item = QStandardItem()
+                    item.setData(value, Qt.DisplayRole)
+                    item.setData(new_uid, Qt.UserRole)
+                    row.append(item)
+                self.search_results_model.appendRow(row)
+            if counter:
+                self.sig_update_header.emit()
+                duration = time.monotonic() - t0
+                log.debug("Displayed %d new results (%.3f s).", counter, duration)
+            self.show_results_event.set()
+            msg.hideBusy()
+        except Exception as e:
+            msg.showMessage("Error displaying runs")
+            msg.logError(e)
+        finally:
+            msg.hideBusy()
 
     def reload(self):
         t0 = time.monotonic()
@@ -330,20 +347,19 @@ class SearchResultsModel(QStandardItemModel):
             self.selected_rows -= set(index.row() for index in deselected.indexes())
             entries = []
             for row in sorted(self.selected_rows):
-                uid = self.search_state._results[row]
-                #TODO this takes  a long time if the catalog is remote
+                uid = self.data(self.index(row, 0), Qt.UserRole)
                 entry = self.search_state._results_catalog[uid]
                 entries.append(entry)
             self.selected_result.emit(entries)
         except Exception as e:
-            log.error("Error emitting selected rows", e)
+            msg.logError(e)
             msg.showMessage("Problem getting info about for selected row")
 
     def emit_open_entries(self, target, indexes):
         rows = set(index.row() for index in indexes)
         entries = []
         for row in rows:
-            uid = self.search_state._results[row]
+            uid = self.data(self.index(row, 0), Qt.UserRole)
             entry = self.search_state._results_catalog[uid]
             entries.append(entry)
         self.open_entries.emit(target, entries)
@@ -364,7 +380,6 @@ class SearchResultsModel(QStandardItemModel):
     def on_until_time_changed(self, datetime):
         self.until = datetime.toSecsSinceEpoch()
         self.search_state.search()
-
 
 class SearchInputWidget(QWidget):
     """
@@ -461,6 +476,14 @@ class SearchResultsWidget(QTableView):
         self.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.setAlternatingRowColors(True)
 
+    def hide_hidden_columns(self):
+        hidden_columns = QSettings().value("catalog.columns.hidden") or set()
+        header = self.horizontalHeader()
+        current_column_names = [str(self.model().headerData(i, Qt.Horizontal)) for i in range(header.count())]
+        current_hidden_names = hidden_columns.intersection(set(current_column_names))
+        for name in current_hidden_names:
+            header.setSectionHidden(current_column_names.index(name), True)
+
 
 class SearchWidget(QWidget):
     """
@@ -468,16 +491,71 @@ class SearchWidget(QWidget):
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
         self.catalog_selection_widget = CatalogSelectionWidget()
         self.search_input_widget = SearchInputWidget()
         self.search_results_widget = SearchResultsWidget()
-
         layout = QVBoxLayout()
         layout.addWidget(self.catalog_selection_widget)
         layout.addWidget(self.search_input_widget)
         layout.addWidget(self.search_results_widget)
         self.setLayout(layout)
+
+        header = self.search_results_widget.horizontalHeader()
+        header.setContextMenuPolicy(Qt.CustomContextMenu)
+        header.customContextMenuRequested.connect(self.header_menu)
+        
+    def _current_column_names(self, header):
+        return [self._current_column_name(header, i) for i in range(header.count())]
+
+    def _current_column_name(self, header, index):
+        return str(header.model().headerData(index, Qt.Horizontal))
+       
+    def hide_column(self, header, logicalIndex):
+        '''
+        Hide a column, adding the column from the list of hidden columns in QSettings
+        '''
+        hidden_columns = QSettings().value("catalog.columns.hidden") or set()
+        if len(hidden_columns) == header.count() - 1:
+            msg.notifyMessage("Only one column is left to hide, cannot hide all of them.")
+            return
+        hidden_columns.add(self._current_column_name(header, logicalIndex))
+        QSettings().setValue("catalog.columns.hidden", hidden_columns)
+        header.setSectionHidden(logicalIndex, True)
+
+    def unhide_column(self, header, logicalIndex):
+        '''
+        Unhide a column, removing the column from the list of hidden columns in QSettings
+        '''
+        hidden_columns = QSettings().value("catalog.columns.hidden") or set()
+        column_name = self._current_column_name(header, logicalIndex)
+        try:
+            hidden_columns.remove(column_name)
+        except KeyError as ex:
+            raise(KeyError(f"Attempted to unhide non-hidden column name {column_name}."))
+        QSettings().setValue("catalog.columns.hidden", hidden_columns)
+        header.setSectionHidden(logicalIndex, False)
+
+    def header_menu(self, position):
+        '''
+        Creates a menu allowing users to show and hide columns
+        '''
+        header = self.sender()  # type: QHeaderView
+        index = header.logicalIndexAt(position)
+        menu = QMenu("Options")
+        action = menu.addAction("Hide Column")  # type: QAction
+        column_name = str(header.model().headerData(index, Qt.Horizontal))
+        action.triggered.connect(lambda: self.hide_column(header, index))
+        show_columns_menu = menu.addMenu("Show Columns")
+
+        for i in range(header.count()):
+            if header.isSectionHidden(i):
+                column_name = str(header.model().headerData(i, Qt.Horizontal))
+                action = show_columns_menu.addAction(column_name)
+                action.triggered.connect(functools.partial(self.unhide_column, header, i))
+                # why does below work, but not: lambda: self.unhide_column(header, i)
+                # action.triggered.connect(lambda triggered, logicalIndex=i: self.unhide_column(header, logicalIndex))
+
+        menu.exec_(header.mapToGlobal(position))
 
 
 class SkipRow(Exception):

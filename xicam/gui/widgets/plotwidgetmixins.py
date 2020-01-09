@@ -56,6 +56,7 @@ class CurveLabels(HoverHighlight):
         item = self.plotItem.plot(*args, **kwargs)
 
         item.sigPointsClicked.connect(self.showLabel)
+        return item
 
     def showLabel(self, item, points):
         if self._curvepoint:
