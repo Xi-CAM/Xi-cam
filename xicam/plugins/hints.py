@@ -266,6 +266,8 @@ class CoPlotHint(Hint):
         for plothint in self.plothints:
             plothint.remove()
         self.canvas_map[self.canvas] -= 1
+        if self.canvas_map[self.canvas] < 0:
+            self.canvas_map[self.canvas] = 0
 
     def visualize(self, canvas):
         self.canvas = canvas
