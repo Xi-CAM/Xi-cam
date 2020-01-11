@@ -50,7 +50,6 @@ class SummaryWidget(QWidget):
 
     def call_entry(self, entries):
         entry, = entries
-        run = entry()
         return entry()
 
     def set_entries(self, entries):
