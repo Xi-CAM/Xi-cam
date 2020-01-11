@@ -118,7 +118,9 @@ def hideBusy():
 
     """
     if progressbar:
-        progressbar.hide()
+        from .. import threads  # must be a late import
+
+        threads.invoke_in_main_thread(progressbar.hide)
         progressbar.setRange(0, 100)
 
 
@@ -182,7 +184,8 @@ def showMessage(*args, timeout=5, **kwargs):
     """
     s = " ".join(args)
     if statusbar is not None:
-        statusbar.showMessage(s, timeout * 1000)
+        from .. import threads  # must be a late import
+        threads.invoke_in_main_thread(statusbar.showMessage, s, timeout * 1000)
 
     logMessage(*args, **kwargs)
 
@@ -252,7 +255,9 @@ def clearMessage():
     """
     Clear messages from the statusbar
     """
-    statusbar.clearMessage()
+    from .. import threads  # must be a late import
+
+    threads.invoke_in_main_thread(statusbar.clearMessage)
 
 
 def logError(exception: Exception, value=None, tb=None, **kwargs):
