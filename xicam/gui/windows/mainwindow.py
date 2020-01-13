@@ -274,7 +274,7 @@ class pluginModeWidget(QToolBar):
 
     def _build_nodes(self):
         self._nodes = []
-        for plugin in pluginmanager.getPluginsOfCategory("GUIPlugin"):
+        for plugin in pluginmanager.getPluginsOfCategory("GUIPlugin") + pluginmanager.getPluginsOfCategory("EZPlugin"):
 
             node = Node(plugin, plugin.plugin_object.name)
 
