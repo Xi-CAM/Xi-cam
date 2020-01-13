@@ -24,12 +24,7 @@ class ROIProcessingPlugin(ProcessingPlugin):
         self.name = f"ROI #{self.ROI.index}"
 
     def evaluate(self):
-        # TODO -- don't need to do scene matching if we are not using ROI.getArrayRegion
-        # Add ROI to same scene as image
-        # (workflow serialization changes the obj refs, they need to be the same for ROI.getArrayRegion)
-        image_scene = self.image.value.scene()
-        image_scene.addItem(self.ROI)
-        self.region.value = self.ROI.getArrayRegion(self.data.value, self.image.value)
+        self.region.value = self.ROI.getLabelArray(self.data.value, self.image.value)
         self.roi.value = self.region.value.astype(np.bool)
 
     @property
@@ -359,6 +354,27 @@ class RectROI(BetterROI, RectROI):
     def handleChanged(self):
         self.parameter().child('width').setValue(self.width)
         self.parameter().child('height').setValue(self.height)
+
+    def getLabelArray(self, arr, img:pg.ImageItem = None):
+        # TODO : make more generic for all rectangle ROIs, segmented (multi-labeled) and non-segmented (single-labeled)
+        dim_0, dim_1 = arr.shape
+
+        min_x = self.pos().x()
+        min_y = self.pos().y()
+        max_x = self.size().x() + min_x
+        max_y = self.size().y() + min_y
+
+        mask = np.zeros_like(arr)
+
+        label_mask = np.fromfunction(lambda y, x: (x + .5 > min_x) &
+                                                  (x + .5 < max_x) &
+                                                  (y + .5 > min_y) &
+                                                  (y + .5 < max_y), (dim_0, dim_1))
+        mask[label_mask] = 1
+
+        # Invert y
+        # FIXME -- use image transform above with passed image item
+        return mask[::-1,::]
 
 
 class LineROI(BetterROI, LineROI):

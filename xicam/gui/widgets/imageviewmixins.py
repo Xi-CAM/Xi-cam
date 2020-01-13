@@ -69,7 +69,7 @@ class PixelSpace(ImageView):
         shape = img.shape
         a = [(0, shape[-2] - 1), (shape[-1] - 1, shape[-2] - 1), (shape[-1] - 1, 0), (0, 0)]
 
-        b = [(0, 0), (shape[-1] - 1, 0), (shape[-1] - 1, shape[-2] - 1), (0, shape[-2] - 1)]
+        b = [(0, 1), (shape[-1] - 1, 1), (shape[-1] - 1, shape[-2]), (0, shape[-2])]
 
         quad1 = QPolygonF()
         quad2 = QPolygonF()

@@ -12,7 +12,7 @@ import queue
 import threading
 import time
 
-from qtpy.QtCore import Qt, Signal, QThread
+from qtpy.QtCore import Qt, Signal, QThread, QSettings
 from qtpy.QtGui import QStandardItemModel, QStandardItem
 from qtpy.QtWidgets import (
     QAbstractItemView,
@@ -27,10 +27,15 @@ from qtpy.QtWidgets import (
     QVBoxLayout,
     QWidget,
     QTableView,
+    QMenu,
     )
+
+from xicam.core import msg
+
 from .utils import ConfigurableQObject
 from .top_utils import load_config, Callable
-
+from xicam.core import msg
+from xicam.core import threads
 
 MAX_SEARCH_RESULTS = 100  # TODO Use fetchMore instead of a hard limit.
 log = logging.getLogger('bluesky_browser')
@@ -47,11 +52,18 @@ QLineEdit {
 RELOAD_INTERVAL = 11
 _validate = functools.partial(jsonschema.validate, types={'array': (list, tuple)})
 
+def timeit(f):
+    def wrap(*args):
+        time1 = time.time()
+        ret = f(*args)
+        time2 = time.time()
+        print('{:s} function took {:.3f} ms'.format(f.__name__, (time2-time1)*1000.0))
+        return ret
+    return wrap
 
 def default_search_result_row(entry):
-    metadata = entry.describe()['metadata']
-    start = metadata['start']
-    stop = metadata['stop']
+    start = entry.metadata['start']
+    stop = entry.metadata['stop']
     start_time = datetime.fromtimestamp(start['time'])
     if stop is None:
         str_duration = '-'
@@ -73,29 +85,31 @@ class SearchState(ConfigurableQObject):
     """
     new_results_catalog = Signal([])
     new_results_catalog = Signal([])
+    sig_update_header = Signal()
     search_result_row = Callable(default_search_result_row, config=True)
 
     def __init__(self, catalog):
         self.update_config(load_config())
-        self.catalog = catalog
+        self.root_catalog = self.flatten_remote_catalogs(catalog)
         self.enabled = False  # to block searches during initial configuration
         self.catalog_selection_model = CatalogSelectionModel()
         self.search_results_model = SearchResultsModel(self)
         self._subcatalogs = []  # to support lookup by item's positional index
-        self._results = []  # to support lookup by item's positional index
+        self.open_uids = set()  # to support quick lookup that a catalog is open
         self._results_catalog = None
-        self._new_entries = queue.Queue(maxsize=MAX_SEARCH_RESULTS)
+        self._new_uids_queue = queue.Queue(maxsize=MAX_SEARCH_RESULTS) #to pass reference of new catalogs across threads
         self.list_subcatalogs()
         self.set_selected_catalog(0)
         self.query_queue = queue.Queue()
         self.show_results_event = threading.Event()
+        self.show_results_event.set()
         self.reload_event = threading.Event()
-
         search_state = self
 
         super().__init__()
 
-        self.new_results_catalog.connect(self.show_results)
+        self.last_results_thread = None
+        self.new_results_catalog.connect(self.start_show_results)
 
         class ReloadThread(QThread):
             def run(self):
@@ -121,11 +135,46 @@ class SearchState(ConfigurableQObject):
                     try:
                         search_state.process_queries()
                     except Exception as e:
-                        log.error(e)
-                  
+                        msg.logError(e)
+                        msg.showMessage("Unable to query: ", str(e))
 
         self.process_queries_thread = ProcessQueriesThread()
         self.process_queries_thread.start()
+
+    def start_show_results(self):
+        if not self.show_results_event.is_set():
+            if self.last_results_thread:
+                self.last_results_thread.requestInterruption()
+            self.show_results_event.wait()
+        self.last_results_thread = threads.QThreadFuture(self.show_results)
+        self.last_results_thread.start()
+
+    def flatten_remote_catalogs(self, catalog):
+        from intake.catalog.base import Catalog
+        cat_dict = {}
+
+        for name in catalog:
+            try:
+                from intake.catalog.base import RemoteCatalog
+                sub_cat = catalog[name]
+                # @TODO remote catalogs are one level too high. This check is
+                # pretty rough. Would rather check that a catalog's children
+                # should be top-level.
+                # This is making the terrible assumption that children
+                # of a RemoteCatalog be treated as top-level. But until
+                # we figure out how to tell that a catalog is a real catalog
+                # with data, it's as good as we can get
+                if isinstance(sub_cat(), RemoteCatalog):
+                    for name in sub_cat:
+                        cat_dict[name] = sub_cat[name]
+                else:
+                    cat_dict[name] = sub_cat
+            except Exception as e:
+                log.error(e)
+                msg.showMessage("Unable to query top level catalogs: ", str(e))
+
+        return Catalog.from_dict(cat_dict)
+
 
     def request_reload(self):
         self._results_catalog.force_reload()
@@ -167,26 +216,36 @@ class SearchState(ConfigurableQObject):
     def list_subcatalogs(self):
         self._subcatalogs.clear()
         self.catalog_selection_model.clear()
-        for name in self.catalog:
+        if not self.root_catalog:
+            return
+
+        for name in self.root_catalog:
             self._subcatalogs.append(name)
             self.catalog_selection_model.appendRow(QStandardItem(str(name)))
 
     def set_selected_catalog(self, item):
+        if len(self._subcatalogs) == 0:
+            return
         name = self._subcatalogs[item]
-        self.selected_catalog = self.catalog[name]()
-        self.search()
+        try:
+            self.selected_catalog = self.root_catalog[name]()
+            self.search()
+        except Exception as e:
+            log.error(e)
+            msg.showMessage("Unable to contact catalog: ", str(e))
 
     def check_for_new_entries(self):
         # check for any new results and add them to the queue for later processing
-        for uid, entry in itertools.islice(self._results_catalog.items(), MAX_SEARCH_RESULTS):
-            if uid in self._results:
+        for uid in itertools.islice(self._results_catalog, MAX_SEARCH_RESULTS):
+            if uid in self.open_uids:
                 continue
-            self._results.append(uid)
-            self._new_entries.put(entry)
+            self.open_uids.add(uid)
+            self._new_uids_queue.put(uid)
 
     def process_queries(self):
         # If there is a backlog, process only the newer query.
         block = True
+        
         while True:
             try:
                 query = self.query_queue.get_nowait()
@@ -195,20 +254,31 @@ class SearchState(ConfigurableQObject):
                 if block:
                     query = self.query_queue.get()
                 break
-        print(query)
         log.debug('Submitting query %r', query)
-        t0 = time.monotonic()
-        self._results_catalog = self.selected_catalog.search(query)
-        self.check_for_new_entries()
-        duration = time.monotonic() - t0
-        log.debug('Query yielded %r results (%.3f s).',
-                  len(self._results_catalog), duration)
-        self.new_results_catalog.emit()
+        try:
+            t0 = time.monotonic()
+            msg.showMessage("Running Query")
+            msg.showBusy()
+            self._results_catalog = self.selected_catalog.search(query)
+            self.check_for_new_entries()
+            duration = time.monotonic() - t0
+            log.debug('Query yielded %r results (%.3f s).',
+                    len(self._results_catalog), duration)
+            self.new_results_catalog.emit()
+        except Exception as e:
+            msg.logError(e)
+            msg.showMessage("Problem running query")
+        finally:
+            msg.hideBusy()
 
     def search(self):
+        self._new_uids_queue = queue.Queue(maxsize=MAX_SEARCH_RESULTS)
+        if self.last_results_thread and not self.show_results_event.is_set():
+            self.last_results_thread.requestInterruption()
+            self.last_results_thread.wait()
         self.search_results_model.clear()
         self.search_results_model.selected_rows.clear()
-        self._results.clear()
+        self.open_uids.clear()
         if not self.enabled:
             return
         query = {'time': {}}
@@ -219,43 +289,65 @@ class SearchState(ConfigurableQObject):
         query.update(**self.search_results_model.custom_query)
         self.query_queue.put(query)
 
+    @timeit
+    def get_run_by_uid(self, uid):
+        return self._results_catalog[uid]
+
+
     def show_results(self):
         header_labels_set = False
         self.show_results_event.clear()
         t0 = time.monotonic()
         counter = 0
+        
+        try:
+            msg.showBusy()
+            while not self._new_uids_queue.empty():
+                counter += 1
+                new_uid = self._new_uids_queue.get()
+                entry = self.get_run_by_uid(new_uid)
+                row = []
+                try:
+                    row_data = self.apply_search_result_row(entry)
+                except SkipRow:
+                    continue
+                if not header_labels_set:
+                    # Set header labels just once.
+                    threads.invoke_in_main_thread(self.search_results_model.setHorizontalHeaderLabels, list(row_data))
+                    header_labels_set = True
+                for value in row_data.values():
+                    item = QStandardItem()
+                    item.setData(value, Qt.DisplayRole)
+                    item.setData(new_uid, Qt.UserRole)
+                    row.append(item)
+                if QThread.currentThread().isInterruptionRequested():
+                    self.show_results_event.set()
+                    return
+                threads.invoke_in_main_thread(self.search_results_model.appendRow, row)
 
-        while not self._new_entries.empty():
-            counter += 1
-            entry = self._new_entries.get()
-            row = []
-            try:
-                row_data = self.apply_search_result_row(entry)
-            except SkipRow:
-                continue
-            if not header_labels_set:
-                # Set header labels just once.
-                self.search_results_model.setHorizontalHeaderLabels(list(row_data))
-                header_labels_set = True
-            for value in row_data.values():
-                item = QStandardItem()
-                item.setData(value, Qt.DisplayRole)
-                row.append(item)
-            self.search_results_model.appendRow(row)
-        if counter:
-            duration = time.monotonic() - t0
-            log.debug("Displayed %d new results (%.3f s).", counter, duration)
-        self.show_results_event.set()
+            if counter:
+                self.sig_update_header.emit()
+                duration = time.monotonic() - t0
+                log.debug("Displayed %d new results (%.3f s).", counter, duration)
+            self.show_results_event.set()
+        except Exception as e:
+            msg.showMessage("Error displaying runs")
+            msg.logError(e)
+        finally:
+            msg.hideBusy()
 
     def reload(self):
         t0 = time.monotonic()
         if self._results_catalog is not None:
-            self._results_catalog.reload()
-            self.check_for_new_entries()
-            duration = time.monotonic() - t0
-            log.debug("Reloaded search results (%.3f s).", duration)
-            self.new_results_catalog.emit()
-
+            try:
+                self._results_catalog.reload()
+                self.check_for_new_entries()
+                duration = time.monotonic() - t0
+                log.debug("Reloaded search results (%.3f s).", duration)
+                self.new_results_catalog.emit()
+            except Exception as e:
+                log.error(e)
+                msg.showMessage("Unable to query top level catalogs: ", str(e))
 
 class CatalogSelectionModel(QStandardItemModel):
     """
@@ -281,20 +373,24 @@ class SearchResultsModel(QStandardItemModel):
         self.selected_rows = set()
 
     def emit_selected_result(self, selected, deselected):
-        self.selected_rows |= set(index.row() for index in selected.indexes())
-        self.selected_rows -= set(index.row() for index in deselected.indexes())
-        entries = []
-        for row in sorted(self.selected_rows):
-            uid = self.search_state._results[row]
-            entry = self.search_state._results_catalog[uid]
-            entries.append(entry)
-        self.selected_result.emit(entries)
+        try:
+            self.selected_rows |= set(index.row() for index in selected.indexes())
+            self.selected_rows -= set(index.row() for index in deselected.indexes())
+            entries = []
+            for row in sorted(self.selected_rows):
+                uid = self.data(self.index(row, 0), Qt.UserRole)
+                entry = self.search_state._results_catalog[uid]
+                entries.append(entry)
+            self.selected_result.emit(entries)
+        except Exception as e:
+            msg.logError(e)
+            msg.showMessage("Problem getting info about for selected row")
 
     def emit_open_entries(self, target, indexes):
         rows = set(index.row() for index in indexes)
         entries = []
         for row in rows:
-            uid = self.search_state._results[row]
+            uid = self.data(self.index(row, 0), Qt.UserRole)
             entry = self.search_state._results_catalog[uid]
             entries.append(entry)
         self.open_entries.emit(target, entries)
@@ -315,7 +411,6 @@ class SearchResultsModel(QStandardItemModel):
     def on_until_time_changed(self, datetime):
         self.until = datetime.toSecsSinceEpoch()
         self.search_state.search()
-
 
 class SearchInputWidget(QWidget):
     """
@@ -412,6 +507,14 @@ class SearchResultsWidget(QTableView):
         self.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
         self.setAlternatingRowColors(True)
 
+    def hide_hidden_columns(self):
+        hidden_columns = QSettings().value("catalog.columns.hidden") or set()
+        header = self.horizontalHeader()
+        current_column_names = [str(self.model().headerData(i, Qt.Horizontal)) for i in range(header.count())]
+        current_hidden_names = hidden_columns.intersection(set(current_column_names))
+        for name in current_hidden_names:
+            header.setSectionHidden(current_column_names.index(name), True)
+
 
 class SearchWidget(QWidget):
     """
@@ -419,16 +522,72 @@ class SearchWidget(QWidget):
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
         self.catalog_selection_widget = CatalogSelectionWidget()
         self.search_input_widget = SearchInputWidget()
         self.search_results_widget = SearchResultsWidget()
-
         layout = QVBoxLayout()
         layout.addWidget(self.catalog_selection_widget)
         layout.addWidget(self.search_input_widget)
         layout.addWidget(self.search_results_widget)
         self.setLayout(layout)
+
+        header = self.search_results_widget.horizontalHeader()
+        header.setContextMenuPolicy(Qt.CustomContextMenu)
+        header.customContextMenuRequested.connect(self.header_menu)
+        
+    def _current_column_names(self, header):
+        return [self._current_column_name(header, i) for i in range(header.count())]
+
+    def _current_column_name(self, header, index):
+        return str(header.model().headerData(index, Qt.Horizontal))
+       
+    def hide_column(self, header, logicalIndex):
+        '''
+        Hide a column, adding the column from the list of hidden columns in QSettings
+        '''
+        hidden_columns = QSettings().value("catalog.columns.hidden") or set()
+        if len(hidden_columns) == header.count() - 1:
+            msg.notifyMessage("Only one column is left to hide, cannot hide all of them.")
+            return
+        hidden_columns.add(self._current_column_name(header, logicalIndex))
+        QSettings().setValue("catalog.columns.hidden", hidden_columns)
+        header.setSectionHidden(logicalIndex, True)
+
+    def unhide_column(self, header, logicalIndex):
+        '''
+        Unhide a column, removing the column from the list of hidden columns in QSettings
+        '''
+        hidden_columns = QSettings().value("catalog.columns.hidden") or set()
+        column_name = self._current_column_name(header, logicalIndex)
+        try:
+            hidden_columns.remove(column_name)
+        except KeyError as ex:
+            raise(KeyError(f"Attempted to unhide non-hidden column name {column_name}."))
+        QSettings().setValue("catalog.columns.hidden", hidden_columns)
+        header.setSectionHidden(logicalIndex, False)
+
+    def header_menu(self, position):
+        '''
+        Creates a menu allowing users to show and hide columns
+        '''
+        header = self.sender()  # type: QHeaderView
+        index = header.logicalIndexAt(position)
+        menu = QMenu("Options")
+        action = menu.addAction("Hide Column")  # type: QAction
+        column_name = str(header.model().headerData(index, Qt.Horizontal))
+        action.triggered.connect(lambda: self.hide_column(header, index))
+        show_columns_menu = menu.addMenu("Show Columns")
+
+        for i in range(header.count()):
+            if header.isSectionHidden(i):
+                column_name = str(header.model().headerData(i, Qt.Horizontal))
+                action = show_columns_menu.addAction(column_name)
+                action.triggered.connect(functools.partial(self.unhide_column, header, i))
+                # why does below work, but not: lambda: self.unhide_column(header, i)
+                # action.triggered.connect(lambda triggered, logicalIndex=i: self.unhide_column(header, logicalIndex))
+
+        menu.exec_(header.mapToGlobal(position))
+
 
 
 class SkipRow(Exception):
