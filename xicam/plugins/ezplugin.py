@@ -5,7 +5,8 @@ from qtpy.QtGui import *
 
 
 class _EZPlugin(GUIPlugin):
-    def __init__(self, name, toolbuttons=None, parameters=None, appendheadertest=None, centerwidget=None, bottomwidget=None):
+    def __init__(self, name, toolbuttons=None, parameters=None, appendcatalog=None, centerwidget=None,
+                 bottomwidget=None):
         self.name = name
 
         self.centerwidget = centerwidget() if callable(centerwidget) else centerwidget
@@ -21,8 +22,8 @@ class _EZPlugin(GUIPlugin):
             for toolbutton in toolbuttons:
                 self.addToolButton(*toolbutton)
 
-        if appendheadertest:
-            self.appendHeader = appendheadertest
+        if appendcatalog:
+            self.appendCatalog = appendcatalog
 
         self.stages = {
             "EZPlugin": GUILayout(self.centerwidget, right=self.rightwidget, bottom=self.bottomwidget, top=self.toolbar)
@@ -47,7 +48,7 @@ class _EZPlugin(GUIPlugin):
 
 
 def EZPlugin(
-    name="TestPlugin", toolbuttons=None, parameters=None, appendheadertest=None, centerwidget=None, bottomwidget=None
+        name="TestPlugin", toolbuttons=None, parameters=None, appendcatalog=None, centerwidget=None, bottomwidget=None
 ):
     """
     Quickly create a custom Xi-cam plugin.
@@ -99,7 +100,7 @@ def EZPlugin(
         (_EZPlugin,),
         {
             "__init__": lambda self: _EZPlugin.__init__(
-                self, name, toolbuttons, parameters, appendheadertest, centerwidget, bottomwidget
+                self, name, toolbuttons, parameters, appendcatalog, centerwidget, bottomwidget
             )
         },
     )
