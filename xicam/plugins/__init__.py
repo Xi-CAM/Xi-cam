@@ -13,7 +13,7 @@ from yapsy.PluginManager import PluginManager
 import xicam
 from xicam.core import msg
 from xicam.core import threads
-from xicam.args import parse_args
+from xicam.core.args import parse_args
 
 from .datahandlerplugin import DataHandlerPlugin
 from .catalogplugin import CatalogPlugin
