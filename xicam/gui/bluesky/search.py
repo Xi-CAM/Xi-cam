@@ -307,11 +307,13 @@ class SearchState(ConfigurableQObject):
             while not self._new_uids_queue.empty():
                 counter += 1
                 row = []
+                new_uid = self._new_uids_queue.get()
                 try:
-                    new_uid = self._new_uids_queue.get()
                     entry = self.get_run_by_uid(new_uid)
                     row_data = self.apply_search_result_row(entry)
-                except SkipRow:
+                except SkipRow as e:
+                    msg.showMessage(e.msg)
+                    msg.logError(e)
                     continue
                 if not header_labels_set:
                     # Set header labels just once.
