@@ -291,8 +291,10 @@ class SearchState(ConfigurableQObject):
 
     @timeit
     def get_run_by_uid(self, uid):
-        return self._results_catalog[uid]
-
+        try:
+            return self._results_catalog[uid]
+        except Exception:
+            raise SkipRow(f"error accessing documents for {uid}")
 
     def show_results(self):
         header_labels_set = False
@@ -304,12 +306,14 @@ class SearchState(ConfigurableQObject):
             msg.showBusy()
             while not self._new_uids_queue.empty():
                 counter += 1
-                new_uid = self._new_uids_queue.get()
-                entry = self.get_run_by_uid(new_uid)
                 row = []
+                new_uid = self._new_uids_queue.get()
                 try:
+                    entry = self.get_run_by_uid(new_uid)
                     row_data = self.apply_search_result_row(entry)
-                except SkipRow:
+                except SkipRow as e:
+                    msg.showMessage(e.msg)
+                    msg.logError(e)
                     continue
                 if not header_labels_set:
                     # Set header labels just once.
