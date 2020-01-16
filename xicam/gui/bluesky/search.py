@@ -89,6 +89,7 @@ class SearchState(ConfigurableQObject):
     search_result_row = Callable(default_search_result_row, config=True)
 
     def __init__(self, catalog):
+        self.last_results_thread = None
         self.update_config(load_config())
         self.root_catalog = self.flatten_remote_catalogs(catalog)
         self.enabled = False  # to block searches during initial configuration
@@ -108,7 +109,6 @@ class SearchState(ConfigurableQObject):
 
         super().__init__()
 
-        self.last_results_thread = None
         self.new_results_catalog.connect(self.start_show_results)
 
         class ReloadThread(QThread):
@@ -142,10 +142,6 @@ class SearchState(ConfigurableQObject):
         self.process_queries_thread.start()
 
     def start_show_results(self):
-        if not self.show_results_event.is_set():
-            if self.last_results_thread:
-                self.last_results_thread.requestInterruption()
-            self.show_results_event.wait()
         self.last_results_thread = threads.QThreadFuture(self.show_results)
         self.last_results_thread.start()
 
@@ -236,16 +232,19 @@ class SearchState(ConfigurableQObject):
 
     def check_for_new_entries(self):
         # check for any new results and add them to the queue for later processing
+        found_new = False
         for uid in itertools.islice(self._results_catalog, MAX_SEARCH_RESULTS):
             if uid in self.open_uids:
                 continue
             self.open_uids.add(uid)
             self._new_uids_queue.put(uid)
+            found_new = True
+        return found_new
 
     def process_queries(self):
         # If there is a backlog, process only the newer query.
         block = True
-        
+
         while True:
             try:
                 query = self.query_queue.get_nowait()
@@ -260,11 +259,12 @@ class SearchState(ConfigurableQObject):
             msg.showMessage("Running Query")
             msg.showBusy()
             self._results_catalog = self.selected_catalog.search(query)
-            self.check_for_new_entries()
+            found_new = self.check_for_new_entries()
             duration = time.monotonic() - t0
             log.debug('Query yielded %r results (%.3f s).',
                     len(self._results_catalog), duration)
-            self.new_results_catalog.emit()
+            if found_new and self.show_results_event.is_set():
+                self.new_results_catalog.emit()
         except Exception as e:
             msg.logError(e)
             msg.showMessage("Problem running query")
@@ -301,7 +301,7 @@ class SearchState(ConfigurableQObject):
         self.show_results_event.clear()
         t0 = time.monotonic()
         counter = 0
-        
+
         try:
             msg.showBusy()
             while not self._new_uids_queue.empty():
@@ -326,13 +326,13 @@ class SearchState(ConfigurableQObject):
                     row.append(item)
                 if QThread.currentThread().isInterruptionRequested():
                     self.show_results_event.set()
+                    msg.logMessage("Interrupt requested")
                     return
                 threads.invoke_in_main_thread(self.search_results_model.appendRow, row)
-
             if counter:
                 self.sig_update_header.emit()
                 duration = time.monotonic() - t0
-                log.debug("Displayed %d new results (%.3f s).", counter, duration)
+                msg.showMessage("Displayed {} new results {}.".format(counter, duration))
             self.show_results_event.set()
         except Exception as e:
             msg.showMessage("Error displaying runs")
@@ -345,13 +345,15 @@ class SearchState(ConfigurableQObject):
         if self._results_catalog is not None:
             try:
                 self._results_catalog.reload()
-                self.check_for_new_entries()
+                new_results = self.check_for_new_entries()
                 duration = time.monotonic() - t0
-                log.debug("Reloaded search results (%.3f s).", duration)
-                self.new_results_catalog.emit()
+                msg.logMessage("Reloaded search results {}.".format(duration))
+                if new_results and self.show_results_event.is_set():
+                    self.new_results_catalog.emit()
             except Exception as e:
                 log.error(e)
                 msg.showMessage("Unable to query top level catalogs: ", str(e))
+
 
 class CatalogSelectionModel(QStandardItemModel):
     """
@@ -538,13 +540,13 @@ class SearchWidget(QWidget):
         header = self.search_results_widget.horizontalHeader()
         header.setContextMenuPolicy(Qt.CustomContextMenu)
         header.customContextMenuRequested.connect(self.header_menu)
-        
+
     def _current_column_names(self, header):
         return [self._current_column_name(header, i) for i in range(header.count())]
 
     def _current_column_name(self, header, index):
         return str(header.model().headerData(index, Qt.Horizontal))
-       
+
     def hide_column(self, header, logicalIndex):
         '''
         Hide a column, adding the column from the list of hidden columns in QSettings
