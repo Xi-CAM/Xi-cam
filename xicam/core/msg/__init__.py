@@ -5,12 +5,14 @@ import signal
 import sys
 import os
 import time
+import warnings
 from typing import Any
 import traceback
 import threading
 from collections import defaultdict
 from qtpy.QtCore import QTimer
 from xicam.core import paths
+from contextlib import contextmanager
 
 """
 This module provides application-wide logging tools. Unhandled exceptions are hooked into the log. Messages and progress
@@ -26,25 +28,17 @@ can be displayed in the main Xi-cam window using showProgress and showMessage.
 statusbar = None
 progressbar = None
 os.makedirs(os.path.join(paths.user_cache_dir, "logs"), exist_ok=True)
-logging.basicConfig(filename=os.path.join(paths.user_cache_dir, "logs", "out.log"), level=logging.DEBUG)
 
-blacklist = [
-    "fabio.edfimage",
-    "ipykernel.inprocess.ipkernel",
-    "pyFAI.azimuthalIntegrator",
-    "traitlets",
-    "fabio.openimage",
-    "fabio.fabioutils",
-    "PyQt5.uic.uiparser",
-    "yapsy",
-    "caproto.threading.client",
-    "caproto._circuit",
-    "caproto",
-]
-
-for modname in blacklist:
-    logging.getLogger(modname).setLevel(logging.ERROR)
-stdch = logging.StreamHandler()
+logger = logging.getLogger('xicam')
+logger.setLevel('DEBUG')  # minimum level shown
+handler = logging.StreamHandler()
+handler.setLevel('DEBUG')  # minimum level shown
+#format = "%(asctime)s - %(name)s - %(module)s:%(lineno)d - %(funcName)s - "
+format = "%(asctime)s - %(caller_name)s - %(levelname)s - %(threadName)s - %(message)s"
+date_format = "%a %b %d %H:%M:%S %Y"
+formatter = logging.Formatter(fmt=format, datefmt=date_format)
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 # Log levels constants
 DEBUG = logging.DEBUG  # 10
@@ -121,7 +115,7 @@ def hideBusy():
         from .. import threads  # must be a late import
 
         threads.invoke_in_main_thread(progressbar.hide)
-        progressbar.setRange(0, 100)
+        threads.invoke_in_main_thread(progressbar.setRange, 0, 100)
 
 
 # aliases
@@ -213,42 +207,13 @@ def logMessage(*args: Any, level: int = INFO, loggername: str = None, timestamp:
     """
 
     # Join the args to a string
-    s = " ".join(map(str, args))
+    message = " ".join(map(str, args))
 
-    # ATTENTION: loggername is 'intelligently' determined with inspect. You probably want to leave it None.
-    if not loggername:
-        loggername = inspect.stack()[1][3]
-    logger = logging.getLogger(loggername)
-    logger.setLevel(DEBUG)
-
-    # Set the logging level
-    try:
-        stdch.setLevel(level)
-    except ValueError:
-        level = logging.CRITICAL
-        logger.log("Unrecognized logger level for following message...", level)
-    logger.addHandler(stdch)
-
-    # Make timestamp
-    if timestamp is None:
-        timestamp = time.asctime()
-
-    # Lookup levelname from level
-    levelname = levels[level]
-
-    if threading.current_thread() is threading.main_thread():
-        thread = "M"
-    else:
-        thread = str(threadIds[threading.get_ident()])
-
-    # LOG IT!
-    logger.log(level, f"{timestamp} - {loggername} - {levelname} - {thread} - {s}")
-
-    # Also, print message to stdout
-    # try:
-    #     if not suppressreprint: print(f'{timestamp} - {loggername} - {levelname} - {s}')
-    # except UnicodeEncodeError:
-    #     print('A unicode string could not be written to console. Some logging will not be displayed.')
+    if loggername is not None:
+        warnings.warn("Custom loggername is no longer supported, "
+                     "ignored.")
+    caller_name = sys._getframe().f_back.f_code.co_name
+    logger.log(level, message, extra={'caller_name': caller_name})
 
 
 def clearMessage():
@@ -272,13 +237,33 @@ def logError(exception: Exception, value=None, tb=None, **kwargs):
         tb = exception.__traceback__
     kwargs["level"] = ERROR
     if 'loggername' not in kwargs:
-        kwargs['loggername'] = inspect.stack()[1][3]
+        kwargs['loggername'] = sys._getframe().f_back.f_code.co_name
     logMessage("\n", "The following error was handled safely by Xi-cam. It is displayed here for debugging.", **kwargs)
     try:
         logMessage("\n", *traceback.format_exception(exception, value, tb), **kwargs)
     except AttributeError:
         logMessage("\n", *traceback.format_exception_only(exception, value), **kwargs)
+        
+cumulative_time = defaultdict(lambda: 0)
 
+@contextmanager
+def logTime(*args: Any, level: int = INFO,
+            loggername: str = None,
+            timestamp: str = None,
+            suppressreprint: bool = False,
+            cumulative_key: str = '') -> None:
+
+    start = time.clock_gettime_ns(time.CLOCK_THREAD_CPUTIME_ID)
+    yield
+    elapsed_time = time.clock_gettime_ns(time.CLOCK_THREAD_CPUTIME_ID) - start
+
+    if cumulative_key:
+        cumulative_time[cumulative_key] += elapsed_time
+        extra_args = [f"cumulative elapsed: {cumulative_time[cumulative_key]/1e6} ms elapsed: {elapsed_time/1e6} ms elapsed"]
+    else:
+        extra_args = [f"elapsed: {elapsed_time/1e6} ms elapsed"]
+
+    logMessage(*(args + extra_args), level, loggername, timestamp, suppressreprint)
 
 import sys
 
