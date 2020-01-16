@@ -312,7 +312,7 @@ class SearchState(ConfigurableQObject):
                     entry = self.get_run_by_uid(new_uid)
                     row_data = self.apply_search_result_row(entry)
                 except SkipRow as e:
-                    msg.showMessage(e.msg)
+                    msg.showMessage(str(msg))
                     msg.logError(e)
                     continue
                 if not header_labels_set:
