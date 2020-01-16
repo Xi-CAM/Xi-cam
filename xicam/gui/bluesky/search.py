@@ -142,10 +142,6 @@ class SearchState(ConfigurableQObject):
         self.process_queries_thread.start()
 
     def start_show_results(self):
-        #if not self.show_results_event.is_set():
-        #    if self.last_results_thread:
-        #        self.last_results_thread.requestInterruption()
-        #    self.show_results_event.wait()
         self.last_results_thread = threads.QThreadFuture(self.show_results)
         self.last_results_thread.start()
 
