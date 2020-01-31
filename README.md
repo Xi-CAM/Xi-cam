@@ -4,5 +4,5 @@ The extensible plugin components of [Xi-CAM](https://github.com/synchrotrons/Xi-
 
 ## Resources
 
-Documentation: https://xi-cam2.readthedocs.io/en/latest/
-Issues: https://github.com/synchrotrons/Xi-cam.plugins/issues
+* Documentation: https://xi-cam2.readthedocs.io/en/latest/
+* Issues: https://github.com/synchrotrons/Xi-cam.plugins/issues
