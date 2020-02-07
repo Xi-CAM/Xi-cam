@@ -27,18 +27,31 @@ can be displayed in the main Xi-cam window using showProgress and showMessage.
 # GUI widgets are registered into these slots to display messages/progress
 statusbar = None
 progressbar = None
-os.makedirs(os.path.join(paths.user_cache_dir, "logs"), exist_ok=True)
+log_dir = os.path.join(paths.user_cache_dir, "logs")
+os.makedirs(log_dir, exist_ok=True)
 
 logger = logging.getLogger('xicam')
 logger.setLevel('DEBUG')  # minimum level shown
-handler = logging.StreamHandler()
-handler.setLevel('DEBUG')  # minimum level shown
+
+# Create a formatter that all handlers below can use for formatting their log messages
 #format = "%(asctime)s - %(name)s - %(module)s:%(lineno)d - %(funcName)s - "
 format = "%(asctime)s - %(caller_name)s - %(levelname)s - %(threadName)s - %(message)s"
 date_format = "%a %b %d %H:%M:%S %Y"
 formatter = logging.Formatter(fmt=format, datefmt=date_format)
-handler.setFormatter(formatter)
-logger.addHandler(handler)
+
+# Create a log file that captures all logs (DEBUG)
+log_file = "out.log"
+# By default, append to the log file
+file_handler = logging.FileHandler(os.path.join(log_dir, log_file))
+file_handler.setLevel('DEBUG')  # minimum level shown
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
+
+# Create a stream handler that only shows ERROR-level log messages (attaches to sys.stderr by default)
+stream_handler = logging.StreamHandler()
+stream_handler.setLevel('ERROR')  # minimum level shown
+stream_handler.setFormatter(formatter)
+logger.addHandler(stream_handler)
 
 # Log levels constants
 DEBUG = logging.DEBUG  # 10
