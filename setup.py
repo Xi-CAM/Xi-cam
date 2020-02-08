@@ -57,6 +57,7 @@ setup(
     # simple. Or you can use find_packages().
     packages=[
         "xicam.core",
+        "xicam.core.args",
         "xicam.core.data",
         "xicam.core.execution",
         "xicam.core.msg",
