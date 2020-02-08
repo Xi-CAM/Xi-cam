@@ -25,46 +25,6 @@ from xicam.core import paths
 from contextlib import contextmanager
 
 
-
-# TODO: Add logging for images
-# TODO: Add icons in GUI reflection
-
-# GUI widgets are registered into these slots to display messages/progress
-statusbar = None
-progressbar = None
-log_dir = os.path.join(paths.user_cache_dir, "logs")
-os.makedirs(log_dir, exist_ok=True)
-
-logger = logging.getLogger('xicam')
-logger.setLevel('DEBUG')  # minimum level shown
-log_file = "out.log"
-
-# Create a formatter that all handlers below can use for formatting their log messages
-#format = "%(asctime)s - %(name)s - %(module)s:%(lineno)d - %(funcName)s - "
-format = "%(asctime)s - %(caller_name)s - %(levelname)s - %(threadName)s - %(message)s"
-date_format = "%a %b %d %H:%M:%S %Y"
-formatter = logging.Formatter(fmt=format, datefmt=date_format)
-
-# Create a log file that captures all logs (DEBUG)
-
-# By default, append to the log file
-DEFAULT_FILE_LOG_LEVEL = "DEBUG"
-FILE_LOG_LEVEL_SETTINGS_NAME = "file_log_level"
-file_log_level = QSettings().value(FILE_LOG_LEVEL_SETTINGS_NAME, DEFAULT_FILE_LOG_LEVEL)
-file_handler = logging.FileHandler(os.path.join(log_dir, log_file))
-file_handler.setLevel('DEBUG')  # minimum level shown
-file_handler.setFormatter(formatter)
-logger.addHandler(file_handler)
-
-# Create a stream handler that shows WARNING, ERROR, CRITICAL log messages (attaches to sys.stderr by default)
-DEFAULT_STREAM_LOG_LEVEL = "WARNING"
-STREAM_LOG_LEVEL_SETTINGS_NAME = "stream_log_level"
-stream_log_level = QSettings().value(STREAM_LOG_LEVEL_SETTINGS_NAME, DEFAULT_STREAM_LOG_LEVEL)
-stream_handler = logging.StreamHandler()
-stream_handler.setLevel(stream_log_level)  # minimum level shown
-stream_handler.setFormatter(formatter)
-logger.addHandler(stream_handler)
-
 # Log levels constants
 DEBUG = logging.DEBUG  # 10
 INFO = logging.INFO  # 20
@@ -73,6 +33,46 @@ ERROR = logging.ERROR  # 40
 CRITICAL = logging.CRITICAL  # 50
 
 levels = {DEBUG: "DEBUG", INFO: "INFO", WARNING: "WARNING", ERROR: "ERROR", CRITICAL: "CRITICAL"}
+
+# TODO: Add logging for images
+# TODO: Add icons in GUI reflection
+
+# GUI widgets are registered into these slots to display messages/progress
+statusbar = None
+progressbar = None
+# Create a log file that captures all logs (DEBUG)
+log_dir = os.path.join(paths.user_cache_dir, "logs")
+os.makedirs(log_dir, exist_ok=True)
+log_file = "out.log"
+
+logger = logging.getLogger('xicam')
+logger.setLevel('DEBUG')  # minimum level shown
+
+# Create a formatter that all handlers below can use for formatting their log messages
+#format = "%(asctime)s - %(name)s - %(module)s:%(lineno)d - %(funcName)s - "
+format = "%(asctime)s - %(caller_name)s - %(levelname)s - %(threadName)s - %(message)s"
+date_format = "%a %b %d %H:%M:%S %Y"
+formatter = logging.Formatter(fmt=format, datefmt=date_format)
+
+
+# By default, append to the log file
+DEFAULT_FILE_LOG_LEVEL = DEBUG
+FILE_LOG_LEVEL_SETTINGS_NAME = "file_log_level"
+file_log_level = int(QSettings().value(FILE_LOG_LEVEL_SETTINGS_NAME, DEFAULT_FILE_LOG_LEVEL))
+file_handler = logging.FileHandler(os.path.join(log_dir, log_file))
+file_handler.setLevel('DEBUG')  # minimum level shown
+file_handler.setFormatter(formatter)
+logger.addHandler(file_handler)
+
+# Create a stream handler that shows WARNING, ERROR, CRITICAL log messages (attaches to sys.stderr by default)
+DEFAULT_STREAM_LOG_LEVEL = WARNING
+STREAM_LOG_LEVEL_SETTINGS_NAME = "stream_log_level"
+stream_log_level = int(QSettings().value(STREAM_LOG_LEVEL_SETTINGS_NAME, DEFAULT_STREAM_LOG_LEVEL))
+stream_handler = logging.StreamHandler()
+stream_handler.setLevel(stream_log_level)  # minimum level shown
+stream_handler.setFormatter(formatter)
+logger.addHandler(stream_handler)
+
 
 trayicon = None
 if "qtpy" in sys.modules:
