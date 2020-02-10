@@ -59,7 +59,7 @@ DEFAULT_FILE_LOG_LEVEL = DEBUG
 FILE_LOG_LEVEL_SETTINGS_NAME = "file_log_level"
 file_log_level = int(QSettings().value(FILE_LOG_LEVEL_SETTINGS_NAME, DEFAULT_FILE_LOG_LEVEL))
 file_handler = logging.FileHandler(os.path.join(log_dir, log_file))
-file_handler.setLevel('DEBUG')  # minimum level shown
+file_handler.setLevel(file_log_level)  # minimum level shown
 file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 
