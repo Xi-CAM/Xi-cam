@@ -40,11 +40,11 @@ levels = {DEBUG: "DEBUG", INFO: "INFO", WARNING: "WARNING", ERROR: "ERROR", CRIT
 # GUI widgets are registered into these slots to display messages/progress
 statusbar = None
 progressbar = None
+
 # Create a log file that captures all logs (DEBUG)
 log_dir = os.path.join(paths.user_cache_dir, "logs")
 os.makedirs(log_dir, exist_ok=True)
 log_file = "out.log"
-
 logger = logging.getLogger('xicam')
 logger.setLevel('DEBUG')  # minimum level shown
 
@@ -53,7 +53,6 @@ logger.setLevel('DEBUG')  # minimum level shown
 format = "%(asctime)s - %(caller_name)s - %(levelname)s - %(threadName)s - %(message)s"
 date_format = "%a %b %d %H:%M:%S %Y"
 formatter = logging.Formatter(fmt=format, datefmt=date_format)
-
 
 # By default, append to the log file
 DEFAULT_FILE_LOG_LEVEL = DEBUG
@@ -72,7 +71,6 @@ stream_handler = logging.StreamHandler()
 stream_handler.setLevel(stream_log_level)  # minimum level shown
 stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
-
 
 trayicon = None
 if "qtpy" in sys.modules:
