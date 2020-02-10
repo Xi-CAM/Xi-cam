@@ -2,7 +2,7 @@ import sys
 import os
 import signal
 import trace
-from xicam.args import parse_args
+from xicam.core.args import parse_args
 
 print("args:", sys.argv)
 print("path:", sys.path)
