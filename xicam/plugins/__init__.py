@@ -487,7 +487,7 @@ class XicamPluginManager(PluginManager):
 
 
 class EntryPointPluginInfo():
-    def __init__(self, entry_point):
+    def __init__(self, entry_point: entrypoints.EntryPoint):
         self.plugin_object = None
         try:
             self.plugin_object = entry_point.load()
@@ -495,7 +495,7 @@ class EntryPointPluginInfo():
             msg.logError(ex)
         self.name = entry_point.name
         self.categories = []
-        self.path = 'module_name'
+        self.path = entry_point.module_name
 
 
 # Setup plugin manager
