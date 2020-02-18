@@ -50,12 +50,11 @@ class XicamMainWindow(QMainWindow):
         # Setup appearance
         self.setWindowTitle("Xi-cam")
 
+        self._configdialog = ConfigDialog()
+
         # Load plugins
         pluginmanager.collectPlugins()
 
-        # Restore Settings
-        self._configdialog = ConfigDialog()
-        self._configdialog.restore()
 
         # Setup center/toolbar/statusbar/progressbar
         self.pluginmodewidget = pluginModeWidget()
