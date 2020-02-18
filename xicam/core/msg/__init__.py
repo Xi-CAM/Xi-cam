@@ -5,12 +5,19 @@ can be displayed in the main Xi-cam window using showProgress and showMessage.
 
 Constants
 ---------
+DEFAULT_FILE_LOG_LEVEL : int
+    Default logging level for logging to file.
+DEFAULT_STREAM_LOG_LEVEL : int
+    Default logging level for logging to stream (e.g. sys.stdout).
 FILE_LOG_LEVEL_SETTINGS_NAME : str
     Name of the settings value for defining the file logging level.
+LOGGING_SETTINGS_NAME : str
+    Name of the serialized settings via LogginSettingsPlugin (in GUI mode).
 STREAM_LOG_LEVEL_SETTINGS_NAME : str
     Name of the settings value for defining the stream logging level.
 
 """
+import cloudpickle as pickle
 import logging
 import faulthandler
 import sys
@@ -25,6 +32,9 @@ from xicam.core import paths
 from contextlib import contextmanager
 
 
+# TODO: Add logging for images
+# TODO: Add icons in GUI reflection
+
 # Log levels constants
 DEBUG = logging.DEBUG  # 10
 INFO = logging.INFO  # 20
@@ -34,8 +44,12 @@ CRITICAL = logging.CRITICAL  # 50
 
 levels = {DEBUG: "DEBUG", INFO: "INFO", WARNING: "WARNING", ERROR: "ERROR", CRITICAL: "CRITICAL"}
 
-# TODO: Add logging for images
-# TODO: Add icons in GUI reflection
+# Define constants that the LoggingSettingsPlugin will end up using as well
+DEFAULT_FILE_LOG_LEVEL = DEBUG
+DEFAULT_STREAM_LOG_LEVEL = WARNING
+FILE_LOG_LEVEL_SETTINGS_NAME = "File Log Level"
+LOGGING_SETTINGS_NAME = "Logging"
+STREAM_LOG_LEVEL_SETTINGS_NAME = "Terminal Log Level"
 
 # GUI widgets are registered into these slots to display messages/progress
 statusbar = None
@@ -54,19 +68,33 @@ format = "%(asctime)s - %(caller_name)s - %(levelname)s - %(threadName)s - %(mes
 date_format = "%a %b %d %H:%M:%S %Y"
 formatter = logging.Formatter(fmt=format, datefmt=date_format)
 
-# By default, append to the log file
-DEFAULT_FILE_LOG_LEVEL = DEBUG
-FILE_LOG_LEVEL_SETTINGS_NAME = "file_log_level"
-file_log_level = int(QSettings().value(FILE_LOG_LEVEL_SETTINGS_NAME, DEFAULT_FILE_LOG_LEVEL))
+# Use the QSettings set up for us by LoggingSettingsPlugin
+logging_settings = QSettings().value(LOGGING_SETTINGS_NAME, {})
+if logging_settings:
+    # Unserialize the bytes stream (gives us a dict)
+    logging_settings = pickle.loads(logging_settings)
+    # Since LoggingSettingsPlugin is a ParameterSettingsPlugin,
+    # we access the settings (parameters) through the "children" key
+    logging_settings = logging_settings.get("children", {})
+
+# Create a file handler for logging to a file
+file_log_level = DEFAULT_FILE_LOG_LEVEL
+# See if we have the file logging level available to us
+file_log_settings = logging_settings.get(FILE_LOG_LEVEL_SETTINGS_NAME, {}).get("value")
+if logging_settings and file_log_settings:
+    file_log_level = file_log_settings
+# By default, append to log file
 file_handler = logging.FileHandler(os.path.join(log_dir, log_file))
 file_handler.setLevel(file_log_level)  # minimum level shown
 file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 
-# Create a stream handler that shows WARNING, ERROR, CRITICAL log messages (attaches to sys.stderr by default)
-DEFAULT_STREAM_LOG_LEVEL = WARNING
-STREAM_LOG_LEVEL_SETTINGS_NAME = "stream_log_level"
-stream_log_level = int(QSettings().value(STREAM_LOG_LEVEL_SETTINGS_NAME, DEFAULT_STREAM_LOG_LEVEL))
+# Create a stream handler (attaches to sys.stderr by default)
+stream_log_level = DEFAULT_STREAM_LOG_LEVEL
+# See if we have the stream logging level available to us
+stream_log_settings = logging_settings.get(STREAM_LOG_LEVEL_SETTINGS_NAME, {}).get("value")
+if logging_settings and stream_log_settings:
+    stream_log_level = stream_log_settings
 stream_handler = logging.StreamHandler()
 stream_handler.setLevel(stream_log_level)  # minimum level shown
 stream_handler.setFormatter(formatter)
