@@ -69,6 +69,8 @@ class ConfigDialog(QDialog):
         self.restore()
 
         pluginmanager.attach(self.pluginsChanged)
+        # Restore Settings
+        pluginmanager.attach(self.restore)
 
     def createIcons(self):
         self.contentsModel.clear()

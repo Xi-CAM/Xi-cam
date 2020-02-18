@@ -106,9 +106,18 @@ setup(
     # To provide executable scripts, use entry points in preference to the
     # "scripts" keyword. Entry points provide cross-platform support and allow
     # pip to create the appropriate form of executable for the target platform.
-    entry_points={'xicam.plugins.SettingsPlugin': ['cammart = xicam.gui.cammart:CamMartSettingsPlugin',
-                                                   'venvs = xicam.gui.cammart.venvs:VenvsSettingsPlugin'],
-                  'xicam.plugins.CatalogPlugin': ['databroker_catalog_plugin = xicam.gui.bluesky.databroker_catalog_plugin:DatabrokerCatalogPlugin']},
+    entry_points={
+        'xicam.plugins.SettingsPlugin': [
+            'logging = xicam.gui.settings.logging:LoggingSettingsPlugin',
+            'appearance = xicam.gui.settings.appearance:AppearanceSettingsPlugin',
+            'execution = xicam.gui.settings.execution:ExecutionSettingsPlugin',
+            'cammart = xicam.gui.cammart:CamMartSettingsPlugin',
+            'venvs = xicam.gui.cammart.venvs:VenvsSettingsPlugin',
+        ],
+        'xicam.plugins.CatalogPlugin': [
+            'databroker_catalog_plugin = xicam.gui.bluesky.databroker_catalog_plugin:DatabrokerCatalogPlugin'
+        ],
+    },
     ext_modules=[],
     include_package_data=True,
 )
