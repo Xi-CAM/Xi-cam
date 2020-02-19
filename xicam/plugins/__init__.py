@@ -119,6 +119,7 @@ class XicamPluginManager(PluginManager):
         # Loader thread
         self.loadthread = None
         self.loadqueue = deque()
+        self._loading_plugins = []
 
         self.observers = []
 
@@ -131,10 +132,6 @@ class XicamPluginManager(PluginManager):
     def notify(self, filter=None):
         for callback, obsfilter in self.observers:
             callback()
-
-    def loading_except_slot(self, ex):
-        msg.logError(ex)
-        raise NameError(f"No plugin named {name} is in the queue or plugin manager.")
 
     def getPluginByName(self, name, category="Default", timeout=150):
         plugin = super(XicamPluginManager, self).getPluginByName(name, category)
@@ -152,7 +149,7 @@ class XicamPluginManager(PluginManager):
             return plugin
 
         # if queueing
-        if len(self.loadqueue):
+        if len(self.loadqueue) or self._loading_plugins:
             for load_item in list(self.loadqueue):
                 if load_item[2].name == name:
                     self.loadqueue.remove(load_item)  # remove the item from the top-level queue
@@ -187,9 +184,8 @@ class XicamPluginManager(PluginManager):
         """
         self.loading = True
 
-        self.setPluginPlaces(self.plugindirs + (paths or []))
-
-        self.locatePlugins()
+        self.collectYapsyPlugins(paths)
+        self.collectEntryPointPlugins()
 
         # Prevent loading two plugins with the same name
         candidatedict = {c[2].name: c[2] for c in self._candidates}
@@ -197,7 +193,8 @@ class XicamPluginManager(PluginManager):
 
         for plugin in reversed(self._candidates):
             if plugin[2] not in candidatesset:
-                msg.logMessage(f'Possible duplicate plugin name "{plugin[2].name}" at {plugin[2].path}', level=msg.WARNING)
+                msg.logMessage(f'Possible duplicate plugin name "{plugin[2].name}" at {plugin[2].path}',
+                               level=msg.WARNING)
                 msg.logMessage(f"Possibly shadowed by {candidatedict[plugin[2].name].path}", level=msg.WARNING)
                 self._candidates.remove(plugin)
 
@@ -210,7 +207,33 @@ class XicamPluginManager(PluginManager):
                                                finished_slot=lambda: setattr(self, 'loadcomplete', True))
         future.start()
 
-        self.notify()
+    def collectEntryPointPlugins(self):
+        for category_name in self.category_mapping.keys():
+            group = entrypoints.get_group_named(f'xicam.plugins.{category_name}')
+            group_all = entrypoints.get_group_all(f'xicam.plugins.{category_name}')
+
+            # Warn the user if entrypoint names may shadow each other
+            if len(group_all) != len(group):
+                # There are some name collisions. Let's go digging for them.
+                for name, matches in itertools.groupby(group_all, lambda ep: ep.name):
+                    matches = list(matches)
+                    if len(matches) != 1:
+                        winner = group[name]
+                        warnings.warn(
+                            f"There are {len(matches)} entrypoints which share the name {name!r}: {matches}. "
+                            f"This may cause shadowing or other unexpected behavior in the future. "
+                            f"It is suggested to rename one of these entrypoints.")
+
+            entry_point_plugins = [EntryPointPluginInfo(entry_point, category_name) for entry_point in group_all if
+                                   entry_point.name not in self.blacklist]
+
+            self.loadqueue.extend(zip([None] * len(entry_point_plugins),
+                                      [ep.path for ep in entry_point_plugins],
+                                      entry_point_plugins))
+
+    def collectYapsyPlugins(self, paths=None):
+        self.setPluginPlaces(self.plugindirs + (paths or []))
+        self.locatePlugins()
 
     def instanciatePlugin(self, plugin_info, element, category_name):
         """
@@ -244,6 +267,8 @@ class XicamPluginManager(PluginManager):
                                level=msg.INFO)
 
                 self.notify()
+            finally:
+                self._loading_plugins.remove(plugin_info)
 
     def showLoading(self, plugininfo: PluginInfo):
         # Indicate loading status
@@ -289,12 +314,11 @@ class XicamPluginManager(PluginManager):
         initial_len = len(self.loadqueue)
 
         for candidate_infofile, candidate_filepath, plugin_info in iter(self.loadqueue.popleft, (None, None, None)):
+            self._loading_plugins.append(plugin_info)
             # yield a message can be displayed to the user
             yield plugin_info
 
-            self.load_marked_plugin(
-                candidate_infofile=candidate_infofile, candidate_filepath=candidate_filepath, plugin_info=plugin_info
-            )
+            self.load_plugin(candidate_infofile, candidate_filepath, plugin_info)
 
             msg.showProgress(initial_len - len(self.loadqueue), maxval=initial_len)
 
@@ -304,32 +328,16 @@ class XicamPluginManager(PluginManager):
         # don't need to take up the space
         delattr(self, "_candidates")
 
-        # Load entry points
-        self.load_entry_point_plugins()
-
         return self.processed_plugins
 
-    def load_entry_point_plugins(self):
-        for category_name, plugins in self.category_mapping.items():
-            group = entrypoints.get_group_named(f'xicam.plugins.{category_name}')
-            group_all = entrypoints.get_group_all(f'xicam.plugins.{category_name}')
-
-            # Warn the user if entrypoint names may shadow each other
-            if len(group_all) != len(group):
-                # There are some name collisions. Let's go digging for them.
-                for name, matches in itertools.groupby(group_all, lambda ep: ep.name):
-                    matches = list(matches)
-                    if len(matches) != 1:
-                        winner = group[name]
-                        warnings.warn(
-                            f"There are {len(matches)} entrypoints which share the name {name!r}: {matches}. "
-                            f"This may cause shadowing or other unexpected behavior in the future. "
-                            f"It is suggested to rename one of these entrypoints.")
-
-            entry_point_plugins = [EntryPointPluginInfo(entry_point) for entry_point in group_all if
-                                   entry_point.name not in self.blacklist]
-            for plugin_info in entry_point_plugins:
-                self.load_element_entry_point(category_name, plugin_info)
+    def load_plugin(self, candidate_infofile, candidate_filepath, plugin_info):
+        if candidate_infofile:  # Yapsy-style plugin
+            self.load_marked_plugin(
+                candidate_infofile=candidate_infofile, candidate_filepath=candidate_filepath, plugin_info=plugin_info
+            )
+        else:  # EntryPoint style plugin
+            # (entrypoints can't have more than one category)
+            self.load_element_entry_point(plugin_info.categories[0], plugin_info)
 
     def load_marked_plugin(self, candidate_infofile, candidate_filepath, plugin_info):
         msg.logMessage(
@@ -423,7 +431,7 @@ class XicamPluginManager(PluginManager):
 
         element = plugin_info.plugin_object
 
-        if element is not self.categories_interfaces[category_name]:
+        if element is not self.categories_interfaces[category_name]:  # don't try to instanciate bases
             # we found a new plugin: initialise it and search for the next one
             try:
 
@@ -487,14 +495,15 @@ class XicamPluginManager(PluginManager):
 
 
 class EntryPointPluginInfo():
-    def __init__(self, entry_point: entrypoints.EntryPoint):
+    def __init__(self, entry_point: entrypoints.EntryPoint, category_name):
+        self.entry_point = entry_point
         self.plugin_object = None
         try:
             self.plugin_object = entry_point.load()
         except Exception as ex:
             msg.logError(ex)
         self.name = entry_point.name
-        self.categories = []
+        self.categories = [category_name]
         self.path = entry_point.module_name
 
 
