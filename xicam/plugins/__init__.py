@@ -123,8 +123,11 @@ class XicamPluginManager(PluginManager):
 
         self.observers = []
 
-        self.loading = False
         self.loadcomplete = False
+
+    @property
+    def loading(self):
+        return self._loading_plugins or len(self.loadqueue)
 
     def attach(self, callback, filter=None):
         self.observers.append((callback, filter))
@@ -154,7 +157,7 @@ class XicamPluginManager(PluginManager):
                 if load_item[2].name == name:
                     self.loadqueue.remove(load_item)  # remove the item from the top-level queue
                     msg.logMessage(f"Immediately loading {load_item[2].name}.", level=msg.INFO)
-                    self.load_marked_plugin(*load_item)  # and load it immediately
+                    self.load_plugin(*load_item)  # and load it immediately
                     break
 
             # Run a wait loop until the plugin element is instanciated by main thread
@@ -182,10 +185,15 @@ class XicamPluginManager(PluginManager):
 
         Overloaded to add callback.
         """
-        self.loading = True
 
         self.collectYapsyPlugins(paths)
         self.collectEntryPointPlugins()
+
+        if self.loading:
+            self.loadqueue.extend(self._candidates)
+            return
+        else:
+            self.loadqueue.extend(self._candidates)
 
         # Prevent loading two plugins with the same name
         candidatedict = {c[2].name: c[2] for c in self._candidates}
@@ -227,9 +235,9 @@ class XicamPluginManager(PluginManager):
             entry_point_plugins = [EntryPointPluginInfo(entry_point, category_name) for entry_point in group_all if
                                    entry_point.name not in self.blacklist]
 
-            self.loadqueue.extend(zip([None] * len(entry_point_plugins),
-                                      [ep.path for ep in entry_point_plugins],
-                                      entry_point_plugins))
+            self._candidates.extend(zip([None] * len(entry_point_plugins),
+                                        [ep.path for ep in entry_point_plugins],
+                                        entry_point_plugins))
 
     def collectYapsyPlugins(self, paths=None):
         self.setPluginPlaces(self.plugindirs + (paths or []))
@@ -260,7 +268,6 @@ class XicamPluginManager(PluginManager):
                 )
                 plugin_info.error = exc_info
             else:
-                plugin_info.categories.append(category_name)
                 self.category_mapping[category_name].append(plugin_info)
 
                 msg.logMessage(f"{int(elapsed() * 1000)} ms elapsed while instanciating {plugin_info.name}",
@@ -309,7 +316,6 @@ class XicamPluginManager(PluginManager):
 
         self.processed_plugins = []
 
-        self.loadqueue.extend(self._candidates)
 
         initial_len = len(self.loadqueue)
 
