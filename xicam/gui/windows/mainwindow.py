@@ -12,7 +12,7 @@ from yapsy import PluginInfo
 from xicam.plugins import manager as pluginmanager
 from xicam.plugins import EntryPointPluginInfo
 from xicam.gui.widgets.debugmenubar import DebuggableMenuBar
-from xicam.core import msg
+from xicam.core import msg, threads
 from xicam.core.data import NonDBHeader
 from ..widgets import defaultstage
 from .settings import ConfigDialog
@@ -53,8 +53,8 @@ class XicamMainWindow(QMainWindow):
         self._configdialog = ConfigDialog()
 
         # Load plugins
-        pluginmanager.collectPlugins()
-
+        # Wait for mainwindow to load before collecting plugins
+        threads.invoke_as_event(pluginmanager.collectPlugins)
 
         # Setup center/toolbar/statusbar/progressbar
         self.pluginmodewidget = pluginModeWidget()
