@@ -243,6 +243,11 @@ def invoke_in_main_thread(fn, *args, force_event=False, **kwargs):
         QCoreApplication.postEvent(_invoker, InvokeEvent(fn, *args, **kwargs))
 
 
+def invoke_as_event(fn, *args, **kwargs):
+    """Invoke a callable as an event in the main thread."""
+    invoke_in_main_thread(fn, *args, force_event=True, **kwargs)
+
+
 def is_main_thread():
     return threading.current_thread() is threading.main_thread()
 
