@@ -235,7 +235,7 @@ def showMessage(*args, timeout=5, **kwargs):
     logMessage(*args, **kwargs)
 
 
-def logMessage(*args: Any, level: int = INFO, loggername: str = None, timestamp: str = None, suppressreprint: bool = False):
+def logMessage(*args: Any, level: int = INFO, loggername: str = None, sep=' '):
     """
     Logs messages to logging log. Gui widgets can be subscribed to the log with:
         logging.getLogger().addHandler(callable)
@@ -250,15 +250,13 @@ def logMessage(*args: Any, level: int = INFO, loggername: str = None, timestamp:
         Logging level; one of msg.DEBUG, msg.INFO, msg.WARNING, msg.ERROR, msg.CRITICAL. Default is INFO
     loggername      : str
         The name of the log to post the message into. Typically left blank, and populated by inspection.
-    timestamp       : str
-        The message timestamp, typically left blank.
-    suppressreprint : bool
-        Allows suppressing output to stdout.
+    sep             : str
+        A string to use for joining args; the separator
 
     """
 
     # Join the args to a string
-    message = " ".join(map(str, args))
+    message = sep.join(map(str, args))
 
     if loggername is not None:
         warnings.warn("Custom loggername is no longer supported, "
@@ -297,24 +295,24 @@ def logError(exception: Exception, value=None, tb=None, **kwargs):
         
 cumulative_time = defaultdict(lambda: 0)
 
+
 @contextmanager
 def logTime(*args: Any, level: int = INFO,
             loggername: str = None,
-            timestamp: str = None,
-            suppressreprint: bool = False,
-            cumulative_key: str = '') -> None:
-
+            cumulative_key: str = '',
+            sep=' ') -> None:
     start = time.clock_gettime_ns(time.CLOCK_THREAD_CPUTIME_ID)
     yield
     elapsed_time = time.clock_gettime_ns(time.CLOCK_THREAD_CPUTIME_ID) - start
 
     if cumulative_key:
         cumulative_time[cumulative_key] += elapsed_time
-        extra_args = [f"cumulative elapsed: {cumulative_time[cumulative_key]/1e6} ms elapsed: {elapsed_time/1e6} ms elapsed"]
+        extra_args = [
+            f"cumulative elapsed: {cumulative_time[cumulative_key] / 1e6} ms elapsed: {elapsed_time / 1e6} ms elapsed"]
     else:
-        extra_args = [f"elapsed: {elapsed_time/1e6} ms elapsed"]
+        extra_args = [f"elapsed: {elapsed_time / 1e6} ms elapsed"]
 
-    logMessage(*(args + extra_args), level, loggername, timestamp, suppressreprint)
+    logMessage(*(args + extra_args), level, loggername, sep)
 
 import sys
 
