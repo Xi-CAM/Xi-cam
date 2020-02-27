@@ -143,6 +143,8 @@ class QThreadFuture(QThread):
         """
         Do not call this from the main thread; you're probably looking for start()
         """
+        if self.threadkey:
+            threading.current_thread().name = self.threadkey
         self.cancelled = False
         self.exception = None
         if self.showBusy:
