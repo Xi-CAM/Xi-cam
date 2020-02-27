@@ -121,6 +121,7 @@ class XicamPluginManager():
         try:
             args = parse_args(exit_on_fail=False)
             include_cammart = not args.nocammart
+            self._blacklist = args.blacklist
         except RuntimeError:
             include_cammart = False
 
@@ -177,7 +178,8 @@ class XicamPluginManager():
             self._check_shadows(group, group_all)
 
             for name, entrypoint in group.items():
-                if entrypoint not in self._entrypoints[type_name]:  # If this entrypoint hasn't already been queued
+                # If this entrypoint hasn't already been queued
+                if entrypoint not in self._entrypoints[type_name] and entrypoint.name not in self._blacklist:
                     # ... queue and cache it
                     self._load_queue.put((type_name, entrypoint))
                     self._entrypoints[type_name][name] = entrypoint
@@ -302,8 +304,8 @@ class XicamPluginManager():
             if type_name == search_type_name or not type_name:
                 match_plugin = self.type_mapping[search_type_name].get(name, None)
                 if match_plugin and return_plugin:
-                    raise NameError('Multiple plugins with the same name but different types exist. '
-                                    'Must specify type_name.')
+                    raise ValueError('Multiple plugins with the same name but different types exist. '
+                                     'Must specify type_name.')
                 return_plugin = match_plugin
 
         return return_plugin
@@ -316,8 +318,8 @@ class XicamPluginManager():
             if type_name == search_type_name or not type_name:
                 match_entrypoint = self._entrypoints[search_type_name].get(name, None)
                 if match_entrypoint and return_entrypoint:
-                    raise NameError('Multiple plugins with the same name but different types exist. '
-                                    'Must specify type_name.')
+                    raise ValueError('Multiple plugins with the same name but different types exist. '
+                                     'Must specify type_name.')
                 return_entrypoint = match_entrypoint
                 return_type = search_type_name
 
