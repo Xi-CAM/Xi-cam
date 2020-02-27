@@ -1,4 +1,4 @@
-from yapsy.IPlugin import IPlugin
+from .plugin import PluginType
 
 viewTypes = ["ListView", "TreeView", ""]
 
@@ -39,14 +39,14 @@ except ImportError:
     pass
 
 
-class DataResourcePlugin(IPlugin):
+class DataResourcePlugin(PluginType):
     from xicam.gui.widgets.dataresourcebrowser import DataResourceList, DataBrowser
 
     model = DataSourceListModel
     view = DataResourceList
     controller = DataBrowser
 
-    isSingleton = False
+    is_singleton = False
 
     name = ""
 

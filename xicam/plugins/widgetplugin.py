@@ -1,6 +1,6 @@
 from qtpy.QtCore import *
 from qtpy.QtWidgets import *
-from yapsy.IPlugin import IPlugin
+from .plugin import PluginType
 
 
 # TODO: make classes usable without qt
@@ -14,8 +14,8 @@ from yapsy.IPlugin import IPlugin
 #     isSingleton = False
 
 
-class QWidgetPlugin(QWidget, IPlugin):
-    isSingleton = False
+class QWidgetPlugin(QWidget, PluginType):
+    is_singleton = False
 
 
 def test_QWidgetPlugin():

@@ -23,6 +23,7 @@ from .settingsplugin import SettingsPlugin, ParameterSettingsPlugin
 from .dataresourceplugin import DataResourcePlugin
 from .controllerplugin import ControllerPlugin
 from .widgetplugin import QWidgetPlugin
+from .plugin import PluginType
 
 try:
     # try to find the venvs entrypoint
@@ -79,6 +80,9 @@ class State(Enum):
 
 
 class XicamPluginManager():
+    NOTIFY_LIMIT = 1  # (second)
+    _sentinel = object()
+
     def __init__(self):
 
         self._blacklist = []
@@ -92,22 +96,26 @@ class XicamPluginManager():
         self.type_mapping = {}
         self.plugin_types = {}
 
+        # Remember all modules loaded before any plugins are loaded; don't bother unloading these
+        self._preloaded_modules = set(sys.modules.keys())
+
         # Observe changes to venvs
         if venvsobservers is not None:
             venvsobservers.append(self)
 
         # Load plugin types
-        plugin_types = {ep.name: ep.load() for ep in entrypoints.get_group_named('xicam.plugins.PluginType')}
+        self.plugin_types = {name: ep.load() for name, ep in
+                             entrypoints.get_group_named('xicam.plugins.PluginType').items()}
 
         # Toss plugin types that need qt if running without qt
         if not qt_is_safe:
-            plugin_types = {type_name: type_class for type_name, type_class in plugin_types if
-                            not getattr(type_class, 'needs_qt', True)}
+            self.plugin_types = {type_name: type_class for type_name, type_class in self.plugin_types if
+                                 not getattr(type_class, 'needs_qt', True)}
 
         # Initialize types
-        self.type_mapping = {type_name: {} for type_name in plugin_types.keys()}
-        self._entrypoints = self.type_mapping.copy()
-        self._load_cache = self.type_mapping.copy()
+        self.type_mapping = {type_name: {} for type_name in self.plugin_types.keys()}
+        self._entrypoints = {type_name: {} for type_name in self.plugin_types.keys()}
+        self._load_cache = {type_name: {} for type_name in self.plugin_types.keys()}
 
         # Check if cammart should be ignored
         try:
@@ -125,16 +133,39 @@ class XicamPluginManager():
         Find, load, and instantiate all Xi-cam plugins matching known plugin types
 
         """
-        # If the pm is already collecting, just add new items to the queue
-        discover_only = self.state == State.READY
-
-        self.state = State.DISCOVERING
         self._discover_plugins()
-        self.state = State.LOADING
-        if not discover_only:
-            self._load_plugins()
+        self._load_plugins()
+
+    def collect_plugin(self, plugin_name, plugin_class, type_name):
+        """
+        Register a class as a plugin. For in-memory usage. This is
+
+        """
+        ...
+
+    def _unload_plugins(self):
+        assert self.state == State.READY
+        self._load_queue = LifoQueue()
+        self._instantiate_queue = LifoQueue()
+        self.plugins = []
+
+        # Initialize types
+        self.type_mapping = {type_name: {} for type_name in self.plugin_types.keys()}
+        self._entrypoints = {type_name: {} for type_name in self.plugin_types.keys()}
+        self._load_cache = {type_name: {} for type_name in self.plugin_types.keys()}
+
+        reload_candidates = list(filter(lambda key: key.startswith('xicam.'), sys.modules.keys()))
+        for module_name in reload_candidates:
+            if module_name not in self._preloaded_modules:
+                del (sys.modules[module_name])
+
+    def hot_reload(self):
+        warnings.warn('Hot-reloading plugins; unexpected and unpredictable behavior may occur...', UserWarning)
+        self._unload_plugins()
+        self.collect_plugins()
 
     def _discover_plugins(self):
+        self.state = State.DISCOVERING
         # for each plugin type
         for type_name in self.plugin_types.keys():
 
@@ -145,13 +176,17 @@ class XicamPluginManager():
             # check for duplicate names
             self._check_shadows(group, group_all)
 
-            for entrypoint in group:
+            for name, entrypoint in group.items():
                 if entrypoint not in self._entrypoints[type_name]:  # If this entrypoint hasn't already been queued
                     # ... queue and cache it
                     self._load_queue.put((type_name, entrypoint))
-                    self._entrypoints[type_name][entrypoint.name] = entrypoint
+                    self._entrypoints[type_name][name] = entrypoint
 
-            msg.logMessage("Discovered entrypoints:", self._entrypoints)
+            msg.logMessage(f"Discovered {type_name} entrypoints:",
+                           *self._entrypoints[type_name].values(),
+                           sep='\n')
+        if self.state == State.DISCOVERING:
+            self.state = State.LOADING
 
     @staticmethod
     def _check_shadows(group, group_all):
@@ -171,7 +206,9 @@ class XicamPluginManager():
         started_instantiating = False
 
         # For every entrypoint in the load queue
-        for type_name, entrypoint in iter(self._load_queue.get, None):
+        while not self._load_queue.empty():
+            type_name, entrypoint = self._load_queue.get()
+
             # load it
             self._load_plugin(type_name, entrypoint)
 
@@ -183,11 +220,15 @@ class XicamPluginManager():
             # mark it as completed
             self._load_queue.task_done()
 
-            if self._load_queue.empty():  # Finished loading
-                self.state = State.INSTANTIATING
-                return
+        # Finished loading, progress
+        if self.state == State.LOADING:
+            self.state = State.INSTANTIATING
 
     def _load_plugin(self, type_name, entrypoint: entrypoints.EntryPoint):
+        # if the entrypoint was already loaded into cache and queued, do nothing
+        if self._load_cache[type_name].get(entrypoint.name, None):
+            return
+
         try:
             # Load the entrypoint (unless already cached), cache it, and put it on the instantiate queue
             msg.logMessage(f'Loading entrypoint {entrypoint.name} from module: {entrypoint.module_name}')
@@ -202,40 +243,54 @@ class XicamPluginManager():
             )
 
         else:
-            msg.logMessage(f"{int(elapsed() * 1000)} ms elapsed while instantiating {entrypoint.name}",
+            msg.logMessage(f"{int(elapsed() * 1000)} ms elapsed while loading {entrypoint.name}",
                            level=msg.INFO)
             self._instantiate_queue.put((type_name, entrypoint, plugin_class))
 
     def _instantiate_plugin(self):
-        if not self._instantiate_queue.empty():  # If there's a task in the queue
-            # ...get it
+        while not self._instantiate_queue.empty():
             type_name, entrypoint, plugin_class = self._instantiate_queue.get()
 
-            # ... and instantiate it (as long as its supposed to be singleton)
-            if not getattr(plugin_class, 'is_singleton', False):
-                msg.logMessage(f"Instantiating {entrypoint.name} plugin object.", level=msg.INFO)
-                try:
-                    with load_timer() as elapsed:
-                        self.type_mapping[type_name][entrypoint.name] = plugin_class()
-                except (Exception, SystemError) as ex:
-                    msg.logMessage(
-                        f"Unable to instantiate {entrypoint.name} plugin from module: {entrypoint.module_name}",
-                        msg.ERROR)
-                    msg.logError(ex)
-                    msg.notifyMessage(repr(ex),
-                                      title=f'An error occurred while starting the "{entrypoint.name}" plugin.')
+            # if this plugin was already instantiated earlier, skip it; mark done
+            if self.type_mapping[type_name].get(entrypoint.name, None) is None:
 
-            else:
-                self.type_mapping[type_name][entrypoint.name] = plugin_class
+                success = False
 
-            msg.logMessage(f"Successfully collected {entrypoint.name} plugin.", level=msg.INFO)
-            self._notify_on_schedule()
+                # ... and instantiate it (as long as its supposed to be singleton)
+                if getattr(plugin_class, 'is_singleton', False):
+                    msg.logMessage(f"Instantiating {entrypoint.name} plugin object.", level=msg.INFO)
+                    try:
+                        with load_timer() as elapsed:
+                            self.type_mapping[type_name][entrypoint.name] = plugin_class()
+                    except (Exception, SystemError) as ex:
+                        msg.logMessage(
+                            f"Unable to instantiate {entrypoint.name} plugin from module: {entrypoint.module_name}",
+                            msg.ERROR)
+                        msg.logError(ex)
+                        msg.notifyMessage(repr(ex),
+                                          title=f'An error occurred while starting the "{entrypoint.name}" plugin.')
+                    else:
+                        msg.logMessage(f"{int(elapsed() * 1000)} ms elapsed while instantiating {entrypoint.name}",
+                                       level=msg.INFO)
+                        success = True
+
+                else:
+                    self.type_mapping[type_name][entrypoint.name] = plugin_class
+                    success = True
+
+                if success:
+                    msg.logMessage(f"Successfully collected {entrypoint.name} plugin.", level=msg.INFO)
+                    msg.showProgress(self._progress_count(), maxval=self._entrypoint_count())
+                    self._notify_on_schedule()
 
             # mark it as completed
             self._instantiate_queue.task_done()
 
-            if self._instantiate_queue.empty() and self.state == State.INSTANTIATING:  # If this was the last plugin
-                self.state = State.READY
+        # If this was the last plugin
+        if self._load_queue.empty() and self._instantiate_queue.empty() and self.state == State.INSTANTIATING:
+            self.state = State.READY
+            msg.logMessage('Plugin collection completed!')
+            msg.hideProgress()
 
         if not self.state == State.READY:  # if we haven't reached the last task, but there's nothing queued
             threads.invoke_as_event(self._instantiate_plugin)  # return to the event loop, but come back soon
@@ -245,7 +300,7 @@ class XicamPluginManager():
         # Check all types matching type_name
         for search_type_name in self.plugin_types.keys():
             if type_name == search_type_name or not type_name:
-                match_plugin = self.type_mapping[search_type_name][name]
+                match_plugin = self.type_mapping[search_type_name].get(name, None)
                 if match_plugin and return_plugin:
                     raise NameError('Multiple plugins with the same name but different types exist. '
                                     'Must specify type_name.')
@@ -259,7 +314,7 @@ class XicamPluginManager():
         # Check all types matching type_name
         for search_type_name in self.plugin_types.keys():
             if type_name == search_type_name or not type_name:
-                match_entrypoint = self._entrypoints[search_type_name][name]
+                match_entrypoint = self._entrypoints[search_type_name].get(name, None)
                 if match_entrypoint and return_entrypoint:
                     raise NameError('Multiple plugins with the same name but different types exist. '
                                     'Must specify type_name.')
@@ -268,7 +323,7 @@ class XicamPluginManager():
 
         return return_entrypoint, return_type
 
-    def get_plugin_by_name(self, name, type_name=None, timeout=3):
+    def get_plugin_by_name(self, name, type_name=None, timeout=10):
         """
         Find a collected plugin named `name`, optionally by also specifying the type of plugin.
 
@@ -302,6 +357,9 @@ class XicamPluginManager():
             msg.logMessage(f"Immediately loading {entrypoint.name}.", level=msg.INFO)
             self._load_plugin(type_name, entrypoint)
 
+            # Add another instantiate event to the Qt event queue, so that it triggers in the next event loop
+            threads.invoke_as_event(self._instantiate_plugin)
+
             # wait for it to load
             with load_timer() as elapsed:
                 while not return_plugin:
@@ -315,12 +373,17 @@ class XicamPluginManager():
 
         return return_plugin
 
+    def get_plugins_of_type(self, type_name):
+        return list(self.type_mapping[type_name].values())
+
     def attach(self, callback, filter=None):
         """ Ask to receive updates whenever new plugins are collected. """
-        self.observers.append((callback, filter))
+        self._observers.append((callback, filter))
 
     def _notify_on_schedule(self, filter=None):
         """ Notify all observers IF we haven't recently """
+        # TODO: Implement this!
+        self._notify(filter)
 
     def _notify(self, filter=None):
         """ Notify all observers of new plugins"""
@@ -330,244 +393,29 @@ class XicamPluginManager():
     def venvChanged(self):
         self.collect_plugins()
 
-    def __getitem__(self, item: str):
-        """
-        Convenient way to get plugins.
+    def _entrypoint_count(self):
+        return sum(map(len, self._entrypoints.values()))
 
-        Usage
-        -----
+    def _progress_count(self):
+        return sum(map(len, self.type_mapping.values()))
 
-        manager['GUIPlugin']['SAXS']
+    def getPluginsOfCategory(self, type_name):
+        raise NotImplementedError('This method has been renamed to follow snake_case')
+        warnings.warn('Transition to snake_case in progress...', DeprecationWarning)
+        return self.get_plugins_of_type(type_name)
 
-        """
-        return {plugin.name: plugin for plugin in self.getPluginsOfCategory(item)}
+    def collectPlugins(self):
+        raise NotImplementedError('This method has been renamed to follow snake_case')
+        warnings.warn('Transition to snake_case in progress...', DeprecationWarning)
+        return self.collect_plugins()
 
-    def loadPlugins(self):
-        """
-        Load the candidate plugins that have been identified through a
-        previous call to locatePlugins.  For each plugin candidate
-        look for its category, load it and store it in the appropriate
-        slot of the ``category_mapping``.
-
-        If a callback function is specified, call it before every load
-        attempt.  The ``plugin_info`` instance is passed as an argument to
-        the callback.
-        """
-        # 		print "%s.loadPlugins" % self.__class__
-        if not hasattr(self, "_candidates"):
-            raise ValueError("locatePlugins must be called before loadPlugins")
-
-        self.processed_plugins = []
-
-
-        initial_len = len(self.loadqueue)
-
-        for candidate_infofile, candidate_filepath, plugin_info in iter(self.loadqueue.popleft, (None, None, None)):
-            self._loading_plugins.append(plugin_info)
-            # yield a message can be displayed to the user
-            yield plugin_info
-
-            self.load_plugin(candidate_infofile, candidate_filepath, plugin_info)
-
-            msg.showProgress(initial_len - len(self.loadqueue), maxval=initial_len)
-
-            if not len(self.loadqueue):
-                break
-        # Remove candidates list since we don't need them any more and
-        # don't need to take up the space
-        delattr(self, "_candidates")
-
-        return self.processed_plugins
-
-    def load_plugin(self, candidate_infofile, candidate_filepath, plugin_info):
-        if candidate_infofile:  # Yapsy-style plugin
-            self.load_marked_plugin(
-                candidate_infofile=candidate_infofile, candidate_filepath=candidate_filepath, plugin_info=plugin_info
-            )
-        else:  # EntryPoint style plugin
-            # (entrypoints can't have more than one category)
-            self.load_element_entry_point(plugin_info.categories[0], plugin_info)
-
-    def load_marked_plugin(self, candidate_infofile, candidate_filepath, plugin_info):
-        msg.logMessage(
-            f'Loading {plugin_info.name} plugin in {"main" if threads.is_main_thread() else "background"} thread.',
-            level=msg.INFO,
-        )
-        # make sure to attribute a unique module name to the one
-        # that is about to be loaded
-        plugin_module_name_template = (
-            NormalizePluginNameForModuleName("yapsy_loaded_plugin_" + plugin_info.name) + "_%d"  # why?
-        )
-
-        # make a uniquely numbered module name; again, why?
-        for plugin_name_suffix in range(len(sys.modules)):
-            plugin_module_name = plugin_module_name_template % plugin_name_suffix
-            if plugin_module_name not in sys.modules:
-                break
-
-        try:
-            # use imp to correctly load the plugin as a module
-            from importlib._bootstrap_external import _POPULATE
-
-            submodule_search_locations = (
-                os.path.dirname(plugin_info.path) if plugin_info.path.endswith("__init__.py") else _POPULATE
-            )
-
-            spec = importlib.util.spec_from_file_location(
-                plugin_info.name, plugin_info.path, submodule_search_locations=submodule_search_locations
-            )
-            candidate_module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(candidate_module)
-
-        except Exception as ex:
-            exc_info = sys.exc_info()
-            msg.logMessage("Unable to import plugin: %s" % plugin_info.path, msg.ERROR)
-            msg.logError(ex)
-            msg.notifyMessage(repr(ex), title=f'The "{plugin_info.name}" plugin could not be loaded.', level=msg.CRITICAL)
-            plugin_info.error = exc_info
-            self.processed_plugins.append(plugin_info)
-            return
-        self.processed_plugins.append(plugin_info)
-
-        if "__init__" in os.path.basename(plugin_info.name):  # is this necessary?
-            print("Yes, it is?")
-            sys.path.remove(plugin_info.path)
-        # now try to find and initialise the first subclass of the correct plugin interface
-
-        #### ADDED BY RP
-
-        dirlist = dir(candidate_module)
-        if hasattr(candidate_module, "__plugin_exports__"):
-            dirlist = candidate_module.__plugin_exports__
-        ####
-
-        with load_timer() as elapsed:  # cm for load timing
-
-            element_name = plugin_info.details["Core"].get("Object", None)  # Try explicitly defined element first
-
-            success = False
-            if element_name:
-                element = getattr(candidate_module, element_name)
-                success = self.load_element(element, candidate_infofile, plugin_info)
-
-            if not success:
-                for element in (getattr(candidate_module, name) for name in dirlist):  # add filtering?
-
-                    success = self.load_element(element, candidate_infofile, plugin_info)
-                    if success:
-                        break
-            if success:
-                msg.logMessage(f"{int(elapsed() * 1000)} ms elapsed while loading {plugin_info.name}", level=msg.INFO)
-            else:
-                msg.logMessage(f"No plugin found in indicated module: {candidate_filepath}", msg.ERROR)
-
-    def load_element_entry_point(self, category_name, plugin_info):
-        """
-
-        Parameters
-        ----------
-        element
-        candidate_infofile
-        plugin_info
-
-        Returns
-        -------
-        bool
-            True if the element matched a category, and will be accepted as a plugin
-
-        """
-        target_plugin_info = None
-
-        element = plugin_info.plugin_object
-
-        if element is not self.categories_interfaces[category_name]:  # don't try to instanciate bases
-            # we found a new plugin: initialise it and search for the next one
-            try:
-
-                threads.invoke_in_main_thread(self.instanciatePlugin, plugin_info, element, category_name)
-
-            except Exception as ex:
-                exc_info = sys.exc_info()
-                msg.logError(ex)
-                msg.logMessage("Unable to create plugin object: %s" % plugin_info.path)
-                plugin_info.error = exc_info
-                # break  # If it didn't work once it wont again
-                msg.logError(RuntimeError("An error occurred while loading plugin: %s" % plugin_info.path))
-            else:
-                # plugin_info.categories.append(category_name)
-                # self.category_mapping[category_name].append(plugin_info)
-
-                return True
-
-    def load_element(self, element, candidate_infofile, plugin_info):
-        """
-
-        Parameters
-        ----------
-        element
-        candidate_infofile
-        plugin_info
-
-        Returns
-        -------
-        bool
-            True if the element matched a category, and will be accepted as a plugin
-
-        """
-        target_plugin_info = None
-        for category_name in self.categories_interfaces:
-            try:
-                is_correct_subclass = issubclass(element, self.categories_interfaces[category_name])
-            except Exception:
-                continue
-            if is_correct_subclass and element is not self.categories_interfaces[category_name]:
-                current_category = category_name
-                if candidate_infofile not in self._category_file_mapping[current_category]:
-                    # we found a new plugin: initialise it and search for the next one
-                    try:
-
-                        threads.invoke_in_main_thread(self.instanciatePlugin, plugin_info, element, current_category)
-
-                    except Exception as ex:
-                        exc_info = sys.exc_info()
-                        msg.logError(ex)
-                        msg.logMessage("Unable to create plugin object: %s" % plugin_info.path)
-                        plugin_info.error = exc_info
-                        # break  # If it didn't work once it wont again
-                        msg.logError(RuntimeError("An error occurred while loading plugin: %s" % plugin_info.path))
-                    else:
-                        # plugin_info.categories.append(current_category)
-                        # self.category_mapping[current_category].append(plugin_info)
-                        self._category_file_mapping[current_category].append(candidate_infofile)
-
-                        return True
-
-
-class EntryPointPluginInfo():
-    def __init__(self, entry_point: entrypoints.EntryPoint, category_name):
-        self.entry_point = entry_point
-        self.plugin_object = None
-        try:
-            self.plugin_object = entry_point.load()
-        except Exception as ex:
-            msg.logError(ex)
-        self.name = entry_point.name
-        self.categories = [category_name]
-        self.path = entry_point.module_name
-
+    def getPluginByName(self, plugin_name, type_name):
+        raise NotImplementedError('This method has been renamed to follow snake_case')
+        warnings.warn('Transition to snake_case in progress...', DeprecationWarning)
+        return self.get_plugin_by_name(plugin_name, type_name)
 
 # Setup plugin manager
 manager = XicamPluginManager()
-
-# Example usage:
-#
-# # Loop round the plugins and print their names.
-# for plugin in manager.getAllPlugins():
-#     plugin.plugin_object.print_name()
-#
-# # Loop over each "Visualization" plugin
-# for pluginInfo in manager.getPluginsOfCategory("Visualization"):
-#     pluginInfo.plugin_object.doSomething(...)
 
 from ._version import get_versions
 

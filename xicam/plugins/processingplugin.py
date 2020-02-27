@@ -1,4 +1,4 @@
-from yapsy.IPlugin import IPlugin
+from .plugin import PluginType
 import inspect
 from xicam.core import msg
 from distributed.protocol.serialize import serialize
@@ -13,7 +13,7 @@ from warnings import warn
 # TODO allow outputs/inputs to connect
 
 
-class ProcessingPlugin(IPlugin):
+class ProcessingPlugin(PluginType):
     # TODO -- hints documentation
     # TODO: Categories documentation
     """
@@ -105,7 +105,7 @@ class ProcessingPlugin(IPlugin):
 
 
     """
-    isSingleton = False
+    is_singleton = False
     hints = []
 
     def __new__(cls, *args, **kwargs):
@@ -322,13 +322,13 @@ class _ProcessingPluginRetriever(object):
 
         # look for the plugin matching the saved name and re-instance it
         for plugin in pluginmanager.getPluginsOfCategory("ProcessingPlugin"):
-            if plugin.plugin_object.__name__ == pluginname:
-                p = plugin.plugin_object()
+            if plugin.__name__ == pluginname:
+                p = plugin()
                 p.__dict__ = internaldata
                 return p
 
         pluginlist = "\n\t".join(
-            [plugin.plugin_object.__name__ for plugin in pluginmanager.getPluginsOfCategory("ProcessingPlugin")]
+            [plugin.__name__ for plugin in pluginmanager.getPluginsOfCategory("ProcessingPlugin")]
         )
         raise ValueError(f"No plugin found with name {pluginname} in list of plugins:{pluginlist}")
 

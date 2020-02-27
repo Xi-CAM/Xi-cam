@@ -1,6 +1,6 @@
 from typing import List
 from qtpy.QtCore import QObject, QSettings
-from yapsy.IPlugin import IPlugin
+from .plugin import PluginType
 from xicam import plugins
 from pyqtgraph.parametertree import ParameterTree
 from pyqtgraph.parametertree.parameterTypes import GroupParameter
@@ -8,7 +8,9 @@ import cloudpickle as pickle
 from xicam.core import msg
 
 
-class SettingsPlugin(QObject, IPlugin):
+class SettingsPlugin(QObject, PluginType):
+    is_singleton = True
+
     def __new__(cls, *args, **kwargs):
         if not plugins.qt_is_safe:
             return None
