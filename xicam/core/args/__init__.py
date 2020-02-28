@@ -32,8 +32,8 @@ def parse_args(exit_on_fail=True):
                         help="increase output verbosity", default=0)
     parser.add_argument("--no-cammart", dest="nocammart", action="store_true",
                         help="disable cammart and sandboxed environment features")
-    parser.add_argument("--blacklist", dest="blacklist", action="extend",
-                        help="prevent Xi-cam from loading a plugin by name", nargs="+", type=str)
+    parser.add_argument("--blacklist", dest="blacklist", action="append",
+                        help="prevent Xi-cam from loading a plugin by name", type=str)
     parser.add_argument("--no-splash", dest="nosplash", action="store_true", help="skip the Xi-cam splash screen")
     try:
         return parser.parse_args()
