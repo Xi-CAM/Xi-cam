@@ -82,7 +82,7 @@ class WorkflowWidget(QWidget):
         self.functionmenu.clear()
         sortingDict = {}
         for plugin in pluginmanager.getPluginsOfCategory("ProcessingPlugin"):
-            typeOfProcessingPlugin = plugin.plugin_object.getCategory()
+            typeOfProcessingPlugin = plugin.getCategory()
             if not typeOfProcessingPlugin in sortingDict.keys():
                 sortingDict[typeOfProcessingPlugin] = []
             sortingDict[typeOfProcessingPlugin].append(plugin)
@@ -91,7 +91,7 @@ class WorkflowWidget(QWidget):
             self.functionmenu.addAction(key)
             self.functionmenu.addSeparator()
             for plugin in sortingDict[key]:
-                self.functionmenu.addAction(plugin.name, partial(self.addProcess, plugin.plugin_object, autoconnectall=True))
+                self.functionmenu.addAction(plugin.name, partial(self.addProcess, plugin, autoconnectall=True))
 
     def addProcess(self, process, autoconnectall=True):
         self.view.model().workflow.addProcess(process(), autoconnectall)

@@ -13,15 +13,19 @@ if "PySide.QtCore" in sys.modules and qtpy.API != "pyside":
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.inprocess import QtInProcessKernelManager
 
+from xicam.plugins import manager as plugin_manager
+
 
 class DebuggableMenuBar(QMenuBar):
     def __init__(self, *args, **kwargs):
         super(DebuggableMenuBar, self).__init__(*args, **kwargs)
 
-        self.debugshortcut = QShortcut(QKeySequence("Ctrl+Return"), self, self.showDebugMenu, context=Qt.ApplicationShortcut)
+        self.debugshortcut = QShortcut(QKeySequence("Ctrl+Return"), self, self.showDebugMenu,
+                                       context=Qt.ApplicationShortcut)
 
         self._debugmenu = QMenu("Debugging")
         self._debugmenu.addAction("Debug widget", self.startDebugging)
+        self._debugmenu.addAction("Hot-reload", plugin_manager.hot_reload)
 
         self.mousedebugger = MouseDebugger()
 
