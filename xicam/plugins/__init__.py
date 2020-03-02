@@ -203,7 +203,7 @@ class XicamPluginManager():
                         f"There are {len(matches)} conflicting entrypoints which share the name {name!r}:\n{matches}"
                         f"Loading entrypoint from {winner.module_name} and ignoring others.")
 
-    @threads.method(threadkey='entrypoint-loader')
+    @threads.method(threadkey='entrypoint-loader', showBusy=False)  # progress state managed independently
     def _load_plugins(self):
         started_instantiating = False
 
@@ -250,7 +250,7 @@ class XicamPluginManager():
             self._instantiate_queue.put((type_name, entrypoint, plugin_class))
 
     def _instantiate_plugin(self):
-        while not self._instantiate_queue.empty():
+        if not self._instantiate_queue.empty():
             type_name, entrypoint, plugin_class = self._instantiate_queue.get()
 
             # if this plugin was already instantiated earlier, skip it; mark done
@@ -289,7 +289,8 @@ class XicamPluginManager():
             self._instantiate_queue.task_done()
 
         # If this was the last plugin
-        if self._load_queue.empty() and self._instantiate_queue.empty() and self.state == State.INSTANTIATING:
+        if self._load_queue.empty() and self._instantiate_queue.empty() and self.state in [State.INSTANTIATING,
+                                                                                           State.READY]:
             self.state = State.READY
             msg.logMessage('Plugin collection completed!')
             msg.hideProgress()
