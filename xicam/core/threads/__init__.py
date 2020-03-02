@@ -1,4 +1,5 @@
 import time
+import sys
 from functools import partial, wraps
 from xicam.core import msg
 import logging
@@ -148,7 +149,7 @@ class QThreadFuture(QThread):
         self.cancelled = False
         self.exception = None
         if self.showBusy:
-            invoke_in_main_thread(show_busy)
+            show_busy()
         try:
             for self._result in self._run(*args, **kwargs):
                 if not isinstance(self._result, tuple):
@@ -170,7 +171,8 @@ class QThreadFuture(QThread):
         else:
             self.sigFinished.emit()
         finally:
-            invoke_in_main_thread(show_ready)
+            if self.showBusy:
+                show_ready()
             self.quit()
             QApplication.instance().aboutToQuit.disconnect(self.quit)
 
