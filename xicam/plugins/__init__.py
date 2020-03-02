@@ -79,9 +79,11 @@ class State(Enum):
     INSTANTIATING = auto()
 
 
+class Filters(Enum):
+    COMPLETE = auto()
+
+
 class XicamPluginManager():
-    NOTIFY_LIMIT = 1  # (second)
-    _sentinel = object()
 
     def __init__(self):
 
@@ -283,7 +285,7 @@ class XicamPluginManager():
                 if success:
                     msg.logMessage(f"Successfully collected {entrypoint.name} plugin.", level=msg.INFO)
                     msg.showProgress(self._progress_count(), maxval=self._entrypoint_count())
-                    self._notify_on_schedule()
+                    self._notify(Filters.COMPLETE)
 
             # mark it as completed
             self._instantiate_queue.task_done()
@@ -383,15 +385,11 @@ class XicamPluginManager():
         """ Ask to receive updates whenever new plugins are collected. """
         self._observers.append((callback, filter))
 
-    def _notify_on_schedule(self, filter=None):
-        """ Notify all observers IF we haven't recently """
-        # TODO: Implement this!
-        self._notify(filter)
-
     def _notify(self, filter=None):
         """ Notify all observers of new plugins"""
         for callback, obsfilter in self._observers:
-            callback()
+            if obsfilter == filter or not obsfilter:
+                callback()
 
     def venvChanged(self):
         self.collect_plugins()
