@@ -76,24 +76,25 @@ class QThreadFuture(QThread):
 
     def __init__(
         self,
-        method,
-        *args,
-        callback_slot=None,
-        finished_slot=None,
-        except_slot=None,
-        default_exhandle=True,
-        lock=None,
-        threadkey: str = None,
-        showBusy=True,
-        keepalive=True,
-        priority=QThread.InheritPriority,
-        timeout=0,
-        **kwargs,
+            method,
+            *args,
+            callback_slot=None,
+            finished_slot=None,
+            except_slot=None,
+            default_exhandle=True,
+            lock=None,
+            threadkey: str = None,
+            showBusy=True,
+            keepalive=True,
+            cancelIfRunning=True,
+            priority=QThread.InheritPriority,
+            timeout=0,
+            **kwargs,
     ):
         super(QThreadFuture, self).__init__()
 
         # Auto-Kill other threads with same threadkey
-        if threadkey:
+        if threadkey and cancelIfRunning:
             for thread in manager.threads:
                 if thread.threadkey == threadkey:
                     thread.cancel()
@@ -240,6 +241,9 @@ def invoke_in_main_thread(fn, *args, force_event=False, **kwargs):
     """
     Invoke a callable in the main thread. Use this for making callbacks to the gui where signals are inconvenient.
     """
+    # co_name = sys._getframe().f_back.f_code.co_name
+    # msg.logMessage(f"Invoking {fn} in main thread from {co_name}")
+
     if not force_event and is_main_thread():
         # we're already in the main thread; just do it!
         fn(*args, **kwargs)
@@ -249,6 +253,8 @@ def invoke_in_main_thread(fn, *args, force_event=False, **kwargs):
 
 def invoke_as_event(fn, *args, **kwargs):
     """Invoke a callable as an event in the main thread."""
+    # co_name = sys._getframe().f_back.f_code.co_name
+    # msg.logMessage(f"Invoking {fn} in main thread from {co_name}")
     invoke_in_main_thread(fn, *args, force_event=True, **kwargs)
 
 
@@ -257,17 +263,18 @@ def is_main_thread():
 
 
 def method(
-    callback_slot=None,
-    finished_slot=None,
-    except_slot=None,
-    default_exhandle=True,
-    lock=None,
-    threadkey: str = None,
-    showBusy=True,
-    priority=QThread.InheritPriority,
-    keepalive=True,
-    timeout=0,
-    block=False,
+        callback_slot=None,
+        finished_slot=None,
+        except_slot=None,
+        default_exhandle=True,
+        lock=None,
+        threadkey: str = None,
+        showBusy=True,
+        priority=QThread.InheritPriority,
+        keepalive=True,
+        cancelIfRunning=True,
+        timeout=0,
+        block=False,
 ):
     """
     Decorator for functions/methods to run as RunnableMethods on background QT threads
@@ -307,6 +314,7 @@ def method(
                 showBusy=showBusy,
                 priority=priority,
                 keepalive=keepalive,
+                cancelIfRunning=cancelIfRunning,
                 timeout=timeout,
                 **kwargs,
             )
