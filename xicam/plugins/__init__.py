@@ -94,7 +94,6 @@ class XicamPluginManager():
         self._load_cache = {}
         self._observers = []
         self.state = State.READY
-        self.plugins = []
         self.type_mapping = {}
         self.plugin_types = {}
 
@@ -139,18 +138,29 @@ class XicamPluginManager():
         self._discover_plugins()
         self._load_plugins()
 
-    def collect_plugin(self, plugin_name, plugin_class, type_name):
+    def collect_plugin(self, plugin_name, plugin_class, type_name, replace=False):
         """
-        Register a class as a plugin. For in-memory usage. This is
+        Register a class as a plugin. For in-memory usage. If `replace`, then any earlier instances are purged first
 
         """
-        ...
+        if replace:
+            # Clear cache by name
+            self._entrypoints[type_name].pop(plugin_name, None)
+            self.type_mapping[type_name].pop(plugin_name, None)
+            self._load_cache[type_name].pop(plugin_name, None)
+
+        # Start a special collection cycle
+        self.state = State.DISCOVERING
+        live_entry_point = LiveEntryPoint(plugin_name, plugin_class)
+        self._load_queue.put((type_name, live_entry_point))
+        if self.state == State.DISCOVERING:
+            self.state = State.LOADING
+        self._load_plugins()
 
     def _unload_plugins(self):
         assert self.state == State.READY
         self._load_queue = LifoQueue()
         self._instantiate_queue = LifoQueue()
-        self.plugins = []
 
         # Initialize types
         self.type_mapping = {type_name: {} for type_name in self.plugin_types.keys()}
@@ -205,7 +215,8 @@ class XicamPluginManager():
                         f"There are {len(matches)} conflicting entrypoints which share the name {name!r}:\n{matches}"
                         f"Loading entrypoint from {winner.module_name} and ignoring others.")
 
-    @threads.method(threadkey='entrypoint-loader', showBusy=False)  # progress state managed independently
+    @threads.method(threadkey='entrypoint-loader', showBusy=False,
+                    cancelIfRunning=False)  # progress state managed independently
     def _load_plugins(self):
         started_instantiating = False
 
@@ -415,8 +426,24 @@ class XicamPluginManager():
         warnings.warn('Transition to snake_case in progress...', DeprecationWarning)
         return self.get_plugin_by_name(plugin_name, type_name)
 
+
 # Setup plugin manager
 manager = XicamPluginManager()
+
+
+# A light class to mimic EntryPoint for live objects
+class LiveEntryPoint(entrypoints.EntryPoint):
+    def __init__(self, name, object, extras=None, distro=None):
+        super(LiveEntryPoint, self).__init__(name,
+                                             module_name='[live]',
+                                             object_name=object.__name__,
+                                             extras=extras,
+                                             distro=distro)
+        self.object = object
+
+    def load(self):
+        return self.object
+
 
 from ._version import get_versions
 
