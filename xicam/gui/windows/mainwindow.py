@@ -10,7 +10,7 @@ from xicam.plugins.guiplugin import PanelState
 from yapsy import PluginInfo
 
 from xicam.plugins import manager as pluginmanager
-from xicam.plugins import EntryPointPluginInfo
+from xicam.plugins import PluginType
 from xicam.gui.widgets.debugmenubar import DebuggableMenuBar
 from xicam.core import msg, threads
 from xicam.core.data import NonDBHeader
@@ -53,8 +53,7 @@ class XicamMainWindow(QMainWindow):
         self._configdialog = ConfigDialog()
 
         # Load plugins
-        # Wait for mainwindow to load before collecting plugins
-        threads.invoke_as_event(pluginmanager.collectPlugins)
+        pluginmanager.collect_plugins()
 
         # Setup center/toolbar/statusbar/progressbar
         self.pluginmodewidget = pluginModeWidget()
@@ -271,13 +270,17 @@ class pluginModeWidget(QToolBar):
         # Build children
         self.pluginsChanged()
 
+    def pluginsChanged(self):
+        self._build_nodes()
+        self.showNode()
+
     def _build_nodes(self):
         self._nodes = []
-        for plugin in pluginmanager.getPluginsOfCategory("GUIPlugin") + pluginmanager.getPluginsOfCategory("EZPlugin"):
+        for plugin in pluginmanager.get_plugins_of_type("GUIPlugin") + pluginmanager.get_plugins_of_type("EZPlugin"):
 
-            node = Node(plugin, plugin.plugin_object.name)
+            node = Node(plugin, plugin.name)
 
-            for name, stage in plugin.plugin_object.stages.items():
+            for name, stage in plugin.stages.items():
                 node.children.append(self._build_subnodes(name, stage, parent=node))
 
             self._nodes.append(node)
@@ -292,11 +295,6 @@ class pluginModeWidget(QToolBar):
 
         return node
 
-
-    def pluginsChanged(self):
-        self._build_nodes()
-        self.showNode()
-
     def showNode(self, node=None, direction=None):
         if node is None:  # toplevel
             plugin_nodes = [node for node in self._nodes if node.parent is None]
@@ -310,12 +308,12 @@ class pluginModeWidget(QToolBar):
             if len(nodes) > 1:
                 self._showNodes(nodes, direction)
 
-        elif isinstance(node.object, (PluginInfo.PluginInfo, EntryPointPluginInfo)):
+        elif isinstance(node.object, (PluginType,)):
             nodes = node.children
             if len(nodes) > 1:
                 self._showNodes(nodes, direction)
-            self.sigSetGUIPlugin.emit(node.object.plugin_object)
-            self.setStage(node.object.plugin_object.stage)
+            self.sigSetGUIPlugin.emit(node.object)
+            self.setStage(node.object.stage)
 
         # elif isinstance(node.object, dict): # midlevel
         #     self._showNodes(node.object.keys(), node.object.values(), direction)
@@ -324,7 +322,7 @@ class pluginModeWidget(QToolBar):
             parent_node = node.parent
             while parent_node.parent is not None:
                 parent_node = parent_node.parent
-            self.sigSetGUIPlugin.emit(parent_node.object.plugin_object)
+            self.sigSetGUIPlugin.emit(parent_node.object)
             self.setStage(node.object)
 
             # self.fadeOut(callback=partial(self.mkButtons, names=names, callback=self.showStages), distance=0)
@@ -384,40 +382,9 @@ class pluginModeWidget(QToolBar):
             a.setEasingCurve(QEasingCurve.OutBack)
             a.start(QPropertyAnimation.DeleteWhenStopped)
 
-    # def showStages(self, plugin, *, parent_stage=None):
-    #     if not parent_stage:
-    #         self.sigSetGUIPlugin.emit(plugin)
-    #     if len(self.parent().currentGUIPlugin.plugin_object.stages) > 1:
-    #         if parent_stage:
-    #             names = self.parent().currentGUIPlugin.plugin_object.stages[parent_stage].keys()
-    #         else:
-    #             names = self.parent().currentGUIPlugin.plugin_object.stages.keys()
-    #
-    #         parent = self.parent().currentGUIPlugin.plugin_object.name
-    #         if parent_stage:
-    #             parent += f' > {parent_stage}'
-    #
-    #         self.fadeOut(
-    #             callback=partial(
-    #                 self.mkButtons,
-    #                 names=names,
-    #                 callback=self.setStage,#self.sigSetStage.emit,
-    #                 parent=parent,
-    #             )
-    #         )
 
     def setStage(self, stage):
         self.sigSetStage.emit(stage)
-        # if isinstance(list(self.parent().currentGUIPlugin.plugin_object.stages.values())[i], dict):
-        #     self.showStages(self.parent().currentGUIPlugin.plugin_object, parent_stage=list(self.parent().currentGUIPlugin.plugin_object.stages.keys())[i])
-
-    # def showGUIPlugins(self, distance=20):
-    #     plugins = pluginmanager.getPluginsOfCategory("GUIPlugin")
-    #     # TODO: test deactivated plugins
-    #     names = [
-    #         plugin.plugin_object.name for plugin in plugins if getattr(plugin, "is_activated", True) or True
-    #     ]  # TODO: add plugin deactivation
-    #     self.fadeOut(callback=partial(self.mkButtons, names=names, callback=self.showStages), distance=distance)
 
     def mkButtons(self, nodes):
         # Remove+delete previous children

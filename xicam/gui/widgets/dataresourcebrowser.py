@@ -149,16 +149,16 @@ class BrowserTabBar(ContextMenuTabBar):
 
         for plugin in pluginmanager.getPluginsOfCategory("CatalogPlugin") + pluginmanager.getPluginsOfCategory(
                 "DataResourcePlugin"):
-            self.actions[plugin.plugin_object.name] = QAction(plugin.plugin_object.name)
-            self.actions[plugin.plugin_object.name].triggered.connect(partial(self._addBrowser, plugin))
-            self.menu.addAction(self.actions[plugin.plugin_object.name])
+            self.actions[plugin.name] = QAction(plugin.name)
+            self.actions[plugin.name].triggered.connect(partial(self._addBrowser, plugin))
+            self.menu.addAction(self.actions[plugin.name])
 
         self.menu.popup(pos)
 
     def _addBrowser(self, plugin):
         from xicam.plugins import DataResourcePlugin, CatalogPlugin
 
-        plugin = plugin.plugin_object()
+        plugin = plugin()
 
         if isinstance(plugin, DataResourcePlugin):
             datasource = plugin
