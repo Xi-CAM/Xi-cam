@@ -8,10 +8,12 @@ Welcome to Xi-cam's documentation!
 
 .. toctree::
    :caption: Contents:
+   :maxdepth: 2
 
    intro
    install
    ez-plugin
+   plugin-dev
    processing-plugin
    gui-plugin
    workflow
