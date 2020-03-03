@@ -151,13 +151,13 @@ def load_header(uris: List[Union[str, Path]] = None, uuid: str = None):
     handlercandidates = []
     ext = Path(uris[0]).suffix
     for plugin in pluginmanager.getPluginsOfCategory("DataHandlerPlugin"):
-        if ext in plugin.plugin_object.DEFAULT_EXTENTIONS:
+        if ext in plugin.DEFAULT_EXTENTIONS:
             handlercandidates.append(plugin)
     if not handlercandidates:
         return NonDBHeader({}, [], [], {})
     # try:
     msg.logMessage(f'Handler selected: {handlercandidates[0]}')
-    return NonDBHeader(**handlercandidates[0].plugin_object.ingest(uris))
+    return NonDBHeader(**handlercandidates[0].ingest(uris))
     # except (IsADirectoryError, TypeError):
     #     # TODO: add Header ingestor for directory
     #     return NonDBHeader({}, [], [], {})
