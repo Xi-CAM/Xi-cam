@@ -88,7 +88,17 @@ setup(
     # To provide executable scripts, use entry points in preference to the
     # "scripts" keyword. Entry points provide cross-platform support and allow
     # pip to create the appropriate form of executable for the target platform.
-    entry_points={},
+    entry_points={'xicam.plugins.PluginType':
+                      ['CatalogPlugin = xicam.plugins.catalogplugin:CatalogPlugin',
+                       'ControllerPlugin = xicam.plugins.controllerplugin:ControllerPlugin',
+                       'DataHandlerPlugin = xicam.plugins.datahandlerplugin:DataHandlerPlugin',
+                       'DataResourcePlugin = xicam.plugins.dataresourceplugin:DataResourcePlugin',
+                       'EZPlugin = xicam.plugins.ezplugin:_EZPlugin',
+                       'Fittable1DModelPlugin = xicam.plugins.fittablemodelplugin:Fittable1DModelPlugin',
+                       'GUIPlugin = xicam.plugins.guiplugin:GUIPlugin',
+                       'ProcessingPlugin = xicam.plugins.processingplugin:ProcessingPlugin',
+                       'SettingsPlugin = xicam.plugins.settingsplugin:SettingsPlugin',
+                       'QWidgetPlugin = xicam.plugins.widgetplugin:QWidgetPlugin']},
     ext_modules=[],
     include_package_data=True,
 )

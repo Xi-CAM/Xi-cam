@@ -1,4 +1,4 @@
-from yapsy.IPlugin import IPlugin
+from .plugin import PluginType
 import uuid
 import datetime
 from typing import Tuple, List
@@ -8,7 +8,7 @@ from pathlib import Path
 # Note: Split into DataHandlerPlugin and IngestorPlugin?
 
 
-class DataHandlerPlugin(IPlugin):
+class DataHandlerPlugin(PluginType):
     """
     This base class defines a reader/writer for an on-disk file format. This interface will be structured such that the
     format definition is registered with FabIO at activation, and will mirror the FabIO API structure. Subclass
@@ -20,7 +20,7 @@ class DataHandlerPlugin(IPlugin):
 
     """
 
-    isSingleton = False
+    is_singleton = False
 
     DESCRIPTION = ""
 

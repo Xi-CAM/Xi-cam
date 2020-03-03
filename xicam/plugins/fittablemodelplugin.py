@@ -1,8 +1,10 @@
 from astropy.modeling import Fittable1DModel
-from yapsy.IPlugin import IPlugin
+from .plugin import PluginType
 
 
-class Fittable1DModelPlugin(Fittable1DModel, IPlugin):
+class Fittable1DModelPlugin(Fittable1DModel, PluginType):
+    is_singleton = False
+
     """
     Plugins of this base class mimic the astropy FittableModel class structure. An activated fittable model would be
     usable for fitting 1-d spectra or 2-d images. Example: A 1-D Lorentzian model, usable for fitting SAXS spectra.

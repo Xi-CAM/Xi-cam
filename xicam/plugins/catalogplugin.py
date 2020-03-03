@@ -1,5 +1,5 @@
 import itertools
-from yapsy.IPlugin import IPlugin
+from .plugin import PluginType
 from qtpy.QtWidgets import QListView, QWidget, QVBoxLayout
 from qtpy.QtCore import Signal, QAbstractItemModel, QModelIndex, Qt, QObject
 from intake.catalog.base import Catalog
@@ -116,8 +116,8 @@ class CatalogController(QWidget):
             self.sigOpen.emit(run)
 
 
-class CatalogPlugin(Catalog, IPlugin):
-    isSingleton = False
+class CatalogPlugin(Catalog, PluginType):
+    is_singleton = False
     name = ''
 
     model = CatalogModel
