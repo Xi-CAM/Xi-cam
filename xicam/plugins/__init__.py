@@ -80,6 +80,7 @@ class State(Enum):
 
 
 class Filters(Enum):
+    UPDATE = auto()
     COMPLETE = auto()
 
 
@@ -148,6 +149,12 @@ class XicamPluginManager():
             self._entrypoints[type_name].pop(plugin_name, None)
             self.type_mapping[type_name].pop(plugin_name, None)
             self._load_cache[type_name].pop(plugin_name, None)
+        else:
+            try:
+                assert plugin_name not in self.type_mapping[type_name]
+            except AssertionError:
+                raise ValueError(
+                    f'A plugin named {plugin_name} has already been loaded. Supply `replace=True` to override.')
 
         # Start a special collection cycle
         self.state = State.DISCOVERING
@@ -215,7 +222,8 @@ class XicamPluginManager():
                         f"There are {len(matches)} conflicting entrypoints which share the name {name!r}:\n{matches}"
                         f"Loading entrypoint from {winner.module_name} and ignoring others.")
 
-    @threads.method(threadkey='entrypoint-loader', showBusy=False,
+    @threads.method(threadkey='entrypoint-loader',
+                    showBusy=False,
                     cancelIfRunning=False)  # progress state managed independently
     def _load_plugins(self):
         started_instantiating = False
@@ -296,7 +304,7 @@ class XicamPluginManager():
                 if success:
                     msg.logMessage(f"Successfully collected {entrypoint.name} plugin.", level=msg.INFO)
                     msg.showProgress(self._progress_count(), maxval=self._entrypoint_count())
-                    self._notify(Filters.COMPLETE)
+                    self._notify(Filters.UPDATE)
 
             # mark it as completed
             self._instantiate_queue.task_done()
@@ -307,6 +315,7 @@ class XicamPluginManager():
             self.state = State.READY
             msg.logMessage('Plugin collection completed!')
             msg.hideProgress()
+            self._notify(Filters.COMPLETE)
 
         if not self.state == State.READY:  # if we haven't reached the last task, but there's nothing queued
             threads.invoke_as_event(self._instantiate_plugin)  # return to the event loop, but come back soon
@@ -393,11 +402,15 @@ class XicamPluginManager():
         return list(self.type_mapping[type_name].values())
 
     def attach(self, callback, filter=None):
-        """ Ask to receive updates whenever new plugins are collected. """
+        """
+        Subscribe a callback to receive notifications. If a filter is used, only matching notifications are sent.
+        See `Filters` for options.
+
+        """
         self._observers.append((callback, filter))
 
     def _notify(self, filter=None):
-        """ Notify all observers of new plugins"""
+        """ Notify all observers. Observers attached with filters much mach the emitted filter to be notified."""
         for callback, obsfilter in self._observers:
             if obsfilter == filter or not obsfilter:
                 callback()
