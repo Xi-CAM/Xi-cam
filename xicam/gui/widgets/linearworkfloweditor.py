@@ -81,7 +81,7 @@ class WorkflowWidget(QWidget):
     def populateFunctionMenu(self):
         self.functionmenu.clear()
         sortingDict = {}
-        for plugin in pluginmanager.getPluginsOfCategory("ProcessingPlugin"):
+        for plugin in pluginmanager.get_plugins_of_type("ProcessingPlugin"):
             typeOfProcessingPlugin = plugin.getCategory()
             if not typeOfProcessingPlugin in sortingDict.keys():
                 sortingDict[typeOfProcessingPlugin] = []

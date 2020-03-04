@@ -147,7 +147,7 @@ class BrowserTabBar(ContextMenuTabBar):
         self.actions = {}
         from xicam.plugins import manager as pluginmanager
 
-        for plugin in pluginmanager.getPluginsOfCategory("CatalogPlugin") + pluginmanager.getPluginsOfCategory(
+        for plugin in pluginmanager.get_plugins_of_type("CatalogPlugin") + pluginmanager.get_plugins_of_type(
                 "DataResourcePlugin"):
             self.actions[plugin.name] = QAction(plugin.name)
             self.actions[plugin.name].triggered.connect(partial(self._addBrowser, plugin))

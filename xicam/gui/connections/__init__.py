@@ -132,7 +132,7 @@ class CredentialDialog(QDialog):
         mainLayout.addRow(self.buttonboxWidget)
 
         # Populate profiles
-        for name, credential in manager.getPluginByName("Connections", "SettingsPlugin").credentials.items():
+        for name, credential in manager.get_plugin_by_name("Connections", "SettingsPlugin").credentials.items():
             self.profiles.addItem(name)
 
         self.setLayout(mainLayout)
@@ -150,7 +150,7 @@ class CredentialDialog(QDialog):
             self.savepassword.setEnabled(True)
             self.rememberprofile.setVisible(True)
         else:
-            credential = manager.getPluginByName("Connections", "SettingsPlugin").credentials[profilename]
+            credential = manager.get_plugin_by_name("Connections", "SettingsPlugin").credentials[profilename]
             self.username.setText(credential["username"])
             self.host.setText(credential["host"])
             self.password.setText(credential["password"])

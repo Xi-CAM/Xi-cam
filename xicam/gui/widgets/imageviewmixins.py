@@ -659,7 +659,7 @@ class CatalogView(ImageView):
         self.setCatalog(self.catalog, self.stream, field)
         # TODO -- figure out where to put the geometry update
         if QSpace in inspect.getmro(type(self)):
-            self.setGeometry(pluginmanager.getPluginByName('xicam.SAXS.calibration', 'SettingsPlugin').AI(field))
+            self.setGeometry(pluginmanager.get_plugin_by_name('xicam.SAXS.calibration', 'SettingsPlugin').AI(field))
 
 
 class ImageItemHistogramOverflowFix(ImageItem):
