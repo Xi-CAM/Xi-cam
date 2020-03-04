@@ -314,6 +314,12 @@ def logTime(*args: Any, level: int = INFO,
 
     logMessage(*(args + extra_args), level, loggername, sep)
 
+@contextmanager
+def busyContext() -> None:
+    showBusy()
+    yield
+    showReady()
+
 import sys
 
 sys._excepthook = sys.excepthook = logError
