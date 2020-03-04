@@ -150,7 +150,7 @@ def load_header(uris: List[Union[str, Path]] = None, uuid: str = None):
 
     handlercandidates = []
     ext = Path(uris[0]).suffix
-    for plugin in pluginmanager.getPluginsOfCategory("DataHandlerPlugin"):
+    for plugin in pluginmanager.get_plugins_of_type("DataHandlerPlugin"):
         if ext in plugin.DEFAULT_EXTENTIONS:
             handlercandidates.append(plugin)
     if not handlercandidates:
