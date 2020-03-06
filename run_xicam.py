@@ -22,7 +22,7 @@ if ".zip/" in os.__file__:
 os.environ["QT_API"] = "pyqt5"
 import qtpy
 from qtpy.QtWidgets import QApplication, QErrorMessage
-from qtpy.QtCore import QCoreApplication
+from qtpy.QtCore import QCoreApplication, QProcess
 
 if qtpy.API_NAME == "PyQt5" and "PySide" in sys.modules:
     del sys.modules["PySide"]
@@ -39,11 +39,27 @@ def _main(args):
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     from xicam.gui.windows import splash
+    from xicam.core import msg
 
     if args.verbose in sys.argv:
         QErrorMessage.qtHandler()
 
-    splash = splash.XicamSplashScreen(args=args)
+    # start splash in subprocess
+    splash_proc = QProcess()
+    # splash_proc.started.connect(lambda: print('started splash'))
+    # splash_proc.finished.connect(lambda: print('finished splashing'))
+    log_file = msg.file_handler.baseFilename
+    initial_length = os.path.getsize(log_file)
+    splash_proc.start(sys.executable, [splash.__file__, log_file, str(initial_length)])
+
+    from xicam.gui.windows.mainwindow import XicamMainWindow
+    mainwindow = XicamMainWindow()
+    while splash_proc.state() != QProcess.NotRunning:
+        app.processEvents()
+    # splash_proc.waitForFinished()
+    mainwindow.show()
+
+    # splash = splash.XicamSplashScreen(args=args)
     return sys.exit(app.exec_())
 
 
