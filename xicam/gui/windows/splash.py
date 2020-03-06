@@ -1,20 +1,24 @@
-from typing import Callable
 import sys
-
 from qtpy.QtCore import QTimer, Qt
 from qtpy.QtGui import QMovie, QPixmap
-from qtpy.QtWidgets import QSplashScreen, QApplication, QMainWindow
+from qtpy.QtWidgets import QSplashScreen, QApplication
 
 from xicam.gui import static
 
 
-class XicamSplashScreen(QSplashScreen):
-    minsplashtime = 3000
+def elide(s: str, max_len: int = 60):
+    if len(s) > max_len:
+        s = s[:max_len - 3] + '...'
+    return s
 
-    def __init__(self, mainwindow: Callable[[], QMainWindow] = None,
-                 f: int = Qt.WindowStaysOnTopHint | Qt.SplashScreen,
-                 *,
-                 args):
+
+class XicamSplashScreen(QSplashScreen):
+    minsplashtime = 5000
+
+    def __init__(self,
+                 log_path: str,
+                 initial_length: int,
+                 f: int = Qt.WindowStaysOnTopHint | Qt.SplashScreen):
         """
         A QSplashScreen customized to display an animated gif. The splash triggers launch when clicked.
 
@@ -22,8 +26,10 @@ class XicamSplashScreen(QSplashScreen):
 
         Parameters
         ----------
-        mainwindow  :   class
-            Subclass of QMainWindow to display after splashing
+        log_path    :   str
+            Path to the Xi-CAM log file to reflect
+        initial_length: int
+            Length in bytes to seek forward before reading
         f           :   int
             Extra flags (see base class)
         """
@@ -38,27 +44,28 @@ class XicamSplashScreen(QSplashScreen):
         super(XicamSplashScreen, self).__init__(self.pixmap, f)
         self.setMask(self.pixmap.mask())
         self.movie.finished.connect(self.restartmovie)
+        self.showMessage('Starting Xi-CAM...')
 
         self._launching = False
         self._launchready = False
         self.timer = QTimer(self)
-        self.mainwindow = mainwindow
 
-        if args.nosplash:
-            self.execlaunch()
-        else:
-            # Start splashing
-            self.setAttribute(Qt.WA_DeleteOnClose)
-            self.show()
-            self.raise_()
-            self.activateWindow()
-            QApplication.instance().setActiveWindow(self)
-            # Setup timed triggers for launching the QMainWindow
-            self.timer.singleShot(self.minsplashtime, self.launchwindow)
+        self.log_file = open(log_path, 'r')
+        self.log_file.seek(initial_length)
 
-    def showMessage(self, message: str, color=Qt.white):
+        # Start splashing
+        self.setAttribute(Qt.WA_DeleteOnClose)
+        self.show()
+        self.raise_()
+        self.activateWindow()
+        QApplication.instance().setActiveWindow(self)
+
+        # Setup timed triggers for launching the QMainWindow
+        self.timer.singleShot(self.minsplashtime, self.launchwindow)
+
+    def showMessage(self, message: str, color=Qt.darkGray):
         # TODO: Make this work.
-        super(XicamSplashScreen, self).showMessage(message, color)
+        super(XicamSplashScreen, self).showMessage(message, color=color, alignment=Qt.AlignBottom)
 
     def mousePressEvent(self, *args, **kwargs):
         # TODO: Apparently this doesn't work?
@@ -80,6 +87,10 @@ class XicamSplashScreen(QSplashScreen):
         self.setMask(self.pixmap.mask())
         self.setPixmap(self.pixmap)
         self.movie.setSpeed(self.movie.speed() + 20)
+
+        line = self.log_file.readline().strip()
+        if line:
+            self.showMessage(elide(line.split('>')[-1]))
 
     def sizeHint(self):
         return self.movie.scaledSize()
@@ -106,19 +117,16 @@ class XicamSplashScreen(QSplashScreen):
         if not self._launching:
             self._launching = True
 
-            app = QApplication.instance()
-
-            from xicam.gui.windows.mainwindow import XicamMainWindow
-            self.mainwindow = XicamMainWindow()
             self.timer.stop()
-
-            # Show the QMainWindow
-            self.mainwindow.show()
-            self.mainwindow.raise_()
-            self.mainwindow.activateWindow()
-            app.setActiveWindow(self.mainwindow)
 
             # Stop splashing
             self.hide()
             self.movie.stop()
-            self.finish(self.mainwindow)
+            self.close()
+            QApplication.instance().quit()
+
+
+if __name__ == "__main__":
+    qapp = QApplication([])
+    splash = XicamSplashScreen(sys.argv[-2], int(sys.argv[-1]))
+    qapp.exec_()
