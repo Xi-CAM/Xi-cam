@@ -254,7 +254,7 @@ class ProcessingPlugin(PluginType):
                     children.append(childparam)
                     input._param = childparam
 
-            self._param = Parameter(name=getattr(self, "name", self.__class__.__name__), children=children, type="group")
+            self._param = Parameter(name=self.name() or self.__class__.__name__, children=children, type="group")
 
             self._param.sigValueChanged.connect(self.setParameterValue)
         return self._param

@@ -111,7 +111,7 @@ class XicamPluginManager():
 
         # Toss plugin types that need qt if running without qt
         if not qt_is_safe:
-            self.plugin_types = {type_name: type_class for type_name, type_class in self.plugin_types if
+            self.plugin_types = {type_name: type_class for type_name, type_class in self.plugin_types.items() if
                                  not getattr(type_class, 'needs_qt', True)}
 
         # Initialize types
@@ -277,29 +277,32 @@ class XicamPluginManager():
             # if this plugin was already instantiated earlier, skip it; mark done
             if self.type_mapping[type_name].get(entrypoint.name, None) is None:
 
+                # inject the entrypoint name into the class
+                plugin_class._name = entrypoint.name
+
                 success = False
 
                 # ... and instantiate it (as long as its supposed to be singleton)
-                if getattr(plugin_class, 'is_singleton', False):
-                    msg.logMessage(f"Instantiating {entrypoint.name} plugin object.", level=msg.INFO)
-                    try:
+
+                try:
+                    if getattr(plugin_class, 'is_singleton', False):
+                        msg.logMessage(f"Instantiating {entrypoint.name} plugin object.", level=msg.INFO)
                         with load_timer() as elapsed:
                             self.type_mapping[type_name][entrypoint.name] = plugin_class()
-                    except (Exception, SystemError) as ex:
-                        msg.logMessage(
-                            f"Unable to instantiate {entrypoint.name} plugin from module: {entrypoint.module_name}",
-                            msg.ERROR)
-                        msg.logError(ex)
-                        msg.notifyMessage(repr(ex),
-                                          title=f'An error occurred while starting the "{entrypoint.name}" plugin.')
-                    else:
+
                         msg.logMessage(f"{int(elapsed() * 1000)} ms elapsed while instantiating {entrypoint.name}",
                                        level=msg.INFO)
-                        success = True
-
-                else:
-                    self.type_mapping[type_name][entrypoint.name] = plugin_class
+                    else:
+                        self.type_mapping[type_name][entrypoint.name] = plugin_class
                     success = True
+
+                except (Exception, SystemError) as ex:
+                    msg.logMessage(
+                        f"Unable to instantiate {entrypoint.name} plugin from module: {entrypoint.module_name}",
+                        msg.ERROR)
+                    msg.logError(ex)
+                    msg.notifyMessage(repr(ex),
+                                      title=f'An error occurred while starting the "{entrypoint.name}" plugin.')
 
                 if success:
                     msg.logMessage(f"Successfully collected {entrypoint.name} plugin.", level=msg.INFO)

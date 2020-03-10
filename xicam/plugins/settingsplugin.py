@@ -67,8 +67,6 @@ class ParameterSettingsPlugin(GroupParameter, SettingsPlugin):
         GroupParameter.__init__(self, name=name, type="group", children=paramdicts, **kwargs)
         self.restore()
 
-    name = SettingsPlugin.name  # must be re-overridden because of GroupParameter
-
     @property
     def widget(self):
         widget = ParameterTree()
