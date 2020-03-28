@@ -1,16 +1,11 @@
 from pathlib import Path
-from typing import Union, List
+from typing import Union, List, Set
 
 from qtpy.QtCore import Signal, QObject
 
 from databroker.utils import ALL
 from databroker.in_memory import BlueskyInMemoryCatalog
-from databroker.core import Header
 from warnings import warn
-
-
-# extension_map = {EDFPlugin: ['edf']}
-
 
 import mimetypes
 import warnings
@@ -18,22 +13,14 @@ import warnings
 import entrypoints
 
 
-def ingest_file(filename):
-    """
-    Take in a file name; return a generator that yields (name, doc) pairs.
-    """
-    mimetype = detect_mimetype(filename)
-    ingestor = choose_ingestor(filename, mimetype)
-    generator_instance = ingestor(filename)
-    return generator_instance
-
-
-def detect_mimetype(filename):
+def detect_mimetypes(filename: str) -> List[str]:
     """
     Take in a filename; return a mimetype string like 'image/tiff'.
     """
     # First rely on custom "sniffers" that can employ file signatures (magic
     # numbers) or any other format-specific tricks to extract a mimetype.
+    matched_mimetypes = list()
+
     if Path(filename).is_dir():
         return None  # TODO: do directories have mime-type?
 
@@ -44,19 +31,18 @@ def detect_mimetype(filename):
         first_bytes = file.read(64)
     for ep in entrypoints.get_group_all('databroker.sniffers'):
         content_sniffer = ep.load()
-        mimetype = content_sniffer(filename, first_bytes)
-        if mimetype is not None:
-            return mimetype
-            # TODO Instead of bailing when we get the first match, we might
-            # keep going to check for *conflicting* assessments and warn if
-            # that happens.
-    else:
-        # None of the sniffers found a match. Fall back to guessing based on
-        # file extension.
-        mimetype, _ = mimetypes.guess_type(filename)
-        if mimetype is None:
-            raise UnknownFileType(f"Could not identify the MIME type of {filename}")
-        return mimetype
+
+        matched_mimetype = content_sniffer(filename, first_bytes)
+        if matched_mimetype:
+            matched_mimetypes.append(matched_mimetype)
+
+    # Guessing the mimetype from the mimemtype db is quick, lets do it always
+    matched_mimetypes.append(mimetypes.guess_type(filename)[0])
+
+    if not matched_mimetypes:
+        raise UnknownFileType(f"Could not identify the MIME type of {filename}")
+
+    return matched_mimetypes
 
 
 def applicable_ingestors(filename, mimetype):
@@ -65,17 +51,10 @@ def applicable_ingestors(filename, mimetype):
     """
     # Find ingestor(s) for this mimetype.
     ingestors = []
-    for ep in entrypoints.get_group_all('databroker.ingestors'):
+    for ep in entrypoints.get_group_all('intake.catalogs'):
         if ep.name == mimetype:
             ingestors.append(ep.load())
-    # Let each ingestor look at the content of this file and decide if it
-    # thinks it can handle it. An ingestor *may* implement 'is_applicable' to
-    # do this. If it does not implement 'is_applicable', it is assumed to be
-    # suitable for *all* files of this mimetype.
-    for ingestor in list(ingestors):
-        if hasattr(ingestor, 'is_applicable'):
-            if not ingestor.is_applicable(filename):
-                ingestors.remove(ingestor)
+
     return ingestors
 
 
@@ -124,20 +103,20 @@ def load_header(uris: List[Union[str, Path]] = None, uuid: str = None):
     # First try to see if we have a databroker ingestor, then fall-back to Xi-cam DataHandlers
     ingestor = None
     filename = str(Path(uris[0]))
-    mimetype = None
-    try:
-        mimetype = detect_mimetype(filename)
-    except UnknownFileType as e:
-        msg.logMessage(f"{e}", msg.WARNING)
-    else:
-        msg.logMessage(f'Mimetype detected: {mimetype}')
 
-    try:
-        ingestor = choose_ingestor(filename, mimetype)
-    except NoIngestor as e:
-        warn(f"{e}. Falling-back to DataHandlers")
-    else:
-        msg.logMessage(f'Ingestor selected: {ingestor}')
+    mimetypes = detect_mimetypes(filename)
+    msg.logMessage(f'Mimetypes detected: {mimetypes}')
+
+    # TODO: here, we try each valid mimetype; some GUI for selection will be needed
+
+    for mimetype in mimetypes:
+        try:
+            ingestor = choose_ingestor(filename, mimetype)
+        except NoIngestor as e:
+            warn(f"{e}. Falling-back to DataHandlers")
+        else:
+            msg.logMessage(f'Ingestor selected: {ingestor}')
+            break
 
     if ingestor:
         document = list(ingestor(uris))
