@@ -30,11 +30,14 @@ def detect_mimetypes(filename: str) -> List[str]:
         # assume that they will receive this exact number of bytes.
         first_bytes = file.read(64)
     for ep in entrypoints.get_group_all('databroker.sniffers'):
-        content_sniffer = ep.load()
-
-        matched_mimetype = content_sniffer(filename, first_bytes)
-        if matched_mimetype:
-            matched_mimetypes.append(matched_mimetype)
+        try:
+            content_sniffer = ep.load()  # TODO: only load sniffers once
+        except Exception as ex:
+            msg.logError(ex)
+        else:
+            matched_mimetype = content_sniffer(filename, first_bytes)
+            if matched_mimetype:
+                matched_mimetypes.append(matched_mimetype)
 
     # Guessing the mimetype from the mimemtype db is quick, lets do it always
     matched_mimetype = mimetypes.guess_type(filename)[0]
