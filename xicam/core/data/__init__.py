@@ -37,7 +37,9 @@ def detect_mimetypes(filename: str) -> List[str]:
             matched_mimetypes.append(matched_mimetype)
 
     # Guessing the mimetype from the mimemtype db is quick, lets do it always
-    matched_mimetypes.append(mimetypes.guess_type(filename)[0])
+    matched_mimetype = mimetypes.guess_type(filename)[0]
+    if matched_mimetype:
+        matched_mimetypes.append(matched_mimetype)
 
     if not matched_mimetypes:
         raise UnknownFileType(f"Could not identify the MIME type of {filename}")
