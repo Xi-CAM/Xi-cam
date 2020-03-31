@@ -54,7 +54,7 @@ class PreviewWidget(GraphicsLayoutWidget):
             descriptor = catalog[stream].metadata['descriptors'][0]
             stream_fields = descriptor['data_keys'].keys()
             for field in stream_fields:
-                field_ndims = len(descriptor['data_keys'][field]['shape'])  # +1 is for event dim
+                field_ndims = len(descriptor['data_keys'][field]['shape'])
                 if field_ndims > 1:
                     return stream, field
 
