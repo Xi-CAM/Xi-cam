@@ -14,8 +14,9 @@ from xicam.plugins import PluginType
 from xicam.gui.widgets.debugmenubar import DebuggableMenuBar
 from xicam.core import msg, threads
 from xicam.core.data import NonDBHeader
+from xicam.gui.settings.appearance import AppearanceSettingsPlugin
 from ..widgets import defaultstage
-from .settings import ConfigDialog
+from .settings import ConfigDialog, ConfigRestorer
 from ..static import path
 
 
@@ -49,8 +50,10 @@ class XicamMainWindow(QMainWindow):
 
         # Setup appearance
         self.setWindowTitle("Xi-cam")
+        self.load_style()
 
-        self._configdialog = ConfigDialog()
+        # Attach an object to restore config when loaded
+        self._config_restorer = ConfigRestorer()
 
         # Load plugins
         pluginmanager.collect_plugins()
@@ -125,7 +128,11 @@ class XicamMainWindow(QMainWindow):
             raise TypeError(f"Cannot open {header}.")
 
     def showSettings(self):
-        self._configdialog.show()
+        ConfigDialog().show()
+
+    def load_style(self):
+        # Load styles explicitly
+        AppearanceSettingsPlugin().apply()
 
     def setStage(self, stage):
         """

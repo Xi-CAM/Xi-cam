@@ -1,17 +1,27 @@
 # Adapted from http://doc.qt.io/qt-5/qtwidgets-dialogs-configdialog-configdialog-cpp.html under BSD
 
 
-# TODO QtModern, QtDarkStyle
 # TODO Add remotes config
 # TODO Add usage statistics config
-# TODO QSettings
 
 from qtpy.QtCore import Qt, QSize
 from qtpy.QtGui import QStandardItemModel, QStandardItem, QKeyEvent
-from qtpy.QtWidgets import QDialog, QApplication, QListView, QStackedWidget, QHBoxLayout, QVBoxLayout, QAbstractItemView, QDialogButtonBox
+from qtpy.QtWidgets import QDialog, QApplication, QListView, QStackedWidget, QHBoxLayout, QVBoxLayout, \
+    QAbstractItemView, QDialogButtonBox
 
 from xicam.plugins import manager as pluginmanager, Filters
 from xicam.core import msg
+
+
+class ConfigRestorer:
+    def __init__(self):
+        # Restore Settings
+        pluginmanager.attach(self.request_reload, Filters.COMPLETE)
+
+    @staticmethod
+    def request_reload():
+        for plugin in pluginmanager.get_plugins_of_type("SettingsPlugin"):
+            plugin.restore()
 
 
 class ConfigDialog(QDialog):
@@ -104,13 +114,6 @@ class ConfigDialog(QDialog):
 
     def reload(self):
         self.createIcons()
-        self.restore()
-
-    def restore(self):
-        for plugin in pluginmanager.get_plugins_of_type("SettingsPlugin"):
-            plugin.restore()
-
-        self.apply()
 
     def ok(self):
         self._empty()
@@ -123,7 +126,6 @@ class ConfigDialog(QDialog):
 
     def close(self):
         self._empty()
-        self.restore()
         self.reject()
 
     def _empty(self):
