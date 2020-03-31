@@ -645,7 +645,10 @@ class CatalogView(ImageView):
             eventStream = getattr(self.catalog, self.stream).to_dask()[self.field]
             # Trim off event dimension (so transpose works)
             if eventStream.ndim > 3:
-                eventStream = eventStream[0]
+                if eventStream.shape[0] == 1:  # if only one event, drop the event axis
+                    eventStream = eventStream[0]
+                if eventStream.shape[1] == 1:  # if z axis is unitary, drop that axis
+                    eventStream = eventStream[:, 0]
             self.xarray = MetaXArray(eventStream)
             self.setImage(img=self.xarray, *args, **kwargs)
         else:
