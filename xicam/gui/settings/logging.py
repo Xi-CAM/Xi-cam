@@ -35,7 +35,7 @@ class LoggingSettingsPlugin(ParameterSettingsPlugin):
             return levels
 
         super(LoggingSettingsPlugin, self).__init__(
-            QIcon(str(path("icons/ellipsis.png"))),
+            QIcon(str(path("icons/log.png"))),
             msg.LOGGING_SETTINGS_NAME,
             [
                 # Show users where the log directory is, don't let them modify it though
