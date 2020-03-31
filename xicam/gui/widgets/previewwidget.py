@@ -4,6 +4,7 @@ import numpy as np
 from qtpy.QtCore import QSize
 from qtpy.QtGui import QFont, QTransform
 from qtpy.QtWidgets import QSizePolicy
+from xicam.core import msg
 
 from xicam.core.data import NonDBHeader
 
@@ -54,7 +55,8 @@ class PreviewWidget(GraphicsLayoutWidget):
             for i in range(len(data.shape) - 2):
                 data = data[0]
             self.setImage(np.asarray(data.compute()))
-        except IndexError:
+        except Exception as ex:
+            msg.logError(ex)
             self.imageitem.clear()
             self.setText("UNKNOWN DATA FORMAT")
 
