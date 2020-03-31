@@ -6,7 +6,6 @@ from qtpy.QtGui import *
 from qtpy.QtWidgets import QApplication
 from xicam.gui.static import path
 import pyqtgraph as pg
-from xicam import plugins
 
 from xicam.plugins import ParameterSettingsPlugin
 
