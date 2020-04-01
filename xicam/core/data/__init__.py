@@ -22,7 +22,7 @@ def detect_mimetypes(filename: str) -> List[str]:
     matched_mimetypes = list()
 
     if Path(filename).is_dir():
-        return None  # TODO: do directories have mime-type?
+        return matched_mimetypes  # TODO: do directories have mime-type?
 
     with open(filename, 'rb') as file:
         # The choice of 64 bytes is arbitrary. We may increase this in the
@@ -58,7 +58,12 @@ def applicable_ingestors(filename, mimetype):
     ingestors = []
     for ep in entrypoints.get_group_all('intake.catalogs'):
         if ep.name == mimetype:
-            ingestors.append(ep.load())
+            try:
+                ingestor = ep.load()
+            except Exception as ex:
+                msg.logError(ex)
+            else:
+                ingestors.append(ingestor)
 
     return ingestors
 
