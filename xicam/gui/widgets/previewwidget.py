@@ -5,6 +5,7 @@ from qtpy.QtCore import QSize
 from qtpy.QtGui import QFont, QTransform
 from qtpy.QtWidgets import QSizePolicy
 from xicam.core import msg, threads
+from xicam.core.data import bluesky_utils
 
 from xicam.core.data import NonDBHeader
 
@@ -50,11 +51,11 @@ class PreviewWidget(GraphicsLayoutWidget):
     def guess_stream_field(catalog: BlueskyRun):
         # TODO: use some metadata (techniques?) for guidance about how to get a preview
 
-        for stream in ['primary', *catalog]:
-            descriptor = catalog[stream].metadata['descriptors'][0]
-            stream_fields = descriptor['data_keys'].keys()
-            for field in stream_fields:
-                field_ndims = len(descriptor['data_keys'][field]['shape'])
+        for stream in ['primary', *bluesky_utils.streams_from_run(catalog)]:
+            descriptor = bluesky_utils.descriptors_from_stream(catalog, stream)[0]
+            fields = bluesky_utils.fields_from_descriptor(descriptor)
+            for field in fields:
+                field_ndims = bluesky_utils.ndims_from_descriptor(descriptor, field)
                 if field_ndims > 1:
                     return stream, field
 
