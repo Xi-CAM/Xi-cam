@@ -3,7 +3,11 @@ from .motd import MOTD
 from .dataresourcebrowser import DataResourceBrowser
 from .previewwidget import PreviewWidget
 
-from qtpy.QtWidgets import QApplication
+_defaultstage = None
 
-if QApplication.instance():
-    defaultstage = GUILayout(center=MOTD(), left=DataResourceBrowser(), lefttop=PreviewWidget())
+
+def get_default_stage():
+    global _defaultstage
+    if not _defaultstage:
+        _defaultstage = GUILayout(center=MOTD(), left=DataResourceBrowser(), lefttop=PreviewWidget())
+    return _defaultstage

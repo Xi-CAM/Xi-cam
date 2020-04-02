@@ -1,5 +1,6 @@
-from qtpy.QtWidgets import QTabWidget, QHBoxLayout, QVBoxLayout, QToolBar, QMenu, QAction, QTreeView, QListView, QWidget, QSizePolicy, QTabBar
-from qtpy.QtCore import QObject, QAbstractItemModel, QSize, Qt, QEvent, Signal
+from qtpy.QtWidgets import QTabWidget, QHBoxLayout, QVBoxLayout, QToolBar, QMenu, QAction, QTreeView, QListView, \
+    QWidget, QSizePolicy, QTabBar
+from qtpy.QtCore import QObject, QAbstractItemModel, QSize, Qt, QEvent, Signal, QSettings
 from qtpy.QtGui import QIcon, QPixmap, QKeyEvent
 from intake.catalog.base import Catalog
 from intake.catalog.entry import CatalogEntry
@@ -15,6 +16,7 @@ from pathlib import Path
 from functools import partial
 import os, webbrowser
 from xicam.gui.widgets.tabview import ContextMenuTabBar
+from xicam.gui.bluesky.databroker_catalog_plugin import DatabrokerCatalogPlugin
 
 
 class BrowserTabWidget(QTabWidget):
@@ -66,7 +68,6 @@ class DataBrowser(QWidget):
     def text_to_uri(self):
         uri = parse.urlparse(self.URILineEdit.text())
         self.browserview.model().uri = uri
-        print("uri:", uri)
         return uri
 
     def uri_to_text(self):
@@ -119,7 +120,12 @@ class BrowserTabBar(ContextMenuTabBar):
         # self.movePlusButton()  # Move to the correct location
         # self.setDocumentMode(True)
         self.currentChanged.connect(self.tabwidget.setCurrentIndex)
+        self.currentChanged.connect(self.saveLastTab)
         self.installEventFilter(self)
+
+    def saveLastTab(self, i):
+        if i < 2:
+            QSettings().setValue('databrowsertab', i)
 
     def addTab(self, *args, **kwargs):
         return self.insertTab(self.count() - 1, *args, **kwargs)
@@ -127,9 +133,9 @@ class BrowserTabBar(ContextMenuTabBar):
     def eventFilter(self, object, event):
         try:
             if (
-                object == self
-                and event.type() in [QEvent.MouseButtonPress, QEvent.MouseButtonRelease]
-                and event.button() == Qt.LeftButton
+                    object == self
+                    and event.type() in [QEvent.MouseButtonPress, QEvent.MouseButtonRelease]
+                    and event.button() == Qt.LeftButton
             ):
 
                 if event.type() == QEvent.MouseButtonPress:
@@ -237,7 +243,9 @@ class DataResourceList(QListView, DataResourceView):
                 self.sigURIChanged.emit()
                 return
         uris = [self.model().pull(index) for index in indexes]
-        self.sigOpen.emit(load_header(uris=uris))
+        header = load_header(uris=uris)
+        if header:
+            self.sigOpen.emit(header)
 
 
 class LocalFileSystemTree(DataResourceTree):
@@ -257,7 +265,9 @@ class LocalFileSystemTree(DataResourceTree):
 
     def currentChanged(self, current, previous):
         if current.isValid():
-            self.sigPreview.emit(self.model().getHeader([current]))
+            header = self.model().getHeader([current])
+            if header:
+                self.sigPreview.emit(header)
 
         self.scrollTo(current)
 
@@ -285,6 +295,9 @@ class DataResourceBrowser(QWidget):
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.setMinimumSize(QSize(250, 400))
 
+        # cache pre-load index (otherwise it gets overwritten during init
+        index = int(QSettings().value('databrowsertab', 0))
+
         self.browsertabwidget = BrowserTabWidget(self)
         self.browsertabbar = BrowserTabBar(self.browsertabwidget)
         self.browsertabbar.sigAddBrowser.connect(self.addBrowser)
@@ -292,7 +305,8 @@ class DataResourceBrowser(QWidget):
 
         # Add the required 'Local' browser
         self.addBrowser(DataBrowser(LocalFileSystemTree()), "Local", closable=False)
-        self.browsertabbar.setCurrentIndex(0)
+        self.addBrowser(DatabrokerCatalogPlugin().controller, "Databroker", closable=False)
+        self.browsertabbar.setCurrentIndex(index)
 
         vbox.addWidget(self.browsertabwidget)
 
