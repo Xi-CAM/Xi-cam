@@ -84,13 +84,13 @@ class SearchState(ConfigurableQObject):
     Encapsulates CatalogSelectionModel and SearchResultsModel. Executes search.
     """
     new_results_catalog = Signal([])
-    new_results_catalog = Signal([])
     sig_update_header = Signal()
     search_result_row = Callable(default_search_result_row, config=True)
 
     def __init__(self, catalog):
         self.last_results_thread = None
         self.update_config(load_config())
+        self.selected_catalog = None
         self.root_catalog = self.flatten_remote_catalogs(catalog)
         self.enabled = False  # to block searches during initial configuration
         self.catalog_selection_model = CatalogSelectionModel()
@@ -112,7 +112,7 @@ class SearchState(ConfigurableQObject):
         self.new_results_catalog.connect(self.start_show_results)
 
         class ReloadThread(QThread):
-            def run(self):
+            def run(thread):
                 while True:
                     t0 = time.monotonic()
                     # Never reload until the last reload finished being
@@ -130,7 +130,7 @@ class SearchState(ConfigurableQObject):
         self.reload_thread.start()
 
         class ProcessQueriesThread(QThread):
-            def run(self):
+            def run(thread):
                 while True:
                     try:
                         search_state.process_queries()
@@ -166,7 +166,7 @@ class SearchState(ConfigurableQObject):
                 else:
                     cat_dict[name] = sub_cat
             except Exception as e:
-                log.error(e)
+                msg.logError(e)
                 msg.showMessage("Unable to query top level catalogs: ", str(e))
 
         return Catalog.from_dict(cat_dict)

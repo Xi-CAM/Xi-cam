@@ -1,13 +1,9 @@
 """
 Catalog Plugin for browsing pre-configured databroker catalogs
 """
-from databroker import MergedCatalog
 from xicam.plugins.catalogplugin import CatalogPlugin
 from xicam.gui.widgets.dataresourcebrowser import QListView
 from databroker.core import BlueskyRun
-from databroker.v2 import Broker
-from intake.catalog import Catalog
-from intake.catalog.base import RemoteCatalog
 from qtpy.QtCore import Signal
 from qtpy.QtWidgets import QWidget, QVBoxLayout
 import logging
@@ -64,7 +60,7 @@ class DatabrokerCatalogPlugin(CatalogPlugin):
     """
 
     # set name here so that it appears in the catalog dropdown
-    name = 'Bluesky Databroker'
+    name = 'Databroker'
 
     def __new__(cls):
         # importing catalog gives us #a catalog of pre-configured catalogs YAML files
@@ -73,7 +69,7 @@ class DatabrokerCatalogPlugin(CatalogPlugin):
         from databroker import catalog
         catalog.controller = SearchingCatalogController(catalog)
         catalog.view = QListView()
-        catalog.name = 'Bluesky Databroker'
+        catalog.name = 'Databroker'
         return catalog
 
 
