@@ -4,7 +4,8 @@ import numpy as np
 from qtpy.QtCore import QSize
 from qtpy.QtGui import QFont, QTransform
 from qtpy.QtWidgets import QSizePolicy
-from xicam.core import msg
+from xicam.core import msg, threads
+from xicam.core.data import bluesky_utils
 
 from xicam.core.data import NonDBHeader
 
@@ -39,34 +40,45 @@ class PreviewWidget(GraphicsLayoutWidget):
     def sizeHint(self):
         return QSize(250, 250)
 
+    @threads.method(threadkey='preview', showBusy=False)
     def preview(self, data):
         if isinstance(data, NonDBHeader):
             self.preview_header(data)
         else:
             self.preview_catalog(data)
 
+    @staticmethod
+    def guess_stream_field(catalog: BlueskyRun):
+        # TODO: use some metadata (techniques?) for guidance about how to get a preview
+
+        for stream in ['primary', *bluesky_utils.streams_from_run(catalog)]:
+            descriptor = bluesky_utils.descriptors_from_stream(catalog, stream)[0]
+            fields = bluesky_utils.fields_from_descriptor(descriptor)
+            for field in fields:
+                field_ndims = bluesky_utils.ndims_from_descriptor(descriptor, field)
+                if field_ndims > 1:
+                    return stream, field
+
     def preview_catalog(self, catalog: BlueskyRun):
+        threads.invoke_in_main_thread(self.setText, "LOADING...")
         try:
-            dask_array = catalog.primary.to_dask()
-            fields = dask_array.keys()
-            # Filter out seq num and uid
-            field = next(field for field in fields if not field in ["seq_num", "uid"])
-            data = dask_array[field]
+            stream, field = self.guess_stream_field(catalog)
+            data = getattr(catalog, stream).to_dask()[field].squeeze()
             for i in range(len(data.shape) - 2):
                 data = data[0]
-            self.setImage(np.asarray(data.compute()))
+            threads.invoke_in_main_thread(self.setImage, np.asarray(data.compute()))
         except Exception as ex:
             msg.logError(ex)
-            self.imageitem.clear()
-            self.setText("UNKNOWN DATA FORMAT")
+            threads.invoke_in_main_thread(self.imageitem.clear)
+            threads.invoke_in_main_thread(self.setText, "UNKNOWN DATA FORMAT")
 
     def preview_header(self, header: NonDBHeader):
         try:
             data = header.meta_array()[0]
-            self.setImage(data)
+            threads.invoke_in_main_thread(self.setImage, data)
         except IndexError:
-            self.imageitem.clear()
-            self.setText("UNKNOWN DATA FORMAT")
+            threads.invoke_in_main_thread(self.imageitem.clear)
+            threads.invoke_in_main_thread(self.setText, "UNKNOWN DATA FORMAT")
 
     def setImage(self, imgdata):
         self.imageitem.clear()

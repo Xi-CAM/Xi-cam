@@ -378,6 +378,7 @@ class SearchResultsModel(QStandardItemModel):
     """
     selected_result = Signal([list])
     open_entries = Signal([str, list])
+    preview_entry = Signal(str, object)
     valid_custom_query = Signal([bool])
 
     def __init__(self, search_state, *args, **kwargs):
@@ -410,6 +411,14 @@ class SearchResultsModel(QStandardItemModel):
             entry = self.search_state._results_catalog[uid]
             entries.append(entry)
         self.open_entries.emit(target, entries)
+
+    def emit_preview_entry(self, target, index):
+        row = index.row()
+        entries = []
+        uid = self.data(self.index(row, 0), Qt.UserRole)
+        entry = self.search_state._results_catalog[uid]
+        entries.append(entry)
+        self.preview_entry.emit(target, entry)
 
     def on_search_text_changed(self, text):
         try:

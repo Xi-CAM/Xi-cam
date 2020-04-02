@@ -42,12 +42,16 @@ class SearchingCatalogController(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         self.centralWidget = CentralWidget(menuBar=None, catalog=root_catalog)
 
-        def emit_opened_catalogs(name, my_list):
+        def emit_opened_catalogs(name, catalogs: List[BlueskyRun]):
             """Emit each selected and opened catalog to sigOpen"""
-            [self.sigOpen.emit(item) for item in my_list]
+            [self.sigOpen.emit(item) for item in catalogs]
+
+        def preview_entry(name, catalog: BlueskyRun):
+            self.sigPreview.emit(catalog)
 
         # connect the open_entries in the search model to sigOpen
         self.centralWidget.search_model.open_entries.connect(emit_opened_catalogs)
+        self.centralWidget.search_model.preview_entry.connect(preview_entry)
         self.centralWidget.summary_widget.open.connect(emit_opened_catalogs)
         layout.addWidget(self.centralWidget)
 
