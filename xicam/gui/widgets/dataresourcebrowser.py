@@ -243,7 +243,9 @@ class DataResourceList(QListView, DataResourceView):
                 self.sigURIChanged.emit()
                 return
         uris = [self.model().pull(index) for index in indexes]
-        self.sigOpen.emit(load_header(uris=uris))
+        header = load_header(uris=uris)
+        if header:
+            self.sigOpen.emit(header)
 
 
 class LocalFileSystemTree(DataResourceTree):
@@ -263,7 +265,9 @@ class LocalFileSystemTree(DataResourceTree):
 
     def currentChanged(self, current, previous):
         if current.isValid():
-            self.sigPreview.emit(self.model().getHeader([current]))
+            header = self.model().getHeader([current])
+            if header:
+                self.sigPreview.emit(header)
 
         self.scrollTo(current)
 
