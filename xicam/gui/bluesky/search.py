@@ -52,6 +52,7 @@ QLineEdit {
 RELOAD_INTERVAL = 11
 _validate = functools.partial(jsonschema.validate, types={'array': (list, tuple)})
 
+
 def timeit(f):
     def wrap(*args):
         time1 = time.time()
@@ -60,6 +61,7 @@ def timeit(f):
         print('{:s} function took {:.3f} ms'.format(f.__name__, (time2-time1)*1000.0))
         return ret
     return wrap
+
 
 def default_search_result_row(entry):
     start = entry.metadata['start']
@@ -77,6 +79,40 @@ def default_search_result_row(entry):
             'Start Time': start_time.strftime('%Y-%m-%d %H:%M:%S'),
             'Duration': str_duration,
             'Exit Status': '-' if stop is None else stop['exit_status']}
+
+
+class ReloadThread(QThread):
+    def __init__(self, search_state):
+        super(ReloadThread, self).__init__()
+        self.search_state = search_state
+
+    def run(self):
+        while True:
+            t0 = time.monotonic()
+            # Never reload until the last reload finished being
+            # displayed.
+            self.search_state.show_results_event.wait()
+            # Wait for RELOAD_INTERVAL to pass or until we are poked,
+            # whichever happens first.
+            self.search_state.reload_event.wait(
+                max(0, RELOAD_INTERVAL - (time.monotonic() - t0)))
+            self.search_state.reload_event.clear()
+            # Reload the catalog to show any new results.
+            self.search_state.reload()
+
+
+class ProcessQueriesThread(QThread):
+    def __init__(self, search_state):
+        super(ProcessQueriesThread, self).__init__()
+        self.search_state = search_state
+
+    def run(self):
+        while True:
+            try:
+                self.search_state.process_queries()
+            except Exception as e:
+                msg.logError(e)
+                msg.showMessage("Unable to query: ", str(e))
 
 
 class SearchState(ConfigurableQObject):
@@ -105,40 +141,14 @@ class SearchState(ConfigurableQObject):
         self.show_results_event = threading.Event()
         self.show_results_event.set()
         self.reload_event = threading.Event()
-        search_state = self
 
         super().__init__()
 
         self.new_results_catalog.connect(self.start_show_results)
 
-        class ReloadThread(QThread):
-            def run(thread):
-                while True:
-                    t0 = time.monotonic()
-                    # Never reload until the last reload finished being
-                    # displayed.
-                    search_state.show_results_event.wait()
-                    # Wait for RELOAD_INTERVAL to pass or until we are poked,
-                    # whichever happens first.
-                    search_state.reload_event.wait(
-                        max(0, RELOAD_INTERVAL - (time.monotonic() - t0)))
-                    search_state.reload_event.clear()
-                    # Reload the catalog to show any new results.
-                    search_state.reload()
-
-        self.reload_thread = ReloadThread()
+        self.reload_thread = ReloadThread(self)
         self.reload_thread.start()
-
-        class ProcessQueriesThread(QThread):
-            def run(thread):
-                while True:
-                    try:
-                        search_state.process_queries()
-                    except Exception as e:
-                        msg.logError(e)
-                        msg.showMessage("Unable to query: ", str(e))
-
-        self.process_queries_thread = ProcessQueriesThread()
+        self.process_queries_thread = ProcessQueriesThread(self)
         self.process_queries_thread.start()
 
     def start_show_results(self):
