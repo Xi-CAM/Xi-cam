@@ -7,6 +7,7 @@ from databroker.core import BlueskyRun
 from qtpy.QtCore import Signal
 from qtpy.QtWidgets import QWidget, QVBoxLayout
 import logging
+from typing import List
 
 from xicam.gui.bluesky.central import CentralWidget
 
