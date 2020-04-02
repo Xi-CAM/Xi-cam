@@ -21,9 +21,6 @@ def detect_mimetypes(filename: str) -> List[str]:
     # numbers) or any other format-specific tricks to extract a mimetype.
     matched_mimetypes = list()
 
-    if Path(filename).is_dir():
-        return matched_mimetypes  # TODO: do directories have mime-type?
-
     with open(filename, 'rb') as file:
         # The choice of 64 bytes is arbitrary. We may increase this in the
         # future if we discover reason to. Therefore, sniffers should not
@@ -114,6 +111,14 @@ def load_header(uris: List[Union[str, Path]] = None, uuid: str = None):
     ingestor = None
     filename = str(Path(uris[0]))
 
+    # Sanity checks
+    if Path(filename).is_dir():
+        msg.logMessage('Opening dir; nothing to load.')
+        return
+
+    if not Path(filename).exists():
+        raise FileExistsError(f'Attempted to load non-existent file: {filename}')
+
     mimetypes = detect_mimetypes(filename)
     msg.logMessage(f'Mimetypes detected: {mimetypes}')
 
@@ -123,7 +128,7 @@ def load_header(uris: List[Union[str, Path]] = None, uuid: str = None):
         try:
             ingestor = choose_ingestor(filename, mimetype)
         except NoIngestor as e:
-            warn(f"{e}. Falling-back to DataHandlers")
+            pass
         else:
             msg.logMessage(f'Ingestor selected: {ingestor}')
             break
@@ -136,6 +141,8 @@ def load_header(uris: List[Union[str, Path]] = None, uuid: str = None):
         # TODO -- ask about more convenient way to get a BlueskyRun from a document generator
         catalog.upsert(document[0][1], document[-1][1], ingestor, [uris], {})
         return catalog[uid]
+    else:
+        warn(f"No applicable ingestor found. Falling-back to DataHandlers")
 
     handlercandidates = []
     ext = Path(uris[0]).suffix
