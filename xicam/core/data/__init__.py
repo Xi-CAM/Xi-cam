@@ -53,7 +53,7 @@ def applicable_ingestors(filename, mimetype):
     """
     # Find ingestor(s) for this mimetype.
     ingestors = []
-    for ep in entrypoints.get_group_all('intake.catalogs'):
+    for ep in entrypoints.get_group_all('databroker.ingestors'):
         if ep.name == mimetype:
             try:
                 ingestor = ep.load()
