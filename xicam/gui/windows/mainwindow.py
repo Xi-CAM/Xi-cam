@@ -15,7 +15,7 @@ from xicam.gui.widgets.debugmenubar import DebuggableMenuBar
 from xicam.core import msg, threads
 from xicam.core.data import NonDBHeader
 from xicam.gui.settings.appearance import AppearanceSettingsPlugin
-from ..widgets import defaultstage
+from ..widgets import get_default_stage
 from .settings import ConfigDialog, ConfigRestorer
 from ..static import path
 
@@ -110,9 +110,9 @@ class XicamMainWindow(QMainWindow):
 
         self.readSettings()
         # Wireup default widgets
-        defaultstage["left"].sigOpen.connect(self.open)
-        defaultstage["left"].sigOpen.connect(print)
-        defaultstage["left"].sigPreview.connect(defaultstage["lefttop"].preview)
+        get_default_stage()["left"].sigOpen.connect(self.open)
+        get_default_stage()["left"].sigOpen.connect(print)
+        get_default_stage()["left"].sigPreview.connect(get_default_stage()["lefttop"].preview)
 
     def open(self, header):
         if self.currentGUIPlugin is None:
@@ -198,7 +198,7 @@ class XicamMainWindow(QMainWindow):
         if self.currentGUIPlugin:
             stage = self.currentGUIPlugin.stage
         else:
-            stage = defaultstage
+            stage = get_default_stage()
 
         # Set center contents
         self.centralWidget().addWidget(stage.centerwidget)
@@ -212,15 +212,15 @@ class XicamMainWindow(QMainWindow):
     def populate_hidden(self, stage, position):
         getattr(self, position + "widget").setHidden(
             (stage[position] == PanelState.Disabled)
-            or (stage[position] == PanelState.Defaulted and defaultstage[position] == PanelState.Defaulted)
+            or (stage[position] == PanelState.Defaulted and get_default_stage()[position] == PanelState.Defaulted)
         )
 
     def populate_position(self, stage, position: str):
         if isinstance(stage[position], QWidget):
             getattr(self, position + "widget").setWidget(stage[position])
         elif stage[position] == PanelState.Defaulted:
-            if not defaultstage[position] == PanelState.Defaulted:
-                getattr(self, position + "widget").setWidget(defaultstage[position])
+            if not get_default_stage()[position] == PanelState.Defaulted:
+                getattr(self, position + "widget").setWidget(get_default_stage()[position])
         elif isinstance(stage[position], type):
             raise TypeError(
                 f"A type is not acceptable value for stages. You must instance this class: {stage[position]}, {position}"
