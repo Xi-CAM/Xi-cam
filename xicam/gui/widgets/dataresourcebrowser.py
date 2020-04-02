@@ -68,7 +68,6 @@ class DataBrowser(QWidget):
     def text_to_uri(self):
         uri = parse.urlparse(self.URILineEdit.text())
         self.browserview.model().uri = uri
-        print("uri:", uri)
         return uri
 
     def uri_to_text(self):
@@ -126,7 +125,6 @@ class BrowserTabBar(ContextMenuTabBar):
 
     def saveLastTab(self, i):
         if i < 2:
-            print('set:', i)
             QSettings().setValue('databrowsertab', i)
 
     def addTab(self, *args, **kwargs):
@@ -304,7 +302,6 @@ class DataResourceBrowser(QWidget):
         # Add the required 'Local' browser
         self.addBrowser(DataBrowser(LocalFileSystemTree()), "Local", closable=False)
         self.addBrowser(DatabrokerCatalogPlugin().controller, "Databroker", closable=False)
-        print('loaded:', QSettings().value('databrowsertab'))
         self.browsertabbar.setCurrentIndex(index)
 
         vbox.addWidget(self.browsertabwidget)
