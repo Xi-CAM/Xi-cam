@@ -58,10 +58,6 @@ plugins = pluginmanager.getAllPlugins()
 datas_src.extend([plugin.path for plugin in plugins])
 datas_dst.extend(["plugins"] * len(plugins))
 
-markerfiles = list(map(os.path.abspath, glob.glob("**/*.yapsy-plugin", recursive=True)))
-datas_src.extend(markerfiles)
-datas_dst.extend(["plugins"] * len(markerfiles))
-
 a = Analysis(['run_xicam.py'],
              pathex=[os.getcwd(),
                      'C:\\Windows\\System32\\downlevel',
