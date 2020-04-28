@@ -118,6 +118,7 @@ class CatalogController(QWidget):
 
 class CatalogPlugin(Catalog, PluginType):
     is_singleton = False
+    needs_qt = True
     name = ''
 
     model = CatalogModel

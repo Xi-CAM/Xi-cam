@@ -106,6 +106,7 @@ class ProcessingPlugin(PluginType):
 
     """
     is_singleton = False
+    needs_qt = False
     hints = []
 
     def __new__(cls, *args, **kwargs):

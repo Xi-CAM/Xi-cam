@@ -16,6 +16,7 @@ from .plugin import PluginType
 
 class QWidgetPlugin(QWidget, PluginType):
     is_singleton = False
+    needs_qt = True
 
 
 def test_QWidgetPlugin():

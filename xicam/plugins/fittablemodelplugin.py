@@ -4,6 +4,7 @@ from .plugin import PluginType
 
 class Fittable1DModelPlugin(Fittable1DModel, PluginType):
     is_singleton = False
+    needs_qt = False
 
     """
     Plugins of this base class mimic the astropy FittableModel class structure. An activated fittable model would be

@@ -21,6 +21,7 @@ class DataHandlerPlugin(PluginType):
     """
 
     is_singleton = False
+    needs_qt = False
 
     DESCRIPTION = ""
 

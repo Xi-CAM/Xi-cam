@@ -47,6 +47,7 @@ class DataResourcePlugin(PluginType):
     controller = DataBrowser
 
     is_singleton = False
+    needs_qt = True
 
     name = ""
 

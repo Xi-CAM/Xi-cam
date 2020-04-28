@@ -10,6 +10,7 @@ from xicam.core import msg
 
 class SettingsPlugin(QObject, PluginType):
     is_singleton = True
+    needs_qt = False
 
     def __new__(cls, *args, **kwargs):
         if not plugins.qt_is_safe:

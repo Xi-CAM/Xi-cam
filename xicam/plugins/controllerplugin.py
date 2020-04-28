@@ -4,6 +4,7 @@ from .plugin import PluginType
 
 
 class ControllerPlugin(QWidget, PluginType):
+    needs_qt = True
     is_singleton = False
 
     def __init__(self, device, parent=None, *args):

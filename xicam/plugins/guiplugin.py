@@ -15,6 +15,7 @@ class GUIPlugin(PluginType):
     """
 
     is_singleton = True
+    needs_qt = True
 
     def __init__(self):
         super(GUIPlugin, self).__init__()
