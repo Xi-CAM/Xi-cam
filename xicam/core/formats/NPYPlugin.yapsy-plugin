@@ -1,9 +1,0 @@
-[Core]
-Name = Numpy Format
-Module = NPYPlugin.py
-
-[Documentation]
-Author = Ronald J. Pandolfi
-Version = 0.1.0
-Website = http://lotsofplugins.com
-Description = My first plugin

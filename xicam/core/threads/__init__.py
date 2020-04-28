@@ -107,7 +107,8 @@ class QThreadFuture(QThread):
             self.sigFinished.connect(finished_slot)
         if except_slot:
             self.sigExcept.connect(except_slot)
-        QApplication.instance().aboutToQuit.connect(self.quit)
+        if QApplication.instance():
+            QApplication.instance().aboutToQuit.connect(self.quit)
         self.method = method
         self.args = args
         self.kwargs = kwargs
@@ -175,7 +176,12 @@ class QThreadFuture(QThread):
             if self.showBusy:
                 show_ready()
             self.quit()
-            QApplication.instance().aboutToQuit.disconnect(self.quit)
+            if QApplication.instance():
+                try:
+                    QApplication.instance().aboutToQuit.disconnect(self.quit)
+                # Somehow the application never had its aboutToQuit connected to quit...
+                except TypeError as e:
+                    msg.logError(e)
 
     def _run(self, *args, **kwargs):  # Used to generalize to QThreadFutureIterator
         yield self.method(*self.args, **self.kwargs)
@@ -320,7 +326,8 @@ def method(
             )
             future.start()
             if block:
-                return future.result()
+                future.result()
+            return future
 
         return _runnable_method
 
