@@ -24,7 +24,13 @@ deps = [
     "qtmodern",
     "databroker>=1.0.0b8",
     "distributed",
-    "dask"
+    "dask",
+    "astropy",
+    "signalslot",
+    "virtualenv",
+    "requests",
+    "appdirs",
+    "entrypoints"
 ]
 
 # These bits don't get collected automatically when packaging:
@@ -46,6 +52,7 @@ setup(
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
     description="The CAMERA platform for synchrotron data management, visualization, and reduction.",
+    long_description=long_description,
     # The project's main homepage.
     url="https://github.com/lbl-camera/Xi-cam",
     download_url="https://github.com/lbl-camera/Xi-cam.core/archive/", # TODO: check this
@@ -109,7 +116,19 @@ setup(
     # "scripts" keyword. Entry points provide cross-platform support and allow
     # pip to create the appropriate form of executable for the target platform.
     entry_points={"gui_scripts": ["xicam=run_xicam:main"],
-                  'xicam.plugins.DataHandlerPlugin': ['npy = xicam.core.formats.NPYPlugin:NPYPlugin']},
+                  'xicam.plugins.DataHandlerPlugin': ['npy = xicam.core.formats.NPYPlugin:NPYPlugin'],
+                  'xicam.plugins.PluginType':
+                      ['CatalogPlugin = xicam.plugins.catalogplugin:CatalogPlugin',
+                       'ControllerPlugin = xicam.plugins.controllerplugin:ControllerPlugin',
+                       'DataHandlerPlugin = xicam.plugins.datahandlerplugin:DataHandlerPlugin',
+                       'DataResourcePlugin = xicam.plugins.dataresourceplugin:DataResourcePlugin',
+                       'EZPlugin = xicam.plugins.ezplugin:_EZPlugin',
+                       'Fittable1DModelPlugin = xicam.plugins.fittablemodelplugin:Fittable1DModelPlugin',
+                       'GUIPlugin = xicam.plugins.guiplugin:GUIPlugin',
+                       'ProcessingPlugin = xicam.plugins.processingplugin:ProcessingPlugin',
+                       'SettingsPlugin = xicam.plugins.settingsplugin:SettingsPlugin',
+                       'QWidgetPlugin = xicam.plugins.widgetplugin:QWidgetPlugin']
+                  },
     ext_modules=[],
     include_package_data=True,
 )

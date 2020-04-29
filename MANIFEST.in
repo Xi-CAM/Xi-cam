@@ -1,3 +1,4 @@
 include README.rst
-include LICENSE.mdinclude versioneer.py
+include LICENSE.md
+include versioneer.py
 include xicam/_version.py
