@@ -48,7 +48,6 @@ install:
 script:
   - 'pylint xicam --errors-only || :'
   - 'pytest . || :'
-  - python setup.py install
 
 after_success:
   - codecov
