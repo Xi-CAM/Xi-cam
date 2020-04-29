@@ -14,9 +14,6 @@ matrix:
       language: shell
       before_install:
         - choco install python
-        - python -m venv $HOME/venv
-        - dir ..
-        - source $HOME/venv/Scripts/activate
       after_script:
         - pyinstaller --clean --onefile --noconsole --paths C:\Windows\System32\downlevel Xi-cam.spec
       env: PATH=/c/Python37:/c/Python37/Scripts:$PATH
