@@ -10,18 +10,21 @@ Usage: pip install -e .
 
 import sys
 import versioneer
+from codecs import open
+from os import path
 
 deps = [
-    "databroker",
-    "PyQt5==5.9.2" "pathlib",
+    "PyQt5==5.9.2",
+    "pathlib",
     "qtpy",
-    "yapsy",
     "astropy",
-    "signalslot",
     "numpy",
     "appdirs",
     "qdarkstyle",
     "qtmodern",
+    "databroker>=1.0.0b8",
+    "distributed",
+    "dask"
 ]
 
 # These bits don't get collected automatically when packaging:
@@ -30,6 +33,11 @@ loosebits = ["numpy.core._methods", "numpy.lib.recfunctions"]
 
 from setuptools import setup, find_packages, find_namespace_packages
 
+# Set the long_description from the README
+here = path.abspath(path.dirname(__file__))
+with open(path.join(here, "README.rst"), encoding="utf-8") as f:
+    long_description = f.read()
+
 setup(
     name="xicam",
     # Versions should comply with PEP440.  For a discussion on single-sourcing
@@ -37,10 +45,10 @@ setup(
     # https://packaging.python.org/en/latest/single_source_version.html
     version=versioneer.get_version(),
     cmdclass=versioneer.get_cmdclass(),
-    description="The CAMERA platform for synchrotron data management, visualization, and reduction. This is a "
-    "namespace package containing xicam.core, xicam.plugins, and xicam.gui. ",
+    description="The CAMERA platform for synchrotron data management, visualization, and reduction.",
     # The project's main homepage.
     url="https://github.com/lbl-camera/Xi-cam",
+    download_url="https://github.com/lbl-camera/Xi-cam.core/archive/", # TODO: check this
     # Author details
     author="Ronald J Pandolfi",
     author_email="ronpandolfi@lbl.gov",
@@ -75,7 +83,7 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=["xicam.core", "xicam.plugins", "xicam.gui"],
+    install_requires=deps,
     setup_requires=[],
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
@@ -100,7 +108,8 @@ setup(
     # To provide executable scripts, use entry points in preference to the
     # "scripts" keyword. Entry points provide cross-platform support and allow
     # pip to create the appropriate form of executable for the target platform.
-    entry_points={"gui_scripts": ["xicam=run_xicam:main"]},
+    entry_points={"gui_scripts": ["xicam=run_xicam:main"],
+                  'xicam.plugins.DataHandlerPlugin': ['npy = xicam.core.formats.NPYPlugin:NPYPlugin']},
     ext_modules=[],
     include_package_data=True,
 )
