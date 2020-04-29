@@ -1,6 +1,5 @@
 recursive-include xicam/gui/static *
 include README.rst
 include LICENSE.md
-recursive-include xicam/ *.yapsy-plugin
 include versioneer.py
 include xicam/gui/_version.py

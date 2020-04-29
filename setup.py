@@ -91,7 +91,7 @@ setup(
     # $ pip install -e .[dev,tests]
     extras_require={
         # 'dev': ['check-manifest'],
-        "tests": ["pytest", "coverage"]
+        "tests": ["pytest", "coverage", "pytest-qt"]
     },
     # If there are data files included in your packages that need to be
     # installed, specify them here.  If using Python 2.6 or less, then these
