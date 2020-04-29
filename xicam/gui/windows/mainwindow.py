@@ -6,7 +6,7 @@ from qtpy.QtCore import QPropertyAnimation, QPoint, QEasingCurve, Qt, Slot, Sign
 from qtpy.QtGui import QDesktopServices, QIcon, QPixmap, QKeySequence, QFont
 from qtpy.QtWidgets import QMainWindow, QApplication, QStatusBar, QProgressBar, QStackedWidget, QMenu, QShortcut, \
     QDockWidget, QWidget, QToolBar, QActionGroup, QGraphicsOpacityEffect, QAction, QSpinBox, QMessageBox
-import versioneer
+from xicam import _version as version
 
 from xicam.plugins import manager as pluginmanager
 from xicam.plugins import PluginType
@@ -89,7 +89,7 @@ class XicamMainWindow(QMainWindow):
         help.addSeparator()
 
         about_title = "About Xi-CAM"
-        version_text = f"""Version: <strong>{versioneer.get_version()}</strong>"""
+        version_text = f"""Version: <strong>{version.get_versions()['version']}</strong>"""
         copyright_text = f"""<small>Copyright (c) 2016, The Regents of the University of California, \
             through Lawrence Berkeley National Laboratory \
             (subject to receipt of any required approvals from the U.S. Dept. of Energy). \
