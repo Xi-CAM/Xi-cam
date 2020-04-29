@@ -2,3 +2,4 @@ include README.rst
 include LICENSE.md
 include versioneer.py
 include xicam/_version.py
+recursive-include xicam/gui/static *

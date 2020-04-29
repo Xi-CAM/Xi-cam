@@ -13,6 +13,24 @@ import versioneer
 from codecs import open
 from os import path
 
+# These bits don't get collected automatically when packaging:
+loosebits = ["numpy.core._methods", "numpy.lib.recfunctions"]
+
+
+from setuptools import setup, find_packages, find_namespace_packages
+
+# Set the long_description from the README
+here = path.abspath(path.dirname(__file__))
+with open(path.join(here, "README.rst"), encoding="utf-8") as f:
+    long_description = f.read()
+
+import os
+
+if "APPVEYOR" in os.environ and os.environ["APPVEYOR"]:
+    pyqt = ["PyQt5"]
+else:
+    pyqt = []
+
 deps = [
     "PyQt5==5.9.2",
     "pathlib",
@@ -30,19 +48,9 @@ deps = [
     "virtualenv",
     "requests",
     "appdirs",
-    "entrypoints"
-]
-
-# These bits don't get collected automatically when packaging:
-loosebits = ["numpy.core._methods", "numpy.lib.recfunctions"]
-
-
-from setuptools import setup, find_packages, find_namespace_packages
-
-# Set the long_description from the README
-here = path.abspath(path.dirname(__file__))
-with open(path.join(here, "README.rst"), encoding="utf-8") as f:
-    long_description = f.read()
+    "entrypoints",
+    "pyqtgraph",
+    "qtconsole"] + pyqt
 
 setup(
     name="xicam",
@@ -54,7 +62,7 @@ setup(
     description="The CAMERA platform for synchrotron data management, visualization, and reduction.",
     long_description=long_description,
     # The project's main homepage.
-    url="https://github.com/lbl-camera/Xi-cam",
+    url="https://github.com/Xi-cam/Xi-cam",
     download_url="https://github.com/lbl-camera/Xi-cam.core/archive/", # TODO: check this
     # Author details
     author="Ronald J Pandolfi",
@@ -98,7 +106,7 @@ setup(
     # $ pip install -e .[dev,tests]
     extras_require={
         "docs": ["sphinx", "recommonmark", "sphinx_bootstrap_theme", "sphinx-markdown-tables"],
-        "tests": ["pytest", "coverage", "coveralls", "codecov", "pylint"],
+        "tests": ["pytest", "coverage", "coveralls", "codecov", "pylint", "pytest-qt"],
         "pyqt5": ["pyqt5"],
         "PySide2": ["PySide2"],
     },
@@ -127,7 +135,16 @@ setup(
                        'GUIPlugin = xicam.plugins.guiplugin:GUIPlugin',
                        'ProcessingPlugin = xicam.plugins.processingplugin:ProcessingPlugin',
                        'SettingsPlugin = xicam.plugins.settingsplugin:SettingsPlugin',
-                       'QWidgetPlugin = xicam.plugins.widgetplugin:QWidgetPlugin']
+                       'QWidgetPlugin = xicam.plugins.widgetplugin:QWidgetPlugin'],
+                  'xicam.plugins.SettingsPlugin': [
+                       'logging = xicam.gui.settings.logging:LoggingSettingsPlugin',
+                       'appearance = xicam.gui.settings.appearance:AppearanceSettingsPlugin',
+                       'execution = xicam.gui.settings.execution:ExecutionSettingsPlugin',
+                       'connections = xicam.gui.connections:ConnectionSettingsPlugin',
+                       'cammart = xicam.gui.cammart:CamMartSettingsPlugin',
+                       'venvs = xicam.gui.cammart.venvs:VenvsSettingsPlugin',],
+                  'xicam.plugins.CatalogPlugin': [
+                       'databroker_catalog_plugin = xicam.gui.bluesky.databroker_catalog_plugin:DatabrokerCatalogPlugin'],
                   },
     ext_modules=[],
     include_package_data=True,

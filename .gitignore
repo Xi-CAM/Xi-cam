@@ -11,3 +11,5 @@ docs/build/
 docs/*.log
 *.egg-info/
 dask-worker-space
+*.ui
+ui/

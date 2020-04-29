@@ -1,0 +1,9 @@
+[Core]
+Name = test_guiplugin
+Module = test_guiplugin.py
+
+[Documentation]
+Author = Ronald J. Pandolfi
+Version = 0.1.0
+Website = http://lotsofplugins.com
+Description = My first plugin
