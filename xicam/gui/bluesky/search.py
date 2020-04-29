@@ -268,6 +268,7 @@ class SearchState(ConfigurableQObject):
             t0 = time.monotonic()
             msg.showMessage("Running Query")
             msg.showBusy()
+            if not self.selected_catalog: return
             self._results_catalog = self.selected_catalog.search(query)
             found_new = self.check_for_new_entries()
             duration = time.monotonic() - t0

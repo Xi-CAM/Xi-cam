@@ -32,7 +32,7 @@ else:
     pyqt = []
 
 deps = [
-    "PyQt5==5.9.2",
+    "PyQt5>=5.9.2",
     "pathlib",
     "qtpy",
     "astropy",
@@ -99,7 +99,7 @@ setup(
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=deps,
-    setup_requires=[],
+    setup_requires=['cython'],  # cython is a missing required dep of astropy
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
     # for example:

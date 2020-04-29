@@ -1,16 +1,12 @@
 import sys
 import os
 import platform
-import pkg_resources
 import itertools
 import warnings
 
 import entrypoints
 from appdirs import user_config_dir, site_config_dir, user_cache_dir
-from yapsy import PluginInfo
-from yapsy.PluginManager import PluginManager
 
-import xicam
 from xicam.core import msg
 from xicam.core import threads
 from xicam.core.args import parse_args
@@ -40,8 +36,6 @@ from .fittablemodelplugin import Fittable1DModelPlugin
 from .ezplugin import _EZPlugin, EZPlugin
 from .hints import PlotHint, Hint
 
-from yapsy.PluginManager import NormalizePluginNameForModuleName, imp, log
-import importlib.util
 from queue import LifoQueue
 from enum import Enum, auto
 from contextlib import contextmanager
@@ -220,7 +214,7 @@ class XicamPluginManager():
                 if len(matches) != 1:
                     winner = group[name]
                     warnings.warn(
-                        f"There are {len(matches)} conflicting entrypoints which share the name {name!r}:\n{matches}"
+                        f"There are {len(matches)} conflicting entrypoints which share the name {name!r}:\n{matches}\n"
                         f"Loading entrypoint from {winner.module_name} and ignoring others.")
 
     @threads.method(threadkey='entrypoint-loader',

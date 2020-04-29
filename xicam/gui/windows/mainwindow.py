@@ -7,7 +7,6 @@ from qtpy.QtGui import QDesktopServices, QIcon, QPixmap, QKeySequence, QFont
 from qtpy.QtWidgets import QMainWindow, QApplication, QStatusBar, QProgressBar, QStackedWidget, QMenu, QShortcut, \
     QDockWidget, QWidget, QToolBar, QActionGroup, QGraphicsOpacityEffect, QAction, QSpinBox, QMessageBox
 import versioneer
-from yapsy import PluginInfo
 
 from xicam.plugins import manager as pluginmanager
 from xicam.plugins import PluginType
@@ -178,7 +177,7 @@ class XicamMainWindow(QMainWindow):
         self.currentGUIPlugin = guiplugin
 
     @property
-    def currentGUIPlugin(self) -> PluginInfo:
+    def currentGUIPlugin(self):
         return self._currentGUIPlugin
 
     @currentGUIPlugin.setter
