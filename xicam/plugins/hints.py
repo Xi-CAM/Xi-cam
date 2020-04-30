@@ -1,4 +1,3 @@
-from .processingplugin import Var, Input, ProcessingPlugin
 from typing import Dict, List
 import copy
 from itertools import count
@@ -122,7 +121,7 @@ class VerticalROI(Hint):
     # TODO -- range should not be a Var
     # canvas_cls = tuple(pg.PlotWidget, pg.ImageView)
 
-    def __init__(self, range: Var, **kwargs):
+    def __init__(self, range: str, **kwargs):
         super(VerticalROI, self).__init__()
         self.range = range
         self.kwargs = kwargs
@@ -141,51 +140,6 @@ class VerticalROI(Hint):
     @property
     def name(self):
         return f"{self.parent.name} Vertical ROI"
-
-
-class ButtonHint(Hint):
-    # TODO -- activated should not be a Var
-    targetattribute = "value"
-
-    def __init__(self, activated: Var, iconpath: str):
-        raise DeprecationWarning
-
-    #     super(ButtonHint, self).__init__()
-    #     self.activated = activated
-    #     self.iconpath = iconpath
-    #     self.enabled = False
-    #
-    # def visualize(self, canvas):
-    #     from qtpy.QtWidgets import QToolButton
-    #     from qtpy.QtGui import QIcon
-    #
-    #     canvas = canvases["toolbar"]  # type:QToolBar
-    #     if callable(canvas):
-    #         canvas = canvas()
-    #     button = QToolButton()
-    #     button.setIcon(QIcon(self.iconpath))
-    #     button.setCheckable(True)
-    #     button.toggled.connect(lambda state: setattr(self.activated, self.targetattribute, state))
-    #     canvas.addWidget(button)
-    #
-    # @property
-    # def name(self):
-    #     return f"{self.activated.name} button"
-
-
-class EnableHint(ButtonHint):
-    targetattribute = "enabled"
-
-    def __init__(self, parent: ProcessingPlugin, iconpath: str):
-        raise DeprecationWarning
-
-    #     super(EnableHint, self).__init__(parent, iconpath)  # Ignore typing violation
-    #     self.iconpath = iconpath
-    #     self.enabled = False  # This 'enabled' means the hint's visibility can't be changed
-    #
-    # @property
-    # def name(self):
-    #     return f"{self.parent.name} toggle button"
 
 
 class ImageHint(Hint):

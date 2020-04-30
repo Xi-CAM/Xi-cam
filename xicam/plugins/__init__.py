@@ -14,7 +14,6 @@ from xicam.core.args import parse_args
 from .datahandlerplugin import DataHandlerPlugin
 from .catalogplugin import CatalogPlugin
 from .guiplugin import GUIPlugin, GUILayout
-from .processingplugin import ProcessingPlugin, EZProcessingPlugin, Input, Output, InOut, InputOutput
 from .operationplugin import OperationPlugin
 from .settingsplugin import SettingsPlugin, ParameterSettingsPlugin
 from .dataresourceplugin import DataResourcePlugin

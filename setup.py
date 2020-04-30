@@ -135,7 +135,6 @@ setup(
             "EZPlugin = xicam.plugins.ezplugin:_EZPlugin",
             "Fittable1DModelPlugin = xicam.plugins.fittablemodelplugin:Fittable1DModelPlugin",
             "GUIPlugin = xicam.plugins.guiplugin:GUIPlugin",
-            "ProcessingPlugin = xicam.plugins.processingplugin:ProcessingPlugin",
             "SettingsPlugin = xicam.plugins.settingsplugin:SettingsPlugin",
             "QWidgetPlugin = xicam.plugins.widgetplugin:QWidgetPlugin",
         ],

@@ -28,6 +28,7 @@ from qtpy.QtWidgets import (
     QWidget,
     QTableView,
     QMenu,
+    QApplication
 )
 
 from xicam.core import msg
@@ -88,6 +89,7 @@ class ReloadThread(QThread):
     def __init__(self, search_state):
         super(ReloadThread, self).__init__()
         self.search_state = search_state
+        QApplication.instance().aboutToQuit.connect(self.quit)
 
     def run(self):
         while True:
@@ -107,6 +109,7 @@ class ProcessQueriesThread(QThread):
     def __init__(self, search_state):
         super(ProcessQueriesThread, self).__init__()
         self.search_state = search_state
+        QApplication.instance().aboutToQuit.connect(self.quit)
 
     def run(self):
         while True:

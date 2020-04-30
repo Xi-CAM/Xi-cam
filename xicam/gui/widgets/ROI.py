@@ -4,17 +4,16 @@ from qtpy.QtCore import QRectF, QPointF, Qt
 from qtpy.QtGui import QColor, QPainter, QPainterPath, QBrush
 import numpy as np
 from itertools import count
+from xicam.plugins import OperationPlugin
 
-from xicam.plugins import ProcessingPlugin, Input, Output, InputOutput
+
 from pyqtgraph.parametertree import Parameter, parameterTypes
 import pyqtgraph as pg
 
 
-class ROIProcessingPlugin(ProcessingPlugin):
-    data = Input()
-    image = Input()
-    roi = Output()
-    region = Output()
+class ROIProcessingPlugin(OperationPlugin):
+    name = 'ROI'
+    output_names = ('ROI', 'data')
 
     def __init__(self, ROI: ROI):
         super(ROIProcessingPlugin, self).__init__()
@@ -23,22 +22,16 @@ class ROIProcessingPlugin(ProcessingPlugin):
 
         self.name = f"ROI #{self.ROI.index}"
 
-    def evaluate(self):
-        self.region.value = self.ROI.getLabelArray(self.data.value, self.image.value)
-        self.roi.value = self.region.value.astype(np.bool)
+    def _func(self, data, image):
+        data = self.ROI.getLabelArray(data, image)
+        roi = data.astype(np.bool)
+        return roi, data
 
     @property
     def parameter(self):
         if not self._param:
             self._param = self.ROI.parameter()
         return self._param
-
-
-class LabelArrayProcessingPlugin(ProcessingPlugin):
-    roi = InputOutput()
-
-    def evaluate(self):
-        self.roi.value = self.roi.value
 
 
 class WorkflowableROI(ROI):

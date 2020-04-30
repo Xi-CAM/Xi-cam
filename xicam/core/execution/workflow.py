@@ -1,4 +1,4 @@
-from xicam.plugins import ProcessingPlugin, OperationPlugin
+from xicam.plugins import OperationPlugin
 from typing import Callable, List, Union, Tuple
 from collections import defaultdict
 from xicam.core import msg, execution
