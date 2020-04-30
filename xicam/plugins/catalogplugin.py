@@ -86,6 +86,7 @@ class CatalogModel(QAbstractItemModel):
         self._rowcount = 0
         self._run_iterator = self.catalog.__iter__()
 
+
 class CatalogController(QWidget):
     # TODO: Make a desicion what we want these signal objects to be
     sigOpen = Signal(object)
@@ -119,7 +120,7 @@ class CatalogController(QWidget):
 class CatalogPlugin(Catalog, PluginType):
     is_singleton = False
     needs_qt = True
-    name = ''
+    name = ""
 
     model = CatalogModel
     view = QListView
@@ -143,20 +144,18 @@ class CatalogPlugin(Catalog, PluginType):
             self.controller = self.controller(self.view)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from intake_bluesky.jsonl import BlueskyJSONLCatalog
     import glob
 
-
     class JSONLCatalogPlugin(BlueskyJSONLCatalog, CatalogPlugin):
         ...
-
 
     from qtpy.QtWidgets import QApplication
 
     qapp = QApplication([])
 
-    paths = glob.glob('/home/rp/data/Catalog Sample/abc/*.jsonl')
+    paths = glob.glob("/home/rp/data/Catalog Sample/abc/*.jsonl")
     model = JSONLCatalogPlugin(paths).model
 
     view = QListView()

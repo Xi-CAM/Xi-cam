@@ -10,14 +10,14 @@ from xicam.core import msg
 
 class TabView(QTabWidget):
     def __init__(
-            self,
-            catalogmodel: QStandardItemModel = None,
-            selectionmodel: QItemSelectionModel = None,
-            widgetcls=None,
-            stream=None,
-            field=None,
-            bindings: List[tuple] = [],
-            **kwargs,
+        self,
+        catalogmodel: QStandardItemModel = None,
+        selectionmodel: QItemSelectionModel = None,
+        widgetcls=None,
+        stream=None,
+        field=None,
+        bindings: List[tuple] = [],
+        **kwargs,
     ):
         """
 
@@ -70,8 +70,10 @@ class TabView(QTabWidget):
             lambda i: self.selectionmodel.setCurrentIndex(self.catalogmodel.index(i, 0), QItemSelectionModel.Rows)
         )
         self.currentChanged.connect(
-            lambda _: self.selectionmodel.setCurrentIndex(self.catalogmodel.index(self.currentIndex(), 0),
-                                                          QItemSelectionModel.ClearAndSelect))
+            lambda _: self.selectionmodel.setCurrentIndex(
+                self.catalogmodel.index(self.currentIndex(), 0), QItemSelectionModel.ClearAndSelect
+            )
+        )
 
     def dataChanged(self, start, end):
         for i in range(self.catalogmodel.rowCount()):
@@ -82,8 +84,9 @@ class TabView(QTabWidget):
                 itemdata = self.catalogmodel.item(i).data(Qt.UserRole)
 
             if self.widget(i):
-                if (hasattr(self.widget(i), 'catalog') and self.widget(i).catalog == itemdata) or \
-                        (hasattr(self.widget(i), 'header') and self.widget(i).header == itemdata):
+                if (hasattr(self.widget(i), "catalog") and self.widget(i).catalog == itemdata) or (
+                    hasattr(self.widget(i), "header") and self.widget(i).header == itemdata
+                ):
                     continue
             try:
                 newwidget = self.widgetcls(itemdata, stream=self.stream, field=self.field, **self.kwargs)

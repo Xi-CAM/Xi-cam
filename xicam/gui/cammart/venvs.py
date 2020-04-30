@@ -35,8 +35,7 @@ class VenvsSettingsPlugin(SettingsPlugin):
             initialize_venv()
 
         self.widget = QLabel("test")
-        super(VenvsSettingsPlugin, self).__init__(QIcon(str(path("icons/python.png"))), "Virtual Environments",
-                                                  self.widget)
+        super(VenvsSettingsPlugin, self).__init__(QIcon(str(path("icons/python.png"))), "Virtual Environments", self.widget)
 
     def toState(self):
         return None  # self.parameter.saveState()

@@ -53,6 +53,7 @@ def _main(args):
     splash_proc.start(sys.executable, [splash.__file__, log_file, str(initial_length)])
 
     from xicam.gui.windows.mainwindow import XicamMainWindow
+
     mainwindow = XicamMainWindow()
     while splash_proc.state() != QProcess.NotRunning:
         app.processEvents()

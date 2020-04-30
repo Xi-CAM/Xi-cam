@@ -50,7 +50,8 @@ deps = [
     "appdirs",
     "entrypoints",
     "pyqtgraph",
-    "qtconsole"] + pyqt
+    "qtconsole",
+] + pyqt
 
 setup(
     name="xicam",
@@ -63,7 +64,7 @@ setup(
     long_description=long_description,
     # The project's main homepage.
     url="https://github.com/Xi-cam/Xi-cam",
-    download_url="https://github.com/lbl-camera/Xi-cam.core/archive/", # TODO: check this
+    download_url="https://github.com/lbl-camera/Xi-cam.core/archive/",  # TODO: check this
     # Author details
     author="Ronald J Pandolfi",
     author_email="ronpandolfi@lbl.gov",
@@ -89,7 +90,7 @@ setup(
     keywords="synchrotron analysis x-ray scattering tomography ",
     # You can just specify the packages manually here if your project is
     # simple. Or you can use find_packages().
-    packages=find_packages() + find_namespace_packages(include=['xicam.*']),
+    packages=find_packages() + find_namespace_packages(include=["xicam.*"]),
     package_dir={},
     # Alternatively, if you want to distribute just a my_module.py, uncomment
     # this:
@@ -99,7 +100,7 @@ setup(
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=deps,
-    setup_requires=['cython'],  # cython is a missing required dep of astropy
+    setup_requires=["cython"],  # cython is a missing required dep of astropy
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
     # for example:
@@ -123,29 +124,33 @@ setup(
     # To provide executable scripts, use entry points in preference to the
     # "scripts" keyword. Entry points provide cross-platform support and allow
     # pip to create the appropriate form of executable for the target platform.
-    entry_points={"gui_scripts": ["xicam=run_xicam:main"],
-                  'xicam.plugins.DataHandlerPlugin': ['npy = xicam.core.formats.NPYPlugin:NPYPlugin'],
-                  'xicam.plugins.PluginType':
-                      ['CatalogPlugin = xicam.plugins.catalogplugin:CatalogPlugin',
-                       'ControllerPlugin = xicam.plugins.controllerplugin:ControllerPlugin',
-                       'DataHandlerPlugin = xicam.plugins.datahandlerplugin:DataHandlerPlugin',
-                       'DataResourcePlugin = xicam.plugins.dataresourceplugin:DataResourcePlugin',
-                       'EZPlugin = xicam.plugins.ezplugin:_EZPlugin',
-                       'Fittable1DModelPlugin = xicam.plugins.fittablemodelplugin:Fittable1DModelPlugin',
-                       'GUIPlugin = xicam.plugins.guiplugin:GUIPlugin',
-                       'ProcessingPlugin = xicam.plugins.processingplugin:ProcessingPlugin',
-                       'SettingsPlugin = xicam.plugins.settingsplugin:SettingsPlugin',
-                       'QWidgetPlugin = xicam.plugins.widgetplugin:QWidgetPlugin'],
-                  'xicam.plugins.SettingsPlugin': [
-                       'logging = xicam.gui.settings.logging:LoggingSettingsPlugin',
-                       'appearance = xicam.gui.settings.appearance:AppearanceSettingsPlugin',
-                       'execution = xicam.gui.settings.execution:ExecutionSettingsPlugin',
-                       'connections = xicam.gui.connections:ConnectionSettingsPlugin',
-                       'cammart = xicam.gui.cammart:CamMartSettingsPlugin',
-                       'venvs = xicam.gui.cammart.venvs:VenvsSettingsPlugin',],
-                  'xicam.plugins.CatalogPlugin': [
-                       'databroker_catalog_plugin = xicam.gui.bluesky.databroker_catalog_plugin:DatabrokerCatalogPlugin'],
-                  },
+    entry_points={
+        "gui_scripts": ["xicam=run_xicam:main"],
+        "xicam.plugins.DataHandlerPlugin": ["npy = xicam.core.formats.NPYPlugin:NPYPlugin"],
+        "xicam.plugins.PluginType": [
+            "CatalogPlugin = xicam.plugins.catalogplugin:CatalogPlugin",
+            "ControllerPlugin = xicam.plugins.controllerplugin:ControllerPlugin",
+            "DataHandlerPlugin = xicam.plugins.datahandlerplugin:DataHandlerPlugin",
+            "DataResourcePlugin = xicam.plugins.dataresourceplugin:DataResourcePlugin",
+            "EZPlugin = xicam.plugins.ezplugin:_EZPlugin",
+            "Fittable1DModelPlugin = xicam.plugins.fittablemodelplugin:Fittable1DModelPlugin",
+            "GUIPlugin = xicam.plugins.guiplugin:GUIPlugin",
+            "ProcessingPlugin = xicam.plugins.processingplugin:ProcessingPlugin",
+            "SettingsPlugin = xicam.plugins.settingsplugin:SettingsPlugin",
+            "QWidgetPlugin = xicam.plugins.widgetplugin:QWidgetPlugin",
+        ],
+        "xicam.plugins.SettingsPlugin": [
+            "logging = xicam.gui.settings.logging:LoggingSettingsPlugin",
+            "appearance = xicam.gui.settings.appearance:AppearanceSettingsPlugin",
+            "execution = xicam.gui.settings.execution:ExecutionSettingsPlugin",
+            "connections = xicam.gui.connections:ConnectionSettingsPlugin",
+            "cammart = xicam.gui.cammart:CamMartSettingsPlugin",
+            "venvs = xicam.gui.cammart.venvs:VenvsSettingsPlugin",
+        ],
+        "xicam.plugins.CatalogPlugin": [
+            "databroker_catalog_plugin = xicam.gui.bluesky.databroker_catalog_plugin:DatabrokerCatalogPlugin"
+        ],
+    },
     ext_modules=[],
     include_package_data=True,
 )

@@ -21,12 +21,12 @@ def detect_mimetypes(filename: str) -> List[str]:
     # numbers) or any other format-specific tricks to extract a mimetype.
     matched_mimetypes = list()
 
-    with open(filename, 'rb') as file:
+    with open(filename, "rb") as file:
         # The choice of 64 bytes is arbitrary. We may increase this in the
         # future if we discover reason to. Therefore, sniffers should not
         # assume that they will receive this exact number of bytes.
         first_bytes = file.read(64)
-    for ep in entrypoints.get_group_all('databroker.sniffers'):
+    for ep in entrypoints.get_group_all("databroker.sniffers"):
         try:
             content_sniffer = ep.load()  # TODO: only load sniffers once
         except Exception as ex:
@@ -53,7 +53,7 @@ def applicable_ingestors(filename, mimetype):
     """
     # Find ingestor(s) for this mimetype.
     ingestors = []
-    for ep in entrypoints.get_group_all('databroker.ingestors'):
+    for ep in entrypoints.get_group_all("databroker.ingestors"):
         if ep.name == mimetype:
             try:
                 ingestor = ep.load()
@@ -86,6 +86,7 @@ class UnknownFileType(ValueError):
 class NoIngestor(ValueError):
     ...
 
+
 def load_header(uris: List[Union[str, Path]] = None, uuid: str = None):
     """
     Load a document object, either from a file source or a databroker source, by uuid. If loading from a filename, the
@@ -113,14 +114,14 @@ def load_header(uris: List[Union[str, Path]] = None, uuid: str = None):
 
     # Sanity checks
     if Path(filename).is_dir():
-        msg.logMessage('Opening dir; nothing to load.')
+        msg.logMessage("Opening dir; nothing to load.")
         return
 
     if not Path(filename).exists():
-        raise FileExistsError(f'Attempted to load non-existent file: {filename}')
+        raise FileExistsError(f"Attempted to load non-existent file: {filename}")
 
     mimetypes = detect_mimetypes(filename)
-    msg.logMessage(f'Mimetypes detected: {mimetypes}')
+    msg.logMessage(f"Mimetypes detected: {mimetypes}")
 
     # TODO: here, we try each valid mimetype; some GUI for selection will be needed
 
@@ -130,7 +131,7 @@ def load_header(uris: List[Union[str, Path]] = None, uuid: str = None):
         except NoIngestor as e:
             pass
         else:
-            msg.logMessage(f'Ingestor selected: {ingestor}')
+            msg.logMessage(f"Ingestor selected: {ingestor}")
             break
 
     if ingestor:
@@ -152,7 +153,7 @@ def load_header(uris: List[Union[str, Path]] = None, uuid: str = None):
     if not handlercandidates:
         return NonDBHeader({}, [], [], {})
     # try:
-    msg.logMessage(f'Handler selected: {handlercandidates[0]}')
+    msg.logMessage(f"Handler selected: {handlercandidates[0]}")
     return NonDBHeader(**handlercandidates[0].ingest(uris))
     # except (IsADirectoryError, TypeError):
     #     # TODO: add Header ingestor for directory
@@ -567,7 +568,7 @@ class MetaXArray(object):
     def __init__(self, dataarray):
         self.dataarray = dataarray
 
-        for attr in ['size', 'ndim', 'shape', 'dtype']:
+        for attr in ["size", "ndim", "shape", "dtype"]:
             setattr(self, attr, getattr(self.dataarray, attr))
 
     def __len__(self):
@@ -593,8 +594,11 @@ class MetaXArray(object):
 
     def transpose(self, ax):
         if ax != [0, 1, 2]:
-            raise ValueError('A MetaXArray cannot actually be transposed; the transpose method is provided for '
-                             'compatibility with pyqtgraph''s ImageView')
+            raise ValueError(
+                "A MetaXArray cannot actually be transposed; the transpose method is provided for "
+                "compatibility with pyqtgraph"
+                "s ImageView"
+            )
         return self
 
     def view(self, _):
@@ -657,8 +661,7 @@ class DocMetaArray(object):
             fields = list(self.header.fields())
             if len(fields) > 1:
                 msg.logError(
-                    ValueError(
-                        "Unspecified field for document stream with >1 field. Potentially unexpected behavior.")
+                    ValueError("Unspecified field for document stream with >1 field. Potentially unexpected behavior.")
                 )
                 self.field = next(iter(self.header.eventdocs[0]["data"].keys()))
             else:

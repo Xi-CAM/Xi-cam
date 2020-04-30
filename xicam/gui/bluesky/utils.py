@@ -21,6 +21,7 @@ class MetaQObjectHasTraits(MetaQObject, MetaHasTraits):
     QObject. Using SuperQObject instead of QObject is highly recommended. See
     QtKernelManager for an example.
     """
+
     def __new__(mcls, name, bases, classdict):
         # FIXME: this duplicates the code from MetaHasTraits.
         # I don't think a super() call will help me here.
@@ -50,8 +51,8 @@ def superQ(QClass):
     This class is primarily useful for attaching signals to existing non-Qt
     classes. See QtKernelManagerMixin for an example.
     """
-    class SuperQClass(QClass):
 
+    class SuperQClass(QClass):
         def __new__(cls, *args, **kw):
             # We initialize QClass as early as possible. Without this, Qt complains
             # if SuperQClass is not the first class in the super class list.
@@ -72,5 +73,4 @@ def superQ(QClass):
 
 
 SuperQObject = superQ(QObject)
-ConfigurableQObject = MetaQObjectHasTraits(
-    'NewBase', (Configurable, SuperQObject), {})
+ConfigurableQObject = MetaQObjectHasTraits("NewBase", (Configurable, SuperQObject), {})

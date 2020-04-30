@@ -1,4 +1,4 @@
-class PluginType():
+class PluginType:
     is_singleton = False
 
     _name = None

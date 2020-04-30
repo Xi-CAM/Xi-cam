@@ -59,11 +59,11 @@ progressbar = None
 log_dir = os.path.join(paths.user_cache_dir, "logs")
 os.makedirs(log_dir, exist_ok=True)
 log_file = "out.log"
-logger = logging.getLogger('xicam')
-logger.setLevel('DEBUG')  # minimum level shown
+logger = logging.getLogger("xicam")
+logger.setLevel("DEBUG")  # minimum level shown
 
 # Create a formatter that all handlers below can use for formatting their log messages
-#format = "%(asctime)s - %(name)s - %(module)s:%(lineno)d - %(funcName)s - "
+# format = "%(asctime)s - %(name)s - %(module)s:%(lineno)d - %(funcName)s - "
 format = "%(asctime)s - %(caller_name)s - %(levelname)s - %(threadName)s - %(message)s"
 date_format = "%a %b %d %H:%M:%S %Y"
 formatter = logging.Formatter(fmt=format, datefmt=date_format)
@@ -202,6 +202,7 @@ def notifyMessage(*args, timeout=8000, title="", level: int = INFO):
         if icon is None:
             raise ValueError("Invalid message level.")
         from .. import threads  # must be a late import
+
         threads.invoke_in_main_thread(trayicon.show)
 
         threads.invoke_in_main_thread(trayicon.showMessage, title, "".join(args), icon, timeout)
@@ -230,12 +231,13 @@ def showMessage(*args, timeout=5, **kwargs):
     s = " ".join(args)
     if statusbar is not None:
         from .. import threads  # must be a late import
+
         threads.invoke_in_main_thread(statusbar.showMessage, s, timeout * 1000)
 
     logMessage(*args, **kwargs)
 
 
-def logMessage(*args: Any, level: int = INFO, loggername: str = None, sep=' '):
+def logMessage(*args: Any, level: int = INFO, loggername: str = None, sep=" "):
     """
     Logs messages to logging log. Gui widgets can be subscribed to the log with:
         logging.getLogger().addHandler(callable)
@@ -259,10 +261,9 @@ def logMessage(*args: Any, level: int = INFO, loggername: str = None, sep=' '):
     message = sep.join(map(str, args))
 
     if loggername is not None:
-        warnings.warn("Custom loggername is no longer supported, "
-                     "ignored.")
+        warnings.warn("Custom loggername is no longer supported, " "ignored.")
     caller_name = sys._getframe().f_back.f_code.co_name
-    logger.log(level, message, extra={'caller_name': caller_name})
+    logger.log(level, message, extra={"caller_name": caller_name})
 
 
 def clearMessage():
@@ -285,22 +286,20 @@ def logError(exception: Exception, value=None, tb=None, **kwargs):
     if not tb:
         tb = exception.__traceback__
     kwargs["level"] = ERROR
-    if 'loggername' not in kwargs:
-        kwargs['loggername'] = sys._getframe().f_back.f_code.co_name
+    if "loggername" not in kwargs:
+        kwargs["loggername"] = sys._getframe().f_back.f_code.co_name
     logMessage("\n", "The following error was handled safely by Xi-cam. It is displayed here for debugging.", **kwargs)
     try:
         logMessage("\n", *traceback.format_exception(exception, value, tb), **kwargs)
     except AttributeError:
         logMessage("\n", *traceback.format_exception_only(exception, value), **kwargs)
-        
+
+
 cumulative_time = defaultdict(lambda: 0)
 
 
 @contextmanager
-def logTime(*args: Any, level: int = INFO,
-            loggername: str = None,
-            cumulative_key: str = '',
-            sep=' ') -> None:
+def logTime(*args: Any, level: int = INFO, loggername: str = None, cumulative_key: str = "", sep=" ") -> None:
     start = time.clock_gettime_ns(time.CLOCK_THREAD_CPUTIME_ID)
     yield
     elapsed_time = time.clock_gettime_ns(time.CLOCK_THREAD_CPUTIME_ID) - start
@@ -308,17 +307,20 @@ def logTime(*args: Any, level: int = INFO,
     if cumulative_key:
         cumulative_time[cumulative_key] += elapsed_time
         extra_args = [
-            f"cumulative elapsed: {cumulative_time[cumulative_key] / 1e6} ms elapsed: {elapsed_time / 1e6} ms elapsed"]
+            f"cumulative elapsed: {cumulative_time[cumulative_key] / 1e6} ms elapsed: {elapsed_time / 1e6} ms elapsed"
+        ]
     else:
         extra_args = [f"elapsed: {elapsed_time / 1e6} ms elapsed"]
 
     logMessage(*(args + extra_args), level, loggername, sep)
+
 
 @contextmanager
 def busyContext() -> None:
     showBusy()
     yield
     showReady()
+
 
 import sys
 
@@ -327,7 +329,7 @@ sys._excepthook = sys.excepthook = logError
 try:
     faulthandler.enable()
 except RuntimeError:
-    faulthandler.enable(file=open(os.path.join(paths.user_cache_dir, "logs", "crash_log.log"), 'w'))
+    faulthandler.enable(file=open(os.path.join(paths.user_cache_dir, "logs", "crash_log.log"), "w"))
 
 # The above enables printing tracebacks during hard crashes. To see it in action, try the following lines
 # import ctypes

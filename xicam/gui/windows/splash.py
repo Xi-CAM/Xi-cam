@@ -8,17 +8,14 @@ from xicam.gui import static
 
 def elide(s: str, max_len: int = 60):
     if len(s) > max_len:
-        s = s[:max_len - 3] + '...'
+        s = s[: max_len - 3] + "..."
     return s
 
 
 class XicamSplashScreen(QSplashScreen):
     minsplashtime = 5000
 
-    def __init__(self,
-                 log_path: str,
-                 initial_length: int,
-                 f: int = Qt.WindowStaysOnTopHint | Qt.SplashScreen):
+    def __init__(self, log_path: str, initial_length: int, f: int = Qt.WindowStaysOnTopHint | Qt.SplashScreen):
         """
         A QSplashScreen customized to display an animated gif. The splash triggers launch when clicked.
 
@@ -44,13 +41,13 @@ class XicamSplashScreen(QSplashScreen):
         super(XicamSplashScreen, self).__init__(self.pixmap, f)
         self.setMask(self.pixmap.mask())
         self.movie.finished.connect(self.restartmovie)
-        self.showMessage('Starting Xi-CAM...')
+        self.showMessage("Starting Xi-CAM...")
 
         self._launching = False
         self._launchready = False
         self.timer = QTimer(self)
 
-        self.log_file = open(log_path, 'r')
+        self.log_file = open(log_path, "r")
         self.log_file.seek(initial_length)
 
         # Start splashing
@@ -90,7 +87,7 @@ class XicamSplashScreen(QSplashScreen):
 
         line = self.log_file.readline().strip()
         if line:
-            self.showMessage(elide(line.split('>')[-1]))
+            self.showMessage(elide(line.split(">")[-1]))
 
     def sizeHint(self):
         return self.movie.scaledSize()

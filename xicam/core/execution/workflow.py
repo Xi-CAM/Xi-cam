@@ -50,7 +50,7 @@ class Graph(object):
             Operation to insert.
         """
         if not isinstance(operation, OperationPlugin):
-            raise TypeError(f"Expected \"{operation}\" to be an OperationPlugin")
+            raise TypeError(f'Expected "{operation}" to be an OperationPlugin')
         self._operations.insert(index, operation)
         operation._workflow = ref(self)
 
@@ -58,17 +58,17 @@ class Graph(object):
 
     def _validate_link_parameters(self, source, dest, source_param, dest_param):
         if not isinstance(source, OperationPlugin):
-            raise TypeError(f"Expected source \"{source}\" to be an OperationPlugin")
+            raise TypeError(f'Expected source "{source}" to be an OperationPlugin')
         if not isinstance(dest, OperationPlugin):
-            raise TypeError(f"Expected dest \"{dest}\" to be an OperationPlugin")
+            raise TypeError(f'Expected dest "{dest}" to be an OperationPlugin')
         if not isinstance(source_param, str):
-            raise TypeError(f"Expected source_param \"{source_param}\" to be a string")
+            raise TypeError(f'Expected source_param "{source_param}" to be a string')
         if not isinstance(dest_param, str):
-            raise TypeError(f"Expected dest_param \"{dest_param}\" to be a string")
+            raise TypeError(f'Expected dest_param "{dest_param}" to be a string')
         if source not in self._operations:
-            raise ValueError(f"Source operation \"{source}\" cannot be found")
+            raise ValueError(f'Source operation "{source}" cannot be found')
         if dest not in self._operations:
-            raise ValueError(f"Destination operation \"{dest}\" cannot be found")
+            raise ValueError(f'Destination operation "{dest}" cannot be found')
 
     def add_link(self, source, dest, source_param, dest_param):
         """Add a link between two operations in the workflow.
@@ -90,11 +90,9 @@ class Graph(object):
         self._validate_link_parameters(source, dest, source_param, dest_param)
 
         if source_param not in source.output_names:
-            raise ValueError(
-                f"An output named \"{source_param}\" could not be found in the source operation, {source.name}")
+            raise ValueError(f'An output named "{source_param}" could not be found in the source operation, {source.name}')
         elif dest_param not in dest.input_names:
-            raise ValueError(
-                f"An input named \"{dest_param}\" could not be found in the destination operation, {dest.name}")
+            raise ValueError(f'An input named "{dest_param}" could not be found in the destination operation, {dest.name}')
         self._inbound_links[dest][source].append((source_param, dest_param))
         self._outbound_links[source][dest].append((source_param, dest_param))
 
@@ -193,7 +191,7 @@ class Graph(object):
 
         # TODO : clear_outbound, clear_inbound
         if not isinstance(operation, OperationPlugin):
-            raise TypeError(f"Expected \'{operation}\' to be an OperationPlugin")
+            raise TypeError(f"Expected '{operation}' to be an OperationPlugin")
         try:
             self._inbound_links[operation].clear()
             self._outbound_links[operation].clear()
@@ -330,8 +328,12 @@ class Graph(object):
             Returns a list of the links (defined as outbound links) in the workflow.
 
         """
-        return [(src, dest, link[0], link[1]) for src, outbound_links in self._outbound_links.items() for
-                dest, links in outbound_links.items() for link in links]
+        return [
+            (src, dest, link[0], link[1])
+            for src, outbound_links in self._outbound_links.items()
+            for dest, links in outbound_links.items()
+            for link in links
+        ]
 
     def operation_links(self, operation: OperationPlugin):
         """Returns the outbound links for an operation.
@@ -347,9 +349,10 @@ class Graph(object):
         if not isinstance(operation, OperationPlugin):
             raise TypeError(f"Expected {operation} to be an OperationPlugin")
         if operation not in self.operations:
-            raise ValueError(f"Operation \"{operation}\" not found")
-        return [(operation, dest, link[0], link[1]) for dest, links in
-                self._outbound_links[operation].items() for link in links]
+            raise ValueError(f'Operation "{operation}" not found')
+        return [
+            (operation, dest, link[0], link[1]) for dest, links in self._outbound_links[operation].items() for link in links
+        ]
 
     def disabled_operations(self):
         """Returns the disabled operations (if any) in the workflow."""
@@ -370,8 +373,9 @@ class Graph(object):
         """
         return operation in self._disabled_operations
 
-    def set_disabled(self, operation: OperationPlugin, value: bool = True, remove_orphan_links: bool = True,
-                     auto_connect_all: bool = True):
+    def set_disabled(
+        self, operation: OperationPlugin, value: bool = True, remove_orphan_links: bool = True, auto_connect_all: bool = True
+    ):
         """Set an operation's disabled state in the workflow.
 
         By default when disabling an operation, links connected to the operation will be removed.
@@ -473,8 +477,7 @@ class Graph(object):
                                 bestmatch = output_operation, output_name
                                 matchness = 1
                                 # if a name+type match hasn't been found
-                                if output_operation.output_types[output_name] == input_operation.input_types[
-                                    input_name]:
+                                if output_operation.output_types[output_name] == input_operation.input_types[input_name]:
                                     if matchness < 2:
                                         bestmatch = output_operation, output_name
                                         matchness = 2
@@ -491,8 +494,9 @@ class Graph(object):
 
     def _pretty_print(self):
         """Print out links in easy-to-read format."""
+
         def print_underlined(text):
-            underline = '-' * len(text)
+            underline = "-" * len(text)
             print(f"{text}\n{underline}")
 
         print_underlined("Graph:")
@@ -535,7 +539,8 @@ class _OperationWrapper:
 
         result_keys = self.node.output_names
         result_values = self.node(**node_args)
-        if not isinstance(result_values, tuple): result_values = (result_values,)
+        if not isinstance(result_values, tuple):
+            result_values = (result_values,)
 
         return dict(zip(result_keys, result_values))
 
@@ -586,17 +591,17 @@ class Workflow(Graph):
         # TODO: use cam-link to mirror installation of plugin packages
 
     def execute(
-            self,
-            executor=None,
-            connection=None,
-            callback_slot=None,
-            finished_slot=None,
-            except_slot=None,
-            default_exhandle=True,
-            lock=None,
-            fill_kwargs=True,
-            threadkey=None,
-            **kwargs,
+        self,
+        executor=None,
+        connection=None,
+        callback_slot=None,
+        finished_slot=None,
+        except_slot=None,
+        default_exhandle=True,
+        lock=None,
+        fill_kwargs=True,
+        threadkey=None,
+        **kwargs,
     ):
         """
         Execute this workflow on the specified host. Connection will be a Connection object (WIP) keeping a connection
@@ -643,17 +648,17 @@ class Workflow(Graph):
         return executor.execute(self)
 
     def execute_all(
-            self,
-            connection=None,
-            executor=None,
-            callback_slot=None,
-            finished_slot=None,
-            except_slot=None,
-            default_exhandle=True,
-            lock=None,
-            fill_kwargs=True,
-            threadkey=None,
-            **kwargs,
+        self,
+        connection=None,
+        executor=None,
+        callback_slot=None,
+        finished_slot=None,
+        except_slot=None,
+        default_exhandle=True,
+        lock=None,
+        fill_kwargs=True,
+        threadkey=None,
+        **kwargs,
     ):
         """
         Execute this workflow on the specified host. Connection will be a Connection object (WIP) keeping a connection

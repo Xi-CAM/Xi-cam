@@ -8,8 +8,8 @@ from xicam.gui.static import path
 class LoggingSettingsPlugin(ParameterSettingsPlugin):
     """Settings plugin for logging information and parameterization.
     """
-    def __init__(self):
 
+    def __init__(self):
         def msg_levels(recommended=""):
             """Returns a dictionary mapping logging level names to their respective integer values.
 
@@ -26,7 +26,7 @@ class LoggingSettingsPlugin(ParameterSettingsPlugin):
                 Dictionary that maps log level names to their values, optionally with one name marked as recommended.
 
             """
-            levels = dict()#{v: k for k, v in msg.levels.items()}
+            levels = dict()  # {v: k for k, v in msg.levels.items()}
             for level, level_name in msg.levels.items():
                 if recommended and recommended == level_name:
                     levels[level_name + " (recommended)"] = level
@@ -42,16 +42,17 @@ class LoggingSettingsPlugin(ParameterSettingsPlugin):
                 dict(
                     name="Log Directory",
                     value=msg.log_dir,
-                    type='str',
+                    type="str",
                     readonly=True,
-                    tip="Location where Xi-CAM writes its logs to."),
+                    tip="Location where Xi-CAM writes its logs to.",
+                ),
                 # Allow users to configure the default log level for the xicam logger's FileHandler
                 dict(
                     name=msg.FILE_LOG_LEVEL_SETTINGS_NAME,
                     values=msg_levels(recommended="DEBUG"),
                     value=msg.DEFAULT_FILE_LOG_LEVEL,
                     type="list",
-                    tip="Changes how much information is logged to the log file in 'Log Directory.'"
+                    tip="Changes how much information is logged to the log file in 'Log Directory.'",
                 ),
                 # Allow users to configure the default log level for the xicam logger's StreamHandler
                 dict(

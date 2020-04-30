@@ -76,20 +76,20 @@ class QThreadFuture(QThread):
 
     def __init__(
         self,
-            method,
-            *args,
-            callback_slot=None,
-            finished_slot=None,
-            except_slot=None,
-            default_exhandle=True,
-            lock=None,
-            threadkey: str = None,
-            showBusy=True,
-            keepalive=True,
-            cancelIfRunning=True,
-            priority=QThread.InheritPriority,
-            timeout=0,
-            **kwargs,
+        method,
+        *args,
+        callback_slot=None,
+        finished_slot=None,
+        except_slot=None,
+        default_exhandle=True,
+        lock=None,
+        threadkey: str = None,
+        showBusy=True,
+        keepalive=True,
+        cancelIfRunning=True,
+        priority=QThread.InheritPriority,
+        timeout=0,
+        **kwargs,
     ):
         super(QThreadFuture, self).__init__()
 
@@ -269,18 +269,18 @@ def is_main_thread():
 
 
 def method(
-        callback_slot=None,
-        finished_slot=None,
-        except_slot=None,
-        default_exhandle=True,
-        lock=None,
-        threadkey: str = None,
-        showBusy=True,
-        priority=QThread.InheritPriority,
-        keepalive=True,
-        cancelIfRunning=True,
-        timeout=0,
-        block=False,
+    callback_slot=None,
+    finished_slot=None,
+    except_slot=None,
+    default_exhandle=True,
+    lock=None,
+    threadkey: str = None,
+    showBusy=True,
+    priority=QThread.InheritPriority,
+    keepalive=True,
+    cancelIfRunning=True,
+    timeout=0,
+    block=False,
 ):
     """
     Decorator for functions/methods to run as RunnableMethods on background QT threads

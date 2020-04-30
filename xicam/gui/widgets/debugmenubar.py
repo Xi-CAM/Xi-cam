@@ -20,8 +20,7 @@ class DebuggableMenuBar(QMenuBar):
     def __init__(self, *args, **kwargs):
         super(DebuggableMenuBar, self).__init__(*args, **kwargs)
 
-        self.debugshortcut = QShortcut(QKeySequence("Ctrl+Return"), self, self.showDebugMenu,
-                                       context=Qt.ApplicationShortcut)
+        self.debugshortcut = QShortcut(QKeySequence("Ctrl+Return"), self, self.showDebugMenu, context=Qt.ApplicationShortcut)
 
         self._debugmenu = QMenu("Debugging")
         self._debugmenu.addAction("Debug widget", self.startDebugging)

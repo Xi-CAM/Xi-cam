@@ -6,8 +6,16 @@
 
 from qtpy.QtCore import Qt, QSize
 from qtpy.QtGui import QStandardItemModel, QStandardItem, QKeyEvent
-from qtpy.QtWidgets import QDialog, QApplication, QListView, QStackedWidget, QHBoxLayout, QVBoxLayout, \
-    QAbstractItemView, QDialogButtonBox
+from qtpy.QtWidgets import (
+    QDialog,
+    QApplication,
+    QListView,
+    QStackedWidget,
+    QHBoxLayout,
+    QVBoxLayout,
+    QAbstractItemView,
+    QDialogButtonBox,
+)
 
 from xicam.plugins import manager as pluginmanager, Filters
 from xicam.core import msg
@@ -51,7 +59,7 @@ class ConfigDialog(QDialog):
         self.contentsWidget.selectionModel().currentChanged.connect(self.changePage)
 
         self.buttonboxWidget = QDialogButtonBox(
-            QDialogButtonBox.Ok | QDialogButtonBox.Cancel | QDialogButtonBox.Apply# | QDialogButtonBox.Help
+            QDialogButtonBox.Ok | QDialogButtonBox.Cancel | QDialogButtonBox.Apply  # | QDialogButtonBox.Help
         )
         self.buttonboxWidget.button(QDialogButtonBox.Ok).clicked.connect(self.ok)
         self.buttonboxWidget.button(QDialogButtonBox.Apply).clicked.connect(self.apply)

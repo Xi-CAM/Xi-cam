@@ -4,8 +4,23 @@ from intake.catalog import Catalog
 from intake.catalog.entry import CatalogEntry
 from qtpy.QtCore import QPropertyAnimation, QPoint, QEasingCurve, Qt, Slot, Signal, QSettings, QUrl
 from qtpy.QtGui import QDesktopServices, QIcon, QPixmap, QKeySequence, QFont
-from qtpy.QtWidgets import QMainWindow, QApplication, QStatusBar, QProgressBar, QStackedWidget, QMenu, QShortcut, \
-    QDockWidget, QWidget, QToolBar, QActionGroup, QGraphicsOpacityEffect, QAction, QSpinBox, QMessageBox
+from qtpy.QtWidgets import (
+    QMainWindow,
+    QApplication,
+    QStatusBar,
+    QProgressBar,
+    QStackedWidget,
+    QMenu,
+    QShortcut,
+    QDockWidget,
+    QWidget,
+    QToolBar,
+    QActionGroup,
+    QGraphicsOpacityEffect,
+    QAction,
+    QSpinBox,
+    QMessageBox,
+)
 from xicam import _version as version
 
 from xicam.plugins import manager as pluginmanager
@@ -276,6 +291,7 @@ class Node(object):
         self.children = children or []
         self.parent = parent
 
+
 class pluginModeWidget(QToolBar):
     """
     A series of styled QPushButtons with pipe characters between them. Used to switch between plugin modes.
@@ -362,9 +378,9 @@ class pluginModeWidget(QToolBar):
             # self.fadeOut(callback=partial(self.mkButtons, names=names, callback=self.showStages), distance=0)
 
     def _showNodes(self, nodes, direction=None):
-        if direction == 'up':
+        if direction == "up":
             distance = 20
-        elif direction == 'down':
+        elif direction == "down":
             distance = -20
         else:
             distance = 0
@@ -416,7 +432,6 @@ class pluginModeWidget(QToolBar):
             a.setEasingCurve(QEasingCurve.OutBack)
             a.start(QPropertyAnimation.DeleteWhenStopped)
 
-
     def setStage(self, stage):
         self.sigSetStage.emit(stage)
 
@@ -426,14 +441,15 @@ class pluginModeWidget(QToolBar):
         for i in reversed(range(layout.count())):
             layout.itemAt(i).widget().setParent(None)
 
-        if not nodes: return
+        if not nodes:
+            return
 
         parent = nodes[0].parent
 
         if parent is not None:
             action = QAction("↑", self)
             action.setFont(self.font)
-            action.triggered.connect(partial(self.showNode, parent.parent, direction='up'))
+            action.triggered.connect(partial(self.showNode, parent.parent, direction="up"))
             action.setProperty("isMode", True)
             self.addAction(action)
             # Make separator pipe
@@ -445,7 +461,7 @@ class pluginModeWidget(QToolBar):
         # Loop over each "GUIPlugin" plugin
         for node in reversed(list(nodes)):
             action = QAction(node.name, self)
-            action.triggered.connect(partial(self.showNode, node, direction='down'))
+            action.triggered.connect(partial(self.showNode, node, direction="down"))
             action.setFont(self.font)
             action.setProperty("isMode", True)
             action.setCheckable(True)

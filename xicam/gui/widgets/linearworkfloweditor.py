@@ -1,8 +1,23 @@
 import pickle
 from qtpy.QtCore import QAbstractTableModel, QMimeData, Qt, Signal, QSize
 from qtpy.QtGui import QIcon, QPixmap
-from qtpy.QtWidgets import QSplitter, QApplication, QWidget, QAbstractItemView, QToolBar, QToolButton, QMenu, \
-    QVBoxLayout, QTableView, QItemDelegate, QGridLayout, QLabel, QPushButton, QSizePolicy, QHeaderView
+from qtpy.QtWidgets import (
+    QSplitter,
+    QApplication,
+    QWidget,
+    QAbstractItemView,
+    QToolBar,
+    QToolButton,
+    QMenu,
+    QVBoxLayout,
+    QTableView,
+    QItemDelegate,
+    QGridLayout,
+    QLabel,
+    QPushButton,
+    QSizePolicy,
+    QHeaderView,
+)
 from xicam.core.execution.workflow import Workflow
 from xicam.plugins import OperationPlugin
 from pyqtgraph.parametertree import ParameterTree, Parameter
@@ -48,11 +63,11 @@ class WorkflowEditor(QSplitter):
 
     def setParameters(self, operation: OperationPlugin):
         parameter = operation.as_parameter()
-        group = GroupParameter(name='Selected Operation', children=parameter)
+        group = GroupParameter(name="Selected Operation", children=parameter)
         operation.wireup_parameter(group)
         for child, parameter in zip(group.children(), parameter):
             # wireup signals to update the workflow
-            if parameter.get('fixable'):
+            if parameter.get("fixable"):
                 child.sigFixToggled.connect(partial(self.setFixed, operation, child.name))
             child.sigValueChanged.connect(partial(self.setValue, operation, child.name))
 
@@ -261,13 +276,13 @@ class HintsWidget(QWidget):
 
         self.name = operation.name
 
-        print('size1:', operation.name, self.sizeHint())
+        print("size1:", operation.name, self.sizeHint())
 
     def setSelectedVisibility(self, selected):
         for row in range(1, self.layout().rowCount()):
             self.layout().itemAtPosition(row, 0).widget().setVisible(selected)
             self.layout().itemAtPosition(row, 1).widget().setVisible(selected)
-        print('size2:', self.name, self.sizeHint())
+        print("size2:", self.name, self.sizeHint())
 
     def sizeHint(self):
         return QSize(30, 30)

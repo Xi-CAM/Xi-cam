@@ -24,7 +24,7 @@ from .plugin import PluginType
 
 try:
     # try to find the venvs entrypoint
-    if 'cammart' in entrypoints.get_group_named(f'xicam.plugins.SettingsPlugin') and not '--no-cammart' in sys.argv:
+    if "cammart" in entrypoints.get_group_named(f"xicam.plugins.SettingsPlugin") and not "--no-cammart" in sys.argv:
         from xicam.gui.cammart.venvs import observers as venvsobservers
         from xicam.gui.cammart import venvs
     else:
@@ -79,8 +79,7 @@ class Filters(Enum):
     COMPLETE = auto()
 
 
-class XicamPluginManager():
-
+class XicamPluginManager:
     def __init__(self):
 
         self._blacklist = []
@@ -101,13 +100,15 @@ class XicamPluginManager():
             venvsobservers.append(self)
 
         # Load plugin types
-        self.plugin_types = {name: ep.load() for name, ep in
-                             entrypoints.get_group_named('xicam.plugins.PluginType').items()}
+        self.plugin_types = {name: ep.load() for name, ep in entrypoints.get_group_named("xicam.plugins.PluginType").items()}
 
         # Toss plugin types that need qt if running without qt
         if not qt_is_safe:
-            self.plugin_types = {type_name: type_class for type_name, type_class in self.plugin_types.items() if
-                                 not getattr(type_class, 'needs_qt', True)}
+            self.plugin_types = {
+                type_name: type_class
+                for type_name, type_class in self.plugin_types.items()
+                if not getattr(type_class, "needs_qt", True)
+            }
 
         # Initialize types
         self.type_mapping = {type_name: {} for type_name in self.plugin_types.keys()}
@@ -124,7 +125,7 @@ class XicamPluginManager():
 
         # ...if so, blacklist it
         if not include_cammart:
-            self._blacklist.extend(['cammart', 'venvs'])
+            self._blacklist.extend(["cammart", "venvs"])
 
     def collect_plugins(self):
         """
@@ -148,8 +149,7 @@ class XicamPluginManager():
             try:
                 assert plugin_name not in self.type_mapping[type_name]
             except AssertionError:
-                raise ValueError(
-                    f'A plugin named {plugin_name} has already been loaded. Supply `replace=True` to override.')
+                raise ValueError(f"A plugin named {plugin_name} has already been loaded. Supply `replace=True` to override.")
 
         # Start a special collection cycle
         self.state = State.DISCOVERING
@@ -169,13 +169,13 @@ class XicamPluginManager():
         self._entrypoints = {type_name: {} for type_name in self.plugin_types.keys()}
         self._load_cache = {type_name: {} for type_name in self.plugin_types.keys()}
 
-        reload_candidates = list(filter(lambda key: key.startswith('xicam.'), sys.modules.keys()))
+        reload_candidates = list(filter(lambda key: key.startswith("xicam."), sys.modules.keys()))
         for module_name in reload_candidates:
             if module_name not in self._preloaded_modules:
-                del (sys.modules[module_name])
+                del sys.modules[module_name]
 
     def hot_reload(self):
-        warnings.warn('Hot-reloading plugins; unexpected and unpredictable behavior may occur...', UserWarning)
+        warnings.warn("Hot-reloading plugins; unexpected and unpredictable behavior may occur...", UserWarning)
         self._unload_plugins()
         self.collect_plugins()
 
@@ -185,8 +185,8 @@ class XicamPluginManager():
         for type_name in self.plugin_types.keys():
 
             # get all entrypoints matching that group
-            group = entrypoints.get_group_named(f'xicam.plugins.{type_name}')
-            group_all = entrypoints.get_group_all(f'xicam.plugins.{type_name}')
+            group = entrypoints.get_group_named(f"xicam.plugins.{type_name}")
+            group_all = entrypoints.get_group_all(f"xicam.plugins.{type_name}")
 
             # check for duplicate names
             self._check_shadows(group, group_all)
@@ -198,9 +198,7 @@ class XicamPluginManager():
                     self._load_queue.put((type_name, entrypoint))
                     self._entrypoints[type_name][name] = entrypoint
 
-            msg.logMessage(f"Discovered {type_name} entrypoints:",
-                           *self._entrypoints[type_name].values(),
-                           sep='\n')
+            msg.logMessage(f"Discovered {type_name} entrypoints:", *self._entrypoints[type_name].values(), sep="\n")
         if self.state == State.DISCOVERING:
             self.state = State.LOADING
 
@@ -215,11 +213,12 @@ class XicamPluginManager():
                     winner = group[name]
                     warnings.warn(
                         f"There are {len(matches)} conflicting entrypoints which share the name {name!r}:\n{matches}\n"
-                        f"Loading entrypoint from {winner.module_name} and ignoring others.")
+                        f"Loading entrypoint from {winner.module_name} and ignoring others."
+                    )
 
-    @threads.method(threadkey='entrypoint-loader',
-                    showBusy=False,
-                    cancelIfRunning=False)  # progress state managed independently
+    @threads.method(
+        threadkey="entrypoint-loader", showBusy=False, cancelIfRunning=False
+    )  # progress state managed independently
     def _load_plugins(self):
         started_instantiating = False
 
@@ -249,10 +248,11 @@ class XicamPluginManager():
 
         try:
             # Load the entrypoint (unless already cached), cache it, and put it on the instantiate queue
-            msg.logMessage(f'Loading entrypoint {entrypoint.name} from module: {entrypoint.module_name}')
+            msg.logMessage(f"Loading entrypoint {entrypoint.name} from module: {entrypoint.module_name}")
             with load_timer() as elapsed:
-                plugin_class = self._load_cache[type_name][entrypoint.name] = \
+                plugin_class = self._load_cache[type_name][entrypoint.name] = (
                     self._load_cache[type_name].get(entrypoint.name, None) or entrypoint.load()
+                )
         except (Exception, SystemError) as ex:
             msg.logMessage(f"Unable to load {entrypoint.name} plugin from module: {entrypoint.module_name}", msg.ERROR)
             msg.logError(ex)
@@ -261,8 +261,7 @@ class XicamPluginManager():
             )
 
         else:
-            msg.logMessage(f"{int(elapsed() * 1000)} ms elapsed while loading {entrypoint.name}",
-                           level=msg.INFO)
+            msg.logMessage(f"{int(elapsed() * 1000)} ms elapsed while loading {entrypoint.name}", level=msg.INFO)
             self._instantiate_queue.put((type_name, entrypoint, plugin_class))
 
     def _instantiate_plugin(self):
@@ -280,24 +279,24 @@ class XicamPluginManager():
                 # ... and instantiate it (as long as its supposed to be singleton)
 
                 try:
-                    if getattr(plugin_class, 'is_singleton', False):
+                    if getattr(plugin_class, "is_singleton", False):
                         msg.logMessage(f"Instantiating {entrypoint.name} plugin object.", level=msg.INFO)
                         with load_timer() as elapsed:
                             self.type_mapping[type_name][entrypoint.name] = plugin_class()
 
-                        msg.logMessage(f"{int(elapsed() * 1000)} ms elapsed while instantiating {entrypoint.name}",
-                                       level=msg.INFO)
+                        msg.logMessage(
+                            f"{int(elapsed() * 1000)} ms elapsed while instantiating {entrypoint.name}", level=msg.INFO
+                        )
                     else:
                         self.type_mapping[type_name][entrypoint.name] = plugin_class
                     success = True
 
                 except (Exception, SystemError) as ex:
                     msg.logMessage(
-                        f"Unable to instantiate {entrypoint.name} plugin from module: {entrypoint.module_name}",
-                        msg.ERROR)
+                        f"Unable to instantiate {entrypoint.name} plugin from module: {entrypoint.module_name}", msg.ERROR
+                    )
                     msg.logError(ex)
-                    msg.notifyMessage(repr(ex),
-                                      title=f'An error occurred while starting the "{entrypoint.name}" plugin.')
+                    msg.notifyMessage(repr(ex), title=f'An error occurred while starting the "{entrypoint.name}" plugin.')
 
                 if success:
                     msg.logMessage(f"Successfully collected {entrypoint.name} plugin.", level=msg.INFO)
@@ -308,10 +307,9 @@ class XicamPluginManager():
             self._instantiate_queue.task_done()
 
         # If this was the last plugin
-        if self._load_queue.empty() and self._instantiate_queue.empty() and self.state in [State.INSTANTIATING,
-                                                                                           State.READY]:
+        if self._load_queue.empty() and self._instantiate_queue.empty() and self.state in [State.INSTANTIATING, State.READY]:
             self.state = State.READY
-            msg.logMessage('Plugin collection completed!')
+            msg.logMessage("Plugin collection completed!")
             msg.hideProgress()
             self._notify(Filters.COMPLETE)
 
@@ -325,8 +323,9 @@ class XicamPluginManager():
             if type_name == search_type_name or not type_name:
                 match_plugin = self.type_mapping[search_type_name].get(name, None)
                 if match_plugin and return_plugin:
-                    raise ValueError('Multiple plugins with the same name but different types exist. '
-                                     'Must specify type_name.')
+                    raise ValueError(
+                        "Multiple plugins with the same name but different types exist. " "Must specify type_name."
+                    )
                 return_plugin = match_plugin
 
         return return_plugin
@@ -339,8 +338,9 @@ class XicamPluginManager():
             if type_name == search_type_name or not type_name:
                 match_entrypoint = self._entrypoints[search_type_name].get(name, None)
                 if match_entrypoint and return_entrypoint:
-                    raise ValueError('Multiple plugins with the same name but different types exist. '
-                                     'Must specify type_name.')
+                    raise ValueError(
+                        "Multiple plugins with the same name but different types exist. " "Must specify type_name."
+                    )
                 return_entrypoint = match_entrypoint
                 return_type = search_type_name
 
@@ -373,8 +373,10 @@ class XicamPluginManager():
             entrypoint, type_name = self._get_entrypoint_by_name(name, type_name)
 
             if not entrypoint:
-                raise NameError(f'The plugin named {name} of type {type_name} could not be discovered. '
-                                f'Check your installation integrity.')
+                raise NameError(
+                    f"The plugin named {name} of type {type_name} could not be discovered. "
+                    f"Check your installation integrity."
+                )
 
             # Load it immediately; it will move to top of instantiate queue as well
             msg.logMessage(f"Immediately loading {entrypoint.name}.", level=msg.INFO)
@@ -423,18 +425,18 @@ class XicamPluginManager():
         return sum(map(len, self.type_mapping.values()))
 
     def getPluginsOfCategory(self, type_name):
-        raise NotImplementedError('This method has been renamed to follow snake_case')
-        warnings.warn('Transition to snake_case in progress...', DeprecationWarning)
+        raise NotImplementedError("This method has been renamed to follow snake_case")
+        warnings.warn("Transition to snake_case in progress...", DeprecationWarning)
         return self.get_plugins_of_type(type_name)
 
     def collectPlugins(self):
-        raise NotImplementedError('This method has been renamed to follow snake_case')
-        warnings.warn('Transition to snake_case in progress...', DeprecationWarning)
+        raise NotImplementedError("This method has been renamed to follow snake_case")
+        warnings.warn("Transition to snake_case in progress...", DeprecationWarning)
         return self.collect_plugins()
 
     def getPluginByName(self, plugin_name, type_name):
-        raise NotImplementedError('This method has been renamed to follow snake_case')
-        warnings.warn('Transition to snake_case in progress...', DeprecationWarning)
+        raise NotImplementedError("This method has been renamed to follow snake_case")
+        warnings.warn("Transition to snake_case in progress...", DeprecationWarning)
         return self.get_plugin_by_name(plugin_name, type_name)
 
 
@@ -445,11 +447,9 @@ manager = XicamPluginManager()
 # A light class to mimic EntryPoint for live objects
 class LiveEntryPoint(entrypoints.EntryPoint):
     def __init__(self, name, object, extras=None, distro=None):
-        super(LiveEntryPoint, self).__init__(name,
-                                             module_name='[live]',
-                                             object_name=object.__name__,
-                                             extras=extras,
-                                             distro=distro)
+        super(LiveEntryPoint, self).__init__(
+            name, module_name="[live]", object_name=object.__name__, extras=extras, distro=distro
+        )
         self.object = object
 
     def load(self):

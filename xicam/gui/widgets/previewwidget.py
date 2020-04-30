@@ -40,7 +40,7 @@ class PreviewWidget(GraphicsLayoutWidget):
     def sizeHint(self):
         return QSize(250, 250)
 
-    @threads.method(threadkey='preview', showBusy=False)
+    @threads.method(threadkey="preview", showBusy=False)
     def preview(self, data):
         if isinstance(data, NonDBHeader):
             self.preview_header(data)
@@ -51,7 +51,7 @@ class PreviewWidget(GraphicsLayoutWidget):
     def guess_stream_field(catalog: BlueskyRun):
         # TODO: use some metadata (techniques?) for guidance about how to get a preview
 
-        for stream in ['primary', *bluesky_utils.streams_from_run(catalog)]:
+        for stream in ["primary", *bluesky_utils.streams_from_run(catalog)]:
             descriptor = bluesky_utils.descriptors_from_stream(catalog, stream)[0]
             fields = bluesky_utils.fields_from_descriptor(descriptor)
             for field in fields:

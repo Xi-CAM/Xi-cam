@@ -28,12 +28,12 @@ def test_ingestor(tmp_path):
     # test data
     data = np.random.random((1000, 1000))
     # write data to test edf
-    edf_path = os.path.join(tmp_path, 'test.edf')
-    print('edf_path:', edf_path)
+    edf_path = os.path.join(tmp_path, "test.edf")
+    print("edf_path:", edf_path)
     EdfImage(data).write(edf_path)
 
     # get edf ingestor
-    edf_ingestor = entrypoints.get_single('databroker.ingestors', 'application/edf').load()
+    edf_ingestor = entrypoints.get_single("databroker.ingestors", "application/edf").load()
 
     # load data into catalog
     document = list(edf_ingestor([edf_path]))
@@ -45,8 +45,8 @@ def test_ingestor(tmp_path):
     return catalog[uid]
 
 
-if __name__ == '__main__':
-    run = test_ingestor('/tmp')
+if __name__ == "__main__":
+    run = test_ingestor("/tmp")
     print(run)
-    print(list(run.canonical(fill='yes')))
+    print(list(run.canonical(fill="yes")))
     print(run.primary.to_dask().values)

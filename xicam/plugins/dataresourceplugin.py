@@ -67,6 +67,7 @@ class DataResourcePlugin(PluginType):
         # self.uri=''
 
         import warnings
+
         warnings.warn("The DataResourcePlugin is being deprecated in favor of CatalogPlugin.", DeprecationWarning)
 
     def pushData(self, *args, **kwargs):

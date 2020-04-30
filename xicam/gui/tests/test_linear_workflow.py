@@ -1,7 +1,19 @@
 from pytestqt import qtbot
 import pytest
-from xicam.plugins.operationplugin import (display_name, fixed, input_names, limits, opts, output_names,
-                                           output_shape, plot_hint, units, visible, ValidationError, operation)
+from xicam.plugins.operationplugin import (
+    display_name,
+    fixed,
+    input_names,
+    limits,
+    opts,
+    output_names,
+    output_shape,
+    plot_hint,
+    units,
+    visible,
+    ValidationError,
+    operation,
+)
 from xicam.core.execution import Workflow
 from xicam.gui.widgets.linearworkfloweditor import WorkflowEditor
 
@@ -9,7 +21,7 @@ from xicam.gui.widgets.linearworkfloweditor import WorkflowEditor
 @pytest.fixture
 def square_op():
     @operation
-    @output_names('square')
+    @output_names("square")
     def square(a=3) -> int:
         return a ** 2
 
@@ -19,7 +31,7 @@ def square_op():
 @pytest.fixture
 def sum_op():
     @operation
-    @output_names('sum')
+    @output_names("sum")
     def my_sum(a, b=3) -> int:
         return a + b
 
@@ -38,17 +50,23 @@ def qfit():
     from pyqtgraph.parametertree import Parameter
 
     class AstropyQSpectraFit(OperationPlugin):
-        name = 'Q Fit (Astropy)'
+        name = "Q Fit (Astropy)"
 
         def __init__(self):
             super(AstropyQSpectraFit, self).__init__()
 
         def as_parameter(self):
             return [
-                {"name": "Model", "type": "list", "limits": self.limits.get('model', {plugin.name: plugin for plugin in
-                                                                                      pluginmanager.get_plugins_of_type(
-                                                                                          'Fittable1DModelPlugin')})},
-                {"name": "Model Parameters", "type": "group"}]
+                {
+                    "name": "Model",
+                    "type": "list",
+                    "limits": self.limits.get(
+                        "model",
+                        {plugin.name: plugin for plugin in pluginmanager.get_plugins_of_type("Fittable1DModelPlugin")},
+                    ),
+                },
+                {"name": "Model Parameters", "type": "group"},
+            ]
 
         def wireup_parameter(self, parameter):
             parameter.sigValueChanged.connect(self.value_changed)
@@ -57,8 +75,16 @@ def qfit():
             print(args, kwargs)
 
         # TODO: model parameters could be set in the gui, but can they be connected programmatically?
-        def _func(self, q, I, model: Fittable1DModel, domain_min=-np.inf, domain_max=np.inf,
-                  fitter=fitting.LevMarLSQFitter, **model_parameters):
+        def _func(
+            self,
+            q,
+            I,
+            model: Fittable1DModel,
+            domain_min=-np.inf,
+            domain_max=np.inf,
+            fitter=fitting.LevMarLSQFitter,
+            **model_parameters,
+        ):
             for name, value in model_parameters.items():  # propogate user-defined values to the model
                 getattr(model, name).value = value
                 getattr(model, name).fixed = self.fixed.get(name)
@@ -85,14 +111,14 @@ def simple_workflow(square_op, sum_op):
 
     square = square_op()
     square2 = square_op()
-    square2.filled_values['a'] = 2
+    square2.filled_values["a"] = 2
     my_sum = sum_op()
 
     wf.add_operation(square)
     wf.add_operation(square2)
     wf.add_operation(my_sum)
-    wf.add_link(square, my_sum, 'square', 'a')
-    wf.add_link(square2, my_sum, 'square', 'b')
+    wf.add_link(square, my_sum, "square", "a")
+    wf.add_link(square2, my_sum, "square", "b")
 
     return wf
 
@@ -125,5 +151,4 @@ def test_custom_parameter(custom_parameter_workflow: Workflow, qtbot):
     workflow_editor = WorkflowEditor(custom_parameter_workflow)
     workflow_editor.show()
     qtbot.addWidget(workflow_editor)
-    workflow_editor.workflowview.selectRow(
-        0)  # Note: models is empty here because pluginmanger hasn't finished load yet
+    workflow_editor.workflowview.selectRow(0)  # Note: models is empty here because pluginmanger hasn't finished load yet

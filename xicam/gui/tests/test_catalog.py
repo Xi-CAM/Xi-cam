@@ -6,18 +6,19 @@ from xicam.core.data import MetaXArray
 
 
 class TestPlugin(GUIPlugin):
-    name = 'catalogtest'
+    name = "catalogtest"
 
     def __init__(self):
         self.imageview = XArrayView()
 
-        self.stages = {'Stage 1': GUILayout(self.imageview), }
+        self.stages = {
+            "Stage 1": GUILayout(self.imageview),
+        }
 
         super(TestPlugin, self).__init__()
 
     def appendCatalog(self, runcatalog, **kwargs):
-        xdata = runcatalog().primary.read()['random_img'][:, :, :,
-                0]  # The test data is 4-dimensional; ignoring last dim
+        xdata = runcatalog().primary.read()["random_img"][:, :, :, 0]  # The test data is 4-dimensional; ignoring last dim
         self.imageview.setImage(MetaXArray(xdata))
 
     def appendHeader(self):

@@ -11,6 +11,7 @@ from xicam.plugins.operationplugin import output_names
 # TODO prevent adding circular links
 execution.executor = localexecutor.LocalExecutor()
 
+
 @pytest.fixture
 def graph():
     return Graph()
@@ -20,6 +21,7 @@ def graph():
 def sum_op():
     def my_sum(n1: int, n2: int) -> int:
         return n1 + n2
+
     return OperationPlugin(my_sum, output_names=("sum",))
 
 
@@ -27,6 +29,7 @@ def sum_op():
 def square_op():
     def my_square(n: int) -> int:
         return n * n
+
     return OperationPlugin(my_square, output_names=("square",))
 
 
@@ -34,11 +37,11 @@ def square_op():
 def negative_op():
     def my_negative(num: int) -> int:
         return -1 * num
+
     return OperationPlugin(my_negative, output_names=("negative",))
 
 
 class TestGraph:
-
     def test_add_operation(self, graph, sum_op):
         graph.add_operation(sum_op)
         assert graph.operations == [sum_op]
@@ -184,7 +187,7 @@ class TestGraph:
 
     def test_clear_operation_links_bad_arg(self, graph):
         with pytest.raises(TypeError):
-            graph.clear_operation_links('this should be an operation')
+            graph.clear_operation_links("this should be an operation")
 
     def test_clear_operation_links_unlinked_operation(self, graph, sum_op, square_op):
         # TODO should this raise an exception?
@@ -333,7 +336,6 @@ class TestGraph:
         assert graph.links() == [link]
 
     def test_links_multiple(self, graph, sum_op):
-
         def my_func(x: int, y: int) -> (int, int):
             return y, x
 
@@ -531,8 +533,10 @@ class TestWorkflow:
     def test_execute_operation_no_default_no_value(self, sum_op):
         # not sure how to test this....
         with pytest.raises(TypeError):
+
             def handle_exception(exception):
                 raise exception
+
             workflow = Workflow()
             workflow.add_operation(sum_op)
             results = workflow.execute(except_slot=handle_exception).result()
@@ -549,6 +553,7 @@ class TestWorkflow:
         @output_names("doubled")
         def double_op(x=10):
             return x * 2
+
         workflow = Workflow()
         workflow.add_operation(double_op)
         results = workflow.execute().result()
@@ -623,9 +628,7 @@ class TestWorkflow:
         n2_values = [2, 4, 6]
         # TODO -- we are only getting one result, should get three (3 pairs of n1/n2).
         results = list(workflow.execute_all(n1=n1_values, n2=n2_values).result())
-        assert results == [{"negative": (1 + 2)**2 * -1},
-                           {"negative": (3 + 4)**2 * -1},
-                           {"negative": (5 + 6)**2 * -1}]
+        assert results == [{"negative": (1 + 2) ** 2 * -1}, {"negative": (3 + 4) ** 2 * -1}, {"negative": (5 + 6) ** 2 * -1}]
 
     def test_fill_kwargs(self):
         assert False
@@ -639,8 +642,10 @@ class TestWorkflow:
 
     def test_notify(self):
         self.flag = False
+
         def observer():
             self.flag = not self.flag
+
         workflow = Workflow()
         workflow.attach(observer)
         workflow.notify()

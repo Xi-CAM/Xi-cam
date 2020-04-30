@@ -33,12 +33,11 @@ typemap = {
 }
 
 
-
 class MetadataWidgetBase(ParameterTree):
     def __init__(self, *args, **kwargs):
-        self.excludedkeys = kwargs.get('excludedkeys')
-        if 'excludedkeys' in kwargs:
-            del kwargs['excludedkeys']
+        self.excludedkeys = kwargs.get("excludedkeys")
+        if "excludedkeys" in kwargs:
+            del kwargs["excludedkeys"]
 
         super(MetadataWidgetBase, self).__init__(*args, **kwargs)
         LazyGroupParameter.itemClass.initialize_treewidget(self)

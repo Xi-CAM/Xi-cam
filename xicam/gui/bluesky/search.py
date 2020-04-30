@@ -28,7 +28,7 @@ from qtpy.QtWidgets import (
     QWidget,
     QTableView,
     QMenu,
-    )
+)
 
 from xicam.core import msg
 
@@ -38,7 +38,7 @@ from xicam.core import msg
 from xicam.core import threads
 
 MAX_SEARCH_RESULTS = 100  # TODO Use fetchMore instead of a hard limit.
-log = logging.getLogger('bluesky_browser')
+log = logging.getLogger("bluesky_browser")
 BAD_TEXT_INPUT = """
 QLineEdit {
     background-color: rgb(255, 100, 100);
@@ -50,7 +50,7 @@ QLineEdit {
 }
 """
 RELOAD_INTERVAL = 11
-_validate = functools.partial(jsonschema.validate, types={'array': (list, tuple)})
+_validate = functools.partial(jsonschema.validate, types={"array": (list, tuple)})
 
 
 def timeit(f):
@@ -58,27 +58,30 @@ def timeit(f):
         time1 = time.time()
         ret = f(*args)
         time2 = time.time()
-        print('{:s} function took {:.3f} ms'.format(f.__name__, (time2-time1)*1000.0))
+        print("{:s} function took {:.3f} ms".format(f.__name__, (time2 - time1) * 1000.0))
         return ret
+
     return wrap
 
 
 def default_search_result_row(entry):
-    start = entry.metadata['start']
-    stop = entry.metadata['stop']
-    start_time = datetime.fromtimestamp(start['time'])
+    start = entry.metadata["start"]
+    stop = entry.metadata["stop"]
+    start_time = datetime.fromtimestamp(start["time"])
     if stop is None:
-        str_duration = '-'
+        str_duration = "-"
     else:
-        duration = datetime.fromtimestamp(stop['time']) - start_time
+        duration = datetime.fromtimestamp(stop["time"]) - start_time
         str_duration = str(duration)
-        str_duration = str_duration[:str_duration.index('.')]
-    return {'Unique ID': start['uid'][:8],
-            'Transient Scan ID': (start.get('scan_id', '-')),
-            'Plan Name': start.get('plan_name', '-'),
-            'Start Time': start_time.strftime('%Y-%m-%d %H:%M:%S'),
-            'Duration': str_duration,
-            'Exit Status': '-' if stop is None else stop['exit_status']}
+        str_duration = str_duration[: str_duration.index(".")]
+    return {
+        "Unique ID": start["uid"][:8],
+        "Transient Scan ID": (start.get("scan_id", "-")),
+        "Plan Name": start.get("plan_name", "-"),
+        "Start Time": start_time.strftime("%Y-%m-%d %H:%M:%S"),
+        "Duration": str_duration,
+        "Exit Status": "-" if stop is None else stop["exit_status"],
+    }
 
 
 class ReloadThread(QThread):
@@ -94,8 +97,7 @@ class ReloadThread(QThread):
             self.search_state.show_results_event.wait()
             # Wait for RELOAD_INTERVAL to pass or until we are poked,
             # whichever happens first.
-            self.search_state.reload_event.wait(
-                max(0, RELOAD_INTERVAL - (time.monotonic() - t0)))
+            self.search_state.reload_event.wait(max(0, RELOAD_INTERVAL - (time.monotonic() - t0)))
             self.search_state.reload_event.clear()
             # Reload the catalog to show any new results.
             self.search_state.reload()
@@ -119,6 +121,7 @@ class SearchState(ConfigurableQObject):
     """
     Encapsulates CatalogSelectionModel and SearchResultsModel. Executes search.
     """
+
     new_results_catalog = Signal([])
     sig_update_header = Signal()
     search_result_row = Callable(default_search_result_row, config=True)
@@ -134,7 +137,7 @@ class SearchState(ConfigurableQObject):
         self._subcatalogs = []  # to support lookup by item's positional index
         self.open_uids = set()  # to support quick lookup that a catalog is open
         self._results_catalog = None
-        self._new_uids_queue = queue.Queue(maxsize=MAX_SEARCH_RESULTS) #to pass reference of new catalogs across threads
+        self._new_uids_queue = queue.Queue(maxsize=MAX_SEARCH_RESULTS)  # to pass reference of new catalogs across threads
         self.list_subcatalogs()
         self.set_selected_catalog(0)
         self.query_queue = queue.Queue()
@@ -157,11 +160,13 @@ class SearchState(ConfigurableQObject):
 
     def flatten_remote_catalogs(self, catalog):
         from intake.catalog.base import Catalog
+
         cat_dict = {}
 
         for name in catalog:
             try:
                 from intake.catalog.base import RemoteCatalog
+
                 sub_cat = catalog[name]
                 # @TODO remote catalogs are one level too high. This check is
                 # pretty rough. Would rather check that a catalog's children
@@ -181,7 +186,6 @@ class SearchState(ConfigurableQObject):
 
         return Catalog.from_dict(cat_dict)
 
-
     def request_reload(self):
         self._results_catalog.force_reload()
         self.reload_event.set()
@@ -194,25 +198,19 @@ class SearchState(ConfigurableQObject):
             # search_result_row (which will be user-configurable) has failed to
             # account for some possiblity. Figure out which situation this is.
             try:
-                _validate(entry.metadata['start'],
-                          event_model.schemas[event_model.DocumentNames.start])
+                _validate(entry.metadata["start"], event_model.schemas[event_model.DocumentNames.start])
             except jsonschema.ValidationError:
-                log.exception("Invalid RunStart Document: %r",
-                              entry.metadata['start'])
+                log.exception("Invalid RunStart Document: %r", entry.metadata["start"])
                 raise SkipRow("invalid document") from exc
             try:
-                _validate(entry.metadata['stop'],
-                          event_model.schemas[event_model.DocumentNames.stop])
+                _validate(entry.metadata["stop"], event_model.schemas[event_model.DocumentNames.stop])
             except jsonschema.ValidationError:
-                if entry.metadata['stop'] is None:
-                    log.debug("Run %r has no RunStop document.",
-                              entry.metadata['start']['uid'])
+                if entry.metadata["stop"] is None:
+                    log.debug("Run %r has no RunStop document.", entry.metadata["start"]["uid"])
                 else:
-                    log.exception("Invalid RunStop Document: %r",
-                                  entry.metadata['stop'])
+                    log.exception("Invalid RunStop Document: %r", entry.metadata["stop"])
                 raise SkipRow("invalid document")
-            log.exception("Run with uid %s raised error with search_result_row.",
-                          entry.metadata['start']['uid'])
+            log.exception("Run with uid %s raised error with search_result_row.", entry.metadata["start"]["uid"])
             raise SkipRow("error in search_result_row") from exc
 
     def __del__(self):
@@ -263,17 +261,17 @@ class SearchState(ConfigurableQObject):
                 if block:
                     query = self.query_queue.get()
                 break
-        log.debug('Submitting query %r', query)
+        log.debug("Submitting query %r", query)
         try:
             t0 = time.monotonic()
             msg.showMessage("Running Query")
             msg.showBusy()
-            if not self.selected_catalog: return
+            if not self.selected_catalog:
+                return
             self._results_catalog = self.selected_catalog.search(query)
             found_new = self.check_for_new_entries()
             duration = time.monotonic() - t0
-            log.debug('Query yielded %r results (%.3f s).',
-                    len(self._results_catalog), duration)
+            log.debug("Query yielded %r results (%.3f s).", len(self._results_catalog), duration)
             if found_new and self.show_results_event.is_set():
                 self.new_results_catalog.emit()
         except Exception as e:
@@ -292,11 +290,11 @@ class SearchState(ConfigurableQObject):
         self.open_uids.clear()
         if not self.enabled:
             return
-        query = {'time': {}}
+        query = {"time": {}}
         if self.search_results_model.since is not None:
-            query['time']['$gte'] = self.search_results_model.since
+            query["time"]["$gte"] = self.search_results_model.since
         if self.search_results_model.until is not None:
-            query['time']['$lt'] = self.search_results_model.until
+            query["time"]["$lt"] = self.search_results_model.until
         query.update(**self.search_results_model.custom_query)
         self.query_queue.put(query)
 
@@ -370,6 +368,7 @@ class CatalogSelectionModel(QStandardItemModel):
     """
     List the subcatalogs in the root Catalog.
     """
+
     ...
 
 
@@ -377,6 +376,7 @@ class SearchResultsModel(QStandardItemModel):
     """
     Perform searches on a Catalog and model the results.
     """
+
     selected_result = Signal([list])
     open_entries = Signal([str, list])
     preview_entry = Signal(str, object)
@@ -438,33 +438,35 @@ class SearchResultsModel(QStandardItemModel):
         self.until = datetime.toSecsSinceEpoch()
         self.search_state.search()
 
+
 class SearchInputWidget(QWidget):
     """
     Input fields for specifying searches on SearchResultsModel
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.search_bar = QLineEdit()
         search_bar_layout = QHBoxLayout()
-        search_bar_layout.addWidget(QLabel('Custom Query:'))
+        search_bar_layout.addWidget(QLabel("Custom Query:"))
         search_bar_layout.addWidget(self.search_bar)
         mongo_query_help_button = QPushButton()
-        mongo_query_help_button.setText('?')
+        mongo_query_help_button.setText("?")
         search_bar_layout.addWidget(mongo_query_help_button)
         mongo_query_help_button.clicked.connect(self.show_mongo_query_help)
 
         self.since_widget = QDateTimeEdit()
         self.since_widget.setCalendarPopup(True)
-        self.since_widget.setDisplayFormat('yyyy-MM-dd HH:mm')
+        self.since_widget.setDisplayFormat("yyyy-MM-dd HH:mm")
         since_layout = QHBoxLayout()
-        since_layout.addWidget(QLabel('Since:'))
+        since_layout.addWidget(QLabel("Since:"))
         since_layout.addWidget(self.since_widget)
 
         self.until_widget = QDateTimeEdit()
         self.until_widget.setCalendarPopup(True)
-        self.until_widget.setDisplayFormat('yyyy-MM-dd HH:mm')
+        self.until_widget.setDisplayFormat("yyyy-MM-dd HH:mm")
         until_layout = QHBoxLayout()
-        until_layout.addWidget(QLabel('Until:'))
+        until_layout.addWidget(QLabel("Until:"))
         until_layout.addWidget(self.until_widget)
 
         layout = QVBoxLayout()
@@ -486,13 +488,15 @@ class SearchInputWidget(QWidget):
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Information)
         msg.setText("For advanced search capability, enter a valid Mongo query.")
-        msg.setInformativeText("""
+        msg.setInformativeText(
+            """
 Examples:
 
 {'plan_name': 'scan'}
 {'proposal': 1234},
 {'$and': ['proposal': 1234, 'sample_name': 'Ni']}
-""")
+"""
+        )
         msg.setWindowTitle("Custom Mongo Query")
         msg.setStandardButtons(QMessageBox.Ok)
         msg.exec_()
@@ -502,6 +506,7 @@ class CatalogList(QComboBox):
     """
     List of subcatalogs
     """
+
     ...
 
 
@@ -509,6 +514,7 @@ class CatalogSelectionWidget(QWidget):
     """
     Input widget for selecting a subcatalog
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.catalog_list = CatalogList()
@@ -522,6 +528,7 @@ class SearchResultsWidget(QTableView):
     """
     Table of search results
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setEditTriggers(QAbstractItemView.NoEditTriggers)
@@ -546,6 +553,7 @@ class SearchWidget(QWidget):
     """
     Search input and results list
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.catalog_selection_widget = CatalogSelectionWidget()
@@ -568,9 +576,9 @@ class SearchWidget(QWidget):
         return str(header.model().headerData(index, Qt.Horizontal))
 
     def hide_column(self, header, logicalIndex):
-        '''
+        """
         Hide a column, adding the column from the list of hidden columns in QSettings
-        '''
+        """
         hidden_columns = QSettings().value("catalog.columns.hidden") or set()
         if len(hidden_columns) == header.count() - 1:
             msg.notifyMessage("Only one column is left to hide, cannot hide all of them.")
@@ -580,22 +588,22 @@ class SearchWidget(QWidget):
         header.setSectionHidden(logicalIndex, True)
 
     def unhide_column(self, header, logicalIndex):
-        '''
+        """
         Unhide a column, removing the column from the list of hidden columns in QSettings
-        '''
+        """
         hidden_columns = QSettings().value("catalog.columns.hidden") or set()
         column_name = self._current_column_name(header, logicalIndex)
         try:
             hidden_columns.remove(column_name)
         except KeyError as ex:
-            raise(KeyError(f"Attempted to unhide non-hidden column name {column_name}."))
+            raise (KeyError(f"Attempted to unhide non-hidden column name {column_name}."))
         QSettings().setValue("catalog.columns.hidden", hidden_columns)
         header.setSectionHidden(logicalIndex, False)
 
     def header_menu(self, position):
-        '''
+        """
         Creates a menu allowing users to show and hide columns
-        '''
+        """
         header = self.sender()  # type: QHeaderView
         index = header.logicalIndexAt(position)
         menu = QMenu("Options")
@@ -613,7 +621,6 @@ class SearchWidget(QWidget):
                 # action.triggered.connect(lambda triggered, logicalIndex=i: self.unhide_column(header, logicalIndex))
 
         menu.exec_(header.mapToGlobal(position))
-
 
 
 class SkipRow(Exception):

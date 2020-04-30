@@ -17,7 +17,6 @@ from xicam.plugins import manager as pluginmanager
 import inspect
 
 
-
 # NOTE: PyQt widget mixins have pitfalls; note #2 here: http://trevorius.com/scrapbook/python/pyqt-multiple-inheritance/
 
 # NOTE: PyFAI geometry position vector is: x = up
@@ -90,7 +89,7 @@ class PixelSpace(ImageView):
         if img is None:
             return
 
-        if getattr(self, 'displaymode', DisplayMode.raw) == DisplayMode.raw:
+        if getattr(self, "displaymode", DisplayMode.raw) == DisplayMode.raw:
             self._raw_image = img
 
         if not kwargs.get("transform", None):
@@ -128,7 +127,7 @@ class QSpace(PixelSpace):
 class EwaldCorrected(QSpace):
     def setDisplayMode(self, mode):
         self.displaymode = mode
-        if hasattr(self, 'drawCenter'):
+        if hasattr(self, "drawCenter"):
             self.drawCenter()
         self.setTransform()
 
@@ -202,8 +201,8 @@ class CenterMarker(QSpace):
         else:
             if self.imageItem.image is not None:
                 if self.displaymode == DisplayMode.raw:
-                    x = fit2d['centerX']
-                    y = self._raw_image.shape[-2] - fit2d['centerY']
+                    x = fit2d["centerX"]
+                    y = self._raw_image.shape[-2] - fit2d["centerY"]
                     self.centerplot.setData(x=[x], y=[y])
                 elif self.displaymode == DisplayMode.remesh:
                     self.centerplot.setData(x=[0], y=[0])
@@ -444,7 +443,7 @@ class PolygonROI(ImageView):
             offsetX = abs(minX)
         if minY < 0:
             offsetY = abs(minY)
-        trimmed = boundingBox[abs(offsetY): abs(offsetY) + height, abs(offsetX): abs(offsetX) + width]
+        trimmed = boundingBox[abs(offsetY) : abs(offsetY) + height, abs(offsetX) : abs(offsetX) + width]
 
         # Reorient the trimmed mask array
         trimmed = trimmed[::-1, ::-1]
@@ -494,6 +493,7 @@ class ComposableItemImageView(ImageView):
     Note that any imageItem named argument passed into the ImageView mixins above will discard the item and instead
     create a composition of imageItem_bases with their respective ImageItem class.
     """
+
     imageItem_bases = tuple()
 
 
@@ -555,8 +555,7 @@ class LogScaleImageItem(ImageItem):
                 else:
                     lutdtype = np.min_scalar_type(lut.shape[0] - 1)
                     efflut = fn.rescaleData(
-                        ind, scale=(lut.shape[0] - 1) / levdiff, offset=minlev, dtype=lutdtype,
-                        clip=(0, lut.shape[0] - 1)
+                        ind, scale=(lut.shape[0] - 1) / levdiff, offset=minlev, dtype=lutdtype, clip=(0, lut.shape[0] - 1)
                     )
                     efflut = lut[efflut]
 
@@ -580,7 +579,6 @@ class LogScaleImageItem(ImageItem):
 
 
 class LogScaleIntensity(ComposableItemImageView):
-
     def __init__(self, *args, **kwargs):
         # Composes a new type consisting of any ImageItem types in imageItem_bases with this classes's helper ImageItem
         # class (LogScaleImageItem)
@@ -662,11 +660,11 @@ class CatalogView(ImageView):
         self.setCatalog(self.catalog, self.stream, field)
         # TODO -- figure out where to put the geometry update
         if QSpace in inspect.getmro(type(self)):
-            self.setGeometry(pluginmanager.get_plugin_by_name('xicam.SAXS.calibration', 'SettingsPlugin').AI(field))
+            self.setGeometry(pluginmanager.get_plugin_by_name("xicam.SAXS.calibration", "SettingsPlugin").AI(field))
 
 
 class ImageItemHistogramOverflowFix(ImageItem):
-    def getHistogram(self, bins='auto', step='auto', targetImageSize=200, targetHistogramSize=500, **kwds):
+    def getHistogram(self, bins="auto", step="auto", targetImageSize=200, targetHistogramSize=500, **kwds):
         """Returns x and y arrays containing the histogram values for the current image.
                 For an explanation of the return format, see numpy.histogram().
 
@@ -686,27 +684,26 @@ class ImageItemHistogramOverflowFix(ImageItem):
                 """
         if self.image is None:
             return None, None
-        if step == 'auto':
-            step = (int(np.ceil(self.image.shape[0] / targetImageSize)),
-                    int(np.ceil(self.image.shape[1] / targetImageSize)))
+        if step == "auto":
+            step = (int(np.ceil(self.image.shape[0] / targetImageSize)), int(np.ceil(self.image.shape[1] / targetImageSize)))
         if np.isscalar(step):
             step = (step, step)
-        stepData = self.image[::step[0], ::step[1]]
+        stepData = self.image[:: step[0], :: step[1]]
 
-        if bins == 'auto':
+        if bins == "auto":
             if stepData.dtype.kind in "ui":
                 mn = stepData.min()
                 mx = stepData.max()
                 # print(f"\n*** mx, mn: {mx}, {mn} ({type(mx)}, {type(mn)})***\n")
                 # PATCH -- explicit subtract with np.int to avoid overflow
-                step = np.ceil(np.subtract(mx, mn, dtype=np.int) / 500.)
+                step = np.ceil(np.subtract(mx, mn, dtype=np.int) / 500.0)
                 bins = np.arange(mn, mx + 1.01 * step, step, dtype=np.int)
                 if len(bins) == 0:
                     bins = [mn, mx]
             else:
                 bins = 500
 
-        kwds['bins'] = bins
+        kwds["bins"] = bins
         stepData = stepData[np.isfinite(stepData)]
         hist = np.histogram(stepData, **kwds)
 

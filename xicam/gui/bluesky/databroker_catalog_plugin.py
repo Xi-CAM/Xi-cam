@@ -11,7 +11,7 @@ from typing import List
 
 from xicam.gui.bluesky.central import CentralWidget
 
-logger = logging.getLogger('BlueskyPlugin')
+logger = logging.getLogger("BlueskyPlugin")
 
 
 class SearchingCatalogController(QWidget):
@@ -65,16 +65,15 @@ class DatabrokerCatalogPlugin(CatalogPlugin):
     """
 
     # set name here so that it appears in the catalog dropdown
-    name = 'Databroker'
+    name = "Databroker"
 
     def __new__(cls):
         # importing catalog gives us #a catalog of pre-configured catalogs YAML files
         # locations by default might look something like:
         #  'USER_HOME/.local/share/intake', 'PYTHON_ENV/share/intake'
         from databroker import catalog
+
         catalog.controller = SearchingCatalogController(catalog)
         catalog.view = QListView()
-        catalog.name = 'Databroker'
+        catalog.name = "Databroker"
         return catalog
-
-

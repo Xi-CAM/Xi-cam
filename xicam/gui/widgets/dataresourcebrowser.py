@@ -1,5 +1,16 @@
-from qtpy.QtWidgets import QTabWidget, QHBoxLayout, QVBoxLayout, QToolBar, QMenu, QAction, QTreeView, QListView, \
-    QWidget, QSizePolicy, QTabBar
+from qtpy.QtWidgets import (
+    QTabWidget,
+    QHBoxLayout,
+    QVBoxLayout,
+    QToolBar,
+    QMenu,
+    QAction,
+    QTreeView,
+    QListView,
+    QWidget,
+    QSizePolicy,
+    QTabBar,
+)
 from qtpy.QtCore import QObject, QAbstractItemModel, QSize, Qt, QEvent, Signal, QSettings
 from qtpy.QtGui import QIcon, QPixmap, QKeyEvent
 from intake.catalog.base import Catalog
@@ -125,7 +136,7 @@ class BrowserTabBar(ContextMenuTabBar):
 
     def saveLastTab(self, i):
         if i < 2:
-            QSettings().setValue('databrowsertab', i)
+            QSettings().setValue("databrowsertab", i)
 
     def addTab(self, *args, **kwargs):
         return self.insertTab(self.count() - 1, *args, **kwargs)
@@ -133,9 +144,9 @@ class BrowserTabBar(ContextMenuTabBar):
     def eventFilter(self, object, event):
         try:
             if (
-                    object == self
-                    and event.type() in [QEvent.MouseButtonPress, QEvent.MouseButtonRelease]
-                    and event.button() == Qt.LeftButton
+                object == self
+                and event.type() in [QEvent.MouseButtonPress, QEvent.MouseButtonRelease]
+                and event.button() == Qt.LeftButton
             ):
 
                 if event.type() == QEvent.MouseButtonPress:
@@ -154,7 +165,8 @@ class BrowserTabBar(ContextMenuTabBar):
         from xicam.plugins import manager as pluginmanager
 
         for plugin in pluginmanager.get_plugins_of_type("CatalogPlugin") + pluginmanager.get_plugins_of_type(
-                "DataResourcePlugin"):
+            "DataResourcePlugin"
+        ):
             self.actions[plugin.name] = QAction(plugin.name)
             self.actions[plugin.name].triggered.connect(partial(self._addBrowser, plugin))
             self.menu.addAction(self.actions[plugin.name])
@@ -168,10 +180,10 @@ class BrowserTabBar(ContextMenuTabBar):
 
         if isinstance(plugin, DataResourcePlugin):
             datasource = plugin
-            self.sigAddBrowser.emit(datasource.controller(datasource.view(datasource.model(datasource))),
-                                    datasource.name)
+            self.sigAddBrowser.emit(datasource.controller(datasource.view(datasource.model(datasource))), datasource.name)
         elif isinstance(plugin, Catalog):
             self.sigAddBrowser.emit(plugin.controller, plugin.name)
+
 
 class DataResourceView(QObject):
     def __init__(self, model: QAbstractItemModel):
@@ -296,7 +308,7 @@ class DataResourceBrowser(QWidget):
         self.setMinimumSize(QSize(250, 400))
 
         # cache pre-load index (otherwise it gets overwritten during init
-        index = int(QSettings().value('databrowsertab', 0))
+        index = int(QSettings().value("databrowsertab", 0))
 
         self.browsertabwidget = BrowserTabWidget(self)
         self.browsertabbar = BrowserTabBar(self.browsertabwidget)
@@ -334,4 +346,3 @@ class DataResourceBrowser(QWidget):
             except AttributeError:
                 self.browsertabbar.tabButton(tab, QTabBar.LeftSide).resize(0, 0)
                 self.browsertabbar.tabButton(tab, QTabBar.LeftSide).hide()
-

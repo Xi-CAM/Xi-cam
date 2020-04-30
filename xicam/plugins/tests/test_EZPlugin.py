@@ -1,4 +1,3 @@
-
 import pytest
 
 
@@ -19,6 +18,7 @@ def test_EZPlugin():
     from xicam.plugins import EZPlugin
     from xicam.gui.static import path
     from xicam.core.data import NonDBHeader
+
     def runtest():
         import numpy as np
 
@@ -41,7 +41,7 @@ def test_EZPlugin():
     return EZTest
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     from qtpy.QtWidgets import QApplication
 
     app = QApplication([])

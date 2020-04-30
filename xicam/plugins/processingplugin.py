@@ -223,22 +223,20 @@ class ProcessingPlugin(PluginType):
 
             children = []
             for name, input in self.inputs.items():
-                if getattr(input.type, '__name__', None) in PARAM_TYPES:
-                    childparam = Parameter.create(name=name,
-                                                  value=getattr(input, 'value',
-                                                                input.default),
-                                                  default=input.default,
-                                                  limits=input.limits,
-                                                  type=getattr(input.type,
-                                                               '__name__',
-                                                               None),
-                                                  units=input.units,
-                                                  fixed=input.fixed,
-                                                  fixable=input.fixable,
-                                                  visible=input.visible,
-                                                  **input.opts)
-                    childparam.sigValueChanged.connect(
-                        partial(self.setParameterValue, name))
+                if getattr(input.type, "__name__", None) in PARAM_TYPES:
+                    childparam = Parameter.create(
+                        name=name,
+                        value=getattr(input, "value", input.default),
+                        default=input.default,
+                        limits=input.limits,
+                        type=getattr(input.type, "__name__", None),
+                        units=input.units,
+                        fixed=input.fixed,
+                        fixable=input.fixable,
+                        visible=input.visible,
+                        **input.opts,
+                    )
+                    childparam.sigValueChanged.connect(partial(self.setParameterValue, name))
                     if input.fixable:
                         childparam.sigFixToggled.connect(input.setFixed)
                     children.append(childparam)
@@ -328,9 +326,7 @@ class _ProcessingPluginRetriever(object):
                 p.__dict__ = internaldata
                 return p
 
-        pluginlist = "\n\t".join(
-            [plugin.__name__ for plugin in pluginmanager.getPluginsOfCategory("ProcessingPlugin")]
-        )
+        pluginlist = "\n\t".join([plugin.__name__ for plugin in pluginmanager.getPluginsOfCategory("ProcessingPlugin")])
         raise ValueError(f"No plugin found with name {pluginname} in list of plugins:{pluginlist}")
 
 
@@ -428,8 +424,20 @@ class Var(object):
 
 
 class Input(Var):
-    whitelist = {'name', 'description', 'default', 'type', 'units', 'min',
-                 'max', 'limits', 'fixed', 'fixable', 'visible', 'opts'}
+    whitelist = {
+        "name",
+        "description",
+        "default",
+        "type",
+        "units",
+        "min",
+        "max",
+        "limits",
+        "fixed",
+        "fixable",
+        "visible",
+        "opts",
+    }
 
     """
     Defines an input variable.
@@ -463,20 +471,23 @@ class Input(Var):
         (the default is True).
 
     """
-    def __init__(self,
-                 name='',
-                 description='',
-                 default=None,
-                 type=None,
-                 units=None,
-                 min=None,
-                 max=None,
-                 limits=None,
-                 fixed=False,
-                 fixable=False,
-                 visible=True,
-                 opts=None,
-                 **kwargs):
+
+    def __init__(
+        self,
+        name="",
+        description="",
+        default=None,
+        type=None,
+        units=None,
+        min=None,
+        max=None,
+        limits=None,
+        fixed=False,
+        fixable=False,
+        visible=True,
+        opts=None,
+        **kwargs,
+    ):
 
         self.fixed = fixed
         super(Input, self).__init__()
@@ -542,7 +553,7 @@ class Input(Var):
 
 
 class Output(Var):
-    whitelist = {'name', 'description', 'type', 'units'}
+    whitelist = {"name", "description", "type", "units"}
     """
     Defines an output variable.
 

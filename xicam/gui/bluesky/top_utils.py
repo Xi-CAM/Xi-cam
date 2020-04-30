@@ -1,9 +1,8 @@
 from traitlets import TraitType
-from traitlets.config.loader import (PyFileConfigLoader, ConfigFileNotFound,
-                                     Config)
+from traitlets.config.loader import PyFileConfigLoader, ConfigFileNotFound, Config
 
-CONFIG_FILE_NAME = 'bluesky_browser_config.py'
-CONFIG_SEARCH_PATH = ('.')
+CONFIG_FILE_NAME = "bluesky_browser_config.py"
+CONFIG_SEARCH_PATH = "."
 
 
 def load_config():
@@ -22,7 +21,7 @@ class Callable(TraitType):
     Classes are callable, as are instances
     with a __call__() method."""
 
-    info_text = 'a callable'
+    info_text = "a callable"
 
     def validate(self, obj, value):
         if callable(value):

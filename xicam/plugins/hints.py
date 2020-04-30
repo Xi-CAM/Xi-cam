@@ -31,7 +31,7 @@ class Hint(object):
         raise NotImplementedError
 
     def selective_copy(self, var_mapping: Dict):
-        #TODO raise
+        # TODO raise
         return self
 
     def visualize(self, canvas):
@@ -63,8 +63,8 @@ class PlotHint(Hint):
     @property
     def name(self):
         if not self._name:
-            left = self.kwargs.get('labels', dict()).get('left')
-            bottom = self.kwargs.get('labels', dict()).get('bottom')
+            left = self.kwargs.get("labels", dict()).get("left")
+            bottom = self.kwargs.get("labels", dict()).get("bottom")
             if left and bottom:
                 self._name = f"{left} vs. {bottom}"
             else:
@@ -86,9 +86,7 @@ class PlotHint(Hint):
         if not color:
             numItems = len(plotItem.items)
             for i in range(numItems):
-                color = (float(i) / numItems * 255,
-                         (1 - float(i) / numItems) * 255,
-                         255)
+                color = (float(i) / numItems * 255, (1 - float(i) / numItems) * 255, 255)
                 plotItem.items[i].setPen(color, **self.kwargs)
         else:
             self.item.setPen(color, **self.kwargs)
@@ -151,6 +149,7 @@ class ButtonHint(Hint):
 
     def __init__(self, activated: Var, iconpath: str):
         raise DeprecationWarning
+
     #     super(ButtonHint, self).__init__()
     #     self.activated = activated
     #     self.iconpath = iconpath
@@ -179,6 +178,7 @@ class EnableHint(ButtonHint):
 
     def __init__(self, parent: ProcessingPlugin, iconpath: str):
         raise DeprecationWarning
+
     #     super(EnableHint, self).__init__(parent, iconpath)  # Ignore typing violation
     #     self.iconpath = iconpath
     #     self.enabled = False  # This 'enabled' means the hint's visibility can't be changed
@@ -193,7 +193,9 @@ class ImageHint(Hint):
     canvas_cls = DynImageView
     ref_count = count(0)
 
-    def __init__(self, image, name="", invertY=False, xlabel: str = None, ylabel: str = None, transform=None, z: int = None, **kwargs):
+    def __init__(
+        self, image, name="", invertY=False, xlabel: str = None, ylabel: str = None, transform=None, z: int = None, **kwargs
+    ):
         self._name = name
         super(ImageHint, self).__init__()
         self.count = next(self.ref_count)
@@ -275,9 +277,7 @@ class CoPlotHint(Hint):
         numItems = self.canvas_map[self.canvas]
         # Update colors according to number of co-plot hints in the same canvas
         for i in range(numItems):
-            color = (float(i) / numItems * 255,
-                     (1 - float(i) / numItems) * 255,
-                     255)
+            color = (float(i) / numItems * 255, (1 - float(i) / numItems) * 255, 255)
         for plothint in self.plothints:
             # TODO: should this rely on the contained plothints' visualize? or should we directly plot on the canvas?
             plothint.visualize(self.canvas, color=color)
