@@ -71,6 +71,8 @@ class XicamMainWindow(QMainWindow):
         self._config_restorer = ConfigRestorer()
 
         # Load plugins
+        pluginmanager.qt_is_safe = True
+        pluginmanager.initialize_types()
         pluginmanager.collect_plugins()
 
         # Setup center/toolbar/statusbar/progressbar

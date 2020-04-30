@@ -50,12 +50,6 @@ else:
     user_plugin_dir = os.path.join(user_config_dir(appname="xicam"), "plugins")
 site_plugin_dir = os.path.join(site_config_dir(appname="xicam"), "plugins")
 
-qt_is_safe = False
-if "qtpy" in sys.modules:
-    from qtpy.QtWidgets import QApplication
-
-    if QApplication.instance():
-        qt_is_safe = True
 
 
 @contextmanager
@@ -80,8 +74,9 @@ class Filters(Enum):
 
 
 class XicamPluginManager:
-    def __init__(self):
+    def __init__(self, qt_is_safe=False):
 
+        self.qt_is_safe = qt_is_safe
         self._blacklist = []
         self._load_queue = LifoQueue()
         self._instantiate_queue = LifoQueue()
@@ -99,21 +94,7 @@ class XicamPluginManager:
         if venvsobservers is not None:
             venvsobservers.append(self)
 
-        # Load plugin types
-        self.plugin_types = {name: ep.load() for name, ep in entrypoints.get_group_named("xicam.plugins.PluginType").items()}
-
-        # Toss plugin types that need qt if running without qt
-        if not qt_is_safe:
-            self.plugin_types = {
-                type_name: type_class
-                for type_name, type_class in self.plugin_types.items()
-                if not getattr(type_class, "needs_qt", True)
-            }
-
-        # Initialize types
-        self.type_mapping = {type_name: {} for type_name in self.plugin_types.keys()}
-        self._entrypoints = {type_name: {} for type_name in self.plugin_types.keys()}
-        self._load_cache = {type_name: {} for type_name in self.plugin_types.keys()}
+        self.initialize_types()
 
         # Check if cammart should be ignored
         try:
@@ -126,6 +107,23 @@ class XicamPluginManager:
         # ...if so, blacklist it
         if not include_cammart:
             self._blacklist.extend(["cammart", "venvs"])
+
+    def initialize_types(self):
+        # Load plugin types
+        self.plugin_types = {name: ep.load() for name, ep in entrypoints.get_group_named("xicam.plugins.PluginType").items()}
+
+        # Toss plugin types that need qt if running without qt
+        if not self.qt_is_safe:
+            self.plugin_types = {
+                type_name: type_class
+                for type_name, type_class in self.plugin_types.items()
+                if not getattr(type_class, "needs_qt", True)
+            }
+
+        # Initialize types
+        self.type_mapping = {type_name: {} for type_name in self.plugin_types.keys()}
+        self._entrypoints = {type_name: {} for type_name in self.plugin_types.keys()}
+        self._load_cache = {type_name: {} for type_name in self.plugin_types.keys()}
 
     def collect_plugins(self):
         """
@@ -390,7 +388,8 @@ class XicamPluginManager:
                 while not return_plugin:
                     return_plugin = self._get_plugin_by_name(name, type_name)
                     if threads.is_main_thread():
-                        QApplication.processEvents()  #
+                        from qtpy.QtWidgets import QApplication  # Required as late import to avoid loading Qt things too soon
+                        QApplication.processEvents()
                     else:
                         time.sleep(0.01)
                     if elapsed() > timeout:
