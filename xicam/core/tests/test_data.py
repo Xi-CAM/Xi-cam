@@ -20,7 +20,6 @@ def test_lazyfield():
 import os
 import entrypoints
 import numpy as np
-from fabio.edfimage import EdfImage
 from databroker.in_memory import BlueskyInMemoryCatalog
 
 
