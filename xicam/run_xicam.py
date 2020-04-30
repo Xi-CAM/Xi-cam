@@ -31,7 +31,7 @@ QCoreApplication.setOrganizationName("Camera")
 QCoreApplication.setApplicationName("Xi-cam")
 
 
-def _main(args):
+def _main(args, exec=True):
     # import pydm
     # app = QApplication([])
     # app = pydm.PyDMApplication()
@@ -41,7 +41,7 @@ def _main(args):
     from xicam.gui.windows import splash
     from xicam.core import msg
 
-    if args.verbose in sys.argv:
+    if getattr(args, 'verbose', False):
         QErrorMessage.qtHandler()
 
     # start splash in subprocess
@@ -61,7 +61,10 @@ def _main(args):
     mainwindow.show()
 
     # splash = splash.XicamSplashScreen(args=args)
-    return sys.exit(app.exec_())
+    if exec:
+        return sys.exit(app.exec_())
+    else:
+        return mainwindow
 
 
 def main():
