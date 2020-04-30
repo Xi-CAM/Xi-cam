@@ -334,7 +334,7 @@ class DisableDelegate(QItemDelegate):
         return QSize(30, 30)
 
 
-@lru_cache
+@lru_cache(1)
 def mk_enableicon():
     enableicon = QIcon()
     enableicon.addPixmap(QPixmap(path("icons/enable.png")), state=enableicon.Off)
