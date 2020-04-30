@@ -45,7 +45,7 @@ if __name__ == "__main__":
     from qtpy.QtWidgets import QApplication
 
     app = QApplication([])
-    import run_xicam
+    from xicam import run_xicam
     from xicam.plugins import EZPlugin
     from xicam.gui.static import path
     from xicam.core.data import NonDBHeader
