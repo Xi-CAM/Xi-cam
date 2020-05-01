@@ -44,7 +44,7 @@ install:
 
 script:
   - 'pylint xicam --errors-only || :'
-  - 'pytest --cov=./ . || :'
+  - 'pytest --cov=xicam . || :'
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)

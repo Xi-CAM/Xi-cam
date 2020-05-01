@@ -1,11 +1,8 @@
-import qtpy  # required unqused import to ensure that headless mode doesn't trigger :(
-from xicam.run_xicam import _main
 from pytestqt import qtbot
-import sys
+from xicam.gui.windows.mainwindow import XicamMainWindow
 
 
 def test_application(qtbot):
-    sys.argv = sys.argv[:1]
-    main_window = _main([], exec=False)
-    qtbot.addWidget(main_window)
-    qtbot.waitForWindowShown(main_window)
+    window = XicamMainWindow()
+    qtbot.addWidget(window)
+    qtbot.waitForWindowShown(window)  # give it time to finish loading
