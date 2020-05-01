@@ -6,5 +6,6 @@ import sys
 
 def test_application(qtbot):
     sys.argv = sys.argv[:1]
-    qtbot.addWidget(_main([], exec=False))
-    qtbot.wait(10)  # give it time to finish loading
+    main_window = _main([], exec=False)
+    qtbot.addWidget(main_window)
+    qtbot.waitForWindowShown(main_window)
