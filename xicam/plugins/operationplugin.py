@@ -6,11 +6,11 @@ from collections import namedtuple, OrderedDict
 from xicam.core import msg
 
 from .hints import PlotHint
+from .plugin import PluginType
 
 
 class OperationError(Exception):
     """Base exception for this module."""
-
     pass
 
 
@@ -40,7 +40,7 @@ class ValidationError(OperationError):
 # TODO: Remove all args from OperationPlugin
 
 
-class OperationPlugin:
+class OperationPlugin(PluginType):
     """A plugin that can be used to define an operation, which can be used in a Workflow.
 
     At its simplest level, an operation can be though of as a function.
@@ -111,7 +111,6 @@ class OperationPlugin:
         return x + y
 
     """
-
     needs_qt = False
 
     _func = None  # type: Callable
@@ -150,14 +149,12 @@ class OperationPlugin:
         # Capture any validation issues for use later when raising
         invalid_msg = ""
         # Define which "input" arg properties we want to check
-        input_properties = {
-            "fixable": cls.fixable,
-            "fixed": cls.fixed,
-            "limits": cls.limits,
-            "opts": cls.opts,
-            "units": cls.units,
-            "visible": cls.visible,
-        }
+        input_properties = {"fixable": cls.fixable,
+                            "fixed": cls.fixed,
+                            "limits": cls.limits,
+                            "opts": cls.opts,
+                            "units": cls.units,
+                            "visible": cls.visible}
         # Check if all the attributes have a default value for each input param
         for arg in cls.input_names:
             for name, prop in input_properties.items():
@@ -168,9 +165,8 @@ class OperationPlugin:
         num_names = len(cls.input_names)
         num_args = len(inspect.signature(cls._func).parameters.keys())
         if num_names != num_args:
-            invalid_msg += (
-                f"Number of input_names given ({num_names}) " f"must match number of inputs for the operation ({num_args})."
-            )
+            invalid_msg += (f"Number of input_names given ({num_names}) "
+                            f"must match number of inputs for the operation ({num_args}).")
         # Check if there are any input args that are not actually defined in the operation
         # e.g. 'x' is not a valid input in the case below:
         # @visible('x')
@@ -178,15 +174,13 @@ class OperationPlugin:
         for name, prop in input_properties.items():
             for arg in prop.keys():
                 if arg not in cls.input_names:
-                    invalid_msg += f'"{arg}" is not a valid input for "{name}". '
+                    invalid_msg += f"\"{arg}\" is not a valid input for \"{name}\". "
 
         # Warn if there are no output_names defined
         if not len(cls.output_names):
-            warning_msg = (
-                f"No output_names have been specified for your operation {cls}; "
-                f"you will not be able to connect your operation's output(s) to "
-                f"any other operations."
-            )
+            warning_msg = (f"No output_names have been specified for your operation {cls}; "
+                           f"you will not be able to connect your operation's output(s) to "
+                           f"any other operations.")
             msg.logMessage(warning_msg, level=msg.WARNING)
 
         # Define which "output" arg properties we want to check
@@ -195,7 +189,7 @@ class OperationPlugin:
         for name, prop in output_properties.items():
             for arg in prop.keys():
                 if arg not in cls.output_names:
-                    invalid_msg += f'"{arg}" is not a valid output for "{name}". '
+                    invalid_msg += f"\"{arg}\" is not a valid output for \"{name}\". "
 
         if invalid_msg:
             raise ValidationError(cls, invalid_msg)
@@ -212,14 +206,14 @@ class OperationPlugin:
         return f"OperationPlugin named {self.name}"
 
     @property
-    def input_types(self) -> "OrderedDict[str, Type]":
+    def input_types(self) -> 'OrderedDict[str, Type]':
         """Returns the types of the inputs for the operation."""
         signature = inspect.signature(self._func)
         input_type_map = OrderedDict([(name, parameter.annotation) for name, parameter in signature.parameters.items()])
         return input_type_map
 
     @property
-    def output_types(self) -> "OrderedDict[str, Type]":
+    def output_types(self) -> 'OrderedDict[str, Type]':
         """Returns the types of the outputs for the operation."""
         return_annotation = inspect.signature(self._func).return_annotation
         if not return_annotation or return_annotation is inspect.Signature.empty:
@@ -232,16 +226,10 @@ class OperationPlugin:
         return output_type_map
 
     def __reduce__(self):
-        return (
-            OperationPlugin,
-            tuple(),
-            {
-                "_func": self._func,
-                "filled_values": self.filled_values,
-                "input_names": self.input_names,
-                "output_names": self.output_names,
-            },
-        )
+        return OperationPlugin, tuple(), {'_func': self._func,
+                                          'filled_values': self.filled_values,
+                                          'input_names': self.input_names,
+                                          'output_names': self.output_names}
 
     def as_parameter(self):
         """Return the operation's inputs as a ready-to-use object with pyqtgraph.
@@ -273,65 +261,60 @@ class OperationPlugin:
 
         parameter_dicts = []
         for name, parameter in inspect.signature(self._func).parameters.items():
-            if getattr(parameter.annotation, "__name__", None) in PARAM_TYPES:
+            if getattr(parameter.annotation, '__name__', None) in PARAM_TYPES:
                 parameter_dict = dict()
                 parameter_dict.update(self.opts.get(name, {}))
-                parameter_dict["name"] = name
-                parameter_dict["default"] = parameter.default if parameter.default is not inspect.Parameter.empty else None
-                parameter_dict["value"] = (
-                    self.filled_values[name] if name in self.filled_values else parameter_dict["default"]
-                )
+                parameter_dict['name'] = name
+                parameter_dict[
+                    'default'] = parameter.default if parameter.default is not inspect.Parameter.empty else None
+                parameter_dict['value'] = self.filled_values[
+                    name] if name in self.filled_values else parameter_dict['default']
 
-                parameter_dict["type"] = getattr(self.input_types[name], "__name__", None)
+                parameter_dict['type'] = getattr(self.input_types[name], '__name__', None)
                 if name in self.limits:
-                    parameter_dict["limits"] = self.limits[name]
-                parameter_dict["units"] = self.units.get(name)
-                parameter_dict["fixed"] = self.fixed.get(name)
-                parameter_dict["fixable"] = self.fixable.get(name)
-                parameter_dict["visible"] = self.visible.get(name, True)
+                    parameter_dict['limits'] = self.limits[name]
+                parameter_dict['units'] = self.units.get(name)
+                parameter_dict['fixed'] = self.fixed.get(name)
+                parameter_dict['fixable'] = self.fixable.get(name)
+                parameter_dict['visible'] = self.visible.get(name, True)
                 parameter_dict.update(self.opts.get(name, {}))
 
                 parameter_dicts.append(parameter_dict)
 
             elif getattr(self.input_types[name], "__name__", None) == "Enum":
                 parameter_dict = dict()
-                parameter_dict["name"] = name
-                parameter_dict["value"] = self.filled_values[name] if name in self.filled_values else parameter.default
-                parameter_dict["values"] = (self.limits.get(name) or ["---"],)
-                parameter_dict["default"] = parameter.default
-                parameter_dict["type"] = ("list",)
+                parameter_dict['name'] = name
+                parameter_dict['value'] = self.filled_values[
+                    name] if name in self.filled_values else parameter.default
+                parameter_dict['values'] = self.limits.get(name) or ["---"],
+                parameter_dict['default'] = parameter.default
+                parameter_dict['type'] = "list",
                 if name in self.limits:
-                    parameter_dict["limits"] = self.limits[name]
-                parameter_dict["units"] = self.units.get(name)
-                parameter_dict["fixed"] = self.fixed.get(name)  # TODO: Does this need a default value
-                parameter_dict["fixable"] = self.fixable.get(name)
-                parameter_dict["visible"] = self.visible.get(name, True)  # TODO: should we store the defaults at top?
+                    parameter_dict['limits'] = self.limits[name]
+                parameter_dict['units'] = self.units.get(name)
+                parameter_dict['fixed'] = self.fixed.get(name)  # TODO: Does this need a default value
+                parameter_dict['fixable'] = self.fixable.get(name)
+                parameter_dict['visible'] = self.visible.get(name, True)  # TODO: should we store the defaults at top?
                 parameter_dict.update(self.opts.get(name, {}))
 
                 parameter_dicts.append(parameter_dict)
         return parameter_dicts
 
     def wireup_parameter(self, parameter):
-        ...
+        print(parameter)
 
 
-def operation(
-    func: Callable,
-    filled_values: dict = None,
-    fixable: dict = None,
-    fixed: dict = None,
-    input_names: Tuple[str, ...] = None,
-    output_names: Tuple[str, ...] = None,
-    limits: dict = None,
-    opts: dict = None,
-    output_shape: dict = None,
-    units: dict = None,
-    visible: dict = None,
-    name: str = None,
-    input_descriptions: dict = None,
-    output_descriptions: dict = None,
-    categories: Sequence[Union[tuple, str]] = None,
-) -> Type[OperationPlugin]:
+def operation(func: Callable,
+              filled_values: dict = None, fixable: dict = None, fixed: dict = None,
+              input_names: Tuple[str, ...] = None, output_names: Tuple[str, ...] = None,
+              limits: dict = None,
+              opts: dict = None,
+              output_shape: dict = None,
+              units: dict = None,
+              visible: dict = None,
+              name: str = None,
+              input_descriptions: dict = None, output_descriptions: dict = None,
+              categories: Sequence[Union[tuple, str]] = None) -> Type[OperationPlugin]:
     """Create an Operation class.
 
     This function can be used as a decorator to define a new operation type.
@@ -403,28 +386,30 @@ def operation(
         output_names = (output_names,)
 
     state = {  # "_func": func,
-        "name": name or getattr(func, "name", getattr(func, "__name__", None)),
+        "name": name or getattr(func, 'name', getattr(func, '__name__', None)),
         # Fallback to inspecting the function arg names if no input names provided
-        "input_names": input_names or getattr(func, "input_names", tuple(inspect.signature(func).parameters.keys())),
-        "output_names": output_names or getattr(func, "output_names", getattr(func, "__name__", tuple())),
-        "output_shape": output_shape or getattr(func, "output_shape", {}),
-        "input_description": input_descriptions or getattr(func, "input_descriptions", {}),
-        "output_descriptions": output_descriptions or getattr(func, "output_descriptions", {}),
-        "categories": categories or getattr(func, "categories", []),
+        "input_names": input_names or getattr(func,
+                                              'input_names',
+                                              tuple(inspect.signature(func).parameters.keys())),
+        "output_names": output_names or getattr(func, 'output_names', getattr(func, "__name__", tuple())),
+        "output_shape": output_shape or getattr(func, 'output_shape', {}),
+        "input_description": input_descriptions or getattr(func, 'input_descriptions', {}),
+        "output_descriptions": output_descriptions or getattr(func, 'output_descriptions', {}),
+        "categories": categories or getattr(func, 'categories', []),
         "filled_values": filled_values or {},
-        "limits": limits or getattr(func, "limits", {}),
-        "units": units or getattr(func, "units", {}),
-        "fixed": fixed or getattr(func, "fixed", {}),
-        "fixable": fixable or getattr(func, "fixable", {}),
-        "visible": visible or getattr(func, "visible", {}),
-        "opts": opts or getattr(func, "opts", {}),
-        "hints": getattr(func, "hints", []),  # TODO: does hints need an arg
+        "limits": limits or getattr(func, 'limits', {}),
+        "units": units or getattr(func, 'units', {}),
+        "fixed": fixed or getattr(func, 'fixed', {}),
+        "fixable": fixable or getattr(func, 'fixable', {}),
+        "visible": visible or getattr(func, 'visible', {}),
+        "opts": opts or getattr(func, 'opts', {}),
+        "hints": getattr(func, 'hints', [])  # TODO: does hints need an arg
     }
 
     if state["name"] is None:
-        raise NameError("The provided operation is unnamed.")
+        raise NameError('The provided operation is unnamed.')
 
-    operation_class = type("WrappedOperationPlugin", (OperationPlugin,), state)  # Ignore intellisense warnings
+    operation_class = type('WrappedOperationPlugin', (OperationPlugin,), state)  # Ignore intellisense warnings
     operation_class._func = staticmethod(func)
 
     operation_class._validate()
@@ -489,7 +474,7 @@ def units(arg_name, unit):
     """
 
     def decorator(func):
-        _quick_set(func, "units", arg_name, unit, {})
+        _quick_set(func, 'units', arg_name, unit, {})
         return func
 
     return decorator
@@ -513,7 +498,7 @@ def fixed(arg_name, fix=True):
     """
 
     def decorator(func):
-        _quick_set(func, "fixed", arg_name, fix, {})
+        _quick_set(func, 'fixed', arg_name, fix, {})
         return func
 
     return decorator
@@ -552,7 +537,7 @@ def limits(arg_name, limit):
     """
 
     def decorator(func):
-        _quick_set(func, "limits", arg_name, limit, {})
+        _quick_set(func, 'limits', arg_name, limit, {})
         return func
 
     return decorator
@@ -575,7 +560,7 @@ def plot_hint(*args, **kwargs):
     """
 
     def decorator(func):
-        if not hasattr(func, "hints"):
+        if not hasattr(func, 'hints'):
             func.hints = []
         func.hints.append(PlotHint(*args, **kwargs))
         return func
@@ -655,7 +640,7 @@ def output_shape(arg_name: str, shape: Union[int, Collection[int]]):
     """
 
     def decorator(func):
-        _quick_set(func, "output_shape", arg_name, shape, {})
+        _quick_set(func, 'output_shape', arg_name, shape, {})
         return func
 
     return decorator
@@ -683,7 +668,7 @@ def visible(arg_name: str, is_visible=True):
     """
 
     def decorator(func):
-        _quick_set(func, "visible", arg_name, is_visible, {})
+        _quick_set(func, 'visible', arg_name, is_visible, {})
         return func
 
     return decorator
@@ -715,17 +700,17 @@ def opts(arg_name: str, **options):
     """
 
     def decorator(func):
-        _quick_set(func, "opts", arg_name, options, {})
+        _quick_set(func, 'opts', arg_name, options, {})
         return func
 
     return decorator
 
 
 def _describe_arg(arg_type: str, arg_name: str, description: str):
-    assert arg_type in ["input", "output"]
+    assert arg_type in ['input', 'output']
 
     def decorator(func):
-        _quick_set(func, f"{arg_type}_descriptions", arg_name, description, {})
+        _quick_set(func, f'{arg_type}_descriptions', arg_name, description, {})
         return func
 
     return decorator
@@ -755,7 +740,7 @@ def describe_input(arg_name: str, description: str):
         return x**2
     """
 
-    return _describe_arg("input", arg_name, description)
+    return _describe_arg('input', arg_name, description)
 
 
 def describe_output(arg_name: str, description: str):
@@ -783,7 +768,7 @@ def describe_output(arg_name: str, description: str):
         return x**2
     """
 
-    return _describe_arg("output", arg_name, description)
+    return _describe_arg('output', arg_name, description)
 
 
 def categories(*categories: Tuple[Union[tuple, str]]):
@@ -814,7 +799,7 @@ def categories(*categories: Tuple[Union[tuple, str]]):
     """
 
     def decorator(func):
-        if not hasattr(func, "categories"):
+        if not hasattr(func, 'categories'):
             func.categories = []
         func.categories.append(categories)
         return func
