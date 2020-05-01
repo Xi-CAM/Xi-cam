@@ -1,12 +1,19 @@
 # Resources
 
-## Example Xi-cam Plugins
+## Example Xi-CAM Plugins
 
-* [Xi-cam Log Plugin](https://github.com/synchrotrons/Xi-cam.plugins.Log) -
+* [Xi-CAM CatalogViewer Plugin](https://github.com/Xi-CAM/Xi-cam.CatalogViewer) -
 Example of a simple single-stage GUIPlugin.
 
-* [Xi-cam NCEM Plugin](https://github.com/synchrotrons/Xi-cam.NCEM) -
+* [Xi-CAM Log Plugin](https://github.com/Xi-CAM/Xi-CAM.plugins.Log) -
+Example of another simple single-stage GUIPlugin.
+
+* [Xi-CAM BSISB Plugin](https://github.com/Xi-CAM/Xi-cam.BSISB) -
 Example of a multi-stage GUIPlugin with more functionality.
+
+* [Xi-CAM NCEM Plugin](https://github.com/Xi-CAM/Xi-CAM.NCEM) -
+Another example of a multi-stage GUIPlugin with more functionality.
+
 
 ## Git
 
@@ -18,7 +25,7 @@ An introduction to git and GitHub.
 
 ## NSLS-II
 
-Useful resources about NSLS-II software that Xi-cam uses.
+Useful resources about NSLS-II software that Xi-CAM uses.
 
 * [Event Model](https://nsls-ii.github.io/architecture-overview.html) -
 Describes an event-based data model.
@@ -42,30 +49,26 @@ look through these or even through resources you find on your own if you are int
 [Qt](https://www.qt.io/what-is-qt/?utm_campaign=Navigation%202019&utm_source=megamenu) 
 is a framework written in C++ for developing graphical user interfaces. 
 PySide2 and PyQt5 are two different python bindings to the Qt C++ API. 
-QtPy is a wrapper that allows for writing python Qt code with either PySide2 or PyQt5 installed.
+QtPy is a wrapper that allows for writing python Qt code with either PyQt5 or PySide2 installed.
 
-Xi-cam uses [QtPy](https://pypi.org/project/QtPy/) to interact with different Python bindings to Qt.
+Xi-CAM uses [QtPy](https://pypi.org/project/QtPy/) to interact with different Python bindings to Qt.
 QtPy allows you *"to write your code as if you were using PySide2 but import Qt modules from qtpy instead of PySide2 
 (or PyQt5)"*. 
-The references below show PySide2 examples and documentation; when writing a Xi-cam
+The references below show PySide2 examples and documentation; when writing a Xi-CAM
 plugin, make sure to use the `qtpy` modules when importing.
+
+* [PySide2 Documentation](https://doc.qt.io/qtforpython/) - Documentation for PySide2. Since the QtPy API
+resembles PySide2, this documentation is helpful for looking up python Qt modules and classes that you may use.
 
 * [PyQt5 GUI Tutorial](https://build-system.fman.io/pyqt5-tutorial) - Introductory tutorial for learning the basic
 concepts of Qt. *Note: this tutorial is written for PyQt5, remember to import from `qtpy` instead of `PyQt5` or 
-`PySide2` when writing code for Xi-cam.*
+`PySide2` when writing code for Xi-CAM.*
 
 * [PySide2 Simple Clickable Button](https://wiki.qt.io/Qt_for_Python_Tutorial_ClickableButton) - 
 Short tutorial that describes the concept of signals and slots in Qt and shows how to create a button that
 responds to clicking.
 
-* [Pyside Documentation (Deprecated)](https://pyside.github.io/docs/pyside/index.html) -
-Although this is deprecated, the documentation for Qt classes is pretty good. The newer PySide2 documentation is not
-as complete as this documentation.
-
-* [PySide2 Documentation](https://doc.qt.io/qtforpython/) - Documentation for PySide2. Since the QtPy API
-resembles PySide2, this documentation is helpful for looking up python Qt modules and classes that you may use.
-
 * [PyQtGraph](http://pyqtgraph.org/documentation/) -
 Documentation for the pyqtgraph package, which relies on Qt and provides basic data visualization (plotting) and
-various widgets (helpful for writing Xi-cam GUIPlugins).
+various widgets (helpful for writing Xi-CAM GUIPlugins).
 

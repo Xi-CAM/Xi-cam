@@ -1,16 +1,162 @@
-# Creating a GUIPlugin
+TODO: 
+Use cookiecutter here to have uniform starting point for plugin creation
 
-Xi-cam provides the GUIPlugin class for writing a Qt widget-based plugin.
-By deriving a GUIPlugin, you can define a custom plugin in Xi-cam that can
-be used to load, process, and analyze data.
+# GUIPlugin Documentation
 
+This documentation provides information on GUIPlugins and GUILayouts
+to help with designing your own plugins for Xi-CAM.
+API reference documentation is also included at the bottom.
+
+*If you are new to developing Xi-CAM plugins,
+it is recommended that you follow the [QuickStart Guide](quickstart.md) first.*
+
+## What Is A GUIPlugin?
+
+A GUIPlugin is an interactive user-facing plugin in Xi-CAM.
+It can be used to visualize and analyze data.
+
+GUIPlugins make use of the `qtpy` Python package for interactive GUI components.
 See the
 [Resources](resources.md) page for more information about Qt and QtPy.
 
+### Where is GUIPlugin?
+
+```python
+xicam.plugins.guiplugin
+```
+
+### What Does a GUIPlugin Look Like?
+
+First, let's look at what Xi-CAM looks like when you first load it:
+
+```eval_rst
+.. figure:: _static/xicam-main.png
+  :alt: Main window of Xi-CAM on startup, with three installed plugins.
+
+Main window of Xi-CAM when running xicam.
+Note that there are three installed `GUIPlugins` here;
+if you haven't installed any plugins, you won't any listed.
+```
+
+As you can see, the main window of Xi-CAM after it has finished loading
+shows any installed GUIPlugins, a citation / references widget, a preview widget,
+and a data browser widget.
+The data browser widget can be used to load data into a `GUIPlugin`.
+The data preview widget can be used to "preview" data before loading it.
+
+It is important to keep in mind a few concepts for GUIPlugins:
+* A `GUIPlugin` can have one or more `stages`.
+* Each `stage` is defined with a `GUILayout`.
+* A `GUILayout` is defined with a widget (or multiple widgets).
+
+These concepts are explored in more detail later in this document.
+
+#### Selecting and Activating a GUIPlugin
+
+We can activate any of the installed GUIPlugins by clicking on their name at the top.
+Let's click on "Example Plugin":
+
+```eval_rst
+.. figure:: _static/xicam-example-plugin.png
+  :alt: Xi-CAM Example Plugin
+
+  The Example Plugin's interface.
+  Note that this plugin doesn't do much yet; it simply displays the text "Stage 1..."
+```
+
+#### How is Example Plugin Implemented?
+
+The code for the "Example Plugin" shown above looks like this:
+
+```python
+from qtpy.QtWidgets import QLabel
+
+from xicam.plugins import GUILayout, GUIPlugin
+
+
+class ExamplePlugin(GUIPlugin):
+    # Define the name of the plugin (how it is displayed in Xi-CAM)
+    name = "Example Plugin"
+
+    def __init__(self, *args, **kwargs):
+        # Insert code here
+
+        # Modify stages here
+        self.stages = {'Stage 1': GUILayout(QLabel("Stage 1..."))}
+
+        super(ExamplePlugin, self).__init__(*args, **kwargs)
+```
+
+We create our own derived version of `GUIPlugin`, which we call `ExamplePlugin`.
+We then give it a name to tell Xi-CAM how to display it in the top bar of the main window.
+In this case, we give it the name "Example Plugin."
+
+We then define our `__init__` method to describe how to create an `ExamplePlugin`.
+Notice that we are adding a `QLabel`, which is simply text, to a `GUILayout`.
+We then add the `GUILayout` to "Stage 1" to define the GUIPlugin's stages.
+
+### What Is a Stage?
+
+Visually, a stage is a stand-alone interface for a `GUIPlugin`.
+A `GUIPlugin` must have at least one stage but may have multiple stages.
+With multiple stages, each stage has its own interface
+and each stage can be selected in the top bar of Xi-CAM.
+
+Stages for a `GUIPlugin` are accessible with ```self.stages```.
+```self.stages``` is a dictionary where each
+* key is the name of the stage
+* value is a `GUILayout`s
+
+For example, we might define two stages as:
+
+```python
+self.stages = {"A": GUILayout(QLabel("1")),
+               "B": GUILayout(QLabel("2"))}
+```
+
+This will look like:
+
+```eval_rst
+.. figure:: _static/xicam-example-plugin-stages.png
+  :alt: Example Plugin with multiple stages
+
+The interface of a plugin named "Example Plugin" with multiple stages, "A" and "B".
+Note that "A" is currently selected, so we see the label "1" in the middle of the window.
+```
+
+### What Is a GUILayout?
+
+A `GUILayout` is a layout used to describe how widgets should be organized in a stage in a GUIPlugin.
+
+```eval_rst
+.. figure:: _static/xicam-layout.png
+  :alt: Layout of Xi-CAM, corresponding to a GUILayout.
+```
+
+The layout corresponds to a 3x3 grid in the Xi-CAM main window, with the names
+center, left, right, lefttop, righttop, leftbottom, rightbottom.
+These names correspond to the arguments you can pass when creating a `GUILayout`.
+
+You **must** provide at least one widget, which will be the center widget.
+
+
+### What Is a QLabel?
+
+`QLabel` is a Qt widget provided by the Qt backend Xi-CAM makes use of.
+It acts a widget that holds simple text.
+
+For more information on Qt, see [Qt for Python Documentation](https://doc.qt.io/qtforpython/).
+
+
+
+
+
+#### Entry Point
+
 ## Prerequisites
 
-If you have not installed Xi-cam for development, follow the instructions on the 
-[Installing Xi-cam](install.md) page.
+If you have not installed Xi-CAM for development, follow the instructions on the 
+[Installing Xi-CAM](install.md) page.
 
 Also, *make sure that your xicam virtual environment (venv) is activated*. 
 
@@ -31,7 +177,7 @@ A GUIPlugin must have at least one stage.
 Stages are defined as as an ordered dictionary,
 where each key represents a stage's name and each associated value
 is a [GUILayout](#gui-layouts) that defines the organization of widgets for that stage.
-The key will be used at the stage's display name in Xi-cam.
+The key will be used at the stage's display name in Xi-CAM.
 
 As an example, we could have a Demo GUIPlugin that has the stages
 X and Y. To set these stages, we would set the
@@ -61,7 +207,7 @@ Enhance, Crop.)
 ### GUI Layouts
 
 The GUILayout class represents a layout of widgets to use in a GUIPlugin stage.
-The main window in Xi-cam is organized in a 3 x 3 grid. 
+The main window in Xi-CAM is organized in a 3 x 3 grid. 
 These cells in the grid are named according to their positions in the grid: 
 center, top, bottom, left, lefttop, leftbottom, right, righttop, rightbottom. 
 
@@ -76,19 +222,19 @@ it is not recommended as it will replace those main window widgets.
 ### Data Handlers
 
 If your plugin needs to load data and/or store internally processed data, the plugin will need a way to ingest
-the data into Xi-cam and then store data internally.
+the data into Xi-CAM and then store data internally.
 
 ### DataHandlerPlugin
 
-The DataHandlerPlugin class provides a mechanism to ingest data into Xi-cam. If you have a custom data format or the
-data you want to load is not currently a format Xi-cam can load, you will need to implement your own
+The DataHandlerPlugin class provides a mechanism to ingest data into Xi-CAM. If you have a custom data format or the
+data you want to load is not currently a format Xi-CAM can load, you will need to implement your own
 DataHandlerPlugin.
  
 See [Creating a DataHandlerPlugin](data-handler.md) for more information.
 
 ### GUIPlugin header methods
 
-Once data is ingested into Xi-cam, you will need a uniform way to access this internal data.
+Once data is ingested into Xi-CAM, you will need a uniform way to access this internal data.
 The GUIPlugin class provides an interface for storing and accessing this data. You will need to override
 (i.e. implement your own version of) a few GUIPlugin methods in your own derived GUIPlugin class:
 
@@ -105,7 +251,7 @@ attribute be created in your GUIPlugin class. This attribute is usually some typ
 
 ### Workflows
 
-In Xi-cam a `Workflow` represents a way to organize a set of processes (with inputs and outputs) and execute these 
+In Xi-CAM a `Workflow` represents a way to organize a set of processes (with inputs and outputs) and execute these 
 processes. Here, a process is a `ProcessingPlugin`. You will want to create a Workflow when you want to parameterize
 and perform processes (i.e. operations) on your data.
 
@@ -119,16 +265,16 @@ After reviewing the core concepts, we can start implementing our own GUIPlugin.
 We will create a simple GUIPlugin that allows viewing loaded images, then we
 will extend that plugin with more features until we have a MovieEnhance plugin.
 
-When first starting to write Xi-cam GUIPlugins, it is recommended to use a `cookiecutter`
+When first starting to write Xi-CAM GUIPlugins, it is recommended to use a `cookiecutter`
 template to set up some basic code and infrastructure for you.
 
 ### Using cookiecutter to Create the Plugin
 [cookiecutter](https://cookiecutter.readthedocs.io/en/latest/readme.html) is a tool for creating
 python projects from a template file.
 
-There is a Xi-cam GUIPlugin template for cookiecutter that helps set up some packaging infrastructure
+There is a Xi-CAM GUIPlugin template for cookiecutter that helps set up some packaging infrastructure
 and boiler-plate code for a GUIPlugin. Follow the instructions here:
-[Xi-cam.templates.GuiPlugin repo](https://github.com/synchrotrons/Xi-cam.templates.GuiPlugin).
+[Xi-CAM.templates.GuiPlugin repo](https://github.com/synchrotrons/Xi-CAM.templates.GuiPlugin).
 
 When cookiecutter is run with the GUIPlugin template file, it will prompt for some information
 that is used to create the package. Most of the prompts will have default values, indicated
@@ -138,7 +284,7 @@ Here are the prompts with descriptions and values that we will use:
 
 prompt | description | our value
 --- | --- | ---
-package_name     | name of the plugin package (also the name displayed in Xi-cam)     | mydemo
+package_name     | name of the plugin package (also the name displayed in Xi-CAM)     | mydemo
 display_name     | name of plugin (shows up in docs and README)                       | My Demo Plugin
 plugin_version   | current plugin version number                                      |
 plugin_file_name | file to put the generated plugin code into                         |
@@ -155,7 +301,7 @@ yapsy_ext        | file extension of the plugin marker file                     
 This generates the following in your current directory:
 
 ```
-Xi-cam.plugins.mydemo/
+Xi-CAM.plugins.mydemo/
   docs/
     ...
   LICENSE.md
@@ -173,7 +319,7 @@ Xi-cam.plugins.mydemo/
       mydemo.yapsy-plugin
 ```
 
-The plugin code will be located in *Xi-cam.plugins.mydemo/xicam/mydemo/__init__.py, which should look like:
+The plugin code will be located in *Xi-CAM.plugins.mydemo/xicam/mydemo/__init__.py, which should look like:
 
 ```python
 from qtpy.QtCore import *
@@ -201,16 +347,16 @@ class mydemo(GUIPlugin):
 
 *If you are familiar with VCS and git, continue to the next section.*
 
-You will need to initialize the directory cookiecutter created, `Xi-cam.plugins.mydemo`, 
+You will need to initialize the directory cookiecutter created, `Xi-CAM.plugins.mydemo`, 
 as a repository:
 
 ```
-cd Xi-cam.plugins.mydemo
+cd Xi-CAM.plugins.mydemo
 git init .
 ```
 
 You will then want to add a .gitignore file to tell what files git shouldn't look at.
-You can copy the .gitignore from the Xi-cam repository you cloned during installation.
+You can copy the .gitignore from the Xi-CAM repository you cloned during installation.
 
 The repository is initialized, but we still need to tell git what files we want to add. To do this, we can add all of
 the non-ignored files by running `git add .`.
@@ -229,26 +375,26 @@ steps under *push an existing repository from the command line* (it will show a 
 
 #### Installing the plugin
 
-After creating the plugin, we need to tell Xi-cam that it is available to use. One way to do this is to create an
-editable pip install. Make sure you are in your plugin's directory (Xi-cam.plugins.mydemo), then run:
+After creating the plugin, we need to tell Xi-CAM that it is available to use. One way to do this is to create an
+editable pip install. Make sure you are in your plugin's directory (Xi-CAM.plugins.mydemo), then run:
 
 ```
 pip install -e .
 ```
 
-This will allow Xi-cam to see your plugin and load it.
+This will allow Xi-CAM to see your plugin and load it.
 
 #### Verifying
 
 Run xicam to verify that your plugin loads properly.
-At the top-right of the Xi-cam main window, you should see *mydemo*.
+At the top-right of the Xi-CAM main window, you should see *mydemo*.
 When you click it, you should see the text *Stage 1* in the middle of the main window.
 
 ---
 
 ## Extending your GUIPlugin
 
-After verifying that your plugin is loading in Xi-cam, we can begin to extend the GUIPlugin with custom
+After verifying that your plugin is loading in Xi-CAM, we can begin to extend the GUIPlugin with custom
 functionality.
 
 ### Example 1 - A Inverting Plugin
@@ -259,7 +405,7 @@ For example, if we have an image that stores 8-bit unsigned data (values 0 to 25
 the pixel value from 255.
 
 First, we will need to create a ProcessingPlugin for our inversion process.
-We can add an Invert class to our *mydemo* package(*Xi-cam.plugins.mydemo/xicam/mydemo/__init__.py*).
+We can add an Invert class to our *mydemo* package(*Xi-CAM.plugins.mydemo/xicam/mydemo/__init__.py*).
 
 Our Invert ProcessingPlugin needs to read in input data and output inverted data.
 We can define Inputs and an Output in our Invert class to handle those appropriately.
@@ -320,7 +466,7 @@ We will need to provide text for the action that is created as well as the recei
 This method will be responsible for executing the Workflow, then calling a method to grab the results of the Workflow (the inverted data)
 and update the image.
 
-For an input image, we will use one of Xi-cam's gui widgets, `DynImageView`, to display the image.
+For an input image, we will use one of Xi-CAM's gui widgets, `DynImageView`, to display the image.
 We will use numpy to generate our input image. We will create a 128x128 size image with each row
 having values from 0 to 127.
 
@@ -404,7 +550,7 @@ DataHandler section
 VCS section
   mention global git config?
   git ssh keys?
-  add .gitignore to cookiecutter template .would be really useful, see Xi-cam's .gitignore for example file
+  add .gitignore to cookiecutter template .would be really useful, see Xi-CAM's .gitignore for example file
 Implementation section
   WorkflowEditor
   TabView
