@@ -7,9 +7,12 @@ matrix:
         - xvfb
       before_install:
         - pip install --upgrade pip  # doesn't work on windows
-      after_install:
+      after_success:
         - pip install .[docs] # only build docs on linux
         - (cd docs && make html)
+        - bash <(curl -s https://codecov.io/bash)
+        - coveralls
+
     - os: windows
       language: shell
       before_install:
@@ -45,10 +48,6 @@ install:
 script:
   - 'pylint xicam --errors-only || :'
   - 'pytest --cov=xicam --cov-config=.coveragerc . || :'
-
-after_success:
-  - bash <(curl -s https://codecov.io/bash)
-  - coveralls
 
 deploy:
   provider: pypi
