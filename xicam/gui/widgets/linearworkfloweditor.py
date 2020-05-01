@@ -1,23 +1,9 @@
 import pickle
 from qtpy.QtCore import QAbstractTableModel, QMimeData, Qt, Signal, QSize
 from qtpy.QtGui import QIcon, QPixmap
-from qtpy.QtWidgets import (
-    QSplitter,
-    QApplication,
-    QWidget,
-    QAbstractItemView,
-    QToolBar,
-    QToolButton,
-    QMenu,
-    QVBoxLayout,
-    QTableView,
-    QItemDelegate,
-    QGridLayout,
-    QLabel,
-    QPushButton,
-    QSizePolicy,
-    QHeaderView,
-)
+from qtpy.QtWidgets import QSplitter, QApplication, QWidget, QAbstractItemView, QToolBar, QToolButton, QMenu, \
+    QVBoxLayout, QTableView, QItemDelegate, QGridLayout, QLabel, QPushButton, QSizePolicy, QHeaderView, QCheckBox, \
+    QHBoxLayout
 from xicam.core.execution.workflow import Workflow
 from xicam.plugins import OperationPlugin
 from pyqtgraph.parametertree import ParameterTree, Parameter
@@ -39,46 +25,62 @@ from functools import partial, lru_cache
 
 class WorkflowEditor(QSplitter):
     sigWorkflowChanged = Signal()
+    sigRunWorkflow = Signal()
 
-    def __init__(self, workflow: Workflow):
+    def __init__(self, workflow: Workflow, **kwargs):
         super(WorkflowEditor, self).__init__()
         self.workflow = workflow
+        self.kwargs = kwargs
         self.setOrientation(Qt.Vertical)
 
         self.operationeditor = WorkflowOperationEditor()
         self.workflowview = LinearWorkflowView(WorkflowModel(workflow))
 
         self.addWidget(self.operationeditor)
-        self.addWidget(WorkflowWidget(self.workflowview))
+        workflow_widget = WorkflowWidget(self.workflowview)
+        self.addWidget(workflow_widget)
+        workflow_widget.sigRunWorkflow.connect(self.sigRunWorkflow.emit)
+        # Should this work internally? How would the start operations get their inputs?
+        # Would the ExamplePlugin need to explicitly set the parameter value (even for hidden image)?
+        # It would be nice to just have this work easily... (to ExamplePlugin's perspective)
+        # workflow_widget.sigRunWorkflow.connect(self.run_workflow)
+        # TODO make work for autorun...
+        # OR is this the outside class's respsonsibility (see SAXSGUIPlugin.maskeditor)
 
         self.workflowview.sigShowParameter.connect(self.setParameters)
 
         workflow.attach(self.sigWorkflowChanged.emit)
 
-    def setFixed(self, operation: OperationPlugin, param_name: str, value):
-        operation.fixed[param_name] = value
+    def run_workflow(self, _):
+        self.workflow.execute(**self.kwargs)
 
-    def setValue(self, operation: OperationPlugin, param_name: str, value):
-        operation.filled_values[param_name] = value
+    def setFixed(self, operation: OperationPlugin, param: Parameter, value):
+        operation.fixed[param.name()] = value
+
+    def setValue(self, operation: OperationPlugin, param: Parameter, value):
+        operation.filled_values[param.name()] = value
 
     def setParameters(self, operation: OperationPlugin):
-        parameter = operation.as_parameter()
-        group = GroupParameter(name="Selected Operation", children=parameter)
-        operation.wireup_parameter(group)
-        for child, parameter in zip(group.children(), parameter):
-            # wireup signals to update the workflow
-            if parameter.get("fixable"):
-                child.sigFixToggled.connect(partial(self.setFixed, operation, child.name))
-            child.sigValueChanged.connect(partial(self.setValue, operation, child.name))
+        if operation:
+            parameter = operation.as_parameter()
+            group = GroupParameter(name='Selected Operation', children=parameter)
+            operation.wireup_parameter(group)
+            for child, parameter in zip(group.children(), parameter):
+                # wireup signals to update the workflow
+                if parameter.get('fixable'):
+                    child.sigFixToggled.connect(partial(self.setFixed, operation))
+                print(child.name())
+                child.sigValueChanged.connect(lambda *args: print(args))
+                child.sigValueChanged.connect(partial(self.setValue, operation))
 
-        group.blockSignals(True)
-        for child in group.children():
-            child.blockSignals(True)
-        self.operationeditor.setParameters(group, showTop=False)
-        QApplication.processEvents()
-        group.blockSignals(False)
-        for child in group.children():
-            child.blockSignals(False)
+            group.blockSignals(True)
+            for child in group.children():
+                child.blockSignals(True)
+            self.operationeditor.setParameters(group, showTop=False)
+            QApplication.processEvents()
+            group.blockSignals(False)
+            for child in group.children():
+                child.blockSignals(False)
 
 
 class WorkflowOperationEditor(ParameterTree):
@@ -87,11 +89,18 @@ class WorkflowOperationEditor(ParameterTree):
 
 class WorkflowWidget(QWidget):
     sigAddFunction = Signal(object)
+    sigRunWorkflow = Signal(object)
 
     def __init__(self, workflowview: QAbstractItemView):
         super(WorkflowWidget, self).__init__()
 
         self.view = workflowview
+
+        self.autorun_checkbox = QCheckBox("Run Automatically")
+        self.autorun_checkbox.setCheckState(Qt.Unchecked)
+        self.autorun_checkbox.stateChanged.connect(self._autorun_state_changed)
+        self.run_button = QPushButton("Run Workflow")
+        self.run_button.clicked.connect(self.sigRunWorkflow.emit)
 
         self.toolbar = QToolBar()
         self.addfunctionmenu = QToolButton()
@@ -111,15 +120,32 @@ class WorkflowWidget(QWidget):
 
         v = QVBoxLayout()
         v.addWidget(self.view)
+        h = QHBoxLayout()
+        h.addWidget(self.autorun_checkbox)
+        h.addWidget(self.run_button)
+        v.addLayout(h)
         v.addWidget(self.toolbar)
         v.setContentsMargins(0, 0, 0, 0)
         self.setLayout(v)
+
+    def _autorun_state_changed(self, state):
+        if state == Qt.Checked:
+            self.run_button.setDisabled(True)
+        else:
+            self.run_button.setDisabled(False)
+
+    def _run_workflow(self, _):
+        self._workflow
 
     def populateFunctionMenu(self):
         self.functionmenu.clear()
         sortingDict = {}
         for plugin in pluginmanager.get_plugins_of_type("OperationPlugin"):
-            typeOfOperationPlugin = plugin.getCategory()
+            typeOfOperationPlugin = plugin.categories
+            # TODO : should OperationPlugin be responsible for initializing categories
+            # to some placeholder value (instead of [])?
+            if typeOfOperationPlugin == []:
+                typeOfOperationPlugin = "uncategorized"  # put found operations into a default category
             if not typeOfOperationPlugin in sortingDict.keys():
                 sortingDict[typeOfOperationPlugin] = []
             sortingDict[typeOfOperationPlugin].append(plugin)
@@ -131,7 +157,9 @@ class WorkflowWidget(QWidget):
                 self.functionmenu.addAction(plugin.name, partial(self.addOperation, plugin, autoconnectall=True))
 
     def addOperation(self, operation: OperationPlugin, autoconnectall=True):
-        self.view.model().workflow.addOperation(operation(), autoconnectall)
+        self.view.model().workflow.add_operation(operation())
+        if autoconnectall:
+            self.view.model().workflow.auto_connect_all()
         print("selected new row:", self.view.model().rowCount() - 1)
         self.view.setCurrentIndex(self.view.model().index(self.view.model().rowCount() - 1, 0))
 
@@ -276,13 +304,13 @@ class HintsWidget(QWidget):
 
         self.name = operation.name
 
-        print("size1:", operation.name, self.sizeHint())
+        print('size1:', operation.name, self.sizeHint())
 
     def setSelectedVisibility(self, selected):
         for row in range(1, self.layout().rowCount()):
             self.layout().itemAtPosition(row, 0).widget().setVisible(selected)
             self.layout().itemAtPosition(row, 1).widget().setVisible(selected)
-        print("size2:", self.name, self.sizeHint())
+        print('size2:', self.name, self.sizeHint())
 
     def sizeHint(self):
         return QSize(30, 30)
@@ -334,7 +362,7 @@ class DisableDelegate(QItemDelegate):
         return QSize(30, 30)
 
 
-@lru_cache(1)
+@lru_cache()
 def mk_enableicon():
     enableicon = QIcon()
     enableicon.addPixmap(QPixmap(path("icons/enable.png")), state=enableicon.Off)
