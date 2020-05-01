@@ -84,6 +84,7 @@ def default_search_result_row(entry):
         "Exit Status": "-" if stop is None else stop["exit_status"],
     }
 
+# TODO: implement threads with event-loops
 
 class ReloadThread(QThread):
     def __init__(self, search_state):
