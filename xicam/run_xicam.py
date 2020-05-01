@@ -35,7 +35,7 @@ def _main(args, exec=True):
     # import pydm
     # app = QApplication([])
     # app = pydm.PyDMApplication()
-    app = QApplication([])
+    app = QApplication.instance() or QApplication([])
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     from xicam.gui.windows import splash
