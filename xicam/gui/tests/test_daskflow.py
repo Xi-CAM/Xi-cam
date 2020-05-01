@@ -1,7 +1,8 @@
-def test_daskflow():
-    from qtpy.QtWidgets import QApplication
+from pytestqt import qtbot
 
-    app = QApplication([])
+def test_daskflow(qtbot):
+
+
     from pyqtgraph.flowchart import Node, Terminal
 
     # COREDUMPS HERE!
@@ -13,6 +14,5 @@ def test_daskflow():
     df = DaskFlow()
     workflow = FourierCalibrationWorkflow()
     df.fromDask(workflow)
-    df.show()
 
-    app.exec_()
+    qtbot.addWidget(df)

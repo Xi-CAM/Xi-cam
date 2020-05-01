@@ -1,11 +1,9 @@
-def test_threads():
-    from qtpy.QtWidgets import QApplication
+from pytestqt import qtbot
 
-    app = QApplication([])
+def test_threads(qtbot):
     from xicam.core import threads
-    from qtpy.QtCore import QTimer, QObject, Signal
+    from qtpy.QtCore import QObject, Signal
 
-    q = QTimer()
 
     def callback(a):
         assert a == 10
@@ -18,20 +16,12 @@ def test_threads():
     callback = Callback()
     t2 = threads.QThreadFuture(sum, [1, 2, 3, 4], callback_slot=callback.sig)
 
-    q.singleShot(1000, t.start)
-    q.singleShot(1000, t2.start)
-    q.singleShot(2000, app.quit)
-    app.exec_()
+    t.start()
+    t2.start()
 
 
-def test_threads_iterator():
-    from qtpy.QtWidgets import QApplication
-
-    app = QApplication([])
+def test_threads_iterator(qtbot):
     from xicam.core import threads
-    from qtpy.QtCore import QTimer
-
-    q = QTimer()
 
     results = []
 
@@ -46,8 +36,5 @@ def test_threads_iterator():
         assert sum(results) == 3
 
     t = threads.QThreadFutureIterator(testiterator, callback_slot=callback, finished_slot=check)
+    t.start()
 
-    q.singleShot(1000, t.start)
-    q.singleShot(2000, app.quit)
-
-    app.exec_()

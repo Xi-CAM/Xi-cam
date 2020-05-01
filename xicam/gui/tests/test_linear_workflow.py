@@ -105,8 +105,6 @@ def simple_workflow(square_op, sum_op):
     from xicam.core.execution.workflow import Workflow
     from xicam.core.execution.daskexecutor import DaskExecutor
 
-    executor = DaskExecutor()
-
     wf = Workflow()
 
     square = square_op()
@@ -126,12 +124,9 @@ def simple_workflow(square_op, sum_op):
 @pytest.fixture
 def custom_parameter_workflow(qfit):
     from xicam.core.execution.workflow import Workflow
-    from xicam.core.execution.daskexecutor import DaskExecutor
     from xicam.plugins import manager
 
     manager.collect_plugins()
-
-    executor = DaskExecutor()
 
     wf = Workflow()
 
