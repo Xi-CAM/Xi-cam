@@ -36,7 +36,7 @@ deps = [
     "pathlib",
     "qtpy",
     "astropy",
-    "numpy",
+    "numpy>=1.16.0",
     "appdirs",
     "qdarkstyle",
     "qtmodern",
