@@ -66,7 +66,7 @@ Now that we have activated a new **xicam** environment and installed **PyQt5**,
 we can install Xi-CAM:
 
 ```
-pip install xicam2
+pip install xicam
 ```
 
 To ensure everything is installed correctly, you can run Xi-CAM as follows:

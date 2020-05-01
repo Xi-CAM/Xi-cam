@@ -75,7 +75,7 @@ conda activate xicam
 
 conda install -c conda-forge pyqt
 
-pip install xicam2
+pip install xicam
 
 xicam
 ```
