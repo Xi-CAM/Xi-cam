@@ -1,5 +1,0 @@
-[run]
-omit = tests/*
-    core/tests/*
-    plugins/tests/*
-    gui/tests/*

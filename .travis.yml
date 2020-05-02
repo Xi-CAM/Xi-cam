@@ -11,7 +11,6 @@ matrix:
         - pip install .[docs] # only build docs on linux
         - (cd docs && make html)
         - bash <(curl -s https://codecov.io/bash)
-        - coveralls
 
     - os: windows
       language: shell
@@ -26,7 +25,7 @@ branches:
   only:
     - master
 
-env: TRAVIS=true
+env: TRAVIS=True
 
 sudo: false
 
