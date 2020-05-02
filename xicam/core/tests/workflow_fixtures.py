@@ -4,63 +4,62 @@ from xicam.core import execution
 from xicam.core.execution import localexecutor
 from xicam.core.execution.workflow import Graph, Workflow
 from xicam.plugins import OperationPlugin
-from xicam.plugins.operationplugin import output_names, operation
+from xicam.plugins.operationplugin import output_names, operation, display_name
 from pyqtgraph.parametertree import Parameter
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def graph():
     return Graph()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def square_op():
     @operation
-    def my_square(n: int) -> int:
+    def square(n: int) -> int:
         return n * n
 
-    return my_square
+    return square()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def sum_op():
     @operation
-    def my_sum(n1: int, n2: int) -> int:
+    def sum(n1: int, n2: int) -> int:
         return n1 + n2
 
-    return my_sum
+    return sum()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def negative_op():
     @operation
-    def my_negative(num: int) -> int:
+    def negative(num: int) -> int:
         return -1 * num
 
-    return my_negative
+    return negative()
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def simple_workflow(square_op, sum_op):
     from xicam.core.execution.workflow import Workflow
 
     wf = Workflow()
 
-    square = square_op()
-    square2 = square_op()
+    square = square_op
+    square2 = square_op.__class__()
     square2.filled_values["n1"] = 2
-    my_sum = sum_op()
 
     wf.add_operation(square)
     wf.add_operation(square2)
-    wf.add_operation(my_sum)
-    wf.add_link(square, my_sum, "square", "n1")
-    wf.add_link(square2, my_sum, "square", "n2")
+    wf.add_operation(sum_op)
+    wf.add_link(square, sum_op, "square", "n1")
+    wf.add_link(square2, sum_op, "square", "n2")
 
     return wf
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def custom_parameter_op():
     class CustomParameterOp(OperationPlugin):
         def __init__(self):
@@ -80,7 +79,7 @@ def custom_parameter_op():
     return CustomParameterOp
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def custom_parameter_workflow(custom_parameter_op):
     from xicam.core.execution.workflow import Workflow
 
