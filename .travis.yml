@@ -26,6 +26,8 @@ branches:
   only:
     - master
 
+env: TRAVIS=true
+
 sudo: false
 
 cache:
