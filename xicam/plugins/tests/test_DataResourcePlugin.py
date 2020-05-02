@@ -2,7 +2,7 @@ from pytestqt import qtbot
 
 
 def test_IDataSourcePlugin(qtbot):
-    from ..dataresourceplugin import DataResourcePlugin, DataSourceListModel
+    from xicam.plugins.dataresourceplugin import DataResourcePlugin, DataSourceListModel
 
     class SpotDataResourcePlugin(DataResourcePlugin):
         def __init__(
@@ -64,3 +64,4 @@ def test_IDataSourcePlugin(qtbot):
 
     spot = SpotDataResourcePlugin()
     assert spot.rowCount()
+    qtbot.addWidget(spot)
