@@ -1,7 +1,14 @@
 # QuickStart Guide
 
 This is a quick-start guide that will help you install Xi-CAM
-and create a simple plugin inside of Xi-CAM.
+and explore an example plugin that you can experiment with.
+
+For more in-depth documentation for developing plugins from scratch,
+see:
+
+* [GUIPlugin documentation](gui-plugin.md)
+* [OperationPlugin documentation](operation-plugin.md)
+* [Workflow documentation](workflow.md)
 
 ## Install Xi-CAM
 
@@ -14,24 +21,159 @@ instructions for your operating system:
 
 ## Overview
 
-Let's dive into an example first that we can explore.
+In this guide we will:
 
-We will create a `GUIPlugin` - 
-this will be a plugin that you will be able to select and see within Xi-CAM.
-We can define the looks and feel of the `GUIPlugin` by using a `GUILayout`.
+* Explore the main window of Xi-CAM
+* Download and install an Example Plugin
+* Configure a sample catalog so we can load data
+* Explore the Example Plugin
 
-We will also create a few `OperationPlugins` - 
-These plugins are basically functions that take in data
-and output derived data.
+## Loking at Xi-CAM's Main Window
 
-After creating some `OperationPlugins`,
-we will need a way to actually run data through the operations.
-To do this, we will add these `OperationPlugins` into a `Workflow`.
-Then, we will create a button in the GUI to execute the workflow.
+Let's look at what the main window in Xi-CAM looks like first:
 
-Note that starting code for this guide can be found
-[here](https://github.com/Xi-CAM/Xi-CAM.ExamplePlugin).
+```eval_rst
+.. figure:: _static/xicam-main.png
+  :alt: Xi-CAM main window after loading.
 
+  The main window of Xi-CAM after it has finished loading.
+```
+
+When Xi-CAM finishes loading, we see the window as shown above.
+Any installed plugins will be visible (and selectable) at the top
+(note that you will probably not have any installed yet).
+
+We can also see some of the default widgets provided:
+* a welcome widget in the *center* of the window
+* a preview widget in the top-left (*lefttop*) of the window,
+which shows a sample of selected data in the data browser widget
+* a data browser widget on the *left* of the window,
+which can show available databroker catalogs
+
+### Quick GUILayout Overview
+
+We mentioned the terms *center*, *lefttop*, and *left* above.
+These correspond to a `GUILayout`,
+which can be thought of as a 3 row by 3 column layout.
+
+Here is a *quick* overview of how the Xi-CAM main window is organized:
+
+```eval_rst
+.. figure:: _static/xicam-layout.png
+  :alt: Layout of Xi-CAM's main window
+
+  The layout of Xi-CAM's main window.
+```
+
+You can see that the layout of Xi-CAM follows a 3x3 grid,
+where each section is named according to its orientation in relation to the center
+of the window.
+
+(Note that any `GUIPlugins` you create will have one or more of these `GUILayouts`).
+
+### Xi-CAM Menu Bar
+
+At the top of the main window,
+there is a menu bar that contains some helpful items.
+
+In the `File` item you can find `Settings` for Xi-CAM.
+This includes things like:
+
+* Logging configuration - where to find the log files, what type of logging record...
+* Theme - change the appearance of Xi-CAM
+* ...
+
+In the `Help` item you can find a link to the Xi-CAM documentation,
+a way to contact the development team,
+and versioning / licensing information for Xi-CAM.
+
+## Download and Install the ExamplePlugin
+
+Now that we have looked at the main window and its layout,
+let's download the Example Plugin.
+
+```bash
+cd ~
+git clone https://github.com/Xi-CAM/Xi-CAM.ExamplePlugin
+cd Xi-CAM.ExamplePlugin
+```
+
+### What's Inside the ExamplePlugin Repository
+
+The repository will contain the following:
+
+```eval_rst
+.. figure:: _static/xicam-example-plugin-dirs.png
+  :alt: Contents of ExamplePlugin repo
+
+  The contents of the ExamplePlugin repo when you clone it.
+```
+
+At the top there are a few files and directories:
+
+* `setup.py` - describes how to install this as a python package;
+**also used to register plugins (via entry points)**.
+* `configure` - special directory for this example, helps set up a catalog
+* `xicam` - directory that acts as a python namespace package
+
+In `xicam`, there is a `exampleplugin` subpackage that contains:
+
+* `__init__.py` - makes `exampleplugin` a python package; also exposes the `ExamplePlugin` class
+* `exampleplugin.py` - module that contains the `ExamplePlugin` GUI plugin
+* `operations.py` - module that contains the example `OperationPlugins`
+* `workflows.py` - module that contains the example `Workflows`
+
+### How Do I Install the Example Plugin?
+
+So far, we have only downloaded the Example Plugin -
+we still need to install it so Xi-CAM can find it and load it.
+
+We can install downloaded plugins using a *pip editable install*:
+
+```bash
+pip install -e .
+```
+
+#### Entry Points
+
+If you are interested in how this works,
+here's a short summary of how the Example Plugin defines entry points
+so Xi-CAM can find the plugins here.
+(There is more information in the documentation;
+for purposes of this quick start guide, we won't go into too much detail.)
+
+There are some entry points defined in the `setup.py` file
+that will tell Xi-CAM what plugins it can find:
+
+```python
+entry_points={
+    'xicam.plugins.GUIPlugin':
+        ['example_plugin = xicam.exampleplugin:ExamplePlugin'],
+    'xicam.plugins.OperationPlugin':
+        [
+            'invert_operation = xicam.exampleplugin.operations:invert',
+            'random_noise_operation = xicam.exampleplugin.operations:random_noise'
+        ]
+    }
+```
+
+In short, Xi-CAM will see the `xicam.plugins.GUIPlugin` entry point key 
+and load in the `ExamplePlugin` defined (in the value).
+Similarly, Xi-CAM will see the `xicam.plugins.Operation` entry point key
+and load in `invert` and `random_noise` operations.
+
+### Run Xi-CAM
+
+When you run `xicam`, 
+you should now see the Example Plugin available at the top right of the main window.
+
+### Setting up the Example Catalog
+
+Now that we have the Example Plugin installed,
+
+## Exploring the Example Plugin
+
+---
 ## Xi-CAM Main Window
 
 Let's look at what the main window looks like first:
