@@ -1,18 +1,7 @@
-def makeapp():
-    from qtpy.QtWidgets import QApplication
-
-    app = QApplication([])
-    return app
+from pytestqt import qtbot
 
 
-def mainloop():
-    from qtpy.QtWidgets import QApplication
-
-    app = QApplication.instance()
-    app.exec_()
-
-
-def test_IDataSourcePlugin():
+def test_IDataSourcePlugin(qtbot):
     from ..dataresourceplugin import DataResourcePlugin, DataSourceListModel
 
     class SpotDataResourcePlugin(DataResourcePlugin):

@@ -4,7 +4,7 @@ from xicam.core import execution
 from xicam.core.execution import localexecutor
 from xicam.core.execution.workflow import Graph, Workflow
 from xicam.plugins import OperationPlugin
-from xicam.plugins.operationplugin import output_names
+from xicam.plugins.operationplugin import output_names, operation
 
 
 # Note that this test relies on the xicam.plugins module
@@ -12,33 +12,7 @@ from xicam.plugins.operationplugin import output_names
 execution.executor = localexecutor.LocalExecutor()
 
 
-@pytest.fixture
-def graph():
-    return Graph()
 
-
-@pytest.fixture
-def sum_op():
-    def my_sum(n1: int, n2: int) -> int:
-        return n1 + n2
-
-    return OperationPlugin(my_sum, output_names=("sum",))
-
-
-@pytest.fixture
-def square_op():
-    def my_square(n: int) -> int:
-        return n * n
-
-    return OperationPlugin(my_square, output_names=("square",))
-
-
-@pytest.fixture
-def negative_op():
-    def my_negative(num: int) -> int:
-        return -1 * num
-
-    return OperationPlugin(my_negative, output_names=("negative",))
 
 
 class TestGraph:
