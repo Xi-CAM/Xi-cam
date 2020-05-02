@@ -8,12 +8,7 @@ matrix:
       before_install:
         - python --version
         - pip install --upgrade pip  # doesn't work on windows
-        - sudo apt-get install -y xvfb herbstluftwm dzen2-textwidth
-        - "export DISPLAY=:99.0"
-        - "/sbin/start-stop-daemon --start --quiet --pidfile /tmp/custom_xvfb_99.pid --make-pidfile --background --exec /usr/bin/Xvfb -- :99 -screen 0 1920x1200x24 -ac +extension GLX +render -noreset"
-        - sleep 3
-      before_script:
-        - "herbstluftwm &"
+        - export DISPLAY=:99.0
       after_success:
         - pip install .[docs] # only build docs on linux
         - (cd docs && make html)
