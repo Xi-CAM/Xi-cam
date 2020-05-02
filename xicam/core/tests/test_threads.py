@@ -19,6 +19,8 @@ def test_threads(qtbot):
     t.start()
     t2.start()
 
+    qtbot.waitSignals([t.sigFinished, t2.sigFinished])
+
 
 def test_threads_iterator(qtbot):
     from xicam.core import threads
@@ -37,4 +39,5 @@ def test_threads_iterator(qtbot):
 
     t = threads.QThreadFutureIterator(testiterator, callback_slot=callback, finished_slot=check)
     t.start()
+    qtbot.waitSignal(t.sigFinished)
 
