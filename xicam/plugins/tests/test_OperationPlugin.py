@@ -142,7 +142,7 @@ class TestOutputNames:
         assert hasattr(my_op, "output_names") is False
         # Test Operation API
         op = operation(my_op)
-        assert op.output_names == "my_op"
+        assert op.output_names == ("my_op", )
         # Expecting a msg.WARNING log record that mentions "output_names"
         expected_warn_record = caplog.records[0]
         assert expected_warn_record.levelno == msg.WARNING
