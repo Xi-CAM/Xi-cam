@@ -4,7 +4,7 @@ This documentation provides information on the foundational aspects
 of the OperationPlugin class, as well as a more detailed API reference.
 
 *If you are new to developing Xi-CAM plugins,
-it is recommended that you follow the [QuickStart Guide](quickstart.md) first.*
+it is recommended that you follow the quick-start documentation first.*
 
 ## What Is an OperationPlugin?
 
@@ -186,9 +186,3 @@ More information about `Workflow` can be found in the [Workflow Documentation](w
 .. automodule:: xicam.plugins.operationplugin
     :members:
 ```
-
-## See Also
-
-* [QuickStart Guide](quickstart.md)
-* [GUIPlugin Documentation](gui-plugin.md)
-* [Workflow Documentation](workflow.md)

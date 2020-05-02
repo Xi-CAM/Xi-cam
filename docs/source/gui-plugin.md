@@ -1,6 +1,20 @@
 TODO: 
 Use cookiecutter here to have uniform starting point for plugin creation
 
+We will create a `GUIPlugin` - 
+this will be a plugin that you will be able to select and see within Xi-CAM.
+We can define the looks and feel of the `GUIPlugin` by using a `GUILayout`.
+
+We will also create a few `OperationPlugins` - 
+These plugins are basically functions that take in data
+and output derived data.
+
+After creating some `OperationPlugins`,
+we will need a way to actually run data through the operations.
+To do this, we will add these `OperationPlugins` into a `Workflow`.
+Then, we will create a button in the GUI to execute the workflow.
+
+
 # GUIPlugin Documentation
 
 This documentation provides information on GUIPlugins and GUILayouts
@@ -8,7 +22,7 @@ to help with designing your own plugins for Xi-CAM.
 API reference documentation is also included at the bottom.
 
 *If you are new to developing Xi-CAM plugins,
-it is recommended that you follow the [QuickStart Guide](quickstart.md) first.*
+it is recommended that you follow the quick-start documentation first.*
 
 ## What Is A GUIPlugin?
 
@@ -16,8 +30,7 @@ A GUIPlugin is an interactive user-facing plugin in Xi-CAM.
 It can be used to visualize and analyze data.
 
 GUIPlugins make use of the `qtpy` Python package for interactive GUI components.
-See the
-[Resources](resources.md) page for more information about Qt and QtPy.
+See the resources documentation for more information.
 
 ### Where is GUIPlugin?
 

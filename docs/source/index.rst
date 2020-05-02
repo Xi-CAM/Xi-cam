@@ -33,7 +33,7 @@ Before starting to develop plugins, you will need to install Xi-CAM and some
 of its dependencies.
 
 Follow the QuickStart_ guide to get started with installation and
-developing your first Xi-CAM plugin (covers GUIPlugin, Workflow, and OperationPlugins).
+exploring an example Xi-CAM plugin (covers GUIPlugin, Workflow, and OperationPlugins).
 
 For more detailed documentation, you may want to visit the following:
 

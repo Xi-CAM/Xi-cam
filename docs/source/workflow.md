@@ -3,7 +3,7 @@
 This documentation provides information on the `Worfklow` class and its API reference.
 
 *If you are new to developing Xi-CAM plugins,
-it is recommended that you follow the [QuickStart Guide](quickstart.md) first.*
+it is recommended that you follow the quick-start documentation first.*
 
 Note that the examples in this documentation can be run in a python interpreter outside of Xi-CAM
 (for demonstration purposes).
