@@ -403,7 +403,6 @@ def operation(
     if type(output_names) is str:
         output_names = (output_names,)
 
-    print('name: ', name or getattr(func, "name", getattr(func, "__name__", None)))
     state = {  # "_func": func,
         "name": name or getattr(func, "name", getattr(func, "__name__", None)),
         # Fallback to inspecting the function arg names if no input names provided
