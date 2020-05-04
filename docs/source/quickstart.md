@@ -3,6 +3,8 @@
 This is a quick-start guide that will help you install Xi-CAM
 and explore an example plugin that you can experiment with.
 
+This guide does not explore the implementation of the plugin
+in too much detail.
 For more in-depth documentation for developing plugins from scratch,
 see:
 
@@ -28,7 +30,7 @@ In this guide we will:
 * Configure a sample catalog so we can load data
 * Explore the Example Plugin
 
-## Loking at Xi-CAM's Main Window
+## Looking at Xi-CAM's Main Window
 
 Let's look at what the main window in Xi-CAM looks like first:
 
@@ -134,13 +136,12 @@ We can install downloaded plugins using a *pip editable install*:
 pip install -e .
 ```
 
+This uses Python's **entry points** mechanism to register plugins for Xi-CAM to see.
+
 #### Entry Points
 
 If you are interested in how this works,
-here's a short summary of how the Example Plugin defines entry points
-so Xi-CAM can find the plugins here.
-(There is more information in the documentation;
-for purposes of this quick start guide, we won't go into too much detail.)
+here's a short summary of how the Example Plugin defines entry points.
 
 There are some entry points defined in the `setup.py` file
 that will tell Xi-CAM what plugins it can find:
@@ -157,7 +158,7 @@ entry_points={
     }
 ```
 
-In short, Xi-CAM will see the `xicam.plugins.GUIPlugin` entry point key 
+Xi-CAM will see the `xicam.plugins.GUIPlugin` entry point key 
 and load in the `ExamplePlugin` defined (in the value).
 Similarly, Xi-CAM will see the `xicam.plugins.Operation` entry point key
 and load in `invert` and `random_noise` operations.
@@ -247,17 +248,16 @@ You should see Clyde the cat loaded into the center `CatalogView`.
 ### Running a Workflow
 
 In our Example Plugin,
-there is an `ExampleWorkflow` that contains two `OperationPlugins`:
+we have a `WorkflowEditor` widget on the right side,
+that has been created using an `ExampleWorkflow`.
+The `ExampleWorkflow` contains two `OperationPlugins`:
 
 * `invert` - inverts its input image
 * `random_noise` - applies random noise to its input image,
 has a "strength" parameter to define how much noise to apply to the image
 
-We can see this workflow and its operations
-on the right side of the Example Plugin's interface.
-
 Now that we have loaded some data,
-let's run our workflow, by clicking the "Run Workflow" button.
+let's run our workflow by clicking the "Run Workflow" button.
 
 ```eval_rst
 .. figure:: _static/example-plugin-results.png
@@ -267,6 +267,60 @@ let's run our workflow, by clicking the "Run Workflow" button.
   Note that the color lookup table can be changed by right-clicking the gradient bar.
 ```
 
+You should see an inverted picture with some random noise added to it.
+
+Note that you can adjust the amount of random noise
+by selecting the "random_noise" text in the `WorkkflowEditor`,
+then changing the value of "strength" that shows up in the parameter tree above.
+
+## Examining the Code
+
+Let's take a quick look at how the code is implemented for our Example Plugin.
+
+The code for this particular plugin is organized into three modules:
+
+* `exampleplugin.py` - Defines the `ExamplePlugin` (the GUIPlugin)
+* `operations.py` - Defines two `OperationPlugins`: invert and random_noise
+* `workflows.py` - Defines an `ExampleWorkflow` with the invert and random_noise operations
+
+### operations.py
+
+Here we define `OperationPlugins` (or operation)
+
+An operation can be thought of as a function;
+input data is sent into the operation,
+and the operation generates some output with the given input.
+
+When defining an `OperationPlugin`,
+we use Python decorators (the `@` seen in the code).
+At the very least, 
+you must provide the `@operation` and `@output_names` decorators for an operation.
+
+### workflows.py
+
+Here we define an `ExampleWorkflow`.
+
+We add our two operations to the `ExampleWorkflow`,
+then connect them so that `invert`'s "output_image" value is sent to `random_noise`'s input image argument.
+
+### exampleplugin.py
+
+Here we define the gui plugin `ExamplePlugin`.
+
+We provide a `name` for the plugin,
+which will display as "Example Plugin" in Xi-CAM.
+
+We define our widgets, our layout,
+and any internal objects we might need (like the workflow) inside of our `__init__` method.
+We connect the `WorkflowEditor`'s `sigRunWorkflow` signal
+to our `run_workflow` method.
+This means whenever "Run Workflow" is clicked in the WorkflowEditor,
+our `ExamplePlugin`'s `run_workflow` method will be called.
+
+We also define a `results_ready` method
+that will be called whenever our workflow has finished executing its operations.
+Providing `callback_slot=self.results_ready` in our `execute` call
+sets up this connection for us.
 
 ---
 ## Xi-CAM Main Window
