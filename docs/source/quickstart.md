@@ -162,16 +162,111 @@ and load in the `ExamplePlugin` defined (in the value).
 Similarly, Xi-CAM will see the `xicam.plugins.Operation` entry point key
 and load in `invert` and `random_noise` operations.
 
-### Run Xi-CAM
+### Exploring the Example Plugin Interface
 
 When you run `xicam`, 
 you should now see the Example Plugin available at the top right of the main window.
 
-### Setting up the Example Catalog
+Select it and you should the Example Plugin layout:
+
+```eval_rst
+.. figure:: _static/example-plugin-annotated.png
+  :alt: Annotated layout of Example Plugin
+
+  The Example Plugin.
+  Uses a CatalogView, DynImageView, and WorkflowEditor as widgets in its layout.
+```
+
+In the center, we have a `CatalogView` that will be used to display loaded data.
+On the right, there is a `WorkflowEditor`
+that shows the operations in the workflow
+and allows for running the workflow.
+At the bottom, there is a `DynImageView`, which will be used to display the results data.
+
+## How Do I Load Data?
 
 Now that we have the Example Plugin installed,
+we need to have data to load into it.
 
-## Exploring the Example Plugin
+For purposes of this guide,
+we will be configuring a catalog called "example-catalog."
+
+For more information,
+see the [Bluesky DataBroker documentation](https://blueskyproject.io/databroker/v2/index.html).
+
+### Configuring a Catalog
+
+There is a `configure/` directory in the repository we cloned.
+This contains a catalog configuration file, a msgpack catalog, and a script.
+
+Feel free to inspect the script before you run it;
+it will attempt to set up a msgpack catalog source for Xi-CAM to use:
+
+```bash
+cd configure
+python setup_catalog.py
+cd ..
+```
+
+### Loading a Catalog from the Data Resource Browser
+
+Now that we've configured the catalog,
+let's make sure that Xi-CAM can see it.
+
+Look at the *Data Resource Browser* on the left hand side of the window.
+After configuring our example catalog,
+it should have the text "example-catalog" in the *Catalog* drop-down box.
+
+Notice that it also has two text inputs, *Since* and *Until*.
+Our example catalog was created in the beginning of 2020.
+In order to see the data (catalogs) our "example-catalog" contains,
+we need to change the *Since* text input.
+
+Change it's value to "2020-01-01".
+This will now look for any data that was created since the start of 2020.
+After making this change,
+the example-catalog will be re-queried for data created within these new dates.
+
+You should see a catalog show up in the table below with the id *349497da*.
+If you *single-click* the row in the table to highlight it,
+more information and a preview of the data should be shown as well.
+You can then open it with the "Open" button.
+
+```eval_rst
+.. figure:: _static/example-plugin-loaded-catalog.png
+  :alt: 
+
+  Here we see catalog 349497da in the DataResourceBrowser.
+  It has one stream (primary) with 10 events in it.
+  A preview shows the first frame of the data,
+  and the opened data appears in the center.
+```
+
+You should see Clyde the cat loaded into the center `CatalogView`.
+
+### Running a Workflow
+
+In our Example Plugin,
+there is an `ExampleWorkflow` that contains two `OperationPlugins`:
+
+* `invert` - inverts its input image
+* `random_noise` - applies random noise to its input image,
+has a "strength" parameter to define how much noise to apply to the image
+
+We can see this workflow and its operations
+on the right side of the Example Plugin's interface.
+
+Now that we have loaded some data,
+let's run our workflow, by clicking the "Run Workflow" button.
+
+```eval_rst
+.. figure:: _static/example-plugin-results.png
+  :alt: Resulting image after running workflow in the Example Plugin.
+
+  The result data after running the workflow.
+  Note that the color lookup table can be changed by right-clicking the gradient bar.
+```
+
 
 ---
 ## Xi-CAM Main Window
