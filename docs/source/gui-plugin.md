@@ -220,7 +220,14 @@ In order to load data into a `GUIPlugin`, you must:
 
 ### Configuring a Databroker Catalog
 
+For general help about databroker, catalogs, and configuration,
+there is excellent documentation here: https://nsls-ii.github.io/databroker/v2/index.html
 
+For a specific example file,
+you can download the `ExamplePlugin` repo (used in the quick-start guide).
+This will give you an example catalog (`configure/SOME_UID.msgpack`)
+and configuration file (`configure/catalog.yml`)
+You may inspect the `configure/setup_catalog.py` script to see how to install the provided example catalog.
 
 ### Implementing appendCatalog
 
@@ -267,5 +274,7 @@ class MyPlugin(GUIPlugin):
 
 ```eval_rst
 .. autoclass:: xicam.plugins.guiplugin.GUIPlugin
+   :members:
+.. autoclass:: xicam.plugins.guiplugin.GUILayout
    :members:
 ```
