@@ -1,7 +1,10 @@
 """TODO Module docstring"""
 import inspect
+from functools import partial
 from typing import Collection, Tuple, Type, Union, List, Callable, Sequence
 from collections import namedtuple, OrderedDict
+
+from pyqtgraph.parametertree import Parameter
 
 from xicam.core import msg
 
@@ -300,8 +303,56 @@ class OperationPlugin(PluginType):
                 parameter_dicts.append(parameter_dict)
         return parameter_dicts
 
-    def wireup_parameter(self, parameter):
-        print(parameter)
+    def wireup_parameter(self, parameter: Parameter):
+        """Wire up a Parameter (created from an operation) to update the operation's state.
+
+        Updates the operation's values (filled_values) if the Parameter values are changed.
+        Updates the operatin's fixed state if the Parameter's fixed state is changed.
+
+        This is useful when you want to interact with an operations inputs in a GUI
+        by using something like a ParameterTree (see example).
+
+        Parameters
+        ----------
+        parameter : Parameter
+            A pyqtgraph Parameter created from an operation (via `as_parameter()`)
+
+        Example
+        -------
+        >>> from pyqtgraph.parametertree import ParameterTree
+        >>> from pyqtgraph.parametertree.parameterTypes import GroupParameter
+        >>> from qtpy.QtWidgets import QApplication, QMainWindow
+        >>> from xicam.plugins.operationplugin import operation, output_names
+        >>> @operation
+        >>> @output_names("sum")
+        >>> def my_operation(x: float = 1.0, y: float = 2.0):
+        >>>     return x + y
+        >>> qapp = QApplication([])
+        >>> parameter_tree = ParameterTree()
+        >>> op = my_operation()
+        >>> parameter = GroupParameter(name=op.name, children=op.as_parameter())
+        >>> op.wireup_parameter(parameter)
+        >>> parameter_tree.addParameters(parameter)
+        >>> window = QMainWindow()
+        >>> window.setCentralWidget(parameter_tree)
+        >>> window.show()
+        >>> qapp.exec_()
+        """
+        for child, param in zip(parameter.children(), self.as_parameter()):
+            # wireup signals to update the workflow
+            if param.get('fixable'):
+                child.sigFixToggled.connect(self._set_fixed)
+            print(child.name())
+            child.sigValueChanged.connect(lambda *args: print(args))
+            child.sigValueChanged.connect(self._set_value)
+
+    def _set_fixed(self, param: Parameter, value):
+        """Update the fixed state for the operation when it is toggled in the corresponding Parameter."""
+        self.fixed[param.name()] = value
+
+    def _set_value(self, param: Parameter, value):
+        """Update the value for an operation when it is changed in he corresponding Parameter."""
+        self.filled_values[param.name()] = value
 
 
 def operation(func: Callable,

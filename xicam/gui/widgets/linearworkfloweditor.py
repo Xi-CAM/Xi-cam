@@ -54,25 +54,15 @@ class WorkflowEditor(QSplitter):
     def run_workflow(self, _):
         self.workflow.execute(**self.kwargs)
 
-    def setFixed(self, operation: OperationPlugin, param: Parameter, value):
-        operation.fixed[param.name()] = value
-
-    def setValue(self, operation: OperationPlugin, param: Parameter, value):
-        operation.filled_values[param.name()] = value
-
     def setParameters(self, operation: OperationPlugin):
         if operation:
+            # Create a new Parameter from the emitted operation,
+            # Then wire up its connections for use in a parameter tree.
             parameter = operation.as_parameter()
             group = GroupParameter(name='Selected Operation', children=parameter)
             operation.wireup_parameter(group)
-            for child, parameter in zip(group.children(), parameter):
-                # wireup signals to update the workflow
-                if parameter.get('fixable'):
-                    child.sigFixToggled.connect(partial(self.setFixed, operation))
-                print(child.name())
-                child.sigValueChanged.connect(lambda *args: print(args))
-                child.sigValueChanged.connect(partial(self.setValue, operation))
 
+            # Add the Parameter to the parameter tree
             group.blockSignals(True)
             for child in group.children():
                 child.blockSignals(True)
