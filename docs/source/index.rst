@@ -20,6 +20,7 @@ The documentation is organized as follows:
    install-macos
    install-windows
    gui-plugin
+   entry-points
    operation-plugin
    workflow
    resources
