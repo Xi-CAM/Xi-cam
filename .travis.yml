@@ -6,12 +6,13 @@ matrix:
       services:
         - xvfb
       before_install:
+        - python --version
         - pip install --upgrade pip  # doesn't work on windows
+        - export DISPLAY=:99.0
       after_success:
         - pip install .[docs] # only build docs on linux
         - (cd docs && make html)
         - bash <(curl -s https://codecov.io/bash)
-        - coveralls
 
     - os: windows
       language: shell
@@ -25,6 +26,8 @@ matrix:
 branches:
   only:
     - master
+
+env: TRAVIS=True
 
 sudo: false
 

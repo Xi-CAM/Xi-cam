@@ -1,8 +1,11 @@
 from pytestqt import qtbot
-from xicam.gui.windows.mainwindow import XicamMainWindow
+from xicam.run_xicam import _main
+import sys
 
 
 def test_application(qtbot):
-    window = XicamMainWindow()
-    qtbot.addWidget(window)
-    qtbot.waitForWindowShown(window)  # give it time to finish loading
+    sys.argv = sys.argv[:1]
+    main_window = _main([], exec=False)
+    qtbot.addWidget(main_window)
+    qtbot.wait(6000)  # give it time to finish loading
+    qtbot.waitForWindowShown(main_window)

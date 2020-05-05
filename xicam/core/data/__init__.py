@@ -120,19 +120,24 @@ def load_header(uris: List[Union[str, Path]] = None, uuid: str = None):
     if not Path(filename).exists():
         raise FileExistsError(f"Attempted to load non-existent file: {filename}")
 
-    mimetypes = detect_mimetypes(filename)
-    msg.logMessage(f"Mimetypes detected: {mimetypes}")
+    try:
+        mimetypes = detect_mimetypes(filename)
+    except UnknownFileType as ex:
+        msg.logError(ex)
+        mimetypes = []
+    else:
+        msg.logMessage(f"Mimetypes detected: {mimetypes}")
 
-    # TODO: here, we try each valid mimetype; some GUI for selection will be needed
+        # TODO: here, we try each valid mimetype; some GUI for selection will be needed
 
-    for mimetype in mimetypes:
-        try:
-            ingestor = choose_ingestor(filename, mimetype)
-        except NoIngestor as e:
-            pass
-        else:
-            msg.logMessage(f"Ingestor selected: {ingestor}")
-            break
+        for mimetype in mimetypes:
+            try:
+                ingestor = choose_ingestor(filename, mimetype)
+            except NoIngestor as e:
+                pass
+            else:
+                msg.logMessage(f"Ingestor selected: {ingestor}")
+                break
 
     if ingestor:
         document = list(ingestor(uris))
