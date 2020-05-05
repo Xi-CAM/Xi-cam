@@ -30,6 +30,23 @@ In this guide we will:
 * Configure a sample catalog so we can load data
 * Explore the Example Plugin
 
+### Key Concepts
+
+Here is a quick overview of some concepts that will be explored in this guide.
+Note that more documentation is available for each of these concepts.
+
+We have one `GUIPlugin` (`ExamplePlugin`) - 
+this will be a plugin that you will be able to select and see within Xi-CAM.
+The layout of the `GUIPlugin` is defined by a `GUILayout`.
+
+We have a few `OperationPlugins` (`invert` and `random_noise`) - 
+These plugins are basically functions that take in data
+and output derived data.
+
+We also need a way to actually run data through the operations.
+To do this, we have a `Workflow` (`ExampleWorkflow`) -
+this contains linked operations to execute (can be thought of like a pipeline).
+
 ## Looking at Xi-CAM's Main Window
 
 Let's look at what the main window in Xi-CAM looks like first:
@@ -42,7 +59,7 @@ Let's look at what the main window in Xi-CAM looks like first:
 ```
 
 When Xi-CAM finishes loading, we see the window as shown above.
-Any installed plugins will be visible (and selectable) at the top
+Any installed **GUIPlugins** will be visible (and selectable) at the top
 (note that you will probably not have any installed yet).
 
 We can also see some of the default widgets provided:
@@ -55,9 +72,7 @@ which can show available databroker catalogs
 ### Quick GUILayout Overview
 
 We mentioned the terms *center*, *lefttop*, and *left* above.
-These correspond to a `GUILayout`,
-which can be thought of as a 3 row by 3 column layout.
-
+These correspond to positions in a `GUILayout`.
 Here is a *quick* overview of how the Xi-CAM main window is organized:
 
 ```eval_rst
@@ -138,31 +153,6 @@ pip install -e .
 
 This uses Python's **entry points** mechanism to register plugins for Xi-CAM to see.
 
-#### Entry Points
-
-If you are interested in how this works,
-here's a short summary of how the Example Plugin defines entry points.
-
-There are some entry points defined in the `setup.py` file
-that will tell Xi-CAM what plugins it can find:
-
-```python
-entry_points={
-    'xicam.plugins.GUIPlugin':
-        ['example_plugin = xicam.exampleplugin:ExamplePlugin'],
-    'xicam.plugins.OperationPlugin':
-        [
-            'invert_operation = xicam.exampleplugin.operations:invert',
-            'random_noise_operation = xicam.exampleplugin.operations:random_noise'
-        ]
-    }
-```
-
-Xi-CAM will see the `xicam.plugins.GUIPlugin` entry point key 
-and load in the `ExamplePlugin` defined (in the value).
-Similarly, Xi-CAM will see the `xicam.plugins.Operation` entry point key
-and load in `invert` and `random_noise` operations.
-
 ### Exploring the Example Plugin Interface
 
 When you run `xicam`, 
@@ -214,6 +204,10 @@ cd ..
 Now that we've configured the catalog,
 let's make sure that Xi-CAM can see it.
 
+**When loading a catalog into Xi-CAM,
+you must have a GUIPlugin active.** 
+Let's select our "Example Plugin."
+
 Look at the *Data Resource Browser* on the left hand side of the window.
 After configuring our example catalog,
 it should have the text "example-catalog" in the *Catalog* drop-down box.
@@ -247,14 +241,14 @@ You should see Clyde the cat loaded into the center `CatalogView`.
 
 ### Running a Workflow
 
-In our Example Plugin,
-we have a `WorkflowEditor` widget on the right side,
-that has been created using an `ExampleWorkflow`.
-The `ExampleWorkflow` contains two `OperationPlugins`:
+Our Example Plugin has one internal workflow, the `ExampleWorkflow`.
+The `ExampleWorkflow` contains two `OperationPlugins` (operations):
 
 * `invert` - inverts its input image
 * `random_noise` - applies random noise to its input image,
 has a "strength" parameter to define how much noise to apply to the image
+
+This workflow is exposed in the GUI with a `WorkflowEditor` on the right side of the layout.
 
 Now that we have loaded some data,
 let's run our workflow by clicking the "Run Workflow" button.
@@ -321,231 +315,3 @@ We also define a `results_ready` method
 that will be called whenever our workflow has finished executing its operations.
 Providing `callback_slot=self.results_ready` in our `execute` call
 sets up this connection for us.
-
----
-## Xi-CAM Main Window
-
-Let's look at what the main window looks like first:
-
-```eval_rst
-.. figure:: _static/xicam-main.png
-  :alt: Xi-CAM main window after loading.
-
-  The main window of Xi-CAM after it has finished loading.
-```
-
-When Xi-CAM finishes loading, we see the window as shown above.
-Any installed plugins will be visible (and selectable) at the top
-(note that you will probably not have any installed yet).
-
-We can also see some of the default widgets provided:
-* a welcome widget in the *center* of the window
-* a preview widget in the top-left (*lefttop*) of the window
-* a data browser widget on the *left* of the window
-
-When creating our GUIPlugin, we will provide our own *center* widget,
-but we will not be modifying the *lefttop* or the *left* widgets.
-
-## GUIPlugin
-
-Now that we have a basic overview of the Xi-CAM main window,
-we need to create and install a GUIPlugin for Xi-CAM.
-
-A GUIPlugin is the user-facing plugin that you will see when loading Xi-CAM
-(they will show up in the top area of the main window).
-
-### Clone the ExamplePlugin Repository
-
-For purposes of this quick-start tutorial,
-we will create a GUIPlugin named "Example Plugin".
-
-Go ahead and open a terminal (or if on Windows, you can use your Anaconda prompt)
-and make sure that your xicam environment that you created is active.
-
-`cd` to a directory of your choice (like your home directory),
-then get the starting code:
-
-```bash
-git clone https://github.com/Xi-CAM/Xi-CAM.ExamplePlugin
-cd Xi-CAM.ExamplePlugin
-```
-
-### Install the ExamplePlugin
-
-Now that we have downloaded the starting code for our `ExamplePlugin`,
-we need to actually *install* the plugin so Xi-CAM can see it.
-
-To do this, we use what's called an *editable pip install*.
-Ensuring that you are in the `Xi-CAM.ExamplePlugin` directory, run:
-
-```bash
-pip install -e .
-```
-
-Next, run xicam:
-
-```bash
-xicam
-```
-
-You should now have "Example Plugin" appear at the top of your Xi-CAM window.
-
-### Exploring the ExamplePlugin
-
-Go ahead and click on the "Example Plugin" text;
-this will select and activate the `ExamplePlugin` GUIPlugin.
-
-```eval_rst
-.. figure:: _static/xicam-example-plugin.png
-  :alt: Interface for the Example Plugin
-
-  The interface for the "Example Plugin".
-```
-
-Notice that the top has the "Example Plugin" selected.
-All this GUIPlugin contains right now is the text "Stage 1..." in the center of the window.
-
-### Modifying the ExamplePlugin
-
-Let's make some modifications to the `ExamplePlugin` so it can load an image from a local databroker.
-
-Go ahead and close Xi-CAM.
-
-#### Configuring the Sample Databroker Catalog
-
-First, we will need to configure a catalog called "example-catalog" for Xi-CAM to find with databroker.
-
-There should be a `configure/` directory in the repository we cloned.
-This contains a catalog configuration file, a msgpack catalog, and a script.
-
-Feel free to inspect the script before you run it;
-it will attempt to set up a msgpack catalog source for Xi-CAM to use:
-
-```bash
-cd configure
-python setup_catalog.py
-cd ..
-```
-
-##### Data Resource Browser
-
-Now that we've configured the catalog,
-let's make sure that Xi-CAM can see it.
-
-Look at the *Data Resource Browser* on the left hand side of the window.
-After configuring our example catalog,
-it should have the text "example-catalog" in the *Catalog* drop-down box.
-
-Notice that it also has two text inputs, *Since* and *Until*.
-Our example catalog was created in the beginning of 2020.
-In order to see the data (catalogs) our "example-catalog" contains,
-we need to change the *Since* text input.
-
-Change it's value to "2020-01-01".
-This will now look for any data that was created since the start of 2020.
-After making this change,
-the example-catalog will be re-queried for data created within these new dates.
-
-You should see a catalog show up in the table below with the id *349497da*.
-If you *single-click* the row in the table to highlight it,
-more information and a preview of the data should be shown as well:
-
-```eval_rst
-.. figure:: _static/xicam-example-catalog.png
-  :alt: Our example-catalog showing a catalog and preview.
-
-  Here we see catalog 349497da.
-  It has one stream (primary) with 10 events in it.
-  A preview shows the first frame of the data,
-  which is a picture of Clyde the cat.
-```
-
-#### Trying to Load the Catalog
-
-Let's see what happens if we try to load the catalog.
-
-Try load the 349497da catalog by either
-double-clicking it or selecting it and clicking the "Open" button.
-
-You will get an error asking you to select a GUIPlugin before loading a catalog.
-This is an important point to remember:
-
-**When loading a catalog into Xi-CAM,
-you must have a GUIPlugin active.**
-
-So, go ahead and select the "Example Plugin".
-If you try to open the catalog now,
-you still will not see anything loaded into the "Example Plugin".
-
-This is the second point to remember when trying to load catalogs:
-
-**In order to load a catalog into your GUIPlugin,
-you must implement the `appendCatalog` method in your GUIPlugin.**
-
-#### Implementing appendCatalog
-
-Let's implement the `appendCatalog` method in `ExamplePlugin`
-so we can load the catalog.
-We will also be adding a widget to view the loaded catalog.
-
-Inside of the `ExamplePlugin` class,
-add the `appendCatalog` as follows:
-
-```python
-from qtpy.QtWidgets import QLabel
-
-from xicam.core.msg import logMessage
-from xicam.plugins import GUILayout, GUIPlugin
-from xicam.gui.widgets.imageviewmixins import CatalogView
-
-
-class ExamplePlugin(GUIPlugin):
-    # Define the name of the plugin (how it is displayed in Xi-CAM)
-    name = "Example Plugin"
-
-    def __init__(self, *args, **kwargs):
-        self._catalog_viewer = CatalogView()
-        self._stream = "primary"
-        self._field = "img"
-
-        catalog_viewer_layout = GUILayout(self._catalog_viewer)
-                
-        # Modify stages here
-        # self.stages = {"Stage 1": GUILayout(QLabel("Stage 1..."))}
-        self.stages = {"View Catalog": catalog_viewer_layout}
-
-        super(ExamplePlugin, self).__init__(*args, **kwargs)
-
-    def appendCatalog(self, catalog):
-        self._catalog_viewer.setCatalog(catalog, self._stream, self._field)
-        logMessage(f"Opening catalog with stream {self._stream} and field {self._field}.")
-        
-
-```
-
-#### Changing the Layout
-
-
-
-## OperationPlugin
-
-Now that we have our GUIPlugin created and installed in Xi-CAM,
-we can start creating our operations.
-
-An operation can be thought of as a function; input data is sent into the operation,
-and the operation generates some output with the given input.
-
-The OperationPlugin API makes use of python decorators for easily defining
-and creating operations.
-
-In the 
-
-## Workflow
-
-
-####NOTES TO SELF
-* Write a demo repo for this, with good commits
-* Quickstarting can be exploring the completed demo
-* Need to provide catalog example data, catalog file, how to do...
-
-* Move the details about implementing the Example Plugin into GUIPlugin
