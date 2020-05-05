@@ -27,6 +27,9 @@ An introduction to git and GitHub.
 
 Useful resources about NSLS-II software that Xi-CAM uses.
 
+* [Databroker Catalog](https://nsls-ii.github.io/databroker/v2/index.html) -
+Describes how to configure and use a databroker catalog.
+
 * [Event Model](https://nsls-ii.github.io/architecture-overview.html) -
 Describes an event-based data model.
 
