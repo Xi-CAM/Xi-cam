@@ -106,12 +106,12 @@ class OperationPlugin(PluginType):
     -----
     This class formally deprecates usage of the `ProcessingPlugin` API.
 
-    Examples
+    Example
     --------
     Here, we define a function, then wrap it with the OperationPlugin decorator to make it an operation.
-    >>>@OperationPlugin\
-    def my_operation(x: int = 1, y: int = 2): -> int\
-        return x + y
+    >>> @OperationPlugin
+    >>> def my_operation(x: int = 1, y: int = 2): -> int
+    >>>     return x + y
 
     """
     needs_qt = False
@@ -410,22 +410,20 @@ def operation(func: Callable,
     categories : List[Union[tuple, str], optional
         A sequence of categories to associate with this operation.
 
-    Examples
+    Example
     --------
     Create a new operation type and create a new operation instance from it.
 
-    >>>from xicam.core.execution import Workflow\
-    from xicam.plugins.operationplugin import operation, output_names\
-    \
-    @operation\
-    @output_names("my_output")\
-    def my_func(x: float = 0.0) -> float:\
-        return x * -1\
-    \
-    op = my_func()\
-    workflow = Workflow()\
-    result = workflow.execute(x=2.5).result()\
-    print(result)
+    >>> from xicam.core.execution import Workflow
+    >>> from xicam.plugins.operationplugin import operation, output_names
+    >>> @operation
+    >>> @output_names("my_output")
+    >>> def my_func(x: float = 0.0) -> float:
+    >>>     return x * -1
+    >>> op = my_func()
+    >>> workflow = Workflow()
+    >>> result = workflow.execute(x=2.5).result()
+    >>> print(result)
 
     """
 
@@ -485,14 +483,14 @@ def display_name(name):
     name : str
         Name for the operation.
 
-    Examples
+    Example
     --------
     Create an operation whose display name is "Cube Operation."
 
-    >>>@OperationPlugin\
-    @display_name('Cube Operation')\
-    def cube(n: int = 2) -> int:\
-        return n**3
+    >>> @OperationPlugin
+    >>> @display_name('Cube Operation')
+    >>> def cube(n: int = 2) -> int:
+    >>>     return n**3
     """
 
     def decorator(func):
@@ -514,14 +512,14 @@ def units(arg_name, unit):
     unit : str
         Unit of measurement descriptor to use (e.g. "mm").
 
-    Examples
+    Example
     --------
     Create an operation where its `x` parameter has its units defined in microns.
 
-    >>>@OperationPlugin\
-    @units('x', '\u03BC'+'m')\
-    def op(x: float = -1) -> float:\
-        return x *= -1.0
+    >>> @OperationPlugin
+    >>> @units('x', '\u03BC'+'m')
+    >>> def op(x: float = -1) -> float:
+    >>>     return x *= -1.0
     """
 
     def decorator(func):
@@ -568,22 +566,22 @@ def limits(arg_name, limit):
     limit : tuple[float]
         A 2-element sequence representing the lower and upper limit.
 
-    Examples
+    Example
     --------
     Make an operation that has a limit on the `x` parameter from [0, 100].
 
-    >>>@OperationPlugin\
-    @limits('x', [0, 100])\
-    def op(x):\
-        ...
+    >>> @OperationPlugin
+    >>> @limits('x', [0, 100])
+    >>> def op(x):
+    >>>     ...
 
     Make an operation that has a limit on the `x` parameter from [0.0, 1.0].
 
-    >>>@OperationPlugin\
-    @limits('x', [0.0, 1.0])\
-    @opts('x', step=0.1)\
-    def op(x):\
-        ...
+    >>> @OperationPlugin
+    >>> @limits('x', [0.0, 1.0])
+    >>> @opts('x', step=0.1)
+    >>> def op(x):
+    >>>     ...
 
     """
 
@@ -627,15 +625,15 @@ def input_names(*names):
     If not provided, input names will be determined by examining the names of the arguments
     to the operation function.
 
-    Examples
+    Example
     --------
     Create an addition operation and use the names "first" and "second" for the input names
     instead of the function arg names (x and y).
 
-    >>>@OperationPlugin\
-    @input_names("first", "second")\
-    def my_add(x: int, y: int) -> int:\
-        return x + y
+    >>> @OperationPlugin
+    >>> @input_names("first", "second")
+    >>> def my_add(x: int, y: int) -> int:
+    >>>     return x + y
     """
 
     def decorator(func):
@@ -656,14 +654,14 @@ def output_names(*names):
     names : List[str]
         Names for the outputs in the operation.
 
-    Examples
+    Example
     --------
     Define an operation that has the outputs `x` and `y`.
 
-    >>>@OperationPlugin\
-    @output_names("x", "y")\
-    def some_operation(a: int, b: int) -> Tuple[int, int]:\
-        return a, b
+    >>> @OperationPlugin
+    >>> @output_names("x", "y")
+    >>> def some_operation(a: int, b: int) -> Tuple[int, int]:
+    >>>     return a, b
 
     """
 
@@ -685,7 +683,7 @@ def output_shape(arg_name: str, shape: Union[int, Collection[int]]):
     shape : int or tuple of ints
         N-element tuple representing the shape (dimensions) of the output.
 
-    Examples
+    Example
     --------
     TODO
     """
@@ -707,14 +705,14 @@ def visible(arg_name: str, is_visible=True):
     is_visible : bool, optional
         Whether or not to make the input visible or not (default is True).
 
-    Examples
+    Example
     --------
     Define an operation that makes the data_image invisible to the GUI (when using `as_parameter()` and pyqtgraph).
 
-    >>>@OperationPlugin\
-    @visible('data_image')\
-    def threshold(data_image: np.ndarray, threshold: float = 0.5) -> np.ndarray:\
-        return ...
+    >>> @OperationPlugin
+    >>> @visible('data_image')
+    >>> def threshold(data_image: np.ndarray, threshold: float = 0.5) -> np.ndarray:
+    >>>     return ...
 
     """
 
@@ -740,14 +738,14 @@ def opts(arg_name: str, **options):
     options : keyword args
         Keyword arguments that can be used for the rendering backend (pyqtgraph).
 
-    Examples
+    Example
     --------
     Define an operation where the `x` input is readonly.
 
-    >>>@OperationPlugin\
-    @opts('x', 'readonly'=True)\
-    def op(x: str = 100) -> str:\
-        return x
+    >>> @OperationPlugin
+    >>> @opts('x', 'readonly'=True)
+    >>> def op(x: str = 100) -> str:
+    >>>     return x
     """
 
     def decorator(func):
@@ -781,14 +779,14 @@ def describe_input(arg_name: str, description: str):
     description : str
         A human-readable description of the input `arg_name`
 
-    Examples
+    Example
     --------
-    Define an operation where the `x` input is readonly.
+    Define an operation and attach a description to its `x` input argument.
 
-    >>>@OperationPlugin\
-    @describe_input('x', 'The value to square.')\
-    def square(x: int = 100) -> int:\
-        return x**2
+    >>> @OperationPlugin
+    >>> @describe_input('x', 'The value to square.')
+    >>> def square(x: int = 100) -> int:
+    >>>     return x**2
     """
 
     return _describe_arg('input', arg_name, description)
@@ -808,15 +806,15 @@ def describe_output(arg_name: str, description: str):
     description : str
         A human-readable description of the output `arg_name`.
 
-    Examples
+    Example
     --------
-    Define an operation where the `x` input is readonly.
+    Define an operation and attach a description to its `square` output.
 
-    >>>@OperationPlugin\
-    @output_names('square')\
-    @describe_output('square', 'The squared value of x.')\
-    def square(x: int = 100) -> int:\
-        return x**2
+    >>> @OperationPlugin
+    >>> @output_names('square')
+    >>> @describe_output('square', 'The squared value of x.')
+    >>> def square(x: int = 100) -> int:
+    >>>     return x**2
     """
 
     return _describe_arg('output', arg_name, description)
@@ -833,20 +831,20 @@ def categories(*categories: Tuple[Union[tuple, str]]):
         A sequence of categories. Each item is a tuple or str. If an item is a tuple, each item in the tuple is considered
         as an additional depth in the menu structure.
 
-    Examples
+    Example
     --------
-    Define an operation where the `x` input is readonly.
+    Define an operation that is in the following categories::
 
-    >>>@OperationPlugin\
-    @categories(('Generic Functions', 'Simple Math'), 'Math Functions')\
-    def square(x: int = 100) -> int:\
-        return x**2
+        Generic Functions
+            Simple Math
+                (square operation)
+        Math Functions
+                (square operation)
 
-    Generic Functions
-        Simple Math
-            Square
-    Math Functions
-        Square
+    >>> @OperationPlugin
+    >>> @categories(('Generic Functions', 'Simple Math'), 'Math Functions')
+    >>> def square(x: int = 100) -> int:
+    >>>     return x**2
     """
 
     def decorator(func):
