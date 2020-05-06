@@ -62,7 +62,7 @@ xicam
 
 You are now ready to start developing plugins for Xi-CAM!
 
-You may wish to consult the [Resources Documentation](resources.md) as well for more information.
+To learn about developing plugins for Xi-CAM, see the [Quick Start Guide](quickstart.md).
 
 ## Copyable Instructions
 

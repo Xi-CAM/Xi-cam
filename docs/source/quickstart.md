@@ -98,7 +98,7 @@ This includes things like:
 
 * Logging configuration - where to find the log files, what type of logging record...
 * Theme - change the appearance of Xi-CAM
-* ...
+* Device settings - allows managing different devices (detectors) (if you have Acquire or SAXS installed)
 
 In the `Help` item you can find a link to the Xi-CAM documentation,
 a way to contact the development team,

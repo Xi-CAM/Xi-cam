@@ -6,7 +6,7 @@ you will be ready to start developing Xi-CAM plugins!
 
 ## Install python3
 
-First, ensure that you have **python3** installed on your system.
+First, ensure that you have **python3.7** installed on your system.
 
 Consult your specific distribution's package manager for installing python3.
 
@@ -28,6 +28,8 @@ sequestered xicam environment. *(If using conda, you can install either with pip
 
 ### virtualenv
 
+If you would like to create a virtual environment, run the following:
+
 ```
 cd ~
 python3 -m venv xicam
@@ -36,9 +38,11 @@ source xicam/bin/actviate
 
 ### conda
 
+If you would like to create an environment through conda, run the following:
+
 ```
 cd ~
-conda create -n xicam
+conda create -n xicam python=3.7
 conda activate xicam
 ```
 
@@ -74,4 +78,4 @@ xicam
 
 You are now ready to start developing plugins for Xi-CAM!
 
-You may wish to consult the [Resources Documentation](resources.md) as well for more information.
+To learn about developing plugins for Xi-CAM, see the [Quick Start Guide](quickstart.md).

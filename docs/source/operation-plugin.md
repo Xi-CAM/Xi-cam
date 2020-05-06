@@ -4,7 +4,9 @@ This documentation provides information on the foundational aspects
 of the OperationPlugin class, as well as a more detailed API reference.
 
 *If you are new to developing Xi-CAM plugins,
-it is recommended that you follow the quick-start documentation first.*
+it is recommended that you follow the [quick-start documentation](quickstart.md) first.*
+
+For more general development resources, see the [Resources](resources.md) page.
 
 ## What Is an OperationPlugin?
 
@@ -56,7 +58,7 @@ This will be useful when connecting multiple operations together in a `Workflow`
 
 ### Default Input Values
 
-If you want to provide you operation with default input values,
+If you want to provide your operation with default input values,
 you can use argument defaults in your function:
 
 ```python

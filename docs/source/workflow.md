@@ -3,7 +3,9 @@
 This documentation provides information on the `Worfklow` class and its API reference.
 
 *If you are new to developing Xi-CAM plugins,
-it is recommended that you follow the quick-start documentation first.*
+it is recommended that you follow the [quick-start documentation](quickstart.md) first.*
+
+For more general development resources, see the [Resources](resources.md) page.
 
 Note that the examples in this documentation can be run in a python interpreter outside of Xi-CAM
 (for demonstration purposes).
@@ -12,7 +14,7 @@ When developing within Xi-CAM, you will **not** need the lines of code marked wi
 
 ## What Is a Workflow?
 
-In Xi-CAM, a `Workflow` is a graph-like structure that represents a sequence of one or more `OperationPlugins` to execute.
+In Xi-CAM, a `Workflow` is represents a sequence of one or more `OperationPlugins` to execute.
 Basically, it allows you to process data through some pipeline of operations. 
 Multiple operations can be linked together in a `Workflow`,
 provided that the connection between any two operations is compatible (based on inputs and outputs).
@@ -87,8 +89,17 @@ In this case, we will use `execute_synchronous` (there are other methods for exe
 However, if we just were to try ```workflow.execute_synchronous()```,
 the workflow wouldn't know what the "x" and "y" inputs are supposed to be for the first operation, `add_op`.
 
-**We need to pass in data for any first operations' inputs when we execute our workflow**.
-To do this, we simply pass in `x=1` and `y=3` to our `execute_synchronous` call.
+We can either:
+1. pass in data into the *first* operation(s)' inputs when we call an execute method on the workflow
+1. have a GUI widget that exposes the operations through the GUI (such as `WorkflowEditor`),
+which can provide values directly to the operations' inputs
+
+In this example,
+we used option 1
+(for an example of option 2,
+see the `ExamplePlugin`'s use of `WorkflowEditor` in the [quick-start documentation](quickstart.md)).
+To do this, we passed `x=1` and `y=3` to our `execute_synchronous` call,
+which provided values for the `invert` operation's `x` and `y` input arguments.
 
 ## Useful Methods for Modifying the Workflow
 
@@ -140,14 +151,14 @@ There are a few ways to run a Workflow: `execute`, `execute_synchronous`, and `e
 
 ### Synchronous Execution
 
-As we saw in our example earlier, we can use `execute_syncrhonous` to run a Workflow as a normal snippet of Python code.
+As we saw in our example earlier, we can use `execute_synchronous` to run a Workflow as a normal snippet of Python code.
 When this method is run, the we wait until we get a result back before the interpreter can continue running code.
 
 ### Asynchronous Execution (Recommended)
 
 The `execute` and `execute_all` methods are asynchronous, so they run in a separate thread.
-This is highly beneficial in a GUI environment like Xi-CAM,
-since we don't want to block Xi-CAM's UI from responding,
+_This is highly beneficial in a GUI environment like Xi-CAM,
+since we don't want to block Xi-CAM's UI from responding,_
 and we could potentially offload execution onto a remote device.
 These methods take in several parameters; for now, we will focus on three of these parameters:
 
@@ -287,8 +298,8 @@ workflow.add_operations(add_op, sqrt_op)
 # Link the "sum" output of add_op to the "n" input of sqrt_op
 workflow.add_link(add_op, sqrt_op, "sum", "n")
 
-# Execute the workflow, sending 1 and 3 as initial inputs to add_op (the first operation)
-# This should give us sqrt(1 + 3) -> 2.0.
+# Execute the workflow, sending the inputs x=1,y=3; x=10,y=15; x=50,y=50.
+# This should give us 2.0, 5.0, and 10.0.
 workflow.execute_all(callback_slot=print_result,
                     finished_slot=finished,
                     x=[1, 10, 50],

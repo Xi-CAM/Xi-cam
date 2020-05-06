@@ -5,7 +5,9 @@ to help with designing your own plugins for Xi-CAM.
 API reference documentation is also included at the bottom.
 
 *If you are new to developing Xi-CAM plugins,
-it is recommended that you follow the quick-start documentation first.*
+it is recommended that you follow the [quick-start documentation](quickstart.md) first.*
+
+For more general development resources, see the [resources documentation](resources.md).
 
 ## What Is A GUIPlugin?
 
@@ -31,7 +33,7 @@ First, let's look at what Xi-CAM looks like when you first load it:
 
 Main window of Xi-CAM when running xicam.
 Note that there are three installed `GUIPlugins` here;
-if you haven't installed any plugins, you won't any listed.
+if you haven't installed any plugins, you won't see any listed.
 ```
 
 As you can see, the main window of Xi-CAM after it has finished loading
@@ -60,6 +62,7 @@ we recommend using a `cookiecutter` template that we have created for Xi-CAM's `
 ### What is cookiecutter?
 
 `cookiecutter` is a templating tool that can be used to interactively create python project.
+For more information, see the [cookiecutter documentation]( https://cookiecutter.readthedocs.io).
 
 #### Install cookiecutter
 
@@ -81,12 +84,21 @@ A prompt will look like `prompt [default value]: `.
 If you want to use the default value specified, hit the enter key.
 Otherwise, respond to the prompt with the value you would like.
 
-Here are a few of the prompts and their descriptions:
+Here are the prompts with their descriptions:
 
-* package_name \[my_plugin\] - name of the package to create (will be xicam.package_name)
-* plugin_name \[MyPlugin\] - name of the GUIPlugin class to create (the name of your GUIPlugin in code)
-* display_name \[My Plugin\]- name of the plugin as it will appear in the Xi-CAM GUI
-* plugin_file_name \[\_\_init\_\_.\]py - name of the file to put in the starter plugin code
+prompt | default value | description 
+--- | --- | ---
+package_name     | my_plugin           | name of the package to create (will be `xicam.package_name`)
+plugin_name      | MyPlugin            | name of the GUIPlugin class to create (name of your gui plugin in code)
+display_name     | My Plugin           | name of the GUIPlugin as it will appear in the Xi-CAM GUI
+plugin_version   | 1.0.0               | current plugin version number
+plugin_file_name | \_\_init\_\_.py     | name of the file to put the starting plugin code into
+author_name      |                     | author's name
+author_email     |                     | author's email
+author_url       |                     | url for the author/plugin (e.g. plugin GitHub repo url)
+description      |                     | description of the plugin
+dependencies     |                     | packages the plugin depends on
+keywords         | \[Xi-cam, plugin\]  | keywords to tag the plugin with (when packaging)
 
 This will create a python package with some files and code to get started developing a GUIPlugin.
 **You can always change the names of your plugin, package, etc. later by hand.**
@@ -96,8 +108,19 @@ we will refer to these values by their defaults.
 
 ### Installing Your GUIPlugin
 
-After creating a package with cookiecutter,
-navigate to your created package directory and create an editable pip install:
+When you create a new plugin package using cookiecutter,
+one of the files it generates is `setup.py`.
+This contains meta-information about the package.
+When you run `pip install` of your package,
+it uses this information to create a disribution.
+
+**`setup.py` also defines entry points,
+which Xi-CAM uses to find plugins.**
+
+For more information about entry points in Xi-CAM,
+see the [following documentation](entry-points.md).
+
+Navigate to your created package directory and create an editable pip install:
 
 ```bash
 cd xicam.my_plugin
@@ -220,14 +243,55 @@ In order to load data into a `GUIPlugin`, you must:
 
 ### Configuring a Databroker Catalog
 
-For general help about databroker, catalogs, and configuration,
-there is excellent documentation here: https://nsls-ii.github.io/databroker/v2/index.html
+For purposes of this documentation,
+we will be using a sample msgpack catalog and a starter catalog.yml file you can download.
 
-For a specific example file,
-you can download the `ExamplePlugin` repo (used in the quick-start guide).
-This will give you an example catalog (`configure/SOME_UID.msgpack`)
-and configuration file (`configure/catalog.yml`)
-You may inspect the `configure/setup_catalog.py` script to see how to install the provided example catalog.
+For general help about databroker, catalogs, and configuration,
+there is excellent documentation here: https://nsls-ii.github.io/databroker/v2/index.html.
+Additional documentation about catalogs can be found here:
+https://intake.readthedocs.io/en/latest/index.html
+
+```eval_rst
+=============================================================================================================== ================================
+Download                                                                                                        MD5
+=============================================================================================================== ================================
+:download:`349497da-ead2-4015-8201-4719f8a2de69.msgpack<_static/349497da-ead2-4015-8201-4719f8a2de69.msgpack>`  3a18341f570b100afbaff1c889e9b4f8
+:download:`catalog.yml<_static/catalog.yml>`                                                                    c14814b4537810f14300f8c8d5949285
+=============================================================================================================== ================================
+```
+
+After downloading these files, we will want to do three things:
+
+1. Decide where to put our data and move it there
+1. Update our `catalog.yml` `paths` to have a path directory the data is in
+1. Move our `catalog.yml` to a place it can be discovered
+
+#### Moving the msgpack Data
+
+You can choose where you'd like to copy or move your data.
+For purposes of this guide,
+we will create a new directory in our home called `catalogs`
+and move the downloaded msgpack file there.
+
+#### Updating catalog.yml
+
+Now that we've moved / copied our sample catalog msgpack file,
+we need to update our `catalog.yml` to tell it where it can find that data.
+
+We will want to add a line under `paths` in `catalog.yml`
+that is the complete file path to the `catalogs` directory we added above.
+
+#### Making catalog.yml Discoverable
+
+To know where we can put our `catalog.yml` file,
+we can run the following in a Python interpreter:
+
+```python
+from databroker import catalog_search_path
+print(catalog_search_path())
+```
+
+You can move the `catalog.yml` file in any of the paths listed.
 
 ### Implementing appendCatalog
 
@@ -235,7 +299,7 @@ Let's implement the `appendCatalog` method in `MyPlugin`
 so we can load the catalog.
 We will also be adding a widget to view the loaded catalog.
 
-Inside of the `MyPlugin` class,
+Inside of the `MyPlugin` class (located in `xicam/my_plugin/__init__.py`),
 add the `appendCatalog` as follows:
 
 ```python
