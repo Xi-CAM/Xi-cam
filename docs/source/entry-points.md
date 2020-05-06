@@ -1,8 +1,13 @@
 # Entry Points
 
 An entry point is a mechanism that can be used to make objects discoverable by a common interface / name.
-In Xi-CAM, can define entry points to register our plugins so that Xi-CAM can see our plugins when it loads.
-Entry points are defined in `setup.py` files.
+
+## Xi-CAM Entry Points
+
+In Xi-CAM, you can define entry points
+and `pip install -e .` in your plugin package directory to register plugins.
+This allows Xi-CAM to see our plugins when it loads.
+Entry points are defined in `setup.py` files, in the `entry_points` key.
 
 Let's look at an example repository and `setup.py`:
 
@@ -51,3 +56,11 @@ it will see the `xicam.plugins.GUIPlugin` entry point key
 and load in `MyGUIPlugin` defined (in the value).
 Similarly, Xi-CAM will see the `xicam.plugins.OperationPlugin` entry point key
 and load in the `laplace` and `sobel` operations.
+
+## More Information
+
+For more information about entry points, see the following:
+
+* https://entrypoints.readthedocs.io/en/latest/
+* https://packaging.python.org/specifications/entry-points/
+* https://amir.rachum.com/blog/2017/07/28/python-entry-points/
