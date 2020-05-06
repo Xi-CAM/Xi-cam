@@ -64,7 +64,7 @@ logger.setLevel("DEBUG")  # minimum level shown
 
 # Create a formatter that all handlers below can use for formatting their log messages
 # format = "%(asctime)s - %(name)s - %(module)s:%(lineno)d - %(funcName)s - "
-format = "%(asctime)s - %(caller_name)s - %(levelname)s - %(threadName)s - %(message)s"
+format = "%(asctime)s - %(caller_name)s - %(levelname)s - %(threadName)s > %(message)s"
 date_format = "%a %b %d %H:%M:%S %Y"
 formatter = logging.Formatter(fmt=format, datefmt=date_format)
 
