@@ -15,9 +15,9 @@ class DaskFlow(FlowchartCtrlWidget):
         super(DaskFlow, self).__init__(self.flowchart)
 
     def fromDask(self, workflow: Workflow):
-        for process in workflow.processes:
-            node = Node(process.name, terminals={"inputTerminalName": {"io": "in"}, "outputTerminalName": {"io": "out"}})
-            self.flowchart.addNode(node, process.name)
+        for operation in workflow.operations:
+            node = Node(operation.name, terminals={"inputTerminalName": {"io": "in"}, "outputTerminalName": {"io": "out"}})
+            self.flowchart.addNode(node, operation.name)
 
 
 # -*- coding: utf-8 -*-

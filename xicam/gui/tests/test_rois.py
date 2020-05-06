@@ -18,4 +18,4 @@ def test_arcroi(qtbot):
 
     assert np.sum(roi.getArrayRegion(np.ones((10, 10)))) == 16
 
-    qtbot.waitSignal(imageview.destroyed, timeout=None)
+    qtbot.waitForWindowShown(imageview)

@@ -1,18 +1,18 @@
-def test_daskflow():
-    from qtpy.QtWidgets import QApplication
+from pytestqt import qtbot
+from xicam.core.tests.workflow_fixtures import simple_workflow, square_op, sum_op
 
-    app = QApplication([])
+
+def test_daskflow(qtbot, simple_workflow):
+
+
     from pyqtgraph.flowchart import Node, Terminal
 
     # COREDUMPS HERE!
     a = Terminal(Node("test1"), "test1", "in")
 
     from xicam.gui.widgets.daskflow import DaskFlow
-    from xicam.SAXS.calibration.workflows import FourierCalibrationWorkflow
 
     df = DaskFlow()
-    workflow = FourierCalibrationWorkflow()
-    df.fromDask(workflow)
-    df.show()
+    df.fromDask(simple_workflow)
 
-    app.exec_()
+    qtbot.addWidget(df)

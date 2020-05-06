@@ -4,7 +4,9 @@ from xicam.core import execution
 from xicam.core.execution import localexecutor
 from xicam.core.execution.workflow import Graph, Workflow
 from xicam.plugins import OperationPlugin
-from xicam.plugins.operationplugin import output_names
+from xicam.plugins.operationplugin import output_names, operation
+
+from xicam.core.tests.workflow_fixtures import graph, sum_op, square_op, negative_op
 
 
 # Note that this test relies on the xicam.plugins module
@@ -12,33 +14,7 @@ from xicam.plugins.operationplugin import output_names
 execution.executor = localexecutor.LocalExecutor()
 
 
-@pytest.fixture
-def graph():
-    return Graph()
 
-
-@pytest.fixture
-def sum_op():
-    def my_sum(n1: int, n2: int) -> int:
-        return n1 + n2
-
-    return OperationPlugin(my_sum, output_names=("sum",))
-
-
-@pytest.fixture
-def square_op():
-    def my_square(n: int) -> int:
-        return n * n
-
-    return OperationPlugin(my_square, output_names=("square",))
-
-
-@pytest.fixture
-def negative_op():
-    def my_negative(num: int) -> int:
-        return -1 * num
-
-    return OperationPlugin(my_negative, output_names=("negative",))
 
 
 class TestGraph:
@@ -78,7 +54,7 @@ class TestGraph:
         def my_sqrt(num):
             return math.sqrt(num)
 
-        sqrt_op = OperationPlugin(my_sqrt, output_names=("sqrt"))
+        sqrt_op = operation(my_sqrt, output_names=("sqrt"))()
         graph.add_operation(sqrt_op)
         # sum -> square -> sqrt
         #   \               |
@@ -277,7 +253,7 @@ class TestGraph:
         # Connect sum_op to square_op.
         # Connect sum_op to my_op's x, square_op to my_op's y.
         # Leave negative_op unconnected
-        my_op = OperationPlugin(my_func, output_names=("y", "x"))
+        my_op = operation(my_func, output_names=("y", "x"))()
         graph.add_operations(sum_op, square_op, negative_op, my_op)
         graph.add_link(sum_op, square_op, "sum", "n")
         graph.add_link(sum_op, my_op, "sum", "x")
@@ -339,7 +315,7 @@ class TestGraph:
         def my_func(x: int, y: int) -> (int, int):
             return y, x
 
-        my_op = OperationPlugin(my_func, output_names=("y", "x"))
+        my_op = operation(my_func, output_names=("y", "x"))()
         graph.add_operations(sum_op, my_op)
         link1 = (my_op, sum_op, "y", "n1")
         link2 = (my_op, sum_op, "x", "n2")
@@ -369,7 +345,7 @@ class TestGraph:
         def my_func(x: int, y: int) -> (int, int):
             return y, x
 
-        my_op = OperationPlugin(my_func, output_names=("y", "x"))
+        my_op = operation(my_func, output_names=("y", "x"))()
         graph.add_operations(sum_op, square_op, negative_op, my_op)
         link1 = (my_op, sum_op, "y", "n1")
         link2 = (my_op, sum_op, "x", "n2")
@@ -480,8 +456,8 @@ class TestGraph:
         def my_decrement(increment: float) -> float:
             return increment - 1
 
-        increment_op = OperationPlugin(my_increment, output_names=("increment",))
-        decrement_op = OperationPlugin(my_decrement, output_names=("end_result",))
+        increment_op = operation(my_increment, output_names=("increment",))()
+        decrement_op = operation(my_decrement, output_names=("end_result",))()
         graph.add_operations(increment_op, decrement_op)
         graph.auto_connect_all()
         assert graph.links() == [(increment_op, decrement_op, "increment", "increment")]
@@ -493,8 +469,8 @@ class TestGraph:
         def my_decrement(m: int) -> int:
             return m - 1
 
-        increment_op = OperationPlugin(my_increment, output_names=("increment",))
-        decrement_op = OperationPlugin(my_decrement, output_names=("decrement",))
+        increment_op = operation(my_increment, output_names=("increment",))()
+        decrement_op = operation(my_decrement, output_names=("decrement",))()
         graph.add_operations(increment_op, decrement_op)
         graph.auto_connect_all()
         assert graph.links() == []
@@ -507,8 +483,8 @@ class TestGraph:
         def my_decrement(increment: int) -> int:
             return increment - 1
 
-        increment_op = OperationPlugin(my_increment, output_names=("increment",))
-        decrement_op = OperationPlugin(my_decrement, output_names=("end_result",))
+        increment_op = operation(my_increment, output_names=("increment",))()
+        decrement_op = operation(my_decrement, output_names=("end_result",))()
         graph.add_operations(increment_op, decrement_op)
         graph.auto_connect_all()
         assert graph.links() == [(increment_op, decrement_op, "increment", "increment")]
@@ -528,19 +504,18 @@ class TestWorkflow:
     def test_execute_no_operations(self):
         workflow = Workflow("Test Workflow")
         results = workflow.execute().result()
-        assert results is ({},)
+        assert results == ({},)
 
     def test_execute_operation_no_default_no_value(self, sum_op):
         # not sure how to test this....
-        with pytest.raises(TypeError):
-
-            def handle_exception(exception):
+        def handle_exception(exception):
+            with pytest.raises(TypeError):
                 raise exception
 
-            workflow = Workflow()
-            workflow.add_operation(sum_op)
-            results = workflow.execute(except_slot=handle_exception).result()
-            print(results)
+        workflow = Workflow()
+        workflow.add_operation(sum_op)
+        results = workflow.execute(except_slot=handle_exception).result()
+        print(results)
 
     def test_execute_operation_no_default(self, sum_op):
         workflow = Workflow()
@@ -549,7 +524,7 @@ class TestWorkflow:
         assert results == ({"sum": 15},)
 
     def test_execute_operation_default_input_value(self):
-        @OperationPlugin
+        @operation
         @output_names("doubled")
         def double_op(x=10):
             return x * 2
@@ -567,12 +542,12 @@ class TestWorkflow:
         assert results == ({"sum": 0})
 
     def test_execute_no_links(self):
-        @OperationPlugin
+        @operation
         @output_names("doubled")
         def double_op(n):
             return n * 2
 
-        @OperationPlugin
+        @operation
         @output_names("tripled")
         def triple_op(n):
             return n * 3

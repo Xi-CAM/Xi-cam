@@ -1,20 +1,8 @@
 import pytest
+from pytestqt import qtbot
 
 
-@pytest.yield_fixture(autouse=True)
-def with_QApplication():
-    # Code that will run before your test
-    from qtpy.QtWidgets import QApplication
-
-    app = QApplication([])
-    # A test function will be run at this point
-    yield app
-    # Code that will run after your test, for example:
-    # ... do something to check the existing files
-    # assert QApplication.exec_() == 0
-
-
-def test_EZPlugin():
+def test_EZPlugin(qtbot):
     from xicam.plugins import EZPlugin
     from xicam.gui.static import path
     from xicam.core.data import NonDBHeader
@@ -40,17 +28,3 @@ def test_EZPlugin():
     )
     return EZTest
 
-
-if __name__ == "__main__":
-    from qtpy.QtWidgets import QApplication
-
-    app = QApplication([])
-    from xicam import run_xicam
-    from xicam.plugins import EZPlugin
-    from xicam.gui.static import path
-    from xicam.core.data import NonDBHeader
-
-    plugin = test_EZPlugin()
-    run_xicam.main()
-
-    app.exec_()

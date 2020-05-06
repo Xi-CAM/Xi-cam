@@ -133,10 +133,11 @@ class OperationPlugin(PluginType):
     categories = None  # type: Sequence[Union[tuple, str]]
     hints = []
 
-    def __init__(self):
+    def __init__(self, **filled_values):
         super(OperationPlugin, self).__init__()
         # Copy class dict information so that changes to instance don't propagate to class
         self.filled_values = self.filled_values.copy()
+        self.filled_values.update(filled_values)
         self.fixable = self.fixable.copy()
         self.fixed = self.fixed.copy()
         self.limits = self.limits.copy()
@@ -458,7 +459,10 @@ def operation(func: Callable,
     if state["name"] is None:
         raise NameError('The provided operation is unnamed.')
 
-    operation_class = type('WrappedOperationPlugin', (OperationPlugin,), state)  # Ignore intellisense warnings
+    if type(state["output_names"]) == str:
+        state["output_names"] = (state["output_names"],)
+
+    operation_class = type("WrappedOperationPlugin", (OperationPlugin,), state)  # Ignore intellisense warnings
     operation_class._func = staticmethod(func)
 
     operation_class._validate()
