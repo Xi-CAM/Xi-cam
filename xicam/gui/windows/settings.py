@@ -30,6 +30,7 @@ class ConfigRestorer:
     def request_reload():
         for plugin in pluginmanager.get_plugins_of_type("SettingsPlugin"):
             plugin.restore()
+            plugin.save()
 
 
 class ConfigDialog(QDialog):
