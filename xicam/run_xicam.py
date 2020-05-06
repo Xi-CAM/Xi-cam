@@ -59,6 +59,7 @@ def _main(args, exec=True):
         app.processEvents()
     # splash_proc.waitForFinished()
     mainwindow.show()
+    mainwindow.activateWindow()
 
     # splash = splash.XicamSplashScreen(args=args)
     if exec:
