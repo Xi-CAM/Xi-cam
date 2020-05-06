@@ -62,7 +62,7 @@ def _main(args, exec=True):
 
     # splash = splash.XicamSplashScreen(args=args)
     if exec:
-        return sys.exit(app.exec_())
+        return app.exec_()
     else:
         return mainwindow
 
@@ -77,5 +77,6 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    return_code = main()
+    sys.exit(return_code)
 # TODO: check entry log when running entry point
