@@ -10,8 +10,6 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-import os
-import sys
 from recommonmark.transform import AutoStructify
 from sphinx.ext import autodoc
 import sphinx_bootstrap_theme
@@ -24,7 +22,7 @@ copyright = "2020, Ronald J. Pandolfi"
 author = "Ronald J. Pandolfi"
 
 # The full version, including alpha/beta/rc tags
-release = get_versions["version"]
+release = get_versions()["version"]
 
 # -- General configuration ---------------------------------------------------
 
