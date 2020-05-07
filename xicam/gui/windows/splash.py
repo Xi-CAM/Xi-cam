@@ -61,8 +61,13 @@ class XicamSplashScreen(QSplashScreen):
         self.timer.singleShot(self.minsplashtime, self.launchwindow)
 
     def showMessage(self, message: str, color=Qt.darkGray):
-        # TODO: Make this work.
-        super(XicamSplashScreen, self).showMessage(message, color=color, alignment=Qt.AlignBottom)
+        # attempt to parse out everyting besides the message
+        try:
+            message=message.split(" - ")[-1]
+        except Exception:
+            pass
+        else:
+            super(XicamSplashScreen, self).showMessage(elide(message), color=color, alignment=Qt.AlignBottom)
 
     def mousePressEvent(self, *args, **kwargs):
         # TODO: Apparently this doesn't work?

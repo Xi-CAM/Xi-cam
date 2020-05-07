@@ -3,9 +3,9 @@ import sys
 from functools import partial, wraps
 from xicam.core import msg
 import logging
-from qtpy.QtCore import *
-from qtpy.QtWidgets import *
-from qtpy.QtGui import *
+from qtpy.QtCore import QTimer, Qt, Signal, QThread, QObject, QEvent, QCoreApplication
+from qtpy.QtWidgets import QApplication
+from qtpy.QtGui import QStandardItemModel, QColor, QStandardItem
 import threading
 
 log = msg.logMessage
@@ -31,7 +31,7 @@ class ThreadManager(QStandardItemModel):
 
     @property
     def threads(self):
-        return [self.item(i).data(self.ThreadRole) for i in range(self.rowCount())]
+        return self._threads
 
     def update(self):
         # purge

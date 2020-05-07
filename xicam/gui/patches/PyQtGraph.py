@@ -204,7 +204,7 @@ pyqtgraph.__dict__["PolyLineROI"] = PolyLineROI
 
 class SafeImageView(ImageView):
     def setImage(self, img, *args, **kwargs):
-        if len(img.shape) < 2:
+        if len(getattr(img, "shape", [])) < 2:
             return
         if len(img) < 4:
             return
