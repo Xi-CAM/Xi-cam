@@ -92,7 +92,6 @@ package_name     | my_plugin           | name of the package to create (will be 
 plugin_name      | MyPlugin            | name of the GUIPlugin class to create (name of your gui plugin in code)
 display_name     | My Plugin           | name of the GUIPlugin as it will appear in the Xi-CAM GUI
 plugin_version   | 1.0.0               | current plugin version number
-plugin_file_name | \_\_init\_\_.py     | name of the file to put the starting plugin code into
 author_name      |                     | author's name
 author_email     |                     | author's email
 author_url       |                     | url for the author/plugin (e.g. plugin GitHub repo url)
@@ -102,6 +101,8 @@ keywords         | \[Xi-cam, plugin\]  | keywords to tag the plugin with (when p
 
 This will create a python package with some files and code to get started developing a GUIPlugin.
 **You can always change the names of your plugin, package, etc. later by hand.**
+
+The GUIPlugin you created will be implemented in `xicam.package_name/xicam/package_name/__init__.py`.
 
 For purposes of this documentation,
 we will refer to these values by their defaults.
