@@ -180,7 +180,7 @@ Now that we have the Example Plugin installed,
 we need to have data to load into it.
 
 For purposes of this guide,
-we will be configuring a catalog called "example-catalog."
+we will be configuring a catalog called "example_catalog."
 
 For more information,
 see the [Bluesky DataBroker documentation](https://blueskyproject.io/databroker/v2/index.html).
@@ -214,17 +214,17 @@ The *Data Resource Browser* gives us access to two different types of data brows
 * a local file browser
 
 After configuring our example catalog,
-the bluesky catalog browser should have the text "example-catalog" in the *Catalog* drop-down box.
+the bluesky catalog browser should have the text "example_catalog" in the *Catalog* drop-down box.
 
 Notice that it also has two text inputs, *Since* and *Until*.
 Our example catalog was created in the beginning of 2020.
-In order to see the data (catalogs) our "example-catalog" contains,
+In order to see the data (catalogs) our "example_catalog" contains,
 we need to change the *Since* text input.
 
 Change it's value to "2020-01-01".
 This will now look for any data that was created since the start of 2020.
 After making this change,
-the example-catalog will be re-queried for data created within these new dates.
+the example_catalog will be re-queried for data created within these new dates.
 
 You should see a catalog show up in the table below with the id *349497da*.
 If you *single-click* the row in the table to highlight it,
