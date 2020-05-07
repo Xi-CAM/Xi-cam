@@ -3,6 +3,9 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
+.. figure:: _static/animated_logo.gif
+  :alt: Xi-CAM Documentation
+
 Xi-CAM Documentation
 ====================
 
