@@ -13,9 +13,27 @@
     color: #0dd;
 }*/
 
+@font-face {
+    font-family: "Zero Threes";
+    src: url("zerothre.ttf");
+}
+
+h1 {
+    text-shadow: 0 0 15px #0dd;
+    font-family: "Zero Threes", "Droid Serif", "DejaVu Serif", "STIX", serif;
+}
+
 .highlight pre, code, .highlight-default {
     background-color: #003;
     color: white;
+}
+
+code {
+    font-size: 100%;
+}
+
+code.literal {
+    background-color: #055;
 }
 
 a {
@@ -24,7 +42,7 @@ a {
 }
 
 a:hover {
-    text-shadow: 0 0 8px #0dd;
+    text-shadow: 0 0 15px #0dd;
 }
 
 .reference:hover {
