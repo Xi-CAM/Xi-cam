@@ -97,11 +97,6 @@ class OperationPlugin(PluginType):
     output_descriptions : dict
         A mapping dict containing descriptions of each named output parameter
 
-    See Also
-    --------
-    xicam.core.execution.Workflow
-    xicam.plugins.GUIPlugin
-
     Notes
     -----
     This class formally deprecates usage of the `ProcessingPlugin` API.

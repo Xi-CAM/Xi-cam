@@ -378,9 +378,9 @@ class Graph(object):
     ):
         """Set an operation's disabled state in the workflow.
 
-        By default when disabling an operation, links connected to the operation will be removed.
+        By default when disabling an operation, links connected to the operation will be removed
+        (`remove_orphan_links` would be True).
         If `value` is False (re-enabling an operation), then no links are changed.
-        If `remove_orphan_links
 
         Parameters
         ----------
@@ -391,6 +391,10 @@ class Graph(object):
         remove_orphan_links : bool
             If True and `value` is True, removes the links connected to the operation.
             Otherwise, no links are changed (default is True).
+        auto_connect_all : bool
+            If True, then a best-effort attempt will be made to try to reconnect the
+            operations in the workflow (default is True).
+            See the `Graph.auto_connect_all` method for more information.
         Returns
         -------
         list

@@ -35,7 +35,7 @@ that can help with developing Xi-CAM plugins.
 
 
 Developer Documentation
---------------
+-----------------------
 
 .. toctree::
    :maxdepth: 1
