@@ -15,15 +15,16 @@ import sys
 from recommonmark.transform import AutoStructify
 from sphinx.ext import autodoc
 import sphinx_bootstrap_theme
+from xicam._version import get_versions
 
 # -- Project information -----------------------------------------------------
 
-project = "Xi-cam"
-copyright = "2019, Ronald Pandolfi"
-author = "Ronald Pandolfi"
+project = "Xi-CAM"
+copyright = "2020, Ronald J. Pandolfi"
+author = "Ronald J. Pandolfi"
 
 # The full version, including alpha/beta/rc tags
-release = "0.1.0"
+release = get_versions["version"]
 
 # -- General configuration ---------------------------------------------------
 
