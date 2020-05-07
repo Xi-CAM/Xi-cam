@@ -209,8 +209,12 @@ you must have a GUIPlugin active.**
 Let's select our "Example Plugin."
 
 Look at the *Data Resource Browser* on the left hand side of the window.
+The *Data Resource Browser* gives us access to two different types of data browsers by default:
+* a bluesky browser for catalogs (adapted from work done by NSLS-II)
+* a local file browser
+
 After configuring our example catalog,
-it should have the text "example-catalog" in the *Catalog* drop-down box.
+the bluesky catalog browser should have the text "example-catalog" in the *Catalog* drop-down box.
 
 Notice that it also has two text inputs, *Since* and *Until*.
 Our example catalog was created in the beginning of 2020.
