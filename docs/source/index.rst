@@ -3,32 +3,17 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to Xi-CAM's Documentation!
-==================================
+Xi-CAM Documentation
+====================
 
-Xi-CAM is a graphical user interface (GUI) application that facilitates synchrotron data processing
-and analysis.
-
-The documentation is organized as follows:
-
-.. toctree::
-   :caption: Contents:
-   :maxdepth: 1
-
-   quickstart
-   install-linux
-   install-macos
-   install-windows
-   gui-plugin
-   entry-points
-   operation-plugin
-   workflow
-   resources
+The :code:`Xi-CAM` package is a plugin-based framework and graphical user
+interface (GUI) application for synchrotron data management, acquisition,
+visualization, and analysis. Support for a variety of techniques is provided
+through its plugin architecture.
 
 
-
-Where to Start
---------------
+Getting Started
+---------------
 
 Before starting to develop plugins, you will need to install Xi-CAM and some
 of its dependencies.
@@ -46,6 +31,23 @@ The Resources_ section has useful links to tutorials, examples, and documentatio
 that can help with developing Xi-CAM plugins.
 
 
+Developer Documentation
+--------------
+
+.. toctree::
+   :maxdepth: 1
+
+   quickstart
+   install-linux
+   install-macos
+   install-windows
+   gui-plugin
+   entry-points
+   operation-plugin
+   workflow
+   resources
+
+
 Links
 -----
 * Xi-CAM GitHub_ Organization
@@ -59,7 +61,7 @@ Links
 
 
 Indices and tables
-==================
+------------------
 
 * :ref:`genindex`
 * :ref:`modindex`
