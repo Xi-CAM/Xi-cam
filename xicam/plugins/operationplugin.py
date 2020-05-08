@@ -1,8 +1,9 @@
 """TODO Module docstring"""
 import inspect
-from functools import partial
+import weakref
 from typing import Collection, Tuple, Type, Union, List, Callable, Sequence
-from collections import namedtuple, OrderedDict
+from collections import OrderedDict
+from collections.abc import MutableMapping
 
 from pyqtgraph.parametertree import Parameter
 
@@ -40,7 +41,62 @@ class ValidationError(OperationError):
         return f"Validation failed for {self.operation}: {self.message}"
 
 
-# TODO: Remove all args from OperationPlugin
+class _OperationDict(MutableMapping):
+    """Internal mapping class that has reference to an associated operation.
+
+    Implements the MutableMapping abstract class,
+    providing custom behavior for __setitem__.
+    Changing the value of the internal mapping will attempt to
+    update the associated operation's Parameter value.
+
+    Context: OperationPlugin.wireup_parameter will ensure that when a Parameter's
+    value or fixed state is changed, the associated operation state
+    (fixed[parameter.name()], filled_value[parameter.name())is changed as well.
+    This class achieves synchronization in the opposite direction -
+    when the operation state changes,
+    the associated Parameter value / fixed state is updated.
+
+    For example, if a value in Operation.filled_values changes ("strength" = 0.6),
+    then we need to update the associated Parameter's value (if the Parameter exists).
+    """
+    def __init__(self, seq=None, op=None, opts_key: str = "value", **kwargs):
+        self.mapping = {}
+        if seq:
+            self.mapping.update(seq)
+        self.mapping.update(kwargs)
+        self.operation = op
+        self._opts_key = opts_key
+
+    def __delitem__(self, key):
+        del self.mapping[key]
+
+    def __getitem__(self, item):
+        return self.mapping[item]
+
+    def __setitem__(self, key, value):
+        self.mapping[key] = value
+        if self.operation:
+            if self.operation._parameter:
+                group_parameter = self.operation._parameter()
+                if group_parameter:
+                    try:
+                        group_parameter.child(key).setOpts(**{self._opts_key: value})
+                        # group_parameter.child(key).setValue(value,
+                        #                                     blockSignal=self._operation._set_value)
+                    except Exception as e:
+                        msg.logError(e)
+
+    def __iter__(self):
+        return iter(self.mapping)
+
+    def __len__(self):
+        return len(self.mapping)
+
+    def __repr__(self):
+        return f"{type(self).__name__}({self.mapping}, op={self.operation})"
+
+    def copy(self):
+        return _OperationDict(self.mapping.copy(), op=self.operation, opts_key=self._opts_key)
 
 
 class OperationPlugin(PluginType):
@@ -99,7 +155,7 @@ class OperationPlugin(PluginType):
 
     Notes
     -----
-    This class formally deprecates usage of the `ProcessingPlugin` API.
+    This class formally deprecates usage of the ProcessingPlugin API.
 
     Example
     --------
@@ -112,9 +168,9 @@ class OperationPlugin(PluginType):
     needs_qt = False
 
     _func = None  # type: Callable
-    filled_values = {}  # type: dict
+    filled_values = _OperationDict()  # type: _OperationDict
     fixable = {}  # type: dict
-    fixed = {}  # type: dict
+    fixed = _OperationDict(opts_key="fixed") # type: _OperationDict
     input_names = None  # type: Tuple[str]
     output_names = None  # type: Tuple[str]
     limits = {}  # type: dict
@@ -132,14 +188,17 @@ class OperationPlugin(PluginType):
         super(OperationPlugin, self).__init__()
         # Copy class dict information so that changes to instance don't propagate to class
         self.filled_values = self.filled_values.copy()
+        self.filled_values.operation = self  # Need to add the operation ref to our OperationDict
         self.filled_values.update(filled_values)
         self.fixable = self.fixable.copy()
         self.fixed = self.fixed.copy()
+        self.fixed.operation = self  # Need to add the operation ref to our OperationDict
         self.limits = self.limits.copy()
         self.opts = self.opts.copy()
         self.output_shape = self.output_shape.copy()
         self.units = self.units.copy()
         self.hints = self.hints.copy()
+        self._parameter = None  # type: weakref.ref
 
     @classmethod
     def _validate(cls):
@@ -335,9 +394,11 @@ class OperationPlugin(PluginType):
             # wireup signals to update the workflow
             if param.get('fixable'):
                 child.sigFixToggled.connect(self._set_fixed)
-            print(child.name())
-            child.sigValueChanged.connect(lambda *args: print(args))
+            msg.logMessage(child.name())
+            # child.sigValueChanged.connect(lambda *args: print(args))
             child.sigValueChanged.connect(self._set_value)
+            # We want to propagate changes to the operation's fixed/values state to the Parameter
+            self._parameter = weakref.ref(parameter)
 
     def _set_fixed(self, param: Parameter, value):
         """Update the fixed state for the operation when it is toggled in the corresponding Parameter."""
@@ -438,10 +499,11 @@ def operation(func: Callable,
         "input_description": input_descriptions or getattr(func, 'input_descriptions', {}),
         "output_descriptions": output_descriptions or getattr(func, 'output_descriptions', {}),
         "categories": categories or getattr(func, 'categories', []),
-        "filled_values": filled_values or {},
+        "filled_values": _OperationDict(filled_values) or _OperationDict(),
         "limits": limits or getattr(func, 'limits', {}),
         "units": units or getattr(func, 'units', {}),
-        "fixed": fixed or getattr(func, 'fixed', {}),
+        "fixed": _OperationDict(fixed, opts_key="fixed") or
+                 _OperationDict(getattr(func, 'fixed', {}), opts_key="fixed"),
         "fixable": fixable or getattr(func, 'fixable', {}),
         "visible": visible or getattr(func, 'visible', {}),
         "opts": opts or getattr(func, 'opts', {}),
@@ -526,7 +588,6 @@ def units(arg_name, unit):
 
 
 def fixed(arg_name, fix=True):
-    # TODO is this a toggleable 'lock' on the parameter's value?
     """Decorator to set whether or not an input's value is fixed.
 
     By default, sets the `arg_name` input to fixed, meaning its value cannot
@@ -544,6 +605,8 @@ def fixed(arg_name, fix=True):
 
     def decorator(func):
         _quick_set(func, 'fixed', arg_name, fix, {})
+        # TODO do we need to make 'fixed' args 'fixable'/'readonly'???
+        # _quick_set(func, 'fixable', arg_name, True, {})
         return func
 
     return decorator
