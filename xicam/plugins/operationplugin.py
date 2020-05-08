@@ -590,8 +590,10 @@ def units(arg_name, unit):
 def fixed(arg_name, fix=True):
     """Decorator to set whether or not an input's value is fixed.
 
-    By default, sets the `arg_name` input to fixed, meaning its value cannot
-    be changed.
+    Fixed means that the input's value is fixed in the context of model fitting.
+
+    By default, sets the `arg_name` input to fixed,
+    meaning its value cannot be changed.
 
     Parameters
     ----------
