@@ -185,6 +185,21 @@ More information about `Workflow` can be found in the [Workflow Documentation](w
 ## API Documentation
 
 ```eval_rst
-.. automodule:: xicam.plugins.operationplugin
-    :members:
+.. autodecorator:: xicam.plugins.operationplugin.operation
+.. autodecorator:: xicam.plugins.operationplugin.output_names
+.. autodecorator:: xicam.plugins.operationplugin.categories
+.. autodecorator:: xicam.plugins.operationplugin.describe_input
+.. autodecorator:: xicam.plugins.operationplugin.describe_output
+.. autodecorator:: xicam.plugins.operationplugin.display_name
+.. autodecorator:: xicam.plugins.operationplugin.fixed
+.. autodecorator:: xicam.plugins.operationplugin.input_names
+.. autodecorator:: xicam.plugins.operationplugin.limits
+.. autodecorator:: xicam.plugins.operationplugin.output_shape
+.. autodecorator:: xicam.plugins.operationplugin.opts
+.. autodecorator:: xicam.plugins.operationplugin.plot_hint
+.. autodecorator:: xicam.plugins.operationplugin.units
+.. autodecorator:: xicam.plugins.operationplugin.visible
+.. autoclass:: xicam.plugins.operationplugin.OperationPlugin
+.. autoclass:: xicam.plugins.operationplugin.ValidationError
+  :show-inheritance:
 ```

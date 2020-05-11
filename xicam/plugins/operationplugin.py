@@ -102,6 +102,8 @@ class _OperationDict(MutableMapping):
 class OperationPlugin(PluginType):
     """A plugin that can be used to define an operation, which can be used in a Workflow.
 
+    Note: use the `@operation` decorator to create an operation type.
+
     At its simplest level, an operation can be though of as a function.
     Any arguments (parameters) defined in the python function are treated as inputs for the operation.
     An operation's outputs are defined by the returned values of the python function.
@@ -160,6 +162,7 @@ class OperationPlugin(PluginType):
     Example
     --------
     Here, we define a function, then wrap it with the OperationPlugin decorator to make it an operation.
+
     >>> @OperationPlugin
     >>> def my_operation(x: int = 1, y: int = 2): -> int
     >>>     return x + y
@@ -305,12 +308,10 @@ class OperationPlugin(PluginType):
             List of dictionaries; each dictionary represents the state of an input parameter
             (only applies to input parameters that are annotated with type-hinting).
 
-        See Also
-        --------
-        For more information about pyqtgraph, see _Parameter.create.
-
-        .. _Parameter.create: http://www.pyqtgraph.org/documentation/parametertree/parameter.html?highlight=create#pyqtgraph.parametertree.Parameter.create
-
+        Notes
+        -----
+        For more information about pyqtgraph and Parameters,
+        see http://www.pyqtgraph.org/documentation/parametertree/parameter.html?highlight=create#pyqtgraph.parametertree.Parameter.create
         """
         from pyqtgraph.parametertree.Parameter import PARAM_TYPES
 
@@ -420,17 +421,14 @@ def operation(func: Callable,
               name: str = None,
               input_descriptions: dict = None, output_descriptions: dict = None,
               categories: Sequence[Union[tuple, str]] = None) -> Type[OperationPlugin]:
-    """Create an Operation class.
+    """Create a new operation.
+
+    *When you define a new operation, you must use this decorator (`@operation`)
+    and the `@output_names` decorator.*
 
     This function can be used as a decorator to define a new operation type.
     The operation can then be instantiated by using the `()` operator on
     the operation function's name.
-
-    Note that an OperationPlugin can be created in the following ways:
-    * @operation - this creates a new operationplugin type (recommended)
-    * @OperationPlugin - this creates a new operationplugin instance
-    * using the OperationPlugin() constructor
-    These decorators must be used before any other decorators on a function.
 
     Parameters
     ----------
