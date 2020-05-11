@@ -293,6 +293,10 @@ print(catalog_search_path())
 ```
 
 You can move the `catalog.yml` file in any of the paths listed.
+Note that typically there will be a more user-oriented path
+and a more global system-level path for the catalogs to find.
+You can copy the `catalog.yml` file to either (or both) path
+depending on how you want a machine set up.
 
 ### Implementing appendCatalog
 
