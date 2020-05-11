@@ -148,7 +148,7 @@ class SimpleFunctionDocumenter(autodoc.FunctionDocumenter):
 
 
 def setup(app):
-    app.add_stylesheet("my-styles.css")
+    app.add_css_file("my-styles.css")
     # Allow md files to evaluate marked sections as rst
     app.add_config_value("recommonmark_config", {"enable_eval_rst": True}, True)
     app.add_transform(AutoStructify)
