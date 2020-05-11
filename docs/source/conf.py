@@ -29,7 +29,11 @@ release = get_versions()["version"]
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ["sphinx.ext.autodoc", "sphinx.ext.napoleon", "recommonmark", "sphinx_markdown_tables"]
+extensions = ["sphinx.ext.autodoc", "sphinx.ext.napoleon", "recommonmark", "sphinx_markdown_tables", "sphinx.ext.intersphinx"]
+
+intersphinx_mapping = {
+    'pyqtgraph': ("http://www.pyqtgraph.org/documentation/", None),
+}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
