@@ -36,6 +36,24 @@ code.literal {
     background-color: #044;
 }
 
+code.descclassname {
+    padding-right:0;
+}
+
+code.descname {
+    padding-left:0;
+    padding-right:0;
+}
+
+dl.class dd {
+    margin: 0 0 12px 24px;
+}
+
+dl.field-list dd.field-odd {
+    margin: 0 0 0 0;
+    padding-left:0;
+}
+
 div.highlight pre {
     background-color: #022;
     border: 1px solid #0cc;
