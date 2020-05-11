@@ -478,6 +478,15 @@ def operation(func: Callable,
     >>> print(result)
 
     """
+    # For now, any C functions that don't have the required metadata for inspection will raise an exception
+    # TODO: link to documentation
+        try:
+        inspect.signature(func)
+    except ValueError as e:
+        msg = f"The provided function '{func.__name__}' could not be inspected." \
+               "In the case that your function is a C function, you will need to wrap it. " \
+               "For an example, see the Xi-CAM.SAXS.processing.inpaint module."
+        raise OperationError(msg) from e
 
     # Allow passing a string
     if type(input_names) is str:
