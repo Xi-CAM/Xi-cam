@@ -16,42 +16,12 @@ from os import path
 # These bits don't get collected automatically when packaging:
 loosebits = ["numpy.core._methods", "numpy.lib.recfunctions"]
 
-
 from setuptools import setup, find_packages, find_namespace_packages
 
 # Set the long_description from the README
 here = path.abspath(path.dirname(__file__))
 with open(path.join(here, "README.rst"), encoding="utf-8") as f:
     long_description = f.read()
-
-import os
-
-if "APPVEYOR" in os.environ and os.environ["APPVEYOR"]:
-    pyqt = ["PyQt5"]
-else:
-    pyqt = []
-
-deps = [
-    "PyQt5>=5.9.2",
-    "pathlib",
-    "qtpy",
-    "astropy",
-    "numpy>=1.16.0",
-    "appdirs",
-    "qdarkstyle",
-    "qtmodern",
-    "databroker>=1.0.0b8",
-    "distributed",
-    "dask",
-    "astropy",
-    "signalslot",
-    "virtualenv",
-    "requests",
-    "appdirs",
-    "entrypoints",
-    "pyqtgraph",
-    "qtconsole",
-] + pyqt
 
 setup(
     name="xicam",
@@ -99,7 +69,24 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=deps,
+    install_requires=["PyQt5>=5.9.2",
+                      "pathlib",
+                      "qtpy",
+                      "astropy",
+                      "numpy>=1.16.0",
+                      "appdirs",
+                      "qdarkstyle",
+                      "qtmodern",
+                      "databroker>=1.0.0b8",
+                      "distributed",
+                      "dask",
+                      "astropy",
+                      "virtualenv",
+                      "requests",
+                      "appdirs",
+                      "entrypoints",
+                      "pyqtgraph",
+                      "qtconsole", ],
     setup_requires=["cython"],  # cython is a missing required dep of astropy
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
@@ -135,6 +122,7 @@ setup(
             "EZPlugin = xicam.plugins.ezplugin:_EZPlugin",
             "Fittable1DModelPlugin = xicam.plugins.fittablemodelplugin:Fittable1DModelPlugin",
             "GUIPlugin = xicam.plugins.guiplugin:GUIPlugin",
+            'OperationPlugin = xicam.plugins.operationplugin:OperationPlugin',
             "SettingsPlugin = xicam.plugins.settingsplugin:SettingsPlugin",
             "QWidgetPlugin = xicam.plugins.widgetplugin:QWidgetPlugin",
         ],

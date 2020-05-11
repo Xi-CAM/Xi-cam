@@ -9,7 +9,10 @@ from .plugin import PluginType
 
 
 class GUIPlugin(PluginType):
-    """
+    """GUIPlugin class for interactive Xi-CAM plugins.
+
+    This class represents the fundamental interactive plugin for Xi-CAM.
+
     GUIPlugins are left uninstanciated until all plugins are loaded so that all dependent widgets are loaded before
     the UI is setup. They DO become singletons.
     """
@@ -18,6 +21,11 @@ class GUIPlugin(PluginType):
     needs_qt = True
 
     def __init__(self):
+        """Creates a GUIPlugin.
+
+        When implementing your own GUIPlugin, you will want to set the `self.stages` property
+        and then call `super` at the end of `__init__`.
+        """
         super(GUIPlugin, self).__init__()
         self.stage = list(self.stages.values())[0]
 
@@ -29,6 +37,13 @@ class GUIPlugin(PluginType):
         pass
 
     def appendCatalog(self, catalog: BlueskyRun, **kwargs):
+        """Re-implement to define how to add a catalog to your GUIPlugin.
+
+        Parameters
+        ----------
+        catalog : BlueskyRun
+            Catalog reference that you can use as you wish (corresponds to the opened catalog in DataResourceBrowser).
+        """
         # kwargs can include flags for how the data append operation is handled, i.e.:
         #   - as a new doc
         #   - merged into the current doc (stream)
@@ -44,10 +59,15 @@ class GUIPlugin(PluginType):
 
     @property
     def stages(self) -> OrderedDict:
+        """Returns the stages of the GUIPlugin.
+
+        A stage is defined by a GUILayout; each stage represents a distinct user-interface in a GUIPlugin.
+        """
         return self._stages
 
     @stages.setter
     def stages(self, stages):
+        """Set the GUIPlugin's stages"""
         self._stages = stages
 
     @property

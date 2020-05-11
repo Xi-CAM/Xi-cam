@@ -1,16 +1,20 @@
 """TODO Module docstring"""
 import inspect
+import weakref
 from typing import Collection, Tuple, Type, Union, List, Callable, Sequence
-from collections import namedtuple, OrderedDict
+from collections import OrderedDict
+from collections.abc import MutableMapping
+
+from pyqtgraph.parametertree import Parameter
 
 from xicam.core import msg
 
 from .hints import PlotHint
+from .plugin import PluginType
 
 
 class OperationError(Exception):
     """Base exception for this module."""
-
     pass
 
 
@@ -37,11 +41,68 @@ class ValidationError(OperationError):
         return f"Validation failed for {self.operation}: {self.message}"
 
 
-# TODO: Remove all args from OperationPlugin
+class _OperationDict(MutableMapping):
+    """Internal mapping class that has reference to an associated operation.
+
+    Implements the MutableMapping abstract class,
+    providing custom behavior for __setitem__.
+    Changing the value of the internal mapping will attempt to
+    update the associated operation's Parameter value.
+
+    Context: OperationPlugin.wireup_parameter will ensure that when a Parameter's
+    value or fixed state is changed, the associated operation state
+    (fixed[parameter.name()], filled_value[parameter.name())is changed as well.
+    This class achieves synchronization in the opposite direction -
+    when the operation state changes,
+    the associated Parameter value / fixed state is updated.
+
+    For example, if a value in Operation.filled_values changes ("strength" = 0.6),
+    then we need to update the associated Parameter's value (if the Parameter exists).
+    """
+    def __init__(self, seq=None, op=None, opts_key: str = "value", **kwargs):
+        self.mapping = {}
+        if seq:
+            self.mapping.update(seq)
+        self.mapping.update(kwargs)
+        self.operation = op
+        self._opts_key = opts_key
+
+    def __delitem__(self, key):
+        del self.mapping[key]
+
+    def __getitem__(self, item):
+        return self.mapping[item]
+
+    def __setitem__(self, key, value):
+        self.mapping[key] = value
+        if self.operation:
+            if self.operation._parameter:
+                group_parameter = self.operation._parameter()
+                if group_parameter:
+                    try:
+                        group_parameter.child(key).setOpts(**{self._opts_key: value})
+                        # group_parameter.child(key).setValue(value,
+                        #                                     blockSignal=self._operation._set_value)
+                    except Exception as e:
+                        msg.logError(e)
+
+    def __iter__(self):
+        return iter(self.mapping)
+
+    def __len__(self):
+        return len(self.mapping)
+
+    def __repr__(self):
+        return f"{type(self).__name__}({self.mapping}, op={self.operation})"
+
+    def copy(self):
+        return _OperationDict(self.mapping.copy(), op=self.operation, opts_key=self._opts_key)
 
 
-class OperationPlugin:
+class OperationPlugin(PluginType):
     """A plugin that can be used to define an operation, which can be used in a Workflow.
+
+    Note: use the `@operation` decorator to create an operation type.
 
     At its simplest level, an operation can be though of as a function.
     Any arguments (parameters) defined in the python function are treated as inputs for the operation.
@@ -94,30 +155,25 @@ class OperationPlugin:
     output_descriptions : dict
         A mapping dict containing descriptions of each named output parameter
 
-    See Also
-    --------
-    xicam.core.execution.Workflow
-    xicam.plugins.GUIPlugin
-
     Notes
     -----
-    This class formally deprecates usage of the `ProcessingPlugin` API.
+    This class formally deprecates usage of the ProcessingPlugin API.
 
-    Examples
+    Example
     --------
     Here, we define a function, then wrap it with the OperationPlugin decorator to make it an operation.
-    >>>@OperationPlugin\
-    def my_operation(x: int = 1, y: int = 2): -> int\
-        return x + y
+
+    >>> @OperationPlugin
+    >>> def my_operation(x: int = 1, y: int = 2): -> int
+    >>>     return x + y
 
     """
-
     needs_qt = False
 
     _func = None  # type: Callable
-    filled_values = {}  # type: dict
+    filled_values = _OperationDict()  # type: _OperationDict
     fixable = {}  # type: dict
-    fixed = {}  # type: dict
+    fixed = _OperationDict(opts_key="fixed") # type: _OperationDict
     input_names = None  # type: Tuple[str]
     output_names = None  # type: Tuple[str]
     limits = {}  # type: dict
@@ -135,14 +191,17 @@ class OperationPlugin:
         super(OperationPlugin, self).__init__()
         # Copy class dict information so that changes to instance don't propagate to class
         self.filled_values = self.filled_values.copy()
+        self.filled_values.operation = self  # Need to add the operation ref to our OperationDict
         self.filled_values.update(filled_values)
         self.fixable = self.fixable.copy()
         self.fixed = self.fixed.copy()
+        self.fixed.operation = self  # Need to add the operation ref to our OperationDict
         self.limits = self.limits.copy()
         self.opts = self.opts.copy()
         self.output_shape = self.output_shape.copy()
         self.units = self.units.copy()
         self.hints = self.hints.copy()
+        self._parameter = None  # type: weakref.ref
 
     @classmethod
     def _validate(cls):
@@ -151,14 +210,12 @@ class OperationPlugin:
         # Capture any validation issues for use later when raising
         invalid_msg = ""
         # Define which "input" arg properties we want to check
-        input_properties = {
-            "fixable": cls.fixable,
-            "fixed": cls.fixed,
-            "limits": cls.limits,
-            "opts": cls.opts,
-            "units": cls.units,
-            "visible": cls.visible,
-        }
+        input_properties = {"fixable": cls.fixable,
+                            "fixed": cls.fixed,
+                            "limits": cls.limits,
+                            "opts": cls.opts,
+                            "units": cls.units,
+                            "visible": cls.visible}
         # Check if all the attributes have a default value for each input param
         for arg in cls.input_names:
             for name, prop in input_properties.items():
@@ -169,9 +226,8 @@ class OperationPlugin:
         num_names = len(cls.input_names)
         num_args = len(inspect.signature(cls._func).parameters.keys())
         if num_names != num_args:
-            invalid_msg += (
-                f"Number of input_names given ({num_names}) " f"must match number of inputs for the operation ({num_args})."
-            )
+            invalid_msg += (f"Number of input_names given ({num_names}) "
+                            f"must match number of inputs for the operation ({num_args}).")
         # Check if there are any input args that are not actually defined in the operation
         # e.g. 'x' is not a valid input in the case below:
         # @visible('x')
@@ -179,15 +235,13 @@ class OperationPlugin:
         for name, prop in input_properties.items():
             for arg in prop.keys():
                 if arg not in cls.input_names:
-                    invalid_msg += f'"{arg}" is not a valid input for "{name}". '
+                    invalid_msg += f"\"{arg}\" is not a valid input for \"{name}\". "
 
         # Warn if there are no output_names defined
         if not len(cls.output_names):
-            warning_msg = (
-                f"No output_names have been specified for your operation {cls}; "
-                f"you will not be able to connect your operation's output(s) to "
-                f"any other operations."
-            )
+            warning_msg = (f"No output_names have been specified for your operation {cls}; "
+                           f"you will not be able to connect your operation's output(s) to "
+                           f"any other operations.")
             msg.logMessage(warning_msg, level=msg.WARNING)
 
         # Define which "output" arg properties we want to check
@@ -196,7 +250,7 @@ class OperationPlugin:
         for name, prop in output_properties.items():
             for arg in prop.keys():
                 if arg not in cls.output_names:
-                    invalid_msg += f'"{arg}" is not a valid output for "{name}". '
+                    invalid_msg += f"\"{arg}\" is not a valid output for \"{name}\". "
 
         if invalid_msg:
             raise ValidationError(cls, invalid_msg)
@@ -213,14 +267,14 @@ class OperationPlugin:
         return f"OperationPlugin named {self.name}"
 
     @property
-    def input_types(self) -> "OrderedDict[str, Type]":
+    def input_types(self) -> 'OrderedDict[str, Type]':
         """Returns the types of the inputs for the operation."""
         signature = inspect.signature(self._func)
         input_type_map = OrderedDict([(name, parameter.annotation) for name, parameter in signature.parameters.items()])
         return input_type_map
 
     @property
-    def output_types(self) -> "OrderedDict[str, Type]":
+    def output_types(self) -> 'OrderedDict[str, Type]':
         """Returns the types of the outputs for the operation."""
         return_annotation = inspect.signature(self._func).return_annotation
         if not return_annotation or return_annotation is inspect.Signature.empty:
@@ -230,16 +284,10 @@ class OperationPlugin:
         return output_type_map
 
     def __reduce__(self):
-        return (
-            OperationPlugin,
-            tuple(),
-            {
-                "_func": self._func,
-                "filled_values": self.filled_values,
-                "input_names": self.input_names,
-                "output_names": self.output_names,
-            },
-        )
+        return OperationPlugin, tuple(), {'_func': self._func,
+                                          'filled_values': self.filled_values,
+                                          'input_names': self.input_names,
+                                          'output_names': self.output_names}
 
     def as_parameter(self):
         """Return the operation's inputs as a ready-to-use object with pyqtgraph.
@@ -260,87 +308,127 @@ class OperationPlugin:
             List of dictionaries; each dictionary represents the state of an input parameter
             (only applies to input parameters that are annotated with type-hinting).
 
-        See Also
-        --------
-        For more information about pyqtgraph, see _Parameter.create.
-
-        .. _Parameter.create: http://www.pyqtgraph.org/documentation/parametertree/parameter.html?highlight=create#pyqtgraph.parametertree.Parameter.create
-
+        Notes
+        -----
+        For more information about pyqtgraph and Parameters,
+        see http://www.pyqtgraph.org/documentation/parametertree/parameter.html?highlight=create#pyqtgraph.parametertree.Parameter.create
         """
         from pyqtgraph.parametertree.Parameter import PARAM_TYPES
 
         parameter_dicts = []
         for name, parameter in inspect.signature(self._func).parameters.items():
-            if getattr(parameter.annotation, "__name__", None) in PARAM_TYPES:
+            if getattr(parameter.annotation, '__name__', None) in PARAM_TYPES:
                 parameter_dict = dict()
                 parameter_dict.update(self.opts.get(name, {}))
-                parameter_dict["name"] = name
-                parameter_dict["default"] = parameter.default if parameter.default is not inspect.Parameter.empty else None
-                parameter_dict["value"] = (
-                    self.filled_values[name] if name in self.filled_values else parameter_dict["default"]
-                )
+                parameter_dict['name'] = name
+                parameter_dict[
+                    'default'] = parameter.default if parameter.default is not inspect.Parameter.empty else None
+                parameter_dict['value'] = self.filled_values[
+                    name] if name in self.filled_values else parameter_dict['default']
 
-                parameter_dict["type"] = getattr(self.input_types[name], "__name__", None)
+                parameter_dict['type'] = getattr(self.input_types[name], '__name__', None)
                 if name in self.limits:
-                    parameter_dict["limits"] = self.limits[name]
-                parameter_dict["units"] = self.units.get(name)
-                parameter_dict["fixed"] = self.fixed.get(name)
-                parameter_dict["fixable"] = self.fixable.get(name)
-                parameter_dict["visible"] = self.visible.get(name, True)
+                    parameter_dict['limits'] = self.limits[name]
+                parameter_dict['units'] = self.units.get(name)
+                parameter_dict['fixed'] = self.fixed.get(name)
+                parameter_dict['fixable'] = self.fixable.get(name)
+                parameter_dict['visible'] = self.visible.get(name, True)
                 parameter_dict.update(self.opts.get(name, {}))
 
                 parameter_dicts.append(parameter_dict)
 
             elif getattr(self.input_types[name], "__name__", None) == "Enum":
                 parameter_dict = dict()
-                parameter_dict["name"] = name
-                parameter_dict["value"] = self.filled_values[name] if name in self.filled_values else parameter.default
-                parameter_dict["values"] = (self.limits.get(name) or ["---"],)
-                parameter_dict["default"] = parameter.default
-                parameter_dict["type"] = ("list",)
+                parameter_dict['name'] = name
+                parameter_dict['value'] = self.filled_values[
+                    name] if name in self.filled_values else parameter.default
+                parameter_dict['values'] = self.limits.get(name) or ["---"],
+                parameter_dict['default'] = parameter.default
+                parameter_dict['type'] = "list",
                 if name in self.limits:
-                    parameter_dict["limits"] = self.limits[name]
-                parameter_dict["units"] = self.units.get(name)
-                parameter_dict["fixed"] = self.fixed.get(name)  # TODO: Does this need a default value
-                parameter_dict["fixable"] = self.fixable.get(name)
-                parameter_dict["visible"] = self.visible.get(name, True)  # TODO: should we store the defaults at top?
+                    parameter_dict['limits'] = self.limits[name]
+                parameter_dict['units'] = self.units.get(name)
+                parameter_dict['fixed'] = self.fixed.get(name)  # TODO: Does this need a default value
+                parameter_dict['fixable'] = self.fixable.get(name)
+                parameter_dict['visible'] = self.visible.get(name, True)  # TODO: should we store the defaults at top?
                 parameter_dict.update(self.opts.get(name, {}))
 
                 parameter_dicts.append(parameter_dict)
         return parameter_dicts
 
-    def wireup_parameter(self, parameter):
-        ...
+    def wireup_parameter(self, parameter: Parameter):
+        """Wire up a Parameter (created from an operation) to update the operation's state.
+
+        Updates the operation's values (filled_values) if the Parameter values are changed.
+        Updates the operatin's fixed state if the Parameter's fixed state is changed.
+
+        This is useful when you want to interact with an operations inputs in a GUI
+        by using something like a ParameterTree (see example).
+
+        Parameters
+        ----------
+        parameter : Parameter
+            A pyqtgraph Parameter created from an operation (via `as_parameter()`)
+
+        Example
+        -------
+        >>> from pyqtgraph.parametertree import ParameterTree
+        >>> from pyqtgraph.parametertree.parameterTypes import GroupParameter
+        >>> from qtpy.QtWidgets import QApplication, QMainWindow
+        >>> from xicam.plugins.operationplugin import operation, output_names
+        >>> @operation
+        >>> @output_names("sum")
+        >>> def my_operation(x: float = 1.0, y: float = 2.0):
+        >>>     return x + y
+        >>> qapp = QApplication([])
+        >>> parameter_tree = ParameterTree()
+        >>> op = my_operation()
+        >>> parameter = GroupParameter(name=op.name, children=op.as_parameter())
+        >>> op.wireup_parameter(parameter)
+        >>> parameter_tree.addParameters(parameter)
+        >>> window = QMainWindow()
+        >>> window.setCentralWidget(parameter_tree)
+        >>> window.show()
+        >>> qapp.exec_()
+        """
+        for child, param in zip(parameter.children(), self.as_parameter()):
+            # wireup signals to update the workflow
+            if param.get('fixable'):
+                child.sigFixToggled.connect(self._set_fixed)
+            msg.logMessage(child.name())
+            # child.sigValueChanged.connect(lambda *args: print(args))
+            child.sigValueChanged.connect(self._set_value)
+            # We want to propagate changes to the operation's fixed/values state to the Parameter
+            self._parameter = weakref.ref(parameter)
+
+    def _set_fixed(self, param: Parameter, value):
+        """Update the fixed state for the operation when it is toggled in the corresponding Parameter."""
+        self.fixed[param.name()] = value
+
+    def _set_value(self, param: Parameter, value):
+        """Update the value for an operation when it is changed in he corresponding Parameter."""
+        self.filled_values[param.name()] = value
 
 
-def operation(
-    func: Callable,
-    filled_values: dict = None,
-    fixable: dict = None,
-    fixed: dict = None,
-    input_names: Tuple[str, ...] = None,
-    output_names: Tuple[str, ...] = None,
-    limits: dict = None,
-    opts: dict = None,
-    output_shape: dict = None,
-    units: dict = None,
-    visible: dict = None,
-    name: str = None,
-    input_descriptions: dict = None,
-    output_descriptions: dict = None,
-    categories: Sequence[Union[tuple, str]] = None,
-) -> Type[OperationPlugin]:
-    """Create an Operation class.
+def operation(func: Callable,
+              filled_values: dict = None, fixable: dict = None, fixed: dict = None,
+              input_names: Tuple[str, ...] = None, output_names: Tuple[str, ...] = None,
+              limits: dict = None,
+              opts: dict = None,
+              output_shape: dict = None,
+              units: dict = None,
+              visible: dict = None,
+              name: str = None,
+              input_descriptions: dict = None, output_descriptions: dict = None,
+              categories: Sequence[Union[tuple, str]] = None) -> Type[OperationPlugin]:
+    """Create a new operation.
+
+    *When you define a new operation, you must use this decorator (`@operation`)
+    and the `@output_names` decorator.*
 
     This function can be used as a decorator to define a new operation type.
     The operation can then be instantiated by using the `()` operator on
     the operation function's name.
-
-    Note that an OperationPlugin can be created in the following ways:
-    * @operation - this creates a new operationplugin type (recommended)
-    * @OperationPlugin - this creates a new operationplugin instance
-    * using the OperationPlugin() constructor
-    These decorators must be used before any other decorators on a function.
 
     Parameters
     ----------
@@ -374,22 +462,20 @@ def operation(
     categories : List[Union[tuple, str], optional
         A sequence of categories to associate with this operation.
 
-    Examples
+    Example
     --------
     Create a new operation type and create a new operation instance from it.
 
-    >>>from xicam.core.execution import Workflow\
-    from xicam.plugins.operationplugin import operation, output_names\
-    \
-    @operation\
-    @output_names("my_output")\
-    def my_func(x: float = 0.0) -> float:\
-        return x * -1\
-    \
-    op = my_func()\
-    workflow = Workflow()\
-    result = workflow.execute(x=2.5).result()\
-    print(result)
+    >>> from xicam.core.execution import Workflow
+    >>> from xicam.plugins.operationplugin import operation, output_names
+    >>> @operation
+    >>> @output_names("my_output")
+    >>> def my_func(x: float = 0.0) -> float:
+    >>>     return x * -1
+    >>> op = my_func()
+    >>> workflow = Workflow()
+    >>> result = workflow.execute(x=2.5).result()
+    >>> print(result)
 
     """
 
@@ -401,26 +487,29 @@ def operation(
         output_names = (output_names,)
 
     state = {  # "_func": func,
-        "name": name or getattr(func, "name", getattr(func, "__name__", None)),
+        "name": name or getattr(func, 'name', getattr(func, '__name__', None)),
         # Fallback to inspecting the function arg names if no input names provided
-        "input_names": input_names or getattr(func, "input_names", tuple(inspect.signature(func).parameters.keys())),
-        "output_names": output_names or getattr(func, "output_names", getattr(func, "__name__", tuple())),
-        "output_shape": output_shape or getattr(func, "output_shape", {}),
-        "input_description": input_descriptions or getattr(func, "input_descriptions", {}),
-        "output_descriptions": output_descriptions or getattr(func, "output_descriptions", {}),
-        "categories": categories or getattr(func, "categories", []),
-        "filled_values": filled_values or {},
-        "limits": limits or getattr(func, "limits", {}),
-        "units": units or getattr(func, "units", {}),
-        "fixed": fixed or getattr(func, "fixed", {}),
-        "fixable": fixable or getattr(func, "fixable", {}),
-        "visible": visible or getattr(func, "visible", {}),
-        "opts": opts or getattr(func, "opts", {}),
-        "hints": getattr(func, "hints", []),  # TODO: does hints need an arg
+        "input_names": input_names or getattr(func,
+                                              'input_names',
+                                              tuple(inspect.signature(func).parameters.keys())),
+        "output_names": output_names or getattr(func, 'output_names', getattr(func, "__name__", tuple())),
+        "output_shape": output_shape or getattr(func, 'output_shape', {}),
+        "input_description": input_descriptions or getattr(func, 'input_descriptions', {}),
+        "output_descriptions": output_descriptions or getattr(func, 'output_descriptions', {}),
+        "categories": categories or getattr(func, 'categories', []),
+        "filled_values": _OperationDict(filled_values) or _OperationDict(),
+        "limits": limits or getattr(func, 'limits', {}),
+        "units": units or getattr(func, 'units', {}),
+        "fixed": _OperationDict(fixed, opts_key="fixed") or
+                 _OperationDict(getattr(func, 'fixed', {}), opts_key="fixed"),
+        "fixable": fixable or getattr(func, 'fixable', {}),
+        "visible": visible or getattr(func, 'visible', {}),
+        "opts": opts or getattr(func, 'opts', {}),
+        "hints": getattr(func, 'hints', [])  # TODO: does hints need an arg
     }
 
     if state["name"] is None:
-        raise NameError("The provided operation is unnamed.")
+        raise NameError('The provided operation is unnamed.')
 
     if type(state["output_names"]) == str:
         state["output_names"] = (state["output_names"],)
@@ -450,14 +539,14 @@ def display_name(name):
     name : str
         Name for the operation.
 
-    Examples
+    Example
     --------
     Create an operation whose display name is "Cube Operation."
 
-    >>>@OperationPlugin\
-    @display_name('Cube Operation')\
-    def cube(n: int = 2) -> int:\
-        return n**3
+    >>> @OperationPlugin
+    >>> @display_name('Cube Operation')
+    >>> def cube(n: int = 2) -> int:
+    >>>     return n**3
     """
 
     def decorator(func):
@@ -479,29 +568,30 @@ def units(arg_name, unit):
     unit : str
         Unit of measurement descriptor to use (e.g. "mm").
 
-    Examples
+    Example
     --------
     Create an operation where its `x` parameter has its units defined in microns.
 
-    >>>@OperationPlugin\
-    @units('x', '\u03BC'+'m')\
-    def op(x: float = -1) -> float:\
-        return x *= -1.0
+    >>> @OperationPlugin
+    >>> @units('x', '\u03BC'+'m')
+    >>> def op(x: float = -1) -> float:
+    >>>     return x *= -1.0
     """
 
     def decorator(func):
-        _quick_set(func, "units", arg_name, unit, {})
+        _quick_set(func, 'units', arg_name, unit, {})
         return func
 
     return decorator
 
 
 def fixed(arg_name, fix=True):
-    # TODO is this a toggleable 'lock' on the parameter's value?
     """Decorator to set whether or not an input's value is fixed.
 
-    By default, sets the `arg_name` input to fixed, meaning its value cannot
-    be changed.
+    Fixed means that the input's value is fixed in the context of model fitting.
+
+    By default, sets the `arg_name` input to fixed,
+    meaning its value cannot be changed.
 
     Parameters
     ----------
@@ -514,7 +604,9 @@ def fixed(arg_name, fix=True):
     """
 
     def decorator(func):
-        _quick_set(func, "fixed", arg_name, fix, {})
+        _quick_set(func, 'fixed', arg_name, fix, {})
+        # TODO do we need to make 'fixed' args 'fixable'/'readonly'???
+        # _quick_set(func, 'fixable', arg_name, True, {})
         return func
 
     return decorator
@@ -533,27 +625,27 @@ def limits(arg_name, limit):
     limit : tuple[float]
         A 2-element sequence representing the lower and upper limit.
 
-    Examples
+    Example
     --------
     Make an operation that has a limit on the `x` parameter from [0, 100].
 
-    >>>@OperationPlugin\
-    @limits('x', [0, 100])\
-    def op(x):\
-        ...
+    >>> @OperationPlugin
+    >>> @limits('x', [0, 100])
+    >>> def op(x):
+    >>>     ...
 
     Make an operation that has a limit on the `x` parameter from [0.0, 1.0].
 
-    >>>@OperationPlugin\
-    @limits('x', [0.0, 1.0])\
-    @opts('x', step=0.1)\
-    def op(x):\
-        ...
+    >>> @OperationPlugin
+    >>> @limits('x', [0.0, 1.0])
+    >>> @opts('x', step=0.1)
+    >>> def op(x):
+    >>>     ...
 
     """
 
     def decorator(func):
-        _quick_set(func, "limits", arg_name, limit, {})
+        _quick_set(func, 'limits', arg_name, limit, {})
         return func
 
     return decorator
@@ -563,7 +655,15 @@ def limits(arg_name, limit):
 
 # TODO Check that signature propagates up
 def plot_hint(*args, **kwargs):
-    """Decorator to define plot hints for 1-dimensional outputs.
+    """Decorator to define plot hints for 1-dimensional outputs. This accepts `kwargs` that get passed to the rendering
+    widget; see :class:`pyqtgraph.PlotDataItem`. This annotation "hints" to Xi-cam that a Plot widget may be generated
+    to represent this data visually.
+
+    >>> @OperationPlugin
+    >>> @output_names('x', 'y')
+    >>> @plot_hint('x', 'y', yLog=True, labels={"left": "y-axis", "bottom": "x-axis"}, pen='r')
+    >>> def op(x):
+    >>>     ...
 
     Parameters
     ----------
@@ -576,7 +676,7 @@ def plot_hint(*args, **kwargs):
     """
 
     def decorator(func):
-        if not hasattr(func, "hints"):
+        if not hasattr(func, 'hints'):
             func.hints = []
         func.hints.append(PlotHint(*args, **kwargs))
         return func
@@ -592,15 +692,15 @@ def input_names(*names):
     If not provided, input names will be determined by examining the names of the arguments
     to the operation function.
 
-    Examples
+    Example
     --------
     Create an addition operation and use the names "first" and "second" for the input names
     instead of the function arg names (x and y).
 
-    >>>@OperationPlugin\
-    @input_names("first", "second")\
-    def my_add(x: int, y: int) -> int:\
-        return x + y
+    >>> @OperationPlugin
+    >>> @input_names("first", "second")
+    >>> def my_add(x: int, y: int) -> int:
+    >>>     return x + y
     """
 
     def decorator(func):
@@ -621,14 +721,14 @@ def output_names(*names):
     names : List[str]
         Names for the outputs in the operation.
 
-    Examples
+    Example
     --------
     Define an operation that has the outputs `x` and `y`.
 
-    >>>@OperationPlugin\
-    @output_names("x", "y")\
-    def some_operation(a: int, b: int) -> Tuple[int, int]:\
-        return a, b
+    >>> @OperationPlugin
+    >>> @output_names("x", "y")
+    >>> def some_operation(a: int, b: int) -> Tuple[int, int]:
+    >>>     return a, b
 
     """
 
@@ -650,13 +750,13 @@ def output_shape(arg_name: str, shape: Union[int, Collection[int]]):
     shape : int or tuple of ints
         N-element tuple representing the shape (dimensions) of the output.
 
-    Examples
+    Example
     --------
     TODO
     """
 
     def decorator(func):
-        _quick_set(func, "output_shape", arg_name, shape, {})
+        _quick_set(func, 'output_shape', arg_name, shape, {})
         return func
 
     return decorator
@@ -672,19 +772,19 @@ def visible(arg_name: str, is_visible=True):
     is_visible : bool, optional
         Whether or not to make the input visible or not (default is True).
 
-    Examples
+    Example
     --------
     Define an operation that makes the data_image invisible to the GUI (when using `as_parameter()` and pyqtgraph).
 
-    >>>@OperationPlugin\
-    @visible('data_image')\
-    def threshold(data_image: np.ndarray, threshold: float = 0.5) -> np.ndarray:\
-        return ...
+    >>> @OperationPlugin
+    >>> @visible('data_image')
+    >>> def threshold(data_image: np.ndarray, threshold: float = 0.5) -> np.ndarray:
+    >>>     return ...
 
     """
 
     def decorator(func):
-        _quick_set(func, "visible", arg_name, is_visible, {})
+        _quick_set(func, 'visible', arg_name, is_visible, {})
         return func
 
     return decorator
@@ -705,28 +805,28 @@ def opts(arg_name: str, **options):
     options : keyword args
         Keyword arguments that can be used for the rendering backend (pyqtgraph).
 
-    Examples
+    Example
     --------
     Define an operation where the `x` input is readonly.
 
-    >>>@OperationPlugin\
-    @opts('x', 'readonly'=True)\
-    def op(x: str = 100) -> str:\
-        return x
+    >>> @OperationPlugin
+    >>> @opts('x', 'readonly'=True)
+    >>> def op(x: str = 100) -> str:
+    >>>     return x
     """
 
     def decorator(func):
-        _quick_set(func, "opts", arg_name, options, {})
+        _quick_set(func, 'opts', arg_name, options, {})
         return func
 
     return decorator
 
 
 def _describe_arg(arg_type: str, arg_name: str, description: str):
-    assert arg_type in ["input", "output"]
+    assert arg_type in ['input', 'output']
 
     def decorator(func):
-        _quick_set(func, f"{arg_type}_descriptions", arg_name, description, {})
+        _quick_set(func, f'{arg_type}_descriptions', arg_name, description, {})
         return func
 
     return decorator
@@ -746,17 +846,17 @@ def describe_input(arg_name: str, description: str):
     description : str
         A human-readable description of the input `arg_name`
 
-    Examples
+    Example
     --------
-    Define an operation where the `x` input is readonly.
+    Define an operation and attach a description to its `x` input argument.
 
-    >>>@OperationPlugin\
-    @describe_input('x', 'The value to square.')\
-    def square(x: int = 100) -> int:\
-        return x**2
+    >>> @OperationPlugin
+    >>> @describe_input('x', 'The value to square.')
+    >>> def square(x: int = 100) -> int:
+    >>>     return x**2
     """
 
-    return _describe_arg("input", arg_name, description)
+    return _describe_arg('input', arg_name, description)
 
 
 def describe_output(arg_name: str, description: str):
@@ -773,18 +873,18 @@ def describe_output(arg_name: str, description: str):
     description : str
         A human-readable description of the output `arg_name`.
 
-    Examples
+    Example
     --------
-    Define an operation where the `x` input is readonly.
+    Define an operation and attach a description to its `square` output.
 
-    >>>@OperationPlugin\
-    @output_names('square')\
-    @describe_output('square', 'The squared value of x.')\
-    def square(x: int = 100) -> int:\
-        return x**2
+    >>> @OperationPlugin
+    >>> @output_names('square')
+    >>> @describe_output('square', 'The squared value of x.')
+    >>> def square(x: int = 100) -> int:
+    >>>     return x**2
     """
 
-    return _describe_arg("output", arg_name, description)
+    return _describe_arg('output', arg_name, description)
 
 
 def categories(*categories: Tuple[Union[tuple, str]]):
@@ -798,24 +898,24 @@ def categories(*categories: Tuple[Union[tuple, str]]):
         A sequence of categories. Each item is a tuple or str. If an item is a tuple, each item in the tuple is considered
         as an additional depth in the menu structure.
 
-    Examples
+    Example
     --------
-    Define an operation where the `x` input is readonly.
+    Define an operation that is in the following categories::
 
-    >>>@OperationPlugin\
-    @categories(('Generic Functions', 'Simple Math'), 'Math Functions')\
-    def square(x: int = 100) -> int:\
-        return x**2
+        Generic Functions
+            Simple Math
+                (square operation)
+        Math Functions
+                (square operation)
 
-    Generic Functions
-        Simple Math
-            Square
-    Math Functions
-        Square
+    >>> @OperationPlugin
+    >>> @categories(('Generic Functions', 'Simple Math'), 'Math Functions')
+    >>> def square(x: int = 100) -> int:
+    >>>     return x**2
     """
 
     def decorator(func):
-        if not hasattr(func, "categories"):
+        if not hasattr(func, 'categories'):
             func.categories = []
         func.categories.append(categories)
         return func

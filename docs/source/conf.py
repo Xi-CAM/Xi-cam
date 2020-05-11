@@ -10,27 +10,30 @@
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 #
-import os
-import sys
 from recommonmark.transform import AutoStructify
 from sphinx.ext import autodoc
 import sphinx_bootstrap_theme
+from xicam._version import get_versions
 
 # -- Project information -----------------------------------------------------
 
-project = "Xi-cam"
-copyright = "2019, Ronald Pandolfi"
-author = "Ronald Pandolfi"
+project = "Xi-CAM"
+copyright = "2020, Ronald J. Pandolfi"
+author = "Ronald J. Pandolfi"
 
 # The full version, including alpha/beta/rc tags
-release = "0.1.0"
+release = get_versions()["version"]
 
 # -- General configuration ---------------------------------------------------
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ["sphinx.ext.autodoc", "sphinx.ext.napoleon", "recommonmark", "sphinx_markdown_tables"]
+extensions = ["sphinx.ext.autodoc", "sphinx.ext.napoleon", "recommonmark", "sphinx_markdown_tables", "sphinx.ext.intersphinx"]
+
+intersphinx_mapping = {
+    'pyqtgraph': ("http://www.pyqtgraph.org/documentation/", None),
+}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
@@ -145,7 +148,7 @@ class SimpleFunctionDocumenter(autodoc.FunctionDocumenter):
 
 
 def setup(app):
-    app.add_stylesheet("my-styles.css")
+    app.add_css_file("my-styles.css")
     # Allow md files to evaluate marked sections as rst
     app.add_config_value("recommonmark_config", {"enable_eval_rst": True}, True)
     app.add_transform(AutoStructify)

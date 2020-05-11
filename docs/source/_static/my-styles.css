@@ -13,9 +13,54 @@
     color: #0dd;
 }*/
 
+@font-face {
+    font-family: "Zero Threes";
+    src: url("zerothre.ttf");
+}
+
+h1 {
+    text-shadow: 0 0 15px #0dd;
+    font-family: "Zero Threes", "Droid Serif", "DejaVu Serif", "STIX", serif;
+}
+
 .highlight pre, code, .highlight-default {
     background-color: #003;
     color: white;
+}
+
+code {
+    font-size: 100%;
+}
+
+code.literal {
+    background-color: #044;
+}
+
+code.descclassname {
+    padding-right:0;
+}
+
+code.descname {
+    padding-left:0;
+    padding-right:0;
+}
+
+code.sig-prename {
+    padding-left:0;
+}
+
+dl.class dd {
+    margin: 0 0 12px 24px;
+}
+
+dl.field-list dd.field-odd {
+    margin: 0 0 0 0;
+    padding-left:0;
+}
+
+div.highlight pre {
+    background-color: #022;
+    border: 1px solid #0cc;
 }
 
 a {
@@ -24,7 +69,7 @@ a {
 }
 
 a:hover {
-    text-shadow: 0 0 8px #0dd;
+    text-shadow: 0 0 15px #0dd;
 }
 
 .reference:hover {

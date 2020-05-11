@@ -1,414 +1,349 @@
-# Creating a GUIPlugin
+# GUIPlugin Documentation
 
-Xi-cam provides the GUIPlugin class for writing a Qt widget-based plugin.
-By deriving a GUIPlugin, you can define a custom plugin in Xi-cam that can
-be used to load, process, and analyze data.
+This documentation provides information on GUIPlugins and GUILayouts
+to help with designing your own plugins for Xi-CAM.
+API reference documentation is also included at the bottom.
 
-See the
-[Resources](resources.md) page for more information about Qt and QtPy.
+*If you are new to developing Xi-CAM plugins,
+it is recommended that you follow the [quick-start documentation](quickstart.md) first.*
 
-## Prerequisites
+For more general development resources, see the [resources documentation](resources.md).
 
-If you have not installed Xi-cam for development, follow the instructions on the 
-[Installing Xi-cam](install.md) page.
+## What Is A GUIPlugin?
 
-Also, *make sure that your xicam virtual environment (venv) is activated*. 
+A GUIPlugin is an interactive user-facing plugin in Xi-CAM.
+It can be used to visualize and analyze data.
 
-For Windows, commands will be run with
-Git Bash. For macOS and Linux, commands will be run on the terminal.
+GUIPlugins make use of the `qtpy` Python package for interactive GUI components.
+See the resources documentation for more information.
 
-## Core Concepts
-
-The core concepts to keep in mind when creating a GUIPlugin are stages, GUI layouts, data handlers, and
-workflows. We will start with stages and GUI Layouts since they are closely tied to each other.
-
-### Stages
-
-Stages are used to organize user work flow in a GUIPlugin.
-Each stage represents a collection of widgets used to perform some task. 
-A GUIPlugin must have at least one stage.
-
-Stages are defined as as an ordered dictionary,
-where each key represents a stage's name and each associated value
-is a [GUILayout](#gui-layouts) that defines the organization of widgets for that stage.
-The key will be used at the stage's display name in Xi-cam.
-
-As an example, we could have a Demo GUIPlugin that has the stages
-X and Y. To set these stages, we would set the
-GUIPlugin's stages property:
+### Where is GUIPlugin?
 
 ```python
-self.stages = {
-    'X': GUILayout(xWidget),
-    'Y': GUILayout(yWidget)
-}
+xicam.plugins.guiplugin
 ```
 
-This creates two stages, X and Y, in your GUIPlugin.
-When clicking the Demo plugin on the top of the main window, you would see:
+### What Does a GUIPlugin Look Like?
 
-> Demo | X | Y | &uarr;
+First, let's look at what Xi-CAM looks like when you first load it:
 
+```eval_rst
+.. figure:: _static/xicam-main.png
+  :alt: Main window of Xi-CAM on startup, with three installed plugins.
 
-[//]: <> (For example, if we
-have a GUIPlugin called MovieEnhance, we could break apart its user work flow
-into separate but related components. MovieEnhance could be broken down into
-a user workflow where the user can view the raw images and select a
-region-of-interest, "enhance" the region-of-interest, then crop for a final
-enhanced product image. These steps can be represented by stages: Examine,
-Enhance, Crop.)
+Main window of Xi-CAM when running xicam.
+Note that there are three installed `GUIPlugins` here;
+if you haven't installed any plugins, you won't see any listed.
+```
 
-### GUI Layouts
+As you can see, the main window of Xi-CAM after it has finished loading
+shows any installed GUIPlugins, a citation / references widget, a preview widget,
+and a data browser widget.
+The data browser widget can be used to load data into a `GUIPlugin`.
+The data preview widget can be used to "preview" data before loading it.
 
-The GUILayout class represents a layout of widgets to use in a GUIPlugin stage.
-The main window in Xi-cam is organized in a 3 x 3 grid. 
-These cells in the grid are named according to their positions in the grid: 
-center, top, bottom, left, lefttop, leftbottom, right, righttop, rightbottom. 
+It is important to keep in mind a few concepts for GUIPlugins:
+* A `GUIPlugin` can have one or more `stages`.
+* Each `stage` is defined with a `GUILayout`.
+* A `GUILayout` is defined with a widget (or multiple widgets).
 
-When creating a GUILayout, a *center* widget must be provided; 
-the other positions are optional. 
-Also note that the *lefttop* and *left* widgets are already occupied 
-by the main window's preview widget
-and data resource browser (i.e. file browser), respectively.
-Although it is possible to provide your own *left* and *lefttop* widgets,
-it is not recommended as it will replace those main window widgets.
+These concepts are explored in more detail later in this document.
 
-### Data Handlers
+## How Do I Create a GUIPlugin?
 
-If your plugin needs to load data and/or store internally processed data, the plugin will need a way to ingest
-the data into Xi-cam and then store data internally.
+To create a `GUIPlugin`, you will need:
 
-### DataHandlerPlugin
+* a derived class of `GUIPlugin`
+* a `setup.py` file with a `xicam.plugins.GUIPlugin` entry point
 
-The DataHandlerPlugin class provides a mechanism to ingest data into Xi-cam. If you have a custom data format or the
-data you want to load is not currently a format Xi-cam can load, you will need to implement your own
-DataHandlerPlugin.
- 
-See [Creating a DataHandlerPlugin](data-handler.md) for more information.
+Although you may structure your plugin's code and support files as you like,
+we recommend using a `cookiecutter` template that we have created for Xi-CAM's `GUIPlugin`.
 
-### GUIPlugin header methods
+### What is cookiecutter?
 
-Once data is ingested into Xi-cam, you will need a uniform way to access this internal data.
-The GUIPlugin class provides an interface for storing and accessing this data. You will need to override
-(i.e. implement your own version of) a few GUIPlugin methods in your own derived GUIPlugin class:
+`cookiecutter` is a templating tool that can be used to interactively create python project.
+For more information, see the [cookiecutter documentation]( https://cookiecutter.readthedocs.io).
 
-**appendHeader** is *intended* to be used to internalize data in your derived GUIPlugin. You *must* override this
-method if you want to add ingested data (`NonDBHeader`) to your internal data model (`QStandardItemModel`).
+#### Install cookiecutter
 
-**currentheader** is *intended* to be used to retrieve the current (active, focused, etc.) internalized data. You
-*must* override this method if you intend to use it. 
+In your active environment, you will need to `pip install cookiecutter`.
 
-**headers** is used to get a list of all of the data items in the data model. *This method expects that a `headermodel`
-attribute be created in your GUIPlugin class. This attribute is usually some type of Qt model 
-(e.g. `QStandardItemModel`) (the `headermodel` attribute is expected to be a type that implements
-`item()` and `rowCount()` methods).*
+#### Run cookiecutter with the Xi-CAM GUIPlugin Template
 
-### Workflows
+Now, in the directory of your choice (the home directory, `~`, should work if you are unsure),
+run the following:
 
-In Xi-cam a `Workflow` represents a way to organize a set of processes (with inputs and outputs) and execute these 
-processes. Here, a process is a `ProcessingPlugin`. You will want to create a Workflow when you want to parameterize
-and perform processes (i.e. operations) on your data.
+```bash
+cookiecutter https://github.com/Xi-CAM/Xi-cam.templates.GuiPlugin 
+```
 
-For more information, see the [Workflow](workflow.md) documentation.
+This will download the template for creating a `GUIPlugin`,
+then present you with a series of prompts.
 
----
+A prompt will look like `prompt [default value]: `.
+If you want to use the default value specified, hit the enter key.
+Otherwise, respond to the prompt with the value you would like.
 
-## Creating your First GUIPlugin
+Here are the prompts with their descriptions:
 
-After reviewing the core concepts, we can start implementing our own GUIPlugin.
-We will create a simple GUIPlugin that allows viewing loaded images, then we
-will extend that plugin with more features until we have a MovieEnhance plugin.
-
-When first starting to write Xi-cam GUIPlugins, it is recommended to use a `cookiecutter`
-template to set up some basic code and infrastructure for you.
-
-### Using cookiecutter to Create the Plugin
-[cookiecutter](https://cookiecutter.readthedocs.io/en/latest/readme.html) is a tool for creating
-python projects from a template file.
-
-There is a Xi-cam GUIPlugin template for cookiecutter that helps set up some packaging infrastructure
-and boiler-plate code for a GUIPlugin. Follow the instructions here:
-[Xi-cam.templates.GuiPlugin repo](https://github.com/synchrotrons/Xi-cam.templates.GuiPlugin).
-
-When cookiecutter is run with the GUIPlugin template file, it will prompt for some information
-that is used to create the package. Most of the prompts will have default values, indicated
-as `[somevalue]` next to the prompt.
-
-Here are the prompts with descriptions and values that we will use:
-
-prompt | description | our value
+prompt | default value | description 
 --- | --- | ---
-package_name     | name of the plugin package (also the name displayed in Xi-cam)     | mydemo
-display_name     | name of plugin (shows up in docs and README)                       | My Demo Plugin
-plugin_version   | current plugin version number                                      |
-plugin_file_name | file to put the generated plugin code into                         |
-author_name      | name of the plugin's author                                        | &lt; Your Name &gt;
-author_email     | author's email                                                     | &lt; Your Email &gt;
-author_url       | url for the author/plugin (this is used as the plugin repo url)    | &lt; Your Plugin Repo &gt;
-description      | description of the plugin                                          | Demonstrates a simple GUIPlugin
-keywords         | keywords to tag the plugin with                                    |
-dependencies     | packages the plugin depends on                                     | 
-plugin_code      | additional code to put in the plugin implementation file           |
-stages_code      | python dictionary to set the plugin's stages to                    |
-yapsy_ext        | file extension of the plugin marker file                           |
+package_name     | my_plugin           | name of the package to create (will be `xicam.package_name`)
+plugin_name      | MyPlugin            | name of the GUIPlugin class to create (name of your gui plugin in code)
+display_name     | My Plugin           | name of the GUIPlugin as it will appear in the Xi-CAM GUI
+plugin_version   | 1.0.0               | current plugin version number
+author_name      |                     | author's name
+author_email     |                     | author's email
+author_url       |                     | url for the author/plugin (e.g. plugin GitHub repo url)
+description      |                     | description of the plugin
+dependencies     |                     | packages the plugin depends on
+keywords         | \[Xi-cam, plugin\]  | keywords to tag the plugin with (when packaging)
 
-This generates the following in your current directory:
+This will create a python package with some files and code to get started developing a GUIPlugin.
+**You can always change the names of your plugin, package, etc. later by hand.**
 
-```
-Xi-cam.plugins.mydemo/
-  docs/
-    ...
-  LICENSE.md
-  MANIFEST.in
-  README.md
-  requirements.txt
-  setup.cfg
-  setup.py
-  tests/
-    ...
-  update_docs.sh
-  xicam/
-    mydemo/
-      __init__.py
-      mydemo.yapsy-plugin
-```
+The GUIPlugin you created will be implemented in `xicam.package_name/xicam/package_name/__init__.py`.
 
-The plugin code will be located in *Xi-cam.plugins.mydemo/xicam/mydemo/__init__.py, which should look like:
+For purposes of this documentation,
+we will refer to these values by their defaults.
 
-```python
-from qtpy.QtCore import *
-from qtpy.QtGui import *
-from qtpy.QtWidgets import *
-from qtpy import uic
-import pyqtgraph as pg
+### Installing Your GUIPlugin
 
-from xicam.core import msg
-from xicam.plugins import GUIPlugin, GUILayout
+When you create a new plugin package using cookiecutter,
+one of the files it generates is `setup.py`.
+This contains meta-information about the package.
+When you run `pip install` of your package,
+it uses this information to create a disribution.
 
-class mydemo(GUIPlugin):
-    name = 'mydemo'
+**`setup.py` also defines entry points,
+which Xi-CAM uses to find plugins.**
 
-    # insert GUI plugin generation
+For more information about entry points in Xi-CAM,
+see the [following documentation](entry-points.md).
 
+Navigate to your created package directory and create an editable pip install:
 
-    def __init__(self, *args, **kwargs):
-        # insert auto generation
-        self.stages = {'Stage 1': GUILayout(QLabel('Stage 1'))}
-        super(mydemo, self).__init__(*args,**kwargs)
-```
-
-#### Setting up VCS (Version Control System)
-
-*If you are familiar with VCS and git, continue to the next section.*
-
-You will need to initialize the directory cookiecutter created, `Xi-cam.plugins.mydemo`, 
-as a repository:
-
-```
-cd Xi-cam.plugins.mydemo
-git init .
-```
-
-You will then want to add a .gitignore file to tell what files git shouldn't look at.
-You can copy the .gitignore from the Xi-cam repository you cloned during installation.
-
-The repository is initialized, but we still need to tell git what files we want to add. To do this, we can add all of
-the non-ignored files by running `git add .`.
-
-This *stages* the changes, meaning that git will save these to your local repository once you commit those changes.
-To save these changes, run `git commit -m "Create mydemo plugin from cookiecutter template`. Now these changes are
-saved locally.
-
-You will want to then set up your remote (e.g. GitHub). If you want to push your code up to GitHub, you will first want
-to [create a new GitHub repository](https://help.github.com/en/articles/creating-a-new-repository). *Do not initialize
-this repository with a README, .gitignore, or license (by default these will not be created).*
-
-GitHub will then give you some instructions with how to add files to the new repository. You will want to follow the
-steps under *push an existing repository from the command line* (it will show a `git remote` command and a
-`git push` command).
-
-#### Installing the plugin
-
-After creating the plugin, we need to tell Xi-cam that it is available to use. One way to do this is to create an
-editable pip install. Make sure you are in your plugin's directory (Xi-cam.plugins.mydemo), then run:
-
-```
+```bash
+cd xicam.my_plugin
 pip install -e .
 ```
 
-This will allow Xi-cam to see your plugin and load it.
+This tells pip install your file locally by looking at the `setup.py` file,
+and the `-e` allows you to make changes to your code without having to reinstall.
 
-#### Verifying
+**If you change an entry point in setup.py, you must reinstall.**
 
-Run xicam to verify that your plugin loads properly.
-At the top-right of the Xi-cam main window, you should see *mydemo*.
-When you click it, you should see the text *Stage 1* in the middle of the main window.
+### Selecting and Activating a GUIPlugin
 
----
+We can activate any of the installed GUIPlugins by clicking on their name at the top.
+Let's click on "My Plugin":
 
-## Extending your GUIPlugin
+```eval_rst
+.. figure:: _static/my-plugin.png
+  :alt: Xi-CAM MyPlugin
 
-After verifying that your plugin is loading in Xi-cam, we can begin to extend the GUIPlugin with custom
-functionality.
+  MyPlugin's interface.
 
-### Example 1 - A Inverting Plugin
+```
+Note that this plugin doesn't do much yet; it simply displays the text "Stage 1..."
+You can also click "Stage 2" at the top, and you will see the text "Stage 2..." in the center.
 
-This example illustrates a simple GUIPlugin that can invert the values of an input image array.
-Here, *invert* will mean taking the difference between the max integer value and the image pixel values.
-For example, if we have an image that stores 8-bit unsigned data (values 0 to 255), we will subtract
-the pixel value from 255.
+### How is MyPlugin Implemented?
 
-First, we will need to create a ProcessingPlugin for our inversion process.
-We can add an Invert class to our *mydemo* package(*Xi-cam.plugins.mydemo/xicam/mydemo/__init__.py*).
-
-Our Invert ProcessingPlugin needs to read in input data and output inverted data.
-We can define Inputs and an Output in our Invert class to handle those appropriately.
-We will also want to give this plugin a name and implement the evaluate method,
-which actually does the 'process' (the inversion).
+The code for `MyPlugin` is implemented in `xicam.package_name/xicam/package_name/__init__.py`.
 
 ```python
-import numpy as np
+from qtpy.QtWidgets import QLabel
 
-from xicam.plugins import ProcessingPlugin, Input, Output
-
-
-class Invert(ProcessingPlugin):
-    name = 'Invert'
-
-    data = Input(description='Image array data to invert', type=np.ndarray)
-    inverted = Output(description='Inverted image data', type=np.ndarray)
-
-    def evaluate(self):
-        
-        invertVal = np.iinfo(self.data.value.dtype).max
-        self.inverted.value = invertVal - self.data.value
-```
-
-Now that we have our Invert ProcessingPlugin implemented, we can begin to modify our GUIPlugin to communicate with it.
-Let's first think about what stages we might need and the layouts of these stages in our GUIPlugin.
-
-To get a quick implementation up and running, we can have one stage for now. This stage will have an image viewer widget
-as its center widget. We will also add a tool bar as the top widget. The tool bar will have a tool button that can run 
-the invert process when clicked. To do this, we will add a QAction to the tool bar using `QToolBar.addAction`. 
-
-When an action is added to the toolbar, it will be displayed as a clickable widget (button).
-In our case, this button will show the text *Invert* (when adding an action,
-there are multiple ways to parameterize what the created action will display).
-Adding an action also sets up the the triggered signal to the method (called a slot in Qt)
-that we pass to the `addAction` method.
-This means whenever the *Invert* button is clicked, an internal method (slot) will be called.
-
-In Qt, signals and slots allow widgets (or any Qt objects) to communicate with each other.
-Slots can be connected to (listen for) a signal.
-A *signal* is *emitted* from a widget, typically when the widget state changes in some way.
-A signal can be emitted without any slots being connected to it.
-When a slot is connected to a signal, the slot is executed anytime the connected signal is emitted.
-*For more information about Qt signals and slots,
-see the [Qt section](resources.md#qt) on the resources page.*
-
-Let's look at the `QToolBar.addAction(text, receiver)` ([ref](https://pyside.github.io/docs/pyside/PySide/QtGui/QToolBar.html?highlight=qtoolbar#PySide.QtGui.PySide.QtGui.QToolBar.addAction)):
-```
-PySide.QtGui.QToolBar.addAction(text, receiver)
-
-This is an overloaded function.
-
-Creates a new action with the given text . This action is added to the end of the toolbar. 
-The action’s PySide.QtGui.QAction.triggered() signal is connected to member in receiver .
-```
-
-We will need to provide text for the action that is created as well as the receiver (slot) method.
-This method will be responsible for executing the Workflow, then calling a method to grab the results of the Workflow (the inverted data)
-and update the image.
-
-For an input image, we will use one of Xi-cam's gui widgets, `DynImageView`, to display the image.
-We will use numpy to generate our input image. We will create a 128x128 size image with each row
-having values from 0 to 127.
-
-The completed example (with added comments) looks like:
-
-```python
-from qtpy.QtCore import *
-from qtpy.QtGui import *
-from qtpy.QtWidgets import *
-from qtpy import uic
-import pyqtgraph as pg
-
-import numpy as np
-
-from xicam.core import msg
-from xicam.core.execution import Workflow
-from xicam.gui.widgets.dynimageview import DynImageView
-from xicam.plugins import GUIPlugin, GUILayout, ProcessingPlugin, Input, Output
+from xicam.plugins import GUIPlugin, GUILayout
 
 
-class Invert(ProcessingPlugin):
-    # Define the plugin's name
-    name = 'Invert'
-
-    # Define inputs and outputs for the plugin
-    data = Input(description='Image array data to invert', type=np.ndarray)
-    inverted = Output(description='Inverted image data', type=np.ndarray)
-
-    # This method does the 'processing'
-    def evaluate(self):
-        # Find the max possible value of the data stored in our image
-        invertVal = np.iinfo(self.data.value.dtype).max
-        # Invert
-        self.inverted.value = invertVal - self.data.value
-
-
-class mydemo(GUIPlugin):
-    name = 'mydemo'
-
-    # insert GUI plugin generation
+class MyPlugin(GUIPlugin):
+    # Defines the name of the plugin (how it is displayed in Xi-CAM)
+    name = "My Plugin"
 
     def __init__(self, *args, **kwargs):
-        # Create tool bar
-        self.toolBar = QToolBar()
-        # When the 'Invert' action is triggered, call self.doInvertWorkflow
-        self.toolBar.addAction('Invert', self.doInvertWorkflow)
+        # Insert code here
 
-        # Create an initial 8-bit 128x128 image
-        self.imageViewer = DynImageView()
-        imageData = np.empty(shape=(128, 128), dtype=np.uint8)
-        imageData[:] = np.arange(imageData.shape[0])
-        self.imageViewer.setImage(imageData)
+        # Modify stages here
+        self.stages = {'Stage 1': GUILayout(QLabel("Stage 1...")),
+                       "Stage 2": GUILayout(QLabel("Stage 2..."))}
 
-        # Create the stages
-        self.stages = {
-            'Invert': GUILayout(self.imageViewer, top=self.toolBar)
-        }
-		
-        # Create a Workfow, add our Invert ProcessingPlugin to it
-        self.workflow = Workflow()
-        self.workflow.addProcess(Invert())
+        # Initialize the parent class, GUIPlugin
+        super(MyPlugin, self).__init__(*args, **kwargs)
 
-        super(mydemo, self).__init__(*args, **kwargs)
-
-    def doInvertWorkflow(self):
-        # Pass the first ProcessingPlugin's Inputs here:
-        # in our case, set the Invert ProcessingPlugin's 'data' Input.
-        # When the processes are finished (just Invert in our case),
-        # we can grab the results (Outputs) in the callback_slot.
-        self.workflow.execute(data=self.imageViewer.image,
-                         callback_slot=self.updateImageView)
-
-    def updateImageView(self, results):
-        # Our Workflow's results are ready, set our image to the inverted data
-        self.imageViewer.setImage(results['inverted'].value)
 ```
 
-[//]: <> (TODO:
-DataHandler section
-  is there a way to easily see registered data handlers? e.g. .hdf, .jpg, .bin, etc. are currently loadable
-VCS section
-  mention global git config?
-  git ssh keys?
-  add .gitignore to cookiecutter template .would be really useful, see Xi-cam's .gitignore for example file
-Implementation section
-  WorkflowEditor
-  TabView
-)
+Cookiecutter set up this starter code for us.
+We have a derived version of `GUIPlugin`, which we call `MyPlugin`.
+It has the name "My Plugin", which is how it will appear in the Xi-CAM GUI.
+
+We then have an `__init__` method to describe how to create a `MyPlugin`.
+Notice that there is a `QLabel`, which is simply text, added into two `GUILayouts`.
+These layouts are then added to the interface via `self.stages`.
+
+#### What Is a Stage?
+
+Visually, a stage is a stand-alone interface for a `GUIPlugin`.
+A `GUIPlugin` must have at least one stage but may have multiple stages.
+With multiple stages, each stage has its own interface
+and each stage can be selected in the top bar of Xi-CAM.
+
+Stages for a `GUIPlugin` are accessible with ```self.stages```.
+```self.stages``` is a dictionary where each
+* key is the name of the stage
+* value is a `GUILayout`s
+
+For example, we might define two stages as:
+
+```python
+self.stages = {"A": GUILayout(QLabel("1")),
+               "B": GUILayout(QLabel("2"))}
+```
+
+This will look like:
+
+```eval_rst
+.. figure:: _static/xicam-example-plugin-stages.png
+  :alt: MyPlugin with multiple stages
+
+The interface of a plugin named "My Plugin" with multiple stages, "A" and "B".
+Note that "A" is currently selected, so we see the label "1" in the middle of the window.
+```
+
+#### What Is a GUILayout?
+
+A `GUILayout` is a layout used to describe how widgets should be organized in a stage in a GUIPlugin.
+
+```eval_rst
+.. figure:: _static/xicam-layout.png
+  :alt: Layout of Xi-CAM, corresponding to a GUILayout.
+```
+
+The layout corresponds to a 3x3 grid in the Xi-CAM main window, with the names
+center, left, right, lefttop, righttop, leftbottom, rightbottom.
+These names correspond to the arguments you can pass when creating a `GUILayout`.
+
+You **must** provide at least one widget, which will be the center widget.
+
+#### What Is a QLabel?
+
+`QLabel` is a Qt widget provided by the Qt backend Xi-CAM makes use of.
+It acts a widget that holds simple text.
+
+For more information on Qt, see [Qt for Python Documentation](https://doc.qt.io/qtforpython/).
+
+## How Do I Load Data into My Plugin?
+
+In order to load data into a `GUIPlugin`, you must:
+
+* have access to or configure a databroker catalog
+* re-implement `appendCatalog` in your `GUIPlugin` derived class
+  * this will need to have access to an internal widget to display the data
+* have a `GUIPlugin` selected in Xi-CAM
+
+### Configuring a Databroker Catalog
+
+For purposes of this documentation,
+we will be using a sample msgpack catalog and a starter catalog.yml file you can download.
+
+For general help about databroker, catalogs, and configuration,
+there is excellent documentation here: https://nsls-ii.github.io/databroker/v2/index.html.
+Additional documentation about catalogs can be found here:
+https://intake.readthedocs.io/en/latest/index.html
+
+```eval_rst
+=============================================================================================================== ================================
+Download                                                                                                        MD5
+=============================================================================================================== ================================
+:download:`349497da-ead2-4015-8201-4719f8a2de69.msgpack<_static/349497da-ead2-4015-8201-4719f8a2de69.msgpack>`  3a18341f570b100afbaff1c889e9b4f8
+:download:`catalog.yml<_static/catalog.yml>`                                                                    c14814b4537810f14300f8c8d5949285
+=============================================================================================================== ================================
+```
+
+After downloading these files, we will want to do three things:
+
+1. Decide where to put our data and move it there
+1. Update our `catalog.yml` `paths` to have a path directory the data is in
+1. Move our `catalog.yml` to a place it can be discovered
+
+#### Moving the msgpack Data
+
+You can choose where you'd like to copy or move your data.
+For purposes of this guide,
+we will create a new directory in our home called `catalogs`
+and move the downloaded msgpack file there.
+
+#### Updating catalog.yml
+
+Now that we've moved / copied our sample catalog msgpack file,
+we need to update our `catalog.yml` to tell it where it can find that data.
+
+We will want to add a line under `paths` in `catalog.yml`
+that is the complete file path to the `catalogs` directory we added above.
+
+#### Making catalog.yml Discoverable
+
+To know where we can put our `catalog.yml` file,
+we can run the following in a Python interpreter:
+
+```python
+from databroker import catalog_search_path
+print(catalog_search_path())
+```
+
+You can move the `catalog.yml` file in any of the paths listed.
+Note that typically there will be a more user-oriented path
+and a more global system-level path for the catalogs to find.
+You can copy the `catalog.yml` file to either (or both) path
+depending on how you want a machine set up.
+
+### Implementing appendCatalog
+
+Let's implement the `appendCatalog` method in `MyPlugin`
+so we can load the catalog.
+We will also be adding a widget to view the loaded catalog.
+
+Inside of the `MyPlugin` class (located in `xicam/my_plugin/__init__.py`),
+add the `appendCatalog` as follows:
+
+```python
+from qtpy.QtWidgets import QLabel
+
+from xicam.core.msg import logMessage
+from xicam.plugins import GUILayout, GUIPlugin
+from xicam.gui.widgets.imageviewmixins import CatalogView
 
 
+class MyPlugin(GUIPlugin):
+    # Define the name of the plugin (how it is displayed in Xi-CAM)
+    name = "My Plugin"
 
+    def __init__(self, *args, **kwargs):
+        self._catalog_viewer = CatalogView()
+        self._stream = "primary"
+        self._field = "img"
+
+        catalog_viewer_layout = GUILayout(self._catalog_viewer)
+                
+        # Modify stages here
+        # self.stages = {"Stage 1": GUILayout(QLabel("Stage 1..."))}
+        self.stages = {"View Catalog": catalog_viewer_layout}
+
+        super(MyPlugin, self).__init__(*args, **kwargs)
+
+    def appendCatalog(self, catalog):
+        self._catalog_viewer.setCatalog(catalog, self._stream, self._field)
+        logMessage(f"Opening catalog with stream {self._stream} and field {self._field}.")
+        
+
+```
+
+## API Reference
+
+```eval_rst
+.. autoclass:: xicam.plugins.guiplugin.GUIPlugin
+   :members:
+.. autoclass:: xicam.plugins.guiplugin.GUILayout
+   :members:
+```

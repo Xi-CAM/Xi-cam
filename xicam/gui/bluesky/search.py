@@ -90,6 +90,7 @@ class ReloadThread(QThread):
     def __init__(self, search_state):
         super(ReloadThread, self).__init__()
         self.search_state = search_state
+        QApplication.instance().aboutToQuit.connect(self.quit)
 
     def run(self):
         while True:
@@ -109,12 +110,12 @@ class ProcessQueriesThread(QThread):
     def __init__(self, search_state):
         super(ProcessQueriesThread, self).__init__()
         self.search_state = search_state
+        QApplication.instance().aboutToQuit.connect(self.quit)
 
     def run(self):
         while True:
             try:
                 self.search_state.process_queries()
-                time.sleep(.1)
             except Exception as e:
                 msg.logError(e)
                 msg.showMessage("Unable to query: ", str(e))
@@ -254,15 +255,16 @@ class SearchState(ConfigurableQObject):
 
     def process_queries(self):
         # If there is a backlog, process only the newer query.
+        block = True
 
         while True:
             try:
                 query = self.query_queue.get_nowait()
-                if not query:
-                    return
+                block = False
             except queue.Empty:
-                return
-
+                if block:
+                    query = self.query_queue.get()
+                break
         log.debug("Submitting query %r", query)
         try:
             t0 = time.monotonic()
