@@ -480,7 +480,7 @@ def operation(func: Callable,
     """
     # For now, any C functions that don't have the required metadata for inspection will raise an exception
     # TODO: link to documentation
-        try:
+    try:
         inspect.signature(func)
     except ValueError as e:
         msg = f"The provided function '{func.__name__}' could not be inspected." \
