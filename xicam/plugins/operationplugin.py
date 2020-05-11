@@ -657,7 +657,15 @@ def limits(arg_name, limit):
 
 # TODO Check that signature propagates up
 def plot_hint(*args, **kwargs):
-    """Decorator to define plot hints for 1-dimensional outputs.
+    """Decorator to define plot hints for 1-dimensional outputs. This accepts `kwargs` that get passed to the rendering
+    widget; see :class:`pyqtgraph.PlotDataItem`. This annotation "hints" to Xi-cam that a Plot widget may be generated
+    to represent this data visually.
+
+    >>> @OperationPlugin
+    >>> @output_names('x', 'y')
+    >>> @plot_hint('x', 'y', yLog=True, labels={"left": "y-axis", "bottom": "x-axis"}, pen='r')
+    >>> def op(x):
+    >>>     ...
 
     Parameters
     ----------
