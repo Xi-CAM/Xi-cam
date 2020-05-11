@@ -45,6 +45,10 @@ code.descname {
     padding-right:0;
 }
 
+code.sig-prename {
+    padding-left:0;
+}
+
 dl.class dd {
     margin: 0 0 12px 24px;
 }
