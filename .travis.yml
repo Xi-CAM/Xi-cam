@@ -22,14 +22,7 @@ matrix:
         - pyinstaller --clean --onefile --noconsole --paths C:\Windows\System32\downlevel Xi-cam.spec
       env: PATH=/c/Python37:/c/Python37/Scripts:$PATH
 
-
-branches:
-  only:
-    - master
-
 env: TRAVIS=True
-
-sudo: false
 
 cache:
   apt: true
