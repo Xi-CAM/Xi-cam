@@ -9,10 +9,10 @@ A plugin-based application framework for synchrotron data processing and analysi
 
 ## Installation
 
-The latest stable Xi-CAM is available on anaconda cloud:
+The latest stable Xi-CAM is available on pypi
 
 ```bash
-conda install -c nsls2forge xicam
+pip install xicam
 ```
 
 For more information, see the [installation documentation](https://xi-cam2.readthedocs.io/en/latest/install.html).
