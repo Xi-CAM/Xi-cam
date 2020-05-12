@@ -46,6 +46,7 @@ script:
   - 'pytest --cov=xicam --cov-config=.coveragerc . || :'
 
 deploy:
+  skip_cleanup: true
   provider: pypi
   user: ronpandolfi
   password:
