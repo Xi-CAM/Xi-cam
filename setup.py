@@ -34,7 +34,7 @@ setup(
     long_description=long_description,
     # The project's main homepage.
     url="https://github.com/Xi-cam/Xi-cam",
-    download_url="https://github.com/lbl-camera/Xi-cam.core/archive/",  # TODO: check this
+    download_url="https://pypi.org/project/xicam/",
     # Author details
     author="Ronald J Pandolfi",
     author_email="ronpandolfi@lbl.gov",
@@ -54,7 +54,7 @@ setup(
         "License :: OSI Approved :: BSD License",
         # Specify the Python versions you support here. In particular, ensure
         # that you indicate whether you support Python 2, Python 3 or both.
-        "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
     ],
     # What does your project relate to?
     keywords="synchrotron analysis x-ray scattering tomography ",
