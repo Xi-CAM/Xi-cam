@@ -6,7 +6,10 @@
 [![Test Coverage](https://img.shields.io/codecov/c/github/Xi-cam/Xi-cam/master.svg)](https://codecov.io/github/Xi-cam/Xi-cam?branch=master)
 <!--[![Slack Status](https://img.shields.io/badge/slack-@ronpandolfi/nikea-yellow.svg?logo=slack)](https://nikea.slack.com/messages/U7Q1N42F6)-->
 
-A plugin-based application framework for synchrotron data processing and analysis, written in Python3.
+Xi-cam is a graphical environment for synchrotron data analysis,
+management, and visualization developed by the Advanced Light Source at
+Lawrence Berkeley National Laboratory. This is a cross-platform
+open-source Python 3 project licensed under BSD.
 
 ## Installation
 
