@@ -25,7 +25,7 @@ If applicable, add screenshots to help explain your problem.
 
 **Desktop (please complete the following information):**
  - OS: [e.g. Ubuntu 18.04]
- - Xi-CAM Version: [e.g. 2.2.5]
+ - Xi-CAM Version: [e.g. 2.0.0.dev1]
 
 **Additional context**
 Add any other context about the problem here.
