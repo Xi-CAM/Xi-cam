@@ -99,7 +99,7 @@ class XicamMainWindow(QMainWindow):
 
         # Set up help
         help = QMenu("&Help", parent=menubar)
-        documentation_link = QUrl("https://xi-cam2.readthedocs.io/en/latest/")
+        documentation_link = QUrl("https://xi-cam.readthedocs.io/en/latest/")
         help.addAction("Xi-CAM &Help", lambda: QDesktopServices.openUrl(documentation_link))
         slack_link = QUrl("https://nikea.slack.com")
         help.addAction("Chat on &Slack", lambda: QDesktopServices.openUrl(slack_link))

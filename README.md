@@ -19,9 +19,9 @@ The latest stable Xi-CAM is available on pypi
 pip install xicam
 ```
 
-For more information, see the [installation documentation](https://xi-cam2.readthedocs.io/en/latest/install.html).
+For more information, see the [installation documentation](https://xi-cam.readthedocs.io/en/latest/install.html).
 
 ## Resources
 
-* Documentation: https://xi-cam2.readthedocs.io/en/latest
-* Report an issue in Xi-CAM: [New Bug Report](https://github.com/Xi-CAM/Xi-cam-unified/issues/new?labels=bug&template=bug_report.md)
+* Documentation: https://xi-cam.readthedocs.io/en/latest
+* Report an issue in Xi-CAM: [New Bug Report](https://github.com/Xi-CAM/Xi-cam/issues/new?labels=bug&template=bug_report.md)
