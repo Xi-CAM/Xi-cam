@@ -19,7 +19,7 @@ The latest stable Xi-CAM is available on pypi
 pip install xicam
 ```
 
-For more information, see the [installation documentation](https://xi-cam.readthedocs.io/en/latest/install.html).
+For more information, see the [installation documentation](https://xi-cam.readthedocs.io/en/latest/quickstart.html).
 
 ## Resources
 
