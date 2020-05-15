@@ -2,13 +2,15 @@
 from functools import WRAPPER_ASSIGNMENTS
 from pyqtgraph import ImageView, InfiniteLine, mkPen, ScatterPlotItem, ImageItem, PlotItem
 from qtpy.QtGui import QTransform, QPolygonF
-from qtpy.QtWidgets import QLabel, QErrorMessage, QSizePolicy, QPushButton
-from qtpy.QtCore import Qt, Signal, Slot, QSize, QPointF, QRectF
+from qtpy.QtWidgets import QLabel, QErrorMessage, QSizePolicy, QPushButton, QHBoxLayout, QVBoxLayout, QComboBox
+from qtpy.QtCore import Qt, Signal, Slot, QSize, QPointF, QRectF, QObjectCleanupHandler
 import numpy as np
+from databroker.core import BlueskyRun
 
 # from pyFAI.geometry import Geometry
 from xicam.core import msg
 from xicam.core.data import MetaXArray
+from xicam.core.data.bluesky_utils import fields_from_stream, streams_from_run
 from xicam.gui.widgets.elidedlabel import ElidedLabel
 from xicam.gui.widgets.ROI import BetterPolyLineROI
 import enum
@@ -317,39 +319,6 @@ class QCoordinates(QSpace, PixelCoordinates):
         )
 
 
-class BetterButtons(ImageView):
-    def __init__(self, *args, **kwargs):
-        super(BetterButtons, self).__init__(*args, **kwargs)
-
-        # Setup axes reset button
-        self.resetAxesBtn = QPushButton("Reset Axes")
-        sizePolicy = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(1)
-        sizePolicy.setHeightForWidth(self.resetAxesBtn.sizePolicy().hasHeightForWidth())
-        self.resetAxesBtn.setSizePolicy(sizePolicy)
-        self.resetAxesBtn.setObjectName("resetAxes")
-        self.ui.gridLayout.addWidget(self.resetAxesBtn, 2, 1, 1, 1)
-        self.resetAxesBtn.clicked.connect(self.autoRange)
-
-        # Setup LUT reset button
-        self.resetLUTBtn = QPushButton("Reset LUT")
-        sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(1)
-        sizePolicy.setHeightForWidth(self.resetLUTBtn.sizePolicy().hasHeightForWidth())
-        # self.resetLUTBtn.setSizePolicy(sizePolicy)
-        # self.resetLUTBtn.setObjectName("resetLUTBtn")
-        self.ui.gridLayout.addWidget(self.resetLUTBtn, 2, 2, 1, 1)
-        self.resetLUTBtn.clicked.connect(self.autoLevels)
-
-        # Hide ROI button and rearrange
-        self.ui.roiBtn.setParent(None)
-        self.ui.menuBtn.setParent(None)
-        # self.ui.gridLayout.addWidget(self.ui.menuBtn, 1, 1, 1, 1)
-        self.ui.gridLayout.addWidget(self.ui.graphicsView, 0, 0, 2, 1)
-
-
 class PolygonROI(ImageView):
     def __init__(self, *args, **kwargs):
         """
@@ -628,6 +597,10 @@ class XArrayView(ImageView):
 
 
 class CatalogView(ImageView):
+    sigCatalogChanged = Signal(BlueskyRun)
+    sigStreamChanged = Signal(str)
+    sigFieldChanged = Signal(str)
+
     def __init__(self, catalog=None, stream=None, field=None, *args, **kwargs):
         self.catalog = catalog
         self.stream = stream
@@ -635,12 +608,22 @@ class CatalogView(ImageView):
         super(CatalogView, self).__init__(*args, **kwargs)
         self.setCatalog(self.catalog, self.stream, self.field)
 
-    def setCatalog(self, catalog, stream, field, *args, **kwargs):
+    def setCatalog(self, catalog, stream=None, field=None, *args, **kwargs):
         self.catalog = catalog
         self.stream = stream
         self.field = field
+        self._updateCatalog(*args, **kwargs)
+
+    def _updateCatalog(self, *args, **kwargs):
         if all([self.catalog, self.stream, self.field]):
-            eventStream = getattr(self.catalog, self.stream).to_dask()[self.field]
+            try:
+                stream = getattr(self.catalog, self.stream)
+            except AttributeError as ex:
+                msg.logError(ex)
+                return
+
+            eventStream = stream.to_dask()[self.field]
+
             # Trim off event dimension (so transpose works)
             if eventStream.ndim > 3:
                 if eventStream.shape[0] == 1:  # if only one event, drop the event axis
@@ -653,14 +636,122 @@ class CatalogView(ImageView):
             # TODO -- clear the current image
             pass
 
-    def streamChanged(self, stream):
-        self.setCatalog(self.catalog, stream, self.field)
+    def setStream(self, stream):
+        self.stream = stream
+        self._updateCatalog()
+        self.sigStreamChanged.emit(stream)
 
-    def fieldChanged(self, field):
-        self.setCatalog(self.catalog, self.stream, field)
+    def setField(self, field):
+        self.field = field
+        self._updateCatalog()
         # TODO -- figure out where to put the geometry update
         if QSpace in inspect.getmro(type(self)):
             self.setGeometry(pluginmanager.get_plugin_by_name("xicam.SAXS.calibration", "SettingsPlugin").AI(field))
+        self.sigFieldChanged.emit(field)
+
+
+class BetterLayout(ImageView):
+    # Replaces awkward gridlayout with more structured v/hboxlayouts, and removes useless buttons
+    def __init__(self, *args, **kwargs):
+        super(BetterLayout, self).__init__(*args, **kwargs)
+        self.ui.outer_layout = QHBoxLayout()
+        self.ui.left_layout = QVBoxLayout()
+        self.ui.right_layout = QVBoxLayout()
+        self.ui.outer_layout.addLayout(self.ui.left_layout)
+        self.ui.outer_layout.addLayout(self.ui.right_layout)
+        for layout in [self.ui.outer_layout, self.ui.left_layout, self.ui.right_layout]:
+            layout.setContentsMargins(0,0,0,0)
+            layout.setSpacing(0)
+
+        self.ui.left_layout.addWidget(self.ui.graphicsView)
+        self.ui.right_layout.addWidget(self.ui.histogram)
+        # self.ui.right_layout.addWidget(self.ui.roiBtn)
+        # self.ui.right_layout.addWidget(self.ui.menuBtn)
+        QObjectCleanupHandler().add(self.ui.layoutWidget.layout())
+        self.ui.roiBtn.setParent(None)
+        self.ui.menuBtn.setParent(None)
+        self.ui.layoutWidget.setLayout(self.ui.outer_layout)
+
+
+class BetterButtons(BetterLayout):
+    def __init__(self, *args, **kwargs):
+        super(BetterButtons, self).__init__(*args, **kwargs)
+
+        # Setup axes reset button
+        self.resetAxesBtn = QPushButton("Reset Axes")
+        sizePolicy = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(1)
+        sizePolicy.setHeightForWidth(self.resetAxesBtn.sizePolicy().hasHeightForWidth())
+        self.resetAxesBtn.setSizePolicy(sizePolicy)
+        self.resetAxesBtn.setObjectName("resetAxes")
+        self.ui.right_layout.addWidget(self.resetAxesBtn)
+        self.resetAxesBtn.clicked.connect(self.autoRange)
+
+        # Setup LUT reset button
+        self.resetLUTBtn = QPushButton("Reset LUT")
+        sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(1)
+        sizePolicy.setHeightForWidth(self.resetLUTBtn.sizePolicy().hasHeightForWidth())
+        # self.resetLUTBtn.setSizePolicy(sizePolicy)
+        # self.resetLUTBtn.setObjectName("resetLUTBtn")
+        self.ui.right_layout.addWidget(self.resetLUTBtn)
+        self.resetLUTBtn.clicked.connect(self.autoLevels)
+
+class ExportButton(BetterLayout):
+    def __init__(self, *args, **kwargs):
+        super(ExportButton, self).__init__(*args, **kwargs)
+
+        # Export button
+        self.exportBtn = QPushButton('Export')
+        sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(1)
+        sizePolicy.setHeightForWidth(self.exportBtn.sizePolicy().hasHeightForWidth())
+        self.ui.right_layout.addWidget(self.exportBtn)
+        self.exportBtn.clicked.connect(self.export)
+
+
+class StreamSelector(CatalogView, BetterLayout):
+    def __init__(self, *args, **kwargs):
+        self.streamComboBox = QComboBox()
+        super(StreamSelector, self).__init__(*args, **kwargs)
+        self.ui.right_layout.insertWidget(0, self.streamComboBox)
+        self.streamComboBox.currentTextChanged.connect(self.setStream)
+
+    def setCatalog(self, catalog, stream=None, field=None, *args, **kwargs):
+        stream = self.updateStreamNames(catalog)
+        super(StreamSelector, self).setCatalog(catalog, stream, field, *args, **kwargs)
+
+    def updateStreamNames(self, catalog):
+        self.streamComboBox.clear()
+        if catalog:
+            self.streamComboBox.addItems(streams_from_run(catalog))
+        return self.streamComboBox.currentText()
+
+
+class FieldSelector(CatalogView, BetterLayout):
+    def __init__(self, *args, **kwargs):
+        self.fieldComboBox = QComboBox()
+        super(FieldSelector, self).__init__(*args, **kwargs)
+
+        self.ui.right_layout.insertWidget(0, self.fieldComboBox)
+        self.fieldComboBox.currentTextChanged.connect(self.setField)
+
+    def setCatalog(self, catalog, stream=None, field=None, *args, **kwargs):
+        field = self.updateFieldNames(catalog, stream)
+        super(FieldSelector, self).setCatalog(catalog, stream, field, *args, **kwargs)
+
+    def setStream(self, stream_name):
+        super(FieldSelector, self).setStream(stream_name)
+        self.updateFieldNames(self.catalog, stream_name)
+
+    def updateFieldNames(self, catalog, stream):
+        self.fieldComboBox.clear()
+        if catalog and stream:
+            self.fieldComboBox.addItems(fields_from_stream(catalog, stream))
+        return self.fieldComboBox.currentText()
 
 
 class ImageItemHistogramOverflowFix(ImageItem):
@@ -719,3 +810,14 @@ class ImageViewHistogramOverflowFix(ComposableItemImageView):
         if "imageItem" in kwargs:
             del kwargs["imageItem"]
         super(ImageViewHistogramOverflowFix, self).__init__(imageItem=imageItem, *args, **kwargs)
+
+
+if __name__ == "__main__":
+    from qtpy.QtWidgets import QApplication
+    qapp = QApplication([])
+
+    cls = type('Blend', (StreamSelector, FieldSelector), {})
+    w = cls()
+    w.show()
+
+    qapp.exec_()
