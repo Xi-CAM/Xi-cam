@@ -51,7 +51,12 @@ class PreviewWidget(GraphicsLayoutWidget):
     def guess_stream_field(catalog: BlueskyRun):
         # TODO: use some metadata (techniques?) for guidance about how to get a preview
 
-        for stream in ["primary", *bluesky_utils.streams_from_run(catalog)]:
+        streams = bluesky_utils.streams_from_run(catalog)
+        if "primary" in streams:
+            streams.remove("primary")
+            streams.insert(0, "primary")
+
+        for stream in streams:
             descriptor = bluesky_utils.descriptors_from_stream(catalog, stream)[0]
             fields = bluesky_utils.fields_from_descriptor(descriptor)
             for field in fields:
