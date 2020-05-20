@@ -1,6 +1,8 @@
-from qtpy.QtWidgets import QLayout, QStyle, QSizePolicy, QWidget, QHBoxLayout, QVBoxLayout, QLabel, QScrollArea
-from qtpy.QtCore import Qt, QRect, QSize, QPoint, Signal
+from qtpy.QtWidgets import QLayout, QStyle, QSizePolicy, QWidget, QHBoxLayout, QVBoxLayout, QLabel, QScrollArea, QFrame, QAbstractItemView, QScrollBar, QApplication
+from qtpy.QtCore import Qt, QRect, QSize, QPoint, Signal, QModelIndex
 from pyqtgraph import HistogramLUTWidget, ImageItem, ViewBox, GraphicsLayoutWidget, TextItem
+from xicam.core.data.bluesky_utils import guess_stream_field, preview
+from xicam.plugins.catalogplugin import CatalogModel
 
 
 class ActivatableImageItem(ImageItem):
@@ -159,9 +161,10 @@ class LibraryWidget(QWidget):
             image_item.setLevels(levels)
 
     def set_lookup_table(self, *args, **kwargs):
-        lut = self.hist_widget.item.getLookupTable(self.current_image_item.image)
-        for image_item in self.image_items:
-            image_item.setLookupTable(lut)
+        if self.current_image_item and self.current_image_item.image is not None:
+            lut = self.hist_widget.item.getLookupTable(self.current_image_item.image)
+            for image_item in self.image_items:
+                image_item.setLookupTable(lut)
 
     def set_current_imageitem(self, imageitem: ImageItem):
         self.current_image_item.deactivate()
@@ -170,7 +173,9 @@ class LibraryWidget(QWidget):
         self.hist_widget.item.setImageItem(self.current_image_item)
 
     def add_image(self, image, label):
-        w = QWidget()
+        w = QFrame()
+        w.setFrameStyle(QFrame.StyledPanel | QFrame.Sunken)
+        w.setLineWidth(2)
         w.setFixedSize(QSize(500, 500))
         w.setLayout(QVBoxLayout())
         gv = GraphicsLayoutWidget()
@@ -197,21 +202,91 @@ class LibraryWidget(QWidget):
         self.last_vb = vb
 
 
-if __name__ == "__main__":
-    from qtpy.QtWidgets import QApplication, QWidget
-    import numpy as np
+class LibraryView(QAbstractItemView):
+    def __init__(self, model=None, parent=None):
+        super(LibraryView, self).__init__(parent)
+        self._libraryWidget = LibraryWidget()
+        self._libraryWidget.setParent(self)
+        self.scrollbar = self._libraryWidget.scroll_widget.verticalScrollBar()  # type: QScrollBar
+        self.scrollbar.valueChanged.connect(self.checkViewport)
+        ###########self._indexToTabMap = OrderedDict()
 
-    qapp = QApplication([])
+        self.setLayout(QVBoxLayout())
+        self.layout().setContentsMargins(0, 0, 0, 0)
+        self.layout().addWidget(self._libraryWidget)
 
-    w = LibraryWidget()
-    l = FlowLayout()
-    w.setLayout(l)
-    last_vb = None
+        if model:
+            self.setModel(model)
 
-    for i in range(15):
-        w.add_image(np.random.random((1000, 1000)), "Test")
+            # initialize with all of the model's cache
+            self.dataChanged(self.model().createIndex(0,0),
+                             self.model().createIndex(self.model().rowCount(QModelIndex()) + 1, 0))
 
-    w.show()
+            # check if more runs need to be cached to fill the viewport
+            self.checkViewport()
 
-    qapp.exec_()
+    def checkViewport(self):
+        # if the scrollbar is near its max
+        while self.scrollbar.value() == self.scrollbar.maximum() and self.model().canFetchMore(QModelIndex()):
+            # Fetch more items from the model
+            self.model().fetchMore(QModelIndex())
+
+    def dataChanged(self, topLeft: QModelIndex, bottomRight: QModelIndex, roles=None):
+        """
+        Re-implements the QAbstractItemView.dataChanged() slot.
+
+        When the data attached to the Qt.CheckStateRole has been changed, this will either render a Hint or remove the
+        Hint visualization.
+
+        Parameters
+        ----------
+        topLeft
+            For now, the only index we are concerned with, which corresponds to the item's check state changing.
+        bottomRight
+            (Unused right now)
+        roles
+            List of roles attached to the data state change.
+
+        """
+        if roles is None:
+            roles = []
+        if self.model():
+            # empty list indicates ALL roles have changed (see documentation)
+            for row in range(topLeft.row(), bottomRight.row() + 1):
+                if row >= self.model().rowCount(QModelIndex()):  # ensure that the item we retrieve is always cached
+                    self.model().fetchMore(QModelIndex())
+
+                catalog = self.model()._cache[row]
+                if catalog:
+                    stream, field = guess_stream_field(catalog)
+                    data = preview(catalog, stream, field)
+
+                    self._libraryWidget.add_image(data, f"({catalog.name})[{stream}]<{field}>")
+
+        super(LibraryView, self).dataChanged(topLeft, bottomRight, roles)
+
+    def horizontalOffset(self):
+        return 0
+
+    def indexAt(self, point: QPoint):
+        return QModelIndex()
+
+    def moveCursor(self, QAbstractItemView_CursorAction, Union, Qt_KeyboardModifiers=None, Qt_KeyboardModifier=None):
+        return QModelIndex()
+
+    def rowsInserted(self, index: QModelIndex, start, end):
+        return
+
+    def rowsAboutToBeRemoved(self, index: QModelIndex, start, end):
+        return
+
+    def scrollTo(self, QModelIndex, hint=None):
+        return
+
+    def verticalOffset(self):
+        return 0
+
+    def visualRect(self, QModelIndex):
+        from qtpy.QtCore import QRect
+        return QRect()
 
