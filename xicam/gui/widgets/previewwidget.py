@@ -52,7 +52,7 @@ class PreviewWidget(GraphicsLayoutWidget):
         try:
             stream, field = bluesky_utils.guess_stream_field(catalog)
             data = bluesky_utils.preview(catalog, stream, field)
-            threads.invoke_in_main_thread(self.setImage, np.asarray(data.compute()))
+            threads.invoke_in_main_thread(self.setImage, data)
         except Exception as ex:
             msg.logError(ex)
             threads.invoke_in_main_thread(self.imageitem.clear)
