@@ -51,8 +51,8 @@ def xarray_from_run(run: BlueskyRun, stream: str = None, field: str = None):
 
 def get_all_image_fields(run_catalog, stream=None):
     # image_fields = []
-    all_streams_image_fields = {}
-    streams = [stream] if streams else get_all_streams(run_catalog)
+    all_streams_image_fields = {} 
+    streams = [stream] if stream is not None else list(run_catalog)
     for stream in streams:
         stream_fields = get_stream_data_keys(run_catalog, stream)
         field_names = stream_fields.keys()
@@ -69,3 +69,6 @@ def get_all_image_fields(run_catalog, stream=None):
             # TODO how to treat non image data fields in streams
             # else:
     return all_streams_image_fields
+
+def get_stream_data_keys(run_catalog, stream):
+    return run_catalog[stream].metadata["descriptors"][0]["data_keys"]
