@@ -1,8 +1,18 @@
-from qtpy.QtWidgets import QLayout, QStyle, QSizePolicy, QWidget, QHBoxLayout, QVBoxLayout, QLabel, QScrollArea, QFrame, QAbstractItemView, QScrollBar, QApplication
+from qtpy.QtWidgets import QLayout, QStyle, QSizePolicy, QWidget, QHBoxLayout, QVBoxLayout, QLabel, QScrollArea, QFrame, QAbstractItemView, QScrollBar, QApplication, QPushButton, QGraphicsView
 from qtpy.QtCore import Qt, QRect, QSize, QPoint, Signal, QModelIndex
+from qtpy.QtGui import QWheelEvent
 from pyqtgraph import HistogramLUTWidget, ImageItem, ViewBox, GraphicsLayoutWidget, TextItem
 from xicam.core.data.bluesky_utils import guess_stream_field, preview
 from xicam.plugins.catalogplugin import CatalogModel
+
+
+class ScrollableGraphicsLayoutWidget(GraphicsLayoutWidget):
+    def wheelEvent(self, ev):
+        # GraphicsLayoutWidget forcibly ignores if an event was accepted, and changes its state to ignored.
+        # This causes parents to have no knowledge of if its children accepted the event or not.
+        # To prevent that behavior, we only process the event if it wasn't accepted.
+        if not ev.isAccepted():
+            super(ScrollableGraphicsLayoutWidget, self).wheelEvent(ev)
 
 
 class ActivatableImageItem(ImageItem):
@@ -13,10 +23,12 @@ class ActivatableImageItem(ImageItem):
         self.sigActivated.emit(self)
 
     def activate(self):
-        self.getViewBox()._viewWidget().setStyleSheet("background-color: gray;")  # TODO: Color the active item differently (not working)
+        pass
+        # self.getViewBox()._viewWidget().setStyleSheet("background-color: gray;")  # TODO: Color the active item differently (not working)
 
     def deactivate(self):
-        self.getViewBox()._viewWidget().setStyleSheet("background-color: black;")
+        pass
+        # self.getViewBox()._viewWidget().setStyleSheet("background-color: black;")
 
 
 class FlowLayout(QLayout):
@@ -129,9 +141,11 @@ class LibraryWidget(QWidget):
     def __init__(self):
         super(LibraryWidget, self).__init__()
         self.image_items = []
+        self.views = []
         self.current_image_item = None
 
         self.setLayout(QHBoxLayout())
+        self.right_layout = QVBoxLayout()
 
         self.scroll_widget = QScrollArea()
         self.scroll_widget.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
@@ -149,11 +163,17 @@ class LibraryWidget(QWidget):
         # self.hist_widget.item.setImageItem(self)
         self.hist_widget.item.sigLevelChangeFinished.connect(self.set_levels)
         self.hist_widget.item.sigLookupTableChanged.connect(self.set_lookup_table)
-        self.layout().addWidget(self.hist_widget)
+        self.layout().addLayout(self.right_layout)
+        self.right_layout.addWidget(self.hist_widget)
 
-        self.first_vb = None
-        self.last_vb = None
-        self.setStyleSheet("background-color:#000;")
+        self.link_button = QPushButton("Link Axes")
+        self.link_button.setCheckable(True)
+        self.right_layout.addWidget(self.link_button)
+
+        # self.setStyleSheet("background-color:#000;")
+
+        self.current_view = None
+        self.axes_linked = False
 
     def set_levels(self, *args, **kwargs):
         levels = self.hist_widget.item.getLevels()
@@ -167,10 +187,21 @@ class LibraryWidget(QWidget):
                 image_item.setLookupTable(lut)
 
     def set_current_imageitem(self, imageitem: ImageItem):
-        self.current_image_item.deactivate()
+        if self.current_image_item:
+            self.current_image_item.deactivate()
         self.current_image_item = imageitem
+        self.current_view = imageitem.getViewBox()
         self.current_image_item.activate()
         self.hist_widget.item.setImageItem(self.current_image_item)
+
+    def propagate_axes(self):
+        if self.link_button.isChecked():
+            view = self.sender()
+            view_rect = view.viewRect()
+
+            for other_view in self.views:
+                if other_view is not view:
+                    other_view.setRange(rect=view_rect)
 
     def add_image(self, image, label):
         w = QFrame()
@@ -178,24 +209,22 @@ class LibraryWidget(QWidget):
         w.setLineWidth(2)
         w.setFixedSize(QSize(500, 500))
         w.setLayout(QVBoxLayout())
-        gv = GraphicsLayoutWidget()
+        gv = ScrollableGraphicsLayoutWidget()
         vb = ViewBox(lockAspect=True)
-        if self.last_vb:
-            vb.setXLink(self.last_vb)
-            vb.setYLink(self.last_vb)
-        if not self.first_vb:
-            self.first_vb = vb
         ii = ActivatableImageItem(image=image)
         ii.sigActivated.connect(self.set_current_imageitem)
         self.hist_widget.item.setImageItem(ii)
         self.current_image_item = ii
         self.image_items.append(ii)
+        self.views.append(vb)
+        vb.sigRangeChangedManually.connect(self.propagate_axes)
         vb.addItem(ii)
         gv.addItem(vb)
+        self.set_current_imageitem(ii)
 
         w.layout().addWidget(gv)
         l = QLabel(label)
-        l.setStyleSheet("color: white;")
+        # l.setStyleSheet("color: white;")
         w.layout().addWidget(l)
 
         self.flow_layout.addWidget(w)
