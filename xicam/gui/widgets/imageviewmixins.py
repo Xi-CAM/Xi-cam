@@ -744,8 +744,9 @@ class FieldSelector(CatalogView, BetterLayout):
         super(FieldSelector, self).setCatalog(catalog, stream, field, *args, **kwargs)
 
     def setStream(self, stream_name):
-        super(FieldSelector, self).setStream(stream_name)
+        self.stream = stream_name
         self.updateFieldNames(self.catalog, stream_name)
+        super(FieldSelector, self).setStream(stream_name)
 
     def updateFieldNames(self, catalog, stream):
         self.fieldComboBox.clear()
