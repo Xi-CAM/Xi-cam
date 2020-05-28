@@ -54,7 +54,7 @@ def xarray_from_run(run: BlueskyRun, stream: str = None, field: str = None):
 def is_image_field(run: BlueskyRun, stream: str, field: str):
     data = getattr(run, stream).to_dask()[field]
     field_dims = data.ndim
-    if 5 > field_dims > 1:
+    if 6 > field_dims > 2:
         # if field contains at least 1 entry that is at least one-dimensional (shape=2)
         # or 2-dimensional (shape=3) or up to 3-dimensional (shape=4)
         # then add field e.g. 'fccd_image'
