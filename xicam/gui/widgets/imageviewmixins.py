@@ -637,11 +637,13 @@ class CatalogView(ImageView):
             pass
 
     def setStream(self, stream):
+        self.clear()
         self.stream = stream
         self._updateCatalog()
         self.sigStreamChanged.emit(stream)
 
     def setField(self, field):
+        self.clear()
         self.field = field
         self._updateCatalog()
         # TODO -- figure out where to put the geometry update
