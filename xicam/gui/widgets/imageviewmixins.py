@@ -10,10 +10,12 @@ from databroker.core import BlueskyRun
 # from pyFAI.geometry import Geometry
 from xicam.core import msg
 from xicam.core.data import MetaXArray
-from xicam.core.data.bluesky_utils import fields_from_stream, streams_from_run
+from xicam.core.data.bluesky_utils import fields_from_stream, streams_from_run, is_image_field
 from xicam.gui.widgets.elidedlabel import ElidedLabel
 from xicam.gui.widgets.ROI import BetterPolyLineROI
 import enum
+from typing import Callable
+from functools import partial
 
 from xicam.plugins import manager as pluginmanager
 import inspect
@@ -716,7 +718,8 @@ class ExportButton(BetterLayout):
 
 
 class StreamSelector(CatalogView, BetterLayout):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, stream_filter=None, **kwargs):
+        self.stream_filter = stream_filter
         self.streamComboBox = QComboBox()
         super(StreamSelector, self).__init__(*args, **kwargs)
         self.ui.right_layout.insertWidget(0, self.streamComboBox)
@@ -729,12 +732,16 @@ class StreamSelector(CatalogView, BetterLayout):
     def updateStreamNames(self, catalog):
         self.streamComboBox.clear()
         if catalog:
-            self.streamComboBox.addItems(streams_from_run(catalog))
+            streams = streams_from_run(catalog)
+            if self.stream_filter:
+                streams = list(filter(is_image_field, streams))
+            self.streamComboBox.addItems(streams)
         return self.streamComboBox.currentText()
 
 
 class FieldSelector(CatalogView, BetterLayout):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, field_filter: Callable = is_image_field, **kwargs):
+        self.field_filter = field_filter
         self.fieldComboBox = QComboBox()
         super(FieldSelector, self).__init__(*args, **kwargs)
 
@@ -753,7 +760,10 @@ class FieldSelector(CatalogView, BetterLayout):
     def updateFieldNames(self, catalog, stream):
         self.fieldComboBox.clear()
         if catalog and stream:
-            self.fieldComboBox.addItems(fields_from_stream(catalog, stream))
+            fields = fields_from_stream(catalog, stream)
+            if self.field_filter:
+                fields = list(filter(partial(self.field_filter, catalog, stream), fields))
+            self.fieldComboBox.addItems(fields)
         return self.fieldComboBox.currentText()
 
 
