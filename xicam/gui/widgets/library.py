@@ -1,21 +1,21 @@
-from qtpy.QtWidgets import QLayout, QStyle, QSizePolicy, QWidget, QHBoxLayout, QVBoxLayout, QLabel, QScrollArea, QFrame, QAbstractItemView, QScrollBar, QApplication, QPushButton, QGraphicsView
+from qtpy.QtWidgets import QLayout, QStyle, QSizePolicy, QWidget, QHBoxLayout, QVBoxLayout, QLabel, QScrollArea, QFrame, QAbstractItemView, QScrollBar, QPushButton, QGraphicsView
 from qtpy.QtCore import Qt, QRect, QSize, QPoint, Signal, QModelIndex
 from qtpy.QtGui import QWheelEvent
 from pyqtgraph import HistogramLUTWidget, ImageItem, ViewBox, GraphicsLayoutWidget, TextItem
 from xicam.core.data.bluesky_utils import guess_stream_field, preview
-from xicam.plugins.catalogplugin import CatalogModel
 
 
 class ScrollableGraphicsLayoutWidget(GraphicsLayoutWidget):
-    def wheelEvent(self, ev):
+    def wheelEvent(self, ev: QWheelEvent):
         # GraphicsLayoutWidget forcibly ignores if an event was accepted, and changes its state to ignored.
         # This causes parents to have no knowledge of if its children accepted the event or not.
         # To prevent that behavior, we only process the event if it wasn't accepted.
         if not ev.isAccepted():
-            super(ScrollableGraphicsLayoutWidget, self).wheelEvent(ev)
+            QGraphicsView.wheelEvent(self, ev)
 
 
 class ActivatableImageItem(ImageItem):
+    # TODO: Give 'active' item special styling
     sigActivated = Signal(object)
 
     def mouseClickEvent(self, ev):
@@ -32,7 +32,11 @@ class ActivatableImageItem(ImageItem):
 
 
 class FlowLayout(QLayout):
-    def __init__(self, parent=None, margin=-1, hspacing=-1, vspacing=-1):
+    """
+    This layout is like a QGridLayout, but it automatically adjusts its number of columns to fit its parent, wrapping
+    items to the next line. Adapted from https://gist.github.com/Cysu/7461066
+    """
+    def __init__(self, parent=None, margin: int =-1, hspacing: int =-1, vspacing: int=-1):
         super(FlowLayout, self).__init__(parent)
         self._hspacing = hspacing
         self._vspacing = vspacing
@@ -154,13 +158,11 @@ class LibraryWidget(QWidget):
         self.flow_widget = QWidget()
         self.flow_layout = FlowLayout()
         self.flow_widget.setLayout(self.flow_layout)
-        # self.scroll_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.scroll_widget.setWidget(self.flow_widget)
         self.layout().addWidget(self.scroll_widget)
 
         self.hist_widget = HistogramLUTWidget()
         self.hist_widget.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
-        # self.hist_widget.item.setImageItem(self)
         self.hist_widget.item.sigLevelChangeFinished.connect(self.set_levels)
         self.hist_widget.item.sigLookupTableChanged.connect(self.set_lookup_table)
         self.layout().addLayout(self.right_layout)
@@ -170,10 +172,15 @@ class LibraryWidget(QWidget):
         self.link_button.setCheckable(True)
         self.right_layout.addWidget(self.link_button)
 
+        # TODO: use Qt styling pallet for theming
         # self.setStyleSheet("background-color:#000;")
 
         self.current_view = None
         self.axes_linked = False
+
+    def set_slice(self, *args, **kwargs):
+        # TODO: support generic orthogonal slicing
+        print('slice:', args, kwargs)
 
     def set_levels(self, *args, **kwargs):
         levels = self.hist_widget.item.getLevels()
@@ -210,6 +217,7 @@ class LibraryWidget(QWidget):
         w.setFixedSize(QSize(500, 500))
         w.setLayout(QVBoxLayout())
         gv = ScrollableGraphicsLayoutWidget()
+        gv.mouseEnabled = True
         vb = ViewBox(lockAspect=True)
         ii = ActivatableImageItem(image=image)
         ii.sigActivated.connect(self.set_current_imageitem)
@@ -281,8 +289,8 @@ class LibraryView(QAbstractItemView):
             roles = []
         if self.model():
             # empty list indicates ALL roles have changed (see documentation)
-            for row in range(topLeft.row(), bottomRight.row() + 1):
-                if row >= self.model().rowCount(QModelIndex()):  # ensure that the item we retrieve is always cached
+            for row in range(topLeft.row(), bottomRight.row()):
+                if row >= self.model().rowCount(QModelIndex()) and self.model().canFetchMore(QModelIndex()):  # ensure that the item we retrieve is always cached
                     self.model().fetchMore(QModelIndex())
 
                 catalog = self.model()._cache[row]
@@ -319,3 +327,5 @@ class LibraryView(QAbstractItemView):
         from qtpy.QtCore import QRect
         return QRect()
 
+    def set_slice(self, *args, **kwargs):
+        print('slice:', args, kwargs)
