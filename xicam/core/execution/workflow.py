@@ -537,9 +537,18 @@ class _OperationWrapper:
     # args = [{'name':value}]
 
     def __call__(self, *args):
+        # Potential inputs:
+        # args is an empty tuple ()
+        # args is a single length tuple with one-element dict ({'x': 1},)
+        # args is a single length tuple with n-element dict ({'x': 1, 'y': 2},)
+        # TODO: is multiple length tuple possible here? ({'x': 1}, {'y': 2})
         node_args = {}
-        for arg, (input_name, sender_operation_name) in zip(args, self.named_args.items()):
-            node_args[input_name] = arg[sender_operation_name]
+        # Only try to extract input args when we are not at a start node
+        if len(args):
+            args = args[0]  # Pull the filled args out of the tuple
+            # Map the source args names and values to the destination op's inputs
+            for arg, (input_name, sender_input_name) in zip(args, self.named_args.items()):
+                node_args[input_name] = args[sender_input_name]
 
         result_keys = self.node.output_names
         result_values = self.node(**node_args)

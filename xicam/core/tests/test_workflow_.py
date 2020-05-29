@@ -3,10 +3,9 @@ import pytest
 from xicam.core import execution
 from xicam.core.execution import localexecutor
 from xicam.core.execution.workflow import Graph, Workflow
-from xicam.plugins import OperationPlugin
 from xicam.plugins.operationplugin import output_names, operation
 
-from xicam.core.tests.workflow_fixtures import graph, sum_op, square_op, negative_op
+from xicam.core.tests.workflow_fixtures import graph, double_and_triple_op, sum_op, square_op, negative_op
 
 
 # Note that this test relies on the xicam.plugins module
@@ -14,7 +13,8 @@ from xicam.core.tests.workflow_fixtures import graph, sum_op, square_op, negativ
 execution.executor = localexecutor.LocalExecutor()
 
 
-
+# TODO fix auto_connect_all
+# e.g. see the toggle_disabled tests; they work when explicitly using auto_connect_all=False
 
 
 class TestGraph:
@@ -341,23 +341,36 @@ class TestGraph:
         assert graph.operation_links(sum_op) == [link]
         assert graph.operation_links(square_op) == []
 
-    def test_operation_links_multiple(self, graph, sum_op, square_op, negative_op):
+    def test_operation_links_multiple(self, sum_op, square_op, negative_op):
+        #
+        #         (y) --> (n1)
+        # my_func           sum (n) --> (num) square
+        #         (x) --> (n2)
+        #
         def my_func(x: int, y: int) -> (int, int):
             return y, x
 
         my_op = operation(my_func, output_names=("y", "x"))()
-        graph.add_operations(sum_op, square_op, negative_op, my_op)
+        workflow = Workflow()
+        # workflow.add_operations(sum_op, square_op, negative_op, my_op)
+        workflow.add_operations(my_op, sum_op, square_op, negative_op)
         link1 = (my_op, sum_op, "y", "n1")
         link2 = (my_op, sum_op, "x", "n2")
         link3 = (sum_op, square_op, "sum", "n")
         link4 = (square_op, negative_op, "square", "num")
-        graph.add_link(*link1)
-        graph.add_link(*link2)
-        graph.add_link(*link3)
-        graph.add_link(*link4)
-        assert graph.operation_links(my_op) == [link1, link2]
-        assert graph.operation_links(sum_op) == [link3]
-        assert graph.operation_links(negative_op) == []
+        workflow.add_link(my_op, sum_op, "y", "n1")
+        workflow.add_link(my_op, sum_op, "x", "n2")
+        workflow.add_link(sum_op, square_op, "sum", "n")
+        workflow.add_link(square_op, negative_op, "square", "num")
+        # assert workflow.operation_links(my_op) == [link1, link2]
+        # assert workflow.operation_links(sum_op) == [link3]
+        # assert workflow.operation_links(square_op) == [link4]
+        # assert workflow.operation_links(negative_op) == []
+        workflow._pretty_print()
+        dask_graph, end_ids = workflow.as_dask_graph()
+
+        # test execution
+        results = workflow.execute_synchronous(x=3, y=5)
 
     def test_set_disabled_default_no_links(self, graph, sum_op):
         graph.add_operation(sum_op)
@@ -440,7 +453,9 @@ class TestGraph:
         link2 = (square_op, negative_op, "square", "num")
         graph.add_link(*link1)
         graph.add_link(*link2)
+        graph._pretty_print()
         return_value = graph.toggle_disabled(sum_op, remove_orphan_links=False)
+        graph._pretty_print()
         assert graph.disabled(sum_op) is True
         assert return_value == graph.operation_links(sum_op)
         assert graph.links() == [link1, link2]
@@ -526,33 +541,39 @@ class TestWorkflow:
     def test_execute_operation_default_input_value(self):
         @operation
         @output_names("doubled")
-        def double_op(x=10):
+        def double(x=10):
             return x * 2
 
         workflow = Workflow()
+        double_op = double()
         workflow.add_operation(double_op)
         results = workflow.execute().result()
         assert results == ({"doubled": 20},)
 
-    def test_execute_no_links_TODO(self, sum_op, square_op, negative_op):
+    def test_execute_no_links_diff_input_names(self, sum_op, square_op, negative_op):
         # do the input names have to match in this case (more than one entry op)
         operations = [sum_op, square_op, negative_op]
         workflow = Workflow(name="test", operations=operations)
-        results = workflow.execute(n1=3, n2=-3).result()
-        assert results == ({"sum": 0})
+        results = workflow.execute(n1=3, n2=-3, n=10, num=33).result()
+        assert len(results) == 3
+        assert {"sum": 0} in results
+        assert {"square": 100} in results
+        assert {"negative": -33} in results
 
-    def test_execute_no_links(self):
+    def test_execute_no_links_same_input_name(self):
         @operation
         @output_names("doubled")
-        def double_op(n):
+        def double(n):
             return n * 2
 
         @operation
         @output_names("tripled")
-        def triple_op(n):
+        def triple(n):
             return n * 3
 
         workflow = Workflow()
+        double_op = double()
+        triple_op = triple()
         workflow.add_operations(double_op, triple_op)
         results = workflow.execute(n=10).result()
         assert len(results) == 2
@@ -576,11 +597,10 @@ class TestWorkflow:
         assert results == ({"negative": -49},)
 
     def test_execute_synchronous_no_links_not_enough_kwargs(self, sum_op, square_op, negative_op):
-        # TODO -- expect exception
         workflow = Workflow()
         workflow.add_operations(sum_op, square_op, negative_op)
-        results = workflow.execute_synchronous(n1=2, n2=5)
-        assert results == ({"negative": -49},)
+        with pytest.raises(TypeError):
+            results = workflow.execute_synchronous(n1=2, n2=5)
 
     def test_execute_synchronous_no_links(self, sum_op, square_op, negative_op):
         workflow = Workflow()
@@ -603,7 +623,9 @@ class TestWorkflow:
         n2_values = [2, 4, 6]
         # TODO -- we are only getting one result, should get three (3 pairs of n1/n2).
         results = list(workflow.execute_all(n1=n1_values, n2=n2_values).result())
-        assert results == [{"negative": (1 + 2) ** 2 * -1}, {"negative": (3 + 4) ** 2 * -1}, {"negative": (5 + 6) ** 2 * -1}]
+        assert results == [{"negative": (1 + 2) ** 2 * -1},
+                           {"negative": (3 + 4) ** 2 * -1},
+                           {"negative": (5 + 6) ** 2 * -1}]
 
     def test_fill_kwargs(self):
         assert False
@@ -625,3 +647,100 @@ class TestWorkflow:
         workflow.attach(observer)
         workflow.notify()
         assert self.flag is True
+
+
+class TestMultipleOutputsOneOp:
+    # Tests when a tuple is returned representing multiple outputs (in this case, 2)
+    #   tests when all outputs are named: return a1, a2 -> 'x', 'y'
+    #   tests when output tuple is named: return a1, a2 -> 'return_val'
+    #   tests when not using @output_names
+    def test_all_output_names(self):
+        @operation
+        @output_names('x', 'y')
+        def my_func(a1, a2):
+            return a1, a2
+
+        op = my_func()
+        workflow = Workflow()
+        workflow.add_operations(op)
+        result = workflow.execute_synchronous(a1=1, a2=2)
+        print(result)
+        assert result == ({'x': 1, 'y': 2},)
+
+    def test_one_output_name(self):
+        @operation
+        @output_names("return_val")
+        def my_func(a1, a2):
+            return a1, a2
+
+        op = my_func()
+        workflow = Workflow()
+        workflow.add_operations(op)
+        result = workflow.execute_synchronous(a1=1, a2=2)
+        assert result == ({"return_val": 1},)
+        assert False  # TODO is above assertion expected behavior?
+
+    def test_no_output_names(self):
+        @operation
+        def my_func(a1, a2):
+            return a1, a2
+
+        op = my_func()
+        w = Workflow()
+        w.add_operations(op)
+        result = w.execute_synchronous(a1=1, a2=2)
+        assert result == ({"my_func": 1},)
+        assert False  # TODO is above assertion expected behavior?
+
+
+class TestMultipleOutputsMultipleOps:
+    # TEST CASES
+    #   start node has return x, y
+    #   middle node has return x, y
+    #   end node has return x, y
+    def test_start_node(self, double_and_triple_op, sum_op, square_op):
+        workflow = Workflow()
+        workflow.add_operations(double_and_triple_op, sum_op, square_op)
+        workflow.add_link(double_and_triple_op, sum_op, "double", "n1")
+        workflow.add_link(double_and_triple_op, sum_op, "triple", "n2")
+        workflow.add_link(sum_op, square_op, "sum", "n")
+        result = workflow.execute_synchronous(n=1)
+        assert result == ({"square": 25},)
+
+    def test_middle_node(self, double_and_triple_op, sum_op, square_op):
+        workflow = Workflow()
+        workflow.add_operations(double_and_triple_op, sum_op, square_op)
+        workflow.add_link(sum_op, double_and_triple_op, "sum", "n")
+        workflow.add_link(double_and_triple_op, square_op, "triple", "n")
+        result = workflow.execute_synchronous(n1=1, n2=2)
+        assert result == ({"square": 81},)
+
+    def test_end_node(self, double_and_triple_op, sum_op, square_op):
+        workflow = Workflow()
+        workflow.add_operations(double_and_triple_op, sum_op, square_op)
+        workflow.add_link(sum_op, square_op, "sum", "n")
+        workflow.add_link(square_op, double_and_triple_op, "square", "n")
+        result = workflow.execute_synchronous(n1=1, n2=2)
+        assert result == ({"double": 18, "triple": 27},)
+
+    # TODO: should this be allowed?
+    # def test_same_connection_multiple_inputs(self, double_and_triple_op, sum_op, square_op):
+    #     workflow = Workflow()
+    #     workflow.add_operations(sum_op, square_op)
+    #     workflow.add_link(square_op, sum_op, "square", "n1")
+    #     workflow.add_link(square_op, sum_op, "square", "n2")
+    #     workflow._pretty_print()
+    #
+    #     result = workflow.execute_synchronous(n=3)
+    #     assert result == ({"sum": 18},)
+
+
+def test_mutliple_end_nodes(double_and_triple_op, sum_op, square_op):
+    workflow = Workflow()
+    workflow.add_operations(double_and_triple_op, sum_op, square_op)
+    workflow.add_link(sum_op, double_and_triple_op, "sum", "n")
+    workflow.add_link(sum_op, square_op, "sum", "n")
+    result = workflow.execute_synchronous(n1=2, n2=3)
+    assert len(result) == 2
+    assert {"double": 10, "triple": 15} in result
+    assert {"square": 25} in result

@@ -174,8 +174,8 @@ class OperationPlugin(PluginType):
     filled_values = _OperationDict()  # type: _OperationDict
     fixable = {}  # type: dict
     fixed = _OperationDict(opts_key="fixed") # type: _OperationDict
-    input_names = None  # type: Tuple[str]
-    output_names = None  # type: Tuple[str]
+    input_names = tuple()  # type: Tuple[str]
+    output_names = tuple()  # type: Tuple[str]
     limits = {}  # type: dict
     opts = {}  # type: dict
     output_shape = {}  # type: dict
@@ -196,11 +196,14 @@ class OperationPlugin(PluginType):
         self.fixable = self.fixable.copy()
         self.fixed = self.fixed.copy()
         self.fixed.operation = self  # Need to add the operation ref to our OperationDict
+        self.hints = self.hints.copy()
+        self.input_descriptions = self.input_descriptions.copy()
         self.limits = self.limits.copy()
         self.opts = self.opts.copy()
+        self.output_descriptions = self.output_descriptions.copy()
         self.output_shape = self.output_shape.copy()
         self.units = self.units.copy()
-        self.hints = self.hints.copy()
+        self.visible = self.visible.copy()
         self._parameter = None  # type: weakref.ref
 
     @classmethod
@@ -238,10 +241,10 @@ class OperationPlugin(PluginType):
                     invalid_msg += f"\"{arg}\" is not a valid input for \"{name}\". "
 
         # Warn if there are no output_names defined
-        if not len(cls.output_names):
+        if not len(cls.output_names) or cls.output_names[0] == cls._func.__name__:
             warning_msg = (f"No output_names have been specified for your operation {cls}; "
-                           f"you will not be able to connect your operation's output(s) to "
-                           f"any other operations.")
+                           f"using {cls._func.__name__} as default output name. "
+                           f"This may cause issues if your operation has multiple outputs.")
             msg.logMessage(warning_msg, level=msg.WARNING)
 
         # Define which "output" arg properties we want to check

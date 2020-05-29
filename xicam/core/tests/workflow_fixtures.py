@@ -1,3 +1,4 @@
+from typing import Tuple
 import pytest
 
 from xicam.core import execution
@@ -11,6 +12,15 @@ from pyqtgraph.parametertree import Parameter
 @pytest.fixture()
 def graph():
     return Graph()
+
+
+@pytest.fixture()
+def double_and_triple_op():
+    @operation
+    @output_names("double", "triple")
+    def double_and_triple(n: int) -> Tuple[int, int]:
+        return 2*n, 3*n
+    return double_and_triple()
 
 
 @pytest.fixture()
