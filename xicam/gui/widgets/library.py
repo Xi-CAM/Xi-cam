@@ -1,8 +1,23 @@
+import numpy as np
+from xarray.core.dataarray import DataArray
 from qtpy.QtWidgets import QLayout, QStyle, QSizePolicy, QWidget, QHBoxLayout, QVBoxLayout, QLabel, QScrollArea, QFrame, QAbstractItemView, QScrollBar, QPushButton, QGraphicsView
-from qtpy.QtCore import Qt, QRect, QSize, QPoint, Signal, QModelIndex
+from qtpy.QtCore import Qt, QRect, QSize, QPoint, Signal, QModelIndex, QRectF, QPointF, QSignalBlocker
 from qtpy.QtGui import QWheelEvent
 from pyqtgraph import HistogramLUTWidget, ImageItem, ViewBox, GraphicsLayoutWidget, TextItem
 from xicam.core.data.bluesky_utils import guess_stream_field, preview
+
+
+def normalize_labels(da: DataArray):
+    # ...infer what axis the "time" axis actually is
+    da = da.rename({"time": "E"})
+
+    # ...reshape flattened axes
+    ...
+
+    # ...replace the "time" axis' coords with more meaningful thing
+    da = da.assign_coords({"E": range(da.shape[0])})
+
+    return da
 
 
 class ScrollableGraphicsLayoutWidget(GraphicsLayoutWidget):
@@ -208,7 +223,8 @@ class LibraryWidget(QWidget):
 
             for other_view in self.views:
                 if other_view is not view:
-                    other_view.setRange(rect=view_rect)
+                    with QSignalBlocker(other_view):
+                        other_view.setRange(rect=view_rect, padding=0)
 
     def add_image(self, image, label):
         w = QFrame()
@@ -217,7 +233,6 @@ class LibraryWidget(QWidget):
         w.setFixedSize(QSize(500, 500))
         w.setLayout(QVBoxLayout())
         gv = ScrollableGraphicsLayoutWidget()
-        gv.mouseEnabled = True
         vb = ViewBox(lockAspect=True)
         ii = ActivatableImageItem(image=image)
         ii.sigActivated.connect(self.set_current_imageitem)
@@ -238,9 +253,15 @@ class LibraryWidget(QWidget):
         self.flow_layout.addWidget(w)
         self.last_vb = vb
 
+    def update_image(self, index, image, label):
+        if index < len(self.image_items):
+            self.image_items[index].setImage(image)
+        else:
+            self.add_image(image, label)
+
 
 class LibraryView(QAbstractItemView):
-    def __init__(self, model=None, parent=None):
+    def __init__(self, model=None, parent=None, slice:dict =None):
         super(LibraryView, self).__init__(parent)
         self._libraryWidget = LibraryWidget()
         self._libraryWidget.setParent(self)
@@ -251,6 +272,8 @@ class LibraryView(QAbstractItemView):
         self.setLayout(QVBoxLayout())
         self.layout().setContentsMargins(0, 0, 0, 0)
         self.layout().addWidget(self._libraryWidget)
+
+        self.slice = slice or {}
 
         if model:
             self.setModel(model)
@@ -296,9 +319,9 @@ class LibraryView(QAbstractItemView):
                 catalog = self.model()._cache[row]
                 if catalog:
                     stream, field = guess_stream_field(catalog)
-                    data = preview(catalog, stream, field)
+                    data = np.squeeze(np.asarray(normalize_labels(getattr(catalog, stream).to_dask()[field])[self.slice].compute()))
 
-                    self._libraryWidget.add_image(data, f"({catalog.name})[{stream}]<{field}>")
+                    self._libraryWidget.update_image(row, data, f"({catalog.name})[{stream}]<{field}>")
 
         super(LibraryView, self).dataChanged(topLeft, bottomRight, roles)
 
@@ -327,5 +350,7 @@ class LibraryView(QAbstractItemView):
         from qtpy.QtCore import QRect
         return QRect()
 
-    def set_slice(self, *args, **kwargs):
-        print('slice:', args, kwargs)
+    def set_slice(self, value, axis):
+        self.slice[axis] = value
+        self.dataChanged(self.model().createIndex(0,0),
+                         self.model().createIndex(self.model().rowCount(QModelIndex()),0))

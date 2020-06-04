@@ -25,14 +25,13 @@ def doc_stream(streams: List[str], fields: List[str], frames: int) -> Generator[
         yield 'start', start_doc
 
         for stream_name in stream_names:
-            data = np.random.random(DATA_SHAPE)
 
             # Compose descriptor
             source = 'synthetic'
             frame_data_keys = {field: {'source': source,
                                        'dtype': 'number',
                                        'dims': ('x', 'y'),
-                                       'shape': data.shape} for field in fields}
+                                       'shape': DATA_SHAPE} for field in fields}
             frame_stream_bundle = run_bundle.compose_descriptor(data_keys=frame_data_keys,
                                                                 name=stream_name,
                                                                 )
@@ -40,6 +39,7 @@ def doc_stream(streams: List[str], fields: List[str], frames: int) -> Generator[
 
             # TODO: use event_page; wasn't working because of timestamps x "array" dtype issue
             for i in range(frames):
+                data = np.random.random(DATA_SHAPE)
                 yield 'event', frame_stream_bundle.compose_event(data={field: data for field in fields},
                                                                       timestamps={field: time.time() for field in fields})
 
@@ -89,7 +89,7 @@ def test_library_widget(qtbot):
     w.show()
 
     qtbot.addWidget(w)
-    qtbot.stopForInteraction()
+    # qtbot.stopForInteraction()
 
 
 # Test the LibraryView bound to a catalog of runs
@@ -101,7 +101,7 @@ def test_library_view(qtbot, random_data_catalog):
     w = QWidget()
     w.setLayout(QHBoxLayout())
 
-    l = LibraryView(model)
+    l = LibraryView(model, slice={"E":0})
 
     s = QSlider()
     s.valueChanged.connect(partial(l.set_slice, axis="E"))
