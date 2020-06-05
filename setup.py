@@ -113,7 +113,13 @@ setup(
     # pip to create the appropriate form of executable for the target platform.
     entry_points={
         "gui_scripts": ["xicam=xicam.run_xicam:main"],
-        "xicam.plugins.DataHandlerPlugin": ["npy = xicam.core.formats.NPYPlugin:NPYPlugin"],
+        "databroker.ingestors": [
+            "image/jpeg = xicam.core.ingestors.generic:ingest",
+            "image/tiff = xicam.core.ingestors.generic:ingest",
+        ],
+        "xicam.plugins.DataHandlerPlugin": [
+            "npy = xicam.core.formats.NPYPlugin:NPYPlugin",
+        ],
         "xicam.plugins.PluginType": [
             "CatalogPlugin = xicam.plugins.catalogplugin:CatalogPlugin",
             "ControllerPlugin = xicam.plugins.controllerplugin:ControllerPlugin",
