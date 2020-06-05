@@ -189,6 +189,8 @@ class OperationPlugin(PluginType):
 
     def __init__(self, **filled_values):
         super(OperationPlugin, self).__init__()
+        self._parameter = None  # type: weakref.ref
+        self.opts = self.opts.copy()
         # Copy class dict information so that changes to instance don't propagate to class
         self.filled_values = self.filled_values.copy()
         self.filled_values.operation = self  # Need to add the operation ref to our OperationDict
@@ -204,7 +206,6 @@ class OperationPlugin(PluginType):
         self.output_shape = self.output_shape.copy()
         self.units = self.units.copy()
         self.visible = self.visible.copy()
-        self._parameter = None  # type: weakref.ref
 
     @classmethod
     def _validate(cls):

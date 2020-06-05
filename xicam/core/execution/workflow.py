@@ -542,6 +542,7 @@ class _OperationWrapper:
         # args is a single length tuple with one-element dict ({'x': 1},)
         # args is a single length tuple with n-element dict ({'x': 1, 'y': 2},)
         # TODO: is multiple length tuple possible here? ({'x': 1}, {'y': 2})
+        print(f"Node name: {self.node.name}\n\tcall args: {args}\n\tnamed_args: {self.named_args}")
         node_args = {}
         # Only try to extract input args when we are not at a start node
         if len(args):

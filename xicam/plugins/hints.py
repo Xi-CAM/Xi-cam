@@ -52,6 +52,7 @@ class PlotHint(Hint):
         self.xLog = xLog
         self.yLog = yLog
         self.labels = labels
+        print(self._name, xLog, yLog)
 
     def init_canvas(self, addLegend=False, **kwargs):
         canvas = super(PlotHint, self).init_canvas(**kwargs)

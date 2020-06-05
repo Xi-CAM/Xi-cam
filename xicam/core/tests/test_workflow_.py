@@ -695,9 +695,44 @@ class TestMultipleOutputsOneOp:
 
 class TestMultipleOutputsMultipleOps:
     # TEST CASES
+    #   two nodes connect into one node with two inputs
     #   start node has return x, y
     #   middle node has return x, y
     #   end node has return x, y
+    def test_two_copy_ops_to_one_op(self, double_and_triple_op, sum_op, square_op):
+        # 1**2 + 2**2 => 5
+        workflow = Workflow()
+        square_op.filled_values.update(n=1)
+        square_op_2 = square_op.__class__()
+        square_op_2.filled_values.update(n=2)
+        square_op_2.output_names = ["square"]
+        workflow.add_operations(sum_op, square_op, square_op_2)
+        workflow.add_link(square_op, sum_op, "square", "n1")
+        workflow.add_link(square_op_2, sum_op, "square", "n2")
+        workflow._pretty_print()
+        result = workflow.execute_synchronous()
+        assert result == ({"sum": 5},)
+
+    def test_two_ops_to_one_op(self, negative_op, square_op, sum_op):
+        workflow = Workflow()
+        workflow.add_operations(negative_op, square_op, sum_op)
+        workflow.add_link(negative_op, sum_op, "negative", "n1")
+        workflow.add_link(square_op, sum_op, "square", "n2")
+        print(workflow.get_inbound_links(sum_op))
+        from dask import visualize
+        visualize(workflow.as_dask_graph()[0], filename="/home/ihumphrey/graph")
+        graph = workflow.as_dask_graph()[0]
+        print(graph)
+        for k, op in graph.items():
+            print(k, op[0].node.name)
+        from dask.threaded import get
+        negative_op.filled_values.update(num=3)
+        square_op.filled_values.update(n=4)
+        print(get(graph, '0'))  # WHY is this an issue? Complains that sum missing required 'n2'
+        # workflow._pretty_print()
+        # result = workflow.execute_synchronous(num=3, n=4)
+        # assert result == ({"sum": 13},)
+
     def test_start_node(self, double_and_triple_op, sum_op, square_op):
         workflow = Workflow()
         workflow.add_operations(double_and_triple_op, sum_op, square_op)
