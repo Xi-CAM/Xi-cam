@@ -1,6 +1,6 @@
 from xicam.plugins import OperationPlugin
 from typing import Callable, List, Union, Tuple
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from xicam.core import msg, execution
 from xicam.core.threads import QThreadFuture, QThreadFutureIterator
 from weakref import ref
@@ -272,7 +272,7 @@ class Graph(object):
         dask_graph = {}
 
         for operation in self.operations:
-            links = {}
+            links = OrderedDict()
             dependent_ids = []
             for dep_operation, inbound_links in self._inbound_links[operation].items():
                 for (source_param, dest_param) in inbound_links:
@@ -546,10 +546,9 @@ class _OperationWrapper:
         node_args = {}
         # Only try to extract input args when we are not at a start node
         if len(args):
-            args = args[0]  # Pull the filled args out of the tuple
             # Map the source args names and values to the destination op's inputs
             for arg, (input_name, sender_input_name) in zip(args, self.named_args.items()):
-                node_args[input_name] = args[sender_input_name]
+                node_args[input_name] = arg[sender_input_name]
 
         result_keys = self.node.output_names
         result_values = self.node(**node_args)
