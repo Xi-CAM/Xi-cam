@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 from functools import WRAPPER_ASSIGNMENTS
+from packaging import version
+import pyqtgraph as pg
 from pyqtgraph import ImageView, InfiniteLine, mkPen, ScatterPlotItem, ImageItem, PlotItem
 from qtpy.QtGui import QTransform, QPolygonF
 from qtpy.QtWidgets import QLabel, QErrorMessage, QSizePolicy, QPushButton, QHBoxLayout, QVBoxLayout, QComboBox
@@ -595,7 +597,14 @@ class XArrayView(ImageView):
 
         sl = slice(None, None, max(1, int(data.size // 1e6)))
         data = np.asarray(data[sl])
-        return (np.nanmin(data), np.nanpercentile(np.where(data < np.nanmax(data), data, np.nanmin(data)), 99))
+
+
+        levels = (np.nanmin(data), np.nanpercentile(np.where(data < np.nanmax(data), data, np.nanmin(data)), 99))
+
+        if version.parse(pg.__version__) > version.parse('0.10.0'):
+            return [levels]
+        else:
+            return levels
 
 
 class CatalogView(ImageView):
