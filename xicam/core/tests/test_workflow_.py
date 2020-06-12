@@ -690,7 +690,6 @@ class TestMultipleOutputsOneOp:
         w.add_operations(op)
         result = w.execute_synchronous(a1=1, a2=2)
         assert result == ({"my_func": 1},)
-        assert False  # TODO is above assertion expected behavior?
 
 
 class TestMultipleOutputsMultipleOps:

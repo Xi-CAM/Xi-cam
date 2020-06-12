@@ -277,7 +277,7 @@ class Graph(object):
             for dep_operation, inbound_links in self._inbound_links[operation].items():
                 for (source_param, dest_param) in inbound_links:
                     links[dest_param] = source_param
-                dependent_ids.append(dep_operation.id)
+                    dependent_ids.append(dep_operation.id)
 
             node = _OperationWrapper(operation, links)
             dask_graph[operation.id] = (node, *dependent_ids)
