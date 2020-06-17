@@ -465,6 +465,8 @@ class Graph(object):
 
         # for each operation
         for input_operation in self.operations:
+            if input_operation in self._disabled_operations:
+                continue
 
             # for each input of given operation
             for input_name in input_operation.input_names:
@@ -472,6 +474,8 @@ class Graph(object):
                 matchness = 0
                 # Parse backwards from the given operation, looking for matching outputs
                 for output_operation in reversed(self.operations[: self.operations.index(input_operation)]):
+                    if output_operation in self._disabled_operations:
+                        continue
                     # check each output
                     for output_name in output_operation.output_names:
                         # if matching name

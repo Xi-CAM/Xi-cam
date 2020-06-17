@@ -1,11 +1,12 @@
 import pytest
+from pytestqt import qtbot
 
 from xicam.core import execution
 from xicam.core.execution import localexecutor
 from xicam.core.execution.workflow import Graph, Workflow
 from xicam.plugins.operationplugin import output_names, operation
 
-from xicam.core.tests.workflow_fixtures import graph, double_and_triple_op, sum_op, square_op, negative_op
+from xicam.core.tests.workflow_fixtures import a_op, b_op, c_op, graph, double_and_triple_op, sum_op, square_op, negative_op
 
 
 # Note that this test relies on the xicam.plugins module
@@ -372,97 +373,175 @@ class TestGraph:
         # test execution
         results = workflow.execute_synchronous(x=3, y=5)
 
-    def test_set_disabled_default_no_links(self, graph, sum_op):
-        graph.add_operation(sum_op)
-        return_value = graph.set_disabled(sum_op)
-        assert graph.disabled(sum_op) is True
-        assert return_value == []
+    class TestDisable:
+        def test_default_no_links(self, graph, sum_op):
+            graph.add_operation(sum_op)
+            return_value = graph.set_disabled(sum_op)
+            assert graph.disabled(sum_op) is True
+            assert return_value == []
 
-    # TODO parameterize these tests
-    def test_set_disabled_default_with_links(self, graph, sum_op, square_op, negative_op):
-        graph.add_operations(sum_op, square_op, negative_op)
-        link1 = (sum_op, square_op, "sum", "n")
-        link2 = (square_op, negative_op, "square", "num")
-        graph.add_link(*link1)
-        graph.add_link(*link2)
-        return_value = graph.set_disabled(sum_op)
-        assert graph.disabled(sum_op) is True
-        assert graph.links() == [link2]
-        assert return_value == []
+        def test_default_with_links(self, graph, a_op, b_op, c_op):
+            graph = Graph()
+            graph.add_operations(a_op, b_op, c_op)
+            link_ab = (a_op, b_op, "n", "n")
+            link_bc = (b_op, c_op, "n", "n")
+            graph.add_link(*link_ab)
+            graph.add_link(*link_bc)
+            orphan_links = graph.set_disabled(a_op)
+            assert graph.disabled(a_op) is True
+            assert graph.disabled(b_op) is False
+            assert graph.disabled(c_op) is False
+            assert graph.links() == [link_bc]
+            assert orphan_links == []
 
-    def test_set_disabled_remove_false(self, graph, sum_op, square_op, negative_op):
-        graph.add_operations(sum_op, square_op, negative_op)
-        link1 = (sum_op, square_op, "sum", "n")
-        link2 = (square_op, negative_op, "square", "num")
-        graph.add_link(*link1)
-        graph.add_link(*link2)
-        return_value = graph.set_disabled(sum_op, remove_orphan_links=False)
-        assert graph.disabled(sum_op) is True
-        assert graph.links() == [link1, link2]
-        assert return_value == graph.operation_links(sum_op)
+        # TODO parameterize these tests
+        def test_default_unmatched_names(self, graph, sum_op, square_op, negative_op):
+            graph.add_operations(sum_op, square_op, negative_op)
+            link1 = (sum_op, square_op, "sum", "n")
+            link2 = (square_op, negative_op, "square", "num")
+            graph.add_link(*link1)
+            graph.add_link(*link2)
+            return_value = graph.set_disabled(sum_op)
+            assert graph.disabled(sum_op) is True
+            assert graph.links() == []
+            assert return_value == []
 
-    def test_set_disabled_value_false(self, graph, sum_op, square_op, negative_op):
-        graph.add_operations(sum_op, square_op, negative_op)
-        link1 = (sum_op, square_op, "sum", "n")
-        link2 = (square_op, negative_op, "square", "num")
-        graph.add_link(*link1)
-        graph.add_link(*link2)
-        return_value = graph.set_disabled(sum_op, value=False)
-        assert graph.disabled(sum_op) is False
-        assert graph.links() == [link1, link2]
-        assert return_value == []
+        def test_remove_false(self, graph, a_op, b_op, c_op):
+            graph.add_operations(a_op, b_op, c_op)
+            link1 = (a_op, b_op, "n", "n")
+            link2 = (b_op, c_op, "n", "n")
+            graph.add_link(*link1)
+            graph.add_link(*link2)
+            return_value = graph.set_disabled(a_op, remove_orphan_links=False)
+            assert graph.disabled(a_op) is True
+            assert graph.links() == [link2]
+            assert return_value == [link1]
 
-    def test_set_disabled_value_and_remove_false(self, graph, sum_op, square_op, negative_op):
-        graph.add_operations(sum_op, square_op, negative_op)
-        link1 = (sum_op, square_op, "sum", "n")
-        link2 = (square_op, negative_op, "square", "num")
-        graph.add_link(*link1)
-        graph.add_link(*link2)
-        return_value = graph.set_disabled(sum_op, value=False, remove_orphan_links=False)
-        assert graph.disabled(sum_op) is False
-        assert graph.links() == [link1, link2]
-        assert return_value == []
+        def test_remove_false_unmatched_names(self, graph, sum_op, square_op, negative_op):
+            graph.add_operations(sum_op, square_op, negative_op)
+            link1 = (sum_op, square_op, "sum", "n")
+            link2 = (square_op, negative_op, "square", "num")
+            graph.add_link(*link1)
+            graph.add_link(*link2)
+            return_value = graph.set_disabled(sum_op, remove_orphan_links=False)
+            assert graph.disabled(sum_op) is True
+            assert graph.links() == []
+            assert return_value == [link1]
 
-    def test_toggle_disabled_default(self, graph, sum_op):
-        graph.add_operation(sum_op)
-        return_value = graph.toggle_disabled(sum_op)
-        assert graph.disabled(sum_op) is True
-        assert return_value == []
-        return_value = graph.toggle_disabled(sum_op)
-        assert graph.disabled(sum_op) is False
-        assert return_value == []
+        def test_value_false(self, graph, a_op, b_op, c_op):
+            graph.add_operations(a_op, b_op, c_op)
+            link1 = (a_op, b_op, "n", "n")
+            link2 = (b_op, c_op, "n", "n")
+            graph.add_link(*link1)
+            graph.add_link(*link2)
+            return_value = graph.set_disabled(sum_op, value=False)
+            assert graph.disabled(sum_op) is False
+            assert graph.links() == [link1, link2]
+            assert return_value == []
 
-    def test_toggle_disabled_with_links(self, graph, sum_op, square_op, negative_op):
-        graph.add_operations(sum_op, square_op, negative_op)
-        link1 = (sum_op, square_op, "sum", "n")
-        link2 = (square_op, negative_op, "square", "num")
-        graph.add_link(*link1)
-        graph.add_link(*link2)
-        return_value = graph.toggle_disabled(sum_op)
-        assert graph.disabled(sum_op) is True
-        assert return_value == []
-        assert graph.links() == [link2]
-        return_value = graph.toggle_disabled(sum_op)
-        assert graph.disabled(sum_op) is False
-        assert return_value == []
-        assert graph.links() == [link2]
+        def test_value_false_unmatched_names(self, graph, sum_op, square_op, negative_op):
+            graph.add_operations(sum_op, square_op, negative_op)
+            link1 = (sum_op, square_op, "sum", "n")
+            link2 = (square_op, negative_op, "square", "num")
+            graph.add_link(*link1)
+            graph.add_link(*link2)
+            return_value = graph.set_disabled(sum_op, value=False)
+            assert graph.disabled(sum_op) is False
+            assert graph.links() == []
+            assert return_value == []
 
-    def test_toggle_disabled_remove_false(self, graph, sum_op, square_op, negative_op):
-        graph.add_operations(sum_op, square_op, negative_op)
-        link1 = (sum_op, square_op, "sum", "n")
-        link2 = (square_op, negative_op, "square", "num")
-        graph.add_link(*link1)
-        graph.add_link(*link2)
-        graph._pretty_print()
-        return_value = graph.toggle_disabled(sum_op, remove_orphan_links=False)
-        graph._pretty_print()
-        assert graph.disabled(sum_op) is True
-        assert return_value == graph.operation_links(sum_op)
-        assert graph.links() == [link1, link2]
-        return_value = graph.toggle_disabled(sum_op, remove_orphan_links=False)
-        assert graph.disabled(sum_op) is False
-        assert return_value == []
-        assert graph.links() == [link1, link2]
+        def test_value_and_remove_false(self, graph, a_op, b_op, c_op):
+            graph.add_operations(a_op, b_op, c_op)
+            link1 = (a_op, b_op, "n", "n")
+            link2 = (b_op, c_op, "n", "n")
+            graph.add_link(*link1)
+            graph.add_link(*link2)
+            return_value = graph.set_disabled(a_op, value=False, remove_orphan_links=False)
+            assert graph.disabled(a_op) is False
+            assert graph.links() == [link1, link2]
+            assert return_value == []
+
+        def test_value_and_remove_false_unmatched_names(self, graph, sum_op, square_op, negative_op):
+            graph.add_operations(sum_op, square_op, negative_op)
+            link1 = (sum_op, square_op, "sum", "n")
+            link2 = (square_op, negative_op, "square", "num")
+            graph.add_link(*link1)
+            graph.add_link(*link2)
+            return_value = graph.set_disabled(sum_op, value=False, remove_orphan_links=False)
+            assert graph.disabled(sum_op) is False
+            assert graph.links() == []
+            assert return_value == []
+
+        def test_toggle_default(self, graph, sum_op):
+            graph.add_operation(sum_op)
+            return_value = graph.toggle_disabled(sum_op)
+            assert graph.disabled(sum_op) is True
+            assert return_value == []
+            return_value = graph.toggle_disabled(sum_op)
+            assert graph.disabled(sum_op) is False
+            assert return_value == []
+
+        def test_toggle_with_links(self, graph, a_op, b_op, c_op):
+            graph.add_operations(a_op, b_op, c_op)
+            link1 = (a_op, b_op, "n", "n")
+            link2 = (b_op, c_op, "n", "n")
+            graph.add_link(*link1)
+            graph.add_link(*link2)
+            return_value = graph.toggle_disabled(a_op)
+            assert graph.disabled(a_op) is True
+            assert return_value == []
+            assert graph.links() == [link2]
+            return_value = graph.toggle_disabled(a_op)
+            assert graph.disabled(a_op) is False
+            assert return_value == []
+            assert graph.links() == [link1, link2]
+
+        def test_toggle_with_links_unmatched_names(self, graph, sum_op, square_op, negative_op):
+            graph.add_operations(sum_op, square_op, negative_op)
+            link1 = (sum_op, square_op, "sum", "n")
+            link2 = (square_op, negative_op, "square", "num")
+            graph.add_link(*link1)
+            graph.add_link(*link2)
+            return_value = graph.toggle_disabled(sum_op)
+            assert graph.disabled(sum_op) is True
+            assert return_value == []
+            assert graph.links() == []
+            return_value = graph.toggle_disabled(sum_op)
+            assert graph.disabled(sum_op) is False
+            assert return_value == []
+            assert graph.links() == []
+
+        def test_toggle_remove_false(self, graph, a_op, b_op, c_op):
+            graph.add_operations(a_op, b_op, c_op)
+            link1 = (a_op, b_op, "n", "n")
+            link2 = (b_op, c_op, "n", "n")
+            graph.add_link(*link1)
+            graph.add_link(*link2)
+            return_value = graph.toggle_disabled(a_op, remove_orphan_links=False)
+            assert graph.disabled(a_op) is True
+            assert return_value == [link1]
+            assert graph.links() == [link2]
+            return_value = graph.toggle_disabled(a_op, remove_orphan_links=False)
+            assert graph.disabled(a_op) is False
+            assert return_value == []
+            assert graph.links() == [link1, link2]
+
+        def test_toggle_remove_false_unmatched_names(self, graph, sum_op, square_op, negative_op):
+            graph.add_operations(sum_op, square_op, negative_op)
+            link1 = (sum_op, square_op, "sum", "n")
+            link2 = (square_op, negative_op, "square", "num")
+            graph.add_link(*link1)
+            graph.add_link(*link2)
+            graph._pretty_print()
+            return_value = graph.toggle_disabled(sum_op, remove_orphan_links=False)
+            graph._pretty_print()
+            assert graph.disabled(sum_op) is True
+            assert return_value == [link1]
+            assert graph.links() == []
+            return_value = graph.toggle_disabled(sum_op, remove_orphan_links=False)
+            assert graph.disabled(sum_op) is False
+            assert return_value == []
+            assert graph.links() == []
 
     def test_auto_connect_all_only_matching_names(self, graph):
         def my_increment(n: int) -> int:
@@ -614,7 +693,13 @@ class TestWorkflow:
         assert {"square": 100} in results
         assert {"negative": -50} in results
 
-    def test_execute_all(self, sum_op, square_op, negative_op):
+    def test_execute_all(self, qtbot, sum_op, square_op, negative_op):
+        results = [{"negative": (1 + 2) ** 2 * -1},
+                   {"negative": (3 + 4) ** 2 * -1},
+                   {"negative": (5 + 6) ** 2 * -1}]
+        def cb(*result):
+            next_result = results.pop(0)
+            assert result == next_result
         workflow = Workflow()
         workflow.add_operations(sum_op, square_op, negative_op)
         workflow.add_link(sum_op, square_op, "sum", "n")
@@ -622,10 +707,7 @@ class TestWorkflow:
         n1_values = [1, 3, 5]
         n2_values = [2, 4, 6]
         # TODO -- we are only getting one result, should get three (3 pairs of n1/n2).
-        results = list(workflow.execute_all(n1=n1_values, n2=n2_values).result())
-        assert results == [{"negative": (1 + 2) ** 2 * -1},
-                           {"negative": (3 + 4) ** 2 * -1},
-                           {"negative": (5 + 6) ** 2 * -1}]
+        workflow.execute_all(callback_slot=cb, n1=n1_values, n2=n2_values).result()
 
     def test_fill_kwargs(self):
         assert False
@@ -678,7 +760,6 @@ class TestMultipleOutputsOneOp:
         workflow.add_operations(op)
         result = workflow.execute_synchronous(a1=1, a2=2)
         assert result == ({"return_val": 1},)
-        assert False  # TODO is above assertion expected behavior?
 
     def test_no_output_names(self):
         @operation

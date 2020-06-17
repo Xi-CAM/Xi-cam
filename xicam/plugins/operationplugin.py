@@ -284,7 +284,11 @@ class OperationPlugin(PluginType):
         if not return_annotation or return_annotation is inspect.Signature.empty:
             return_annotation = tuple()
 
-        output_type_map = OrderedDict(zip(self.output_names, return_annotation.__args__))
+        # output_type_map = OrderedDict(zip(self.output_names, return_annotation.__args__))
+        if not type(return_annotation) is tuple:
+            return_annotation = (return_annotation,)
+
+        output_type_map = OrderedDict(zip(self.output_names, return_annotation))
         return output_type_map
 
     def __reduce__(self):

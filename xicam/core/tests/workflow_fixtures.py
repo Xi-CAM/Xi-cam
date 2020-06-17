@@ -51,6 +51,33 @@ def negative_op():
 
 
 @pytest.fixture()
+def a_op():
+    @operation
+    @output_names("n")
+    def a(n: int) -> int:
+        return n + 1
+    return a()
+
+
+@pytest.fixture()
+def b_op():
+    @operation
+    @output_names("n")
+    def b(n: int) -> int:
+        return n - 1
+    return b()
+
+
+@pytest.fixture()
+def c_op():
+    @operation
+    @output_names("n")
+    def c(n: int) -> int:
+        return n * n
+    return c()
+
+
+@pytest.fixture()
 def simple_workflow(square_op, sum_op):
     from xicam.core.execution.workflow import Workflow
 
