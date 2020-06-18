@@ -601,10 +601,7 @@ class XArrayView(ImageView):
 
         levels = (np.nanmin(data), np.nanpercentile(np.where(data < np.nanmax(data), data, np.nanmin(data)), 99))
 
-        if version.parse(pg.__version__) > version.parse('0.10.0'):
-            return [levels]
-        else:
-            return levels
+        return [levels]
 
 
 class CatalogView(ImageView):
