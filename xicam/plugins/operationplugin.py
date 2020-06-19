@@ -9,7 +9,7 @@ from pyqtgraph.parametertree import Parameter
 
 from xicam.core import msg
 
-from .hints import PlotHint
+from .hints import PlotHint, ImageHint
 from .plugin import PluginType
 
 
@@ -669,6 +669,14 @@ def limits(arg_name, limit):
 
 
 # TODO: need an image_hint decorator? coplot_hint decorator?
+def image_hint(*args, **kwargs):
+    def decorator(func):
+        if not hasattr(func, 'hints'):
+            func.hints = []
+        func.hints.append(ImageHint(*args, **kwargs))
+        return func
+
+    return decorator
 
 # TODO Check that signature propagates up
 def plot_hint(*args, **kwargs):

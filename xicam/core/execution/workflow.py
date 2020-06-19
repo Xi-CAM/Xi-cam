@@ -546,7 +546,7 @@ class _OperationWrapper:
         # args is a single length tuple with one-element dict ({'x': 1},)
         # args is a single length tuple with n-element dict ({'x': 1, 'y': 2},)
         # TODO: is multiple length tuple possible here? ({'x': 1}, {'y': 2})
-        print(f"Node name: {self.node.name}\n\tcall args: {args}\n\tnamed_args: {self.named_args}")
+        # print(f"Node name: {self.node.name}\n\tcall args: {args}\n\tnamed_args: {self.named_args}")
         node_args = {}
         # Only try to extract input args when we are not at a start node
         if len(args):
@@ -559,7 +559,14 @@ class _OperationWrapper:
         if not isinstance(result_values, tuple):
             result_values = (result_values,)
 
-        return dict(zip(result_keys, result_values))
+        results_dict = dict(zip(result_keys, result_values))
+        data_dict = {**results_dict, **node_args}
+
+        if self.node.hints:
+            for hint in self.node.hints:
+                hint.set_data(data_dict)
+
+        return results_dict
 
     def __repr__(self):
         # return getattr(self.node, "name", self.node.__class__.__name__)
