@@ -1,5 +1,6 @@
 from pytestqt import qtbot
 
+
 def test_logIntensity(qtbot):
     from xicam.gui.widgets.imageviewmixins import LogScaleIntensity
     import numpy as np
@@ -20,6 +21,20 @@ def test_logIntensity(qtbot):
         windows.append(w)
 
 
+def test_xarrayview(qtbot):
+    from xicam.gui.widgets.imageviewmixins import XArrayView
+    from xicam.core.data import MetaXArray
+    from xarray import DataArray
+    import numpy as np
 
-if __name__ == "__main__":
-    test_logIntensity()
+    data = np.random.random((100, 10, 10,))
+    xdata = DataArray(data, dims=['E (eV)', 'y (μm)', 'x (μm)'], coords=[np.arange(100)*100, np.arange(10)/10., np.arange(10)/10.])
+    metaxdata = MetaXArray(xdata)
+
+    w = XArrayView()
+
+    w.setImage(xdata)
+
+    w.show()
+    # qtbot.stopForInteraction()
+

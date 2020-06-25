@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 from functools import WRAPPER_ASSIGNMENTS
+from packaging import version
+import pyqtgraph as pg
 from pyqtgraph import ImageView, InfiniteLine, mkPen, ScatterPlotItem, ImageItem, PlotItem
 from qtpy.QtGui import QTransform, QPolygonF
 from qtpy.QtWidgets import QLabel, QErrorMessage, QSizePolicy, QPushButton, QHBoxLayout, QVBoxLayout, QComboBox
@@ -10,12 +12,15 @@ from databroker.core import BlueskyRun
 # from pyFAI.geometry import Geometry
 from xicam.core import msg
 from xicam.core.data import MetaXArray
-from xicam.core.data.bluesky_utils import fields_from_stream, streams_from_run
+from xicam.core.data.bluesky_utils import fields_from_stream, streams_from_run, is_image_field
 from xicam.gui.widgets.elidedlabel import ElidedLabel
 from xicam.gui.widgets.ROI import BetterPolyLineROI
 import enum
+from typing import Callable
+from functools import partial
 
 from xicam.plugins import manager as pluginmanager
+from .ROI import RectROI
 import inspect
 
 
@@ -584,6 +589,95 @@ class LogScaleIntensity(ComposableItemImageView):
 
 
 class XArrayView(ImageView):
+    def __init__(self, *args, **kwargs):
+        # Add axes
+        self.axesItem = PlotItem()
+        self.axesItem.axes["left"]["item"].setZValue(10)
+        self.axesItem.axes["top"]["item"].setZValue(10)
+
+        if "view" not in kwargs:
+            kwargs["view"] = self.axesItem
+
+        super(XArrayView, self).__init__(*args, **kwargs)
+
+        self.view.invertY(False)
+
+    def setImage(self, img,
+                 autoRange=True,
+                 autoLevels=True,
+                 levels=None,
+                 axes=None,
+                 xvals=None,
+                 pos=None,
+                 scale=None,
+                 transform=None,
+                 autoHistogramRange=True,
+                 levelMode=None):
+
+        if xvals or transform:
+            raise ValueError("")
+
+        xvals = img.coords[img.dims[-2]]
+        yvals = img.coords[img.dims[-1]]
+        xmin = float(xvals.min())
+        xmax = float(xvals.max())
+        ymin = float(yvals.min())
+        ymax = float(yvals.max())
+
+        # Position the image according to coords
+        shape = img.shape
+        a = [(0, shape[-2]), (shape[-1]-1, shape[-2]), (shape[-1]-1, 1), (0, 1)]
+
+        b = [(ymin, xmin), (ymax, xmin), (ymax, xmax), (ymin, xmax)]
+
+        quad1 = QPolygonF()
+        quad2 = QPolygonF()
+        for p, q in zip(a, b):
+            quad1.append(QPointF(*p))
+            quad2.append(QPointF(*q))
+
+        transform = QTransform()
+        QTransform.quadToQuad(quad1, quad2, transform)
+
+        # Bind coords from the xarray to the timeline axis
+        super(XArrayView, self).setImage(img, autoRange, autoLevels, levels, axes, np.asarray(img.coords[img.dims[0]]), pos, scale, transform, autoHistogramRange, levelMode)
+
+        # Set the timeline axis label from dims
+        self.ui.roiPlot.setLabel('bottom', img.dims[0])
+
+        # Add a bit more size
+        self.ui.roiPlot.setMinimumSize(QSize(0, 70))
+
+        # Label the image axes
+        self.axesItem.setLabel('left', img.dims[-2])
+        self.axesItem.setLabel('bottom', img.dims[-1])
+
+    def updateImage(self, autoHistogramRange=True):
+        ## Redraw image on screen
+        if self.image is None:
+            return
+
+        image = self.getProcessedImage()
+
+        if autoHistogramRange:
+            self.ui.histogram.setHistogramRange(self.levelMin, self.levelMax)
+
+        # Transpose image into order expected by ImageItem
+        if self.imageItem.axisOrder == 'col-major':
+            axorder = ['t', 'x', 'y', 'c']
+        else:
+            axorder = ['t', 'y', 'x', 'c']
+        axorder = [self.axes[ax] for ax in axorder if self.axes[ax] is not None]
+        ax_swap = [image.dims[ax_index] for ax_index in axorder]
+        image = image.transpose(*ax_swap)
+
+        # Select time index
+        if self.axes['t'] is not None:
+            self.ui.roiPlot.show()
+            image = image[self.currentIndex]
+
+        self.imageItem.updateImage(np.asarray(image))
+
     def quickMinMax(self, data):
         """
         Estimate the min/max values of *data* by subsampling. MODIFIED TO USE THE 99TH PERCENTILE instead of max.
@@ -593,10 +687,13 @@ class XArrayView(ImageView):
 
         sl = slice(None, None, max(1, int(data.size // 1e6)))
         data = np.asarray(data[sl])
-        return (np.nanmin(data), np.nanpercentile(np.where(data < np.nanmax(data), data, np.nanmin(data)), 99))
+
+        levels = (np.nanmin(data), np.nanpercentile(np.where(data < np.nanmax(data), data, np.nanmin(data)), 99))
+
+        return [levels]
 
 
-class CatalogView(ImageView):
+class CatalogView(XArrayView):
     sigCatalogChanged = Signal(BlueskyRun)
     sigStreamChanged = Signal(str)
     sigFieldChanged = Signal(str)
@@ -630,7 +727,7 @@ class CatalogView(ImageView):
                     eventStream = eventStream[0]
                 if eventStream.shape[1] == 1:  # if z axis is unitary, drop that axis
                     eventStream = eventStream[:, 0]
-            self.xarray = MetaXArray(eventStream)
+            self.xarray = eventStream
             self.setImage(img=self.xarray, *args, **kwargs)
         else:
             # TODO -- clear the current image
