@@ -54,6 +54,27 @@ class DisplayMode(enum.Enum):
     remesh = enum.auto()
 
 
+class BetterTicks(ImageView):
+    def __init__(self, *args, **kwargs):
+        super(BetterTicks, self).__init__(*args, **kwargs)
+
+        # Make ticks span the whole Y range (good for plots)
+        self.frameTicks.setYRange([0, 1])
+
+    def setImage(self, img, autoRange=True, autoLevels=True, levels=None, axes=None, xvals=None, pos=None, scale=None, transform=None, autoHistogramRange=True, levelMode=None):
+        # Only show ticks if they don't drown out everything else
+        if img is not None:
+            self.frameTicks.setVisible(img.shape[0] < 100)
+
+        super(BetterTicks, self).setImage(img, autoRange, autoLevels, levels, axes, xvals, pos, scale, transform, autoHistogramRange, levelMode)
+
+
+class BetterPlots(BetterTicks):
+    def __init__(self, *args, **kwargs):
+        super(BetterPlots, self).__init__(*args, **kwargs)
+
+        self.ui.roiPlot.setMinimumSize(QSize(0, 200))
+
 class PixelSpace(ImageView):
     def __init__(self, *args, **kwargs):
         # Add axes
@@ -747,6 +768,24 @@ class CatalogView(XArrayView):
         if QSpace in inspect.getmro(type(self)):
             self.setGeometry(pluginmanager.get_plugin_by_name("xicam.SAXS.calibration", "SettingsPlugin").AI(field))
         self.sigFieldChanged.emit(field)
+
+
+class DepthPlot(XArrayView):
+    def __init__(self, *args, **kwargs):
+        super(DepthPlot, self).__init__()
+
+        # self.roi = pg.RectROI((0,0), (1,1))
+        # self.region_roi = pg.RectROI((0,0), (1,1))
+        self.region_roi = pg.CrosshairROI((0,0), rotatable=False, resizable=False)
+        self.view.addItem(self.region_roi)
+
+        self.region_roi.sigRegionChanged.connect(self.plotDepth)
+        self._plotitem = self.ui.roiPlot.plot()  # type: pg.PlotDataItem
+
+    def plotDepth(self):
+        x, y = self.region_roi.pos()
+        self._plotitem.setData(x=np.asarray(self.image.coords[self.image.dims[0]]),
+                               y=self.image.sel(**{self.image.dims[2]: x, self.image.dims[1]: y}, method='nearest'))
 
 
 class BetterLayout(ImageView):
