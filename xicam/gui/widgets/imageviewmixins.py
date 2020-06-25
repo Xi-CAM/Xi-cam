@@ -75,6 +75,71 @@ class BetterPlots(BetterTicks):
 
         self.ui.roiPlot.setMinimumSize(QSize(0, 200))
 
+
+class BetterLayout(ImageView):
+    # Replaces awkward gridlayout with more structured v/hboxlayouts, and removes useless buttons
+    def __init__(self, *args, **kwargs):
+        super(BetterLayout, self).__init__(*args, **kwargs)
+        self.ui.outer_layout = QHBoxLayout()
+        self.ui.left_layout = QVBoxLayout()
+        self.ui.right_layout = QVBoxLayout()
+        self.ui.outer_layout.addLayout(self.ui.left_layout)
+        self.ui.outer_layout.addLayout(self.ui.right_layout)
+        for layout in [self.ui.outer_layout, self.ui.left_layout, self.ui.right_layout]:
+            layout.setContentsMargins(0,0,0,0)
+            layout.setSpacing(0)
+
+        self.ui.left_layout.addWidget(self.ui.graphicsView)
+        self.ui.right_layout.addWidget(self.ui.histogram)
+        # self.ui.right_layout.addWidget(self.ui.roiBtn)
+        # self.ui.right_layout.addWidget(self.ui.menuBtn)
+        QObjectCleanupHandler().add(self.ui.layoutWidget.layout())
+        self.ui.roiBtn.setParent(None)
+        self.ui.menuBtn.setParent(None)
+        self.ui.layoutWidget.setLayout(self.ui.outer_layout)
+
+
+class BetterButtons(BetterLayout):
+    def __init__(self, *args, **kwargs):
+        super(BetterButtons, self).__init__(*args, **kwargs)
+
+        # Setup axes reset button
+        self.resetAxesBtn = QPushButton("Reset Axes")
+        sizePolicy = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(1)
+        sizePolicy.setHeightForWidth(self.resetAxesBtn.sizePolicy().hasHeightForWidth())
+        self.resetAxesBtn.setSizePolicy(sizePolicy)
+        self.resetAxesBtn.setObjectName("resetAxes")
+        self.ui.right_layout.addWidget(self.resetAxesBtn)
+        self.resetAxesBtn.clicked.connect(self.autoRange)
+
+        # Setup LUT reset button
+        self.resetLUTBtn = QPushButton("Reset LUT")
+        sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(1)
+        sizePolicy.setHeightForWidth(self.resetLUTBtn.sizePolicy().hasHeightForWidth())
+        # self.resetLUTBtn.setSizePolicy(sizePolicy)
+        # self.resetLUTBtn.setObjectName("resetLUTBtn")
+        self.ui.right_layout.addWidget(self.resetLUTBtn)
+        self.resetLUTBtn.clicked.connect(self.autoLevels)
+
+
+class ExportButton(BetterLayout):
+    def __init__(self, *args, **kwargs):
+        super(ExportButton, self).__init__(*args, **kwargs)
+
+        # Export button
+        self.exportBtn = QPushButton('Export')
+        sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(1)
+        sizePolicy.setHeightForWidth(self.exportBtn.sizePolicy().hasHeightForWidth())
+        self.ui.right_layout.addWidget(self.exportBtn)
+        self.exportBtn.clicked.connect(self.export)
+
+
 class PixelSpace(ImageView):
     def __init__(self, *args, **kwargs):
         # Add axes
@@ -573,7 +638,7 @@ class LogScaleImageItem(ImageItem):
         self.qimage = fn.makeQImage(argb, alpha, transpose=False)
 
 
-class LogScaleIntensity(ComposableItemImageView):
+class LogScaleIntensity(BetterLayout, ComposableItemImageView):
     def __init__(self, *args, **kwargs):
         # Composes a new type consisting of any ImageItem types in imageItem_bases with this classes's helper ImageItem
         # class (LogScaleImageItem)
@@ -593,7 +658,7 @@ class LogScaleIntensity(ComposableItemImageView):
         sizePolicy.setHeightForWidth(self.logIntensityButton.sizePolicy().hasHeightForWidth())
         self.logIntensityButton.setSizePolicy(sizePolicy)
         self.logIntensityButton.setObjectName("logIntensity")
-        self.ui.gridLayout.addWidget(self.logIntensityButton, 3, 2, 1, 1)
+        self.ui.right_layout.addWidget(self.logIntensityButton)
         self.logIntensityButton.setCheckable(True)
         self.setLogScale(True)
         self.logIntensityButton.clicked.connect(self._setLogScale)
@@ -786,69 +851,6 @@ class DepthPlot(XArrayView):
         x, y = self.region_roi.pos()
         self._plotitem.setData(x=np.asarray(self.image.coords[self.image.dims[0]]),
                                y=self.image.sel(**{self.image.dims[2]: x, self.image.dims[1]: y}, method='nearest'))
-
-
-class BetterLayout(ImageView):
-    # Replaces awkward gridlayout with more structured v/hboxlayouts, and removes useless buttons
-    def __init__(self, *args, **kwargs):
-        super(BetterLayout, self).__init__(*args, **kwargs)
-        self.ui.outer_layout = QHBoxLayout()
-        self.ui.left_layout = QVBoxLayout()
-        self.ui.right_layout = QVBoxLayout()
-        self.ui.outer_layout.addLayout(self.ui.left_layout)
-        self.ui.outer_layout.addLayout(self.ui.right_layout)
-        for layout in [self.ui.outer_layout, self.ui.left_layout, self.ui.right_layout]:
-            layout.setContentsMargins(0,0,0,0)
-            layout.setSpacing(0)
-
-        self.ui.left_layout.addWidget(self.ui.graphicsView)
-        self.ui.right_layout.addWidget(self.ui.histogram)
-        # self.ui.right_layout.addWidget(self.ui.roiBtn)
-        # self.ui.right_layout.addWidget(self.ui.menuBtn)
-        QObjectCleanupHandler().add(self.ui.layoutWidget.layout())
-        self.ui.roiBtn.setParent(None)
-        self.ui.menuBtn.setParent(None)
-        self.ui.layoutWidget.setLayout(self.ui.outer_layout)
-
-
-class BetterButtons(BetterLayout):
-    def __init__(self, *args, **kwargs):
-        super(BetterButtons, self).__init__(*args, **kwargs)
-
-        # Setup axes reset button
-        self.resetAxesBtn = QPushButton("Reset Axes")
-        sizePolicy = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(1)
-        sizePolicy.setHeightForWidth(self.resetAxesBtn.sizePolicy().hasHeightForWidth())
-        self.resetAxesBtn.setSizePolicy(sizePolicy)
-        self.resetAxesBtn.setObjectName("resetAxes")
-        self.ui.right_layout.addWidget(self.resetAxesBtn)
-        self.resetAxesBtn.clicked.connect(self.autoRange)
-
-        # Setup LUT reset button
-        self.resetLUTBtn = QPushButton("Reset LUT")
-        sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(1)
-        sizePolicy.setHeightForWidth(self.resetLUTBtn.sizePolicy().hasHeightForWidth())
-        # self.resetLUTBtn.setSizePolicy(sizePolicy)
-        # self.resetLUTBtn.setObjectName("resetLUTBtn")
-        self.ui.right_layout.addWidget(self.resetLUTBtn)
-        self.resetLUTBtn.clicked.connect(self.autoLevels)
-
-class ExportButton(BetterLayout):
-    def __init__(self, *args, **kwargs):
-        super(ExportButton, self).__init__(*args, **kwargs)
-
-        # Export button
-        self.exportBtn = QPushButton('Export')
-        sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(1)
-        sizePolicy.setHeightForWidth(self.exportBtn.sizePolicy().hasHeightForWidth())
-        self.ui.right_layout.addWidget(self.exportBtn)
-        self.exportBtn.clicked.connect(self.export)
 
 
 class StreamSelector(CatalogView, BetterLayout):
