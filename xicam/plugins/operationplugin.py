@@ -201,6 +201,7 @@ class OperationPlugin(PluginType):
         self.hints = self.hints.copy()
         self.input_descriptions = self.input_descriptions.copy()
         self.limits = self.limits.copy()
+        self.name = self.name or getattr(self._func, "name", self._func.__name__)
         self.opts = self.opts.copy()
         self.output_descriptions = self.output_descriptions.copy()
         self.output_shape = self.output_shape.copy()
