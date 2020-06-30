@@ -13,11 +13,12 @@ from xicam.gui.widgets.plotwidgetmixins import CurveLabels
 class Hint(object):
     canvas_cls = None
 
-    def __init__(self, **kwargs):
+    def __init__(self, group:str = None, **kwargs):
         self.parent = None
         self.checked = False
         self.enabled = True
         self._name = None
+        self.group = group
 
     def init_canvas(self, **kwargs):
         return self.canvas_cls()
@@ -45,11 +46,13 @@ class PlotHint(Hint):
                  yKey: str,
                  xLog: bool = False,
                  yLog: bool = False,
+                 group: str = None,
                  labels=None,
                  **kwargs):
-        super(PlotHint, self).__init__()
+        super(PlotHint, self).__init__(group)
         if kwargs.get("name"):
             self._name = kwargs["name"]
+        self.group = group or self._name
         self.x = self.y = []
         self.xKey = xKey
         self.yKey = yKey
@@ -167,16 +170,16 @@ class ImageHint(Hint):
     ref_count = count(0)
 
     def __init__(
-        self, imagekey, name="", invertY=False, xlabel: str = None, ylabel: str = None, transform=None, z: int = None, **kwargs
+        self, imagekey, name="", invertY=False, labels=None, transform=None, z: int = None, **kwargs
     ):
         self._name = name
         super(ImageHint, self).__init__()
+        self.group = self._name
         self.count = next(self.ref_count)
         self.image = None
         self.imagekey = imagekey
         self.invertY = invertY
-        self.xlabel = xlabel
-        self.ylabel = ylabel
+        self.labels = labels
         self.transform = transform
         if transform is None:
             transform = QTransform()
@@ -196,8 +199,8 @@ class ImageHint(Hint):
         self.image = data.get(self.imagekey, [])
 
     def init_canvas(self, **kwargs):
-        x = self.xlabel or f"{self.image_key}<sub>1</sub>"
-        y = self.ylabel or f"{self.image_key}<sub>2</sub>"
+        x = self.labels["left"] or f"{self.image_key}<sub>1</sub>"
+        y = self.labels["bottom"] or f"{self.image_key}<sub>2</sub>"
         self.canvas = self.canvas_cls(view=pg.PlotItem(labels=dict(left=y, bottom=x)))
         self.canvas.view.invertY(self.invertY)
         return self.canvas
@@ -206,6 +209,7 @@ class ImageHint(Hint):
     def name(self):
         if not self._name:
             self._name = "Image " + str(self.count)
+            self.group = self._name
         return self._name
 
     def visualize(self, canvas):
