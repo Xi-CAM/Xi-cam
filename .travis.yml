@@ -18,39 +18,33 @@ matrix:
     before_install:
     - choco install python --version 3.7.5
     after_script:
-    - pyinstaller --clean --onefile --noconsole --paths C:\Windows\System32\downlevel Xi-cam.spec
+    - pyinstaller --clean --onefile --noconsole --paths C:\Windows\System32\downlevel
+      Xi-cam.spec
     env: PATH=/c/Python37:/c/Python37/Scripts:$PATH
-
 env: TRAVIS=True
-
 cache:
   apt: true
   pip: true
-
 addons:
   apt:
     packages:
     - qtbase5-dev
-
 before_install:
 - python --version
-
 install:
 - pip install --upgrade attrs>=17.4.0
 - pip install --upgrade setuptools wheel
 - pip install .[pyqt5,tests,freeze]
-
 script:
 - 'pylint xicam --errors-only || :'
 - 'pytest --cov=xicam --cov-config=.coveragerc . || :'
-
 deploy:
   skip_cleanup: true
   provider: pypi
-  user: ronpandolfi
-  password:
-    secure: "Xr2q5cQC917n6f1Q7GxcEp3XprYGQSu8cth0ce8axVdDnx76dMU21TNuj7ojc/eiywWmuuW48Tu+quZhr1+N26AEwmb4ZVYZX+nZdWj5Vhlgj4Au7NScHobV5hMCa0pGh916Z+aYD1V96/90khwoRZ+LMijOzGtB8A3CwEIPHKjsNZ4BXmjjGys3iQe7MlESflmuFr/jDX93hA9QbMeNUhC3Tm/6yEvjrlH6pMxLtPx8UN4wY82V5vC4KH7zh/OK4XO8FQCG7kf9ZFHYC0VS1I8qsxpBhn67wDSpGi0Lde26kJox4FcNhYQUu/zfRHSmJ5zoMFFpUWOEKzUOd/T/NcX0Lr8QiiZZ+Sjauq2Bb6t2uFHHKKvwXQTqKIGMD5Zj+yvUaOIr0ViX8Zh9lEjJ2QiDmLdBczK45JKUZLmc7ybsB/EQDjZb7cWji5G/f1ZsMmkmqcSLmPB+L8jLhLzebe4BkplqKFEhk1TE5k7DvT7WkGzsn1r+U8RNibBs/iJAXpnhzxqxGuvToWjJropuOjF/Qzi4hf9v/ZrG+dyTDwkeiEO1yfYiJhfYW3b8C2y4xFJz5APQ0PZ0rEJoiI5Ie/uEIeUYWuQjDMWgI0uGW+ZqhboguhF6Mg52MLM8GkP9d6/wflRMaBLb8Jl5gFtxE1NezPANdsEiftCcNbHpuBY="
+  user: __token__
   distributions: sdist bdist_wheel bdist_egg
   on:
     tags: true
     os: linux
+  password:
+    secure: Y3fOoehpUTrxjwgwjbzoHwstAB5C9noZyX6/2TqOV5WYP4uaWY5SsabuSPAaULICq3G107Imj2zWpzmfGzykYr8V84VXCsUL7I/9hvb1hW0VftzRBRdjcf3QSPi2d3bwhBpYexOtlPIJaXEYNZqD5aPNpfDFvzazvvBs/Ls81AMSShAAW5shjtKDu6w5MvI0D/KoKEbTrWmUMpBqBbdBzuLWkCzA7abBfMwVUED2PpXBatjRNh9ncmfcZdapQeMmitKgvJujOGrrXiCeGILpTt8x7sz4mKA1gpxXbZILN+F3cqUAjP1HvP9hwcnHqcJx2ucIAfF76JuKgFa6EqwEmZeY9emqc5hL2M+7I0Y4Bf3GDHQPpjnPyDgOsbokZgb9D+4fbK1U3SBfgDALGeqc3Og/2OqYi495iONx7lGMe5qUS+sZUdWwjY+pioGNXmVOgIQq3f9s4XL1qZSOor/VBAIzsg9NI7XDyO2AiOWxgp1NK17AJ+nr4DjcdCXuWg6/afGY+qI+mUesfVWy7TDXfiQw4he17yJ6XTl++vjbxRvR9shth/8CfOPeGU5nlkBv0avrI2EgHlUOCJ8DAoanctj1h3exDqMk7yBDRbHDyIU/a9hlogMBvq1yAeIHdPk84QcU0mrUEuRQ0ICkvQGH8WF+IZ56XDKF7wZKZs4JRsA=
