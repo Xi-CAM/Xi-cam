@@ -39,12 +39,12 @@ script:
 - 'pylint xicam --errors-only || :'
 - 'pytest --cov=xicam --cov-config=.coveragerc . || :'
 deploy:
-  skip_cleanup: true
+  cleanup: false
   provider: pypi
-  user: __token__
+  username: ihumphrey
+  password: "LAkK6tq+rovaDus/b5O7p/J2FCiLwyLl46I+r6lNdxFvwTW+XQUbSirlsqztrVn4aoaFQDhtIbjh+UgSIKLl9GYMUuU6S4wLGIu1E8uqAUsoVeoThyuX5gcpJpyrueVBUudkjCjSabUUzO713dLCdyoXtEH//ihTHsqSLA+/XaxmpilVd0dq71+D8+xVgBhLb6XTPU740IqgiOeYClqj8zn2T7M+Xp5UfA8mXNZ2LY76BAikeGpwyqiMANRCX9B+rc+C4YoNiQzCD7lsjj89Mfz5MdZkxcGS79oVbBQbtue2KvzYEHKDEPgnrgflK6supEyOtZQ+34pT7xKjLq32AUG5JLHLUuNhrYDMiSIu5VxVy+cMykK2C7zTzfL/MnZeHbDya0awlP+ZevMoKOiaLKKBNSRsxhzGUgBQrTTqMmOerOJLBK4A0DMdglTHTZIxITiaGq6n02ob553V5vvorl/lyOqEgGinRe+LFqxWTrMWt3ixxO8HBtbdSuEfDLNiOrbVzGSw5Dm125gxKm4vwPdTBSkFi0Tzprkjck2im3W/EmEXpcOUYw41YH4Any4RKdVblbtTOAGmr/hsxO7H/wdBjsy3r+oFEbB3RtfFV+k4UkPrBMU6J4Ze3ojmgpM6fyYNltjzzggIC5zWX3+zmIgvyEJvGSC0mIAas56Ry+4="
+  edge: true
   distributions: sdist bdist_wheel bdist_egg
   on:
     tags: true
     os: linux
-  password:
-    secure: Y3fOoehpUTrxjwgwjbzoHwstAB5C9noZyX6/2TqOV5WYP4uaWY5SsabuSPAaULICq3G107Imj2zWpzmfGzykYr8V84VXCsUL7I/9hvb1hW0VftzRBRdjcf3QSPi2d3bwhBpYexOtlPIJaXEYNZqD5aPNpfDFvzazvvBs/Ls81AMSShAAW5shjtKDu6w5MvI0D/KoKEbTrWmUMpBqBbdBzuLWkCzA7abBfMwVUED2PpXBatjRNh9ncmfcZdapQeMmitKgvJujOGrrXiCeGILpTt8x7sz4mKA1gpxXbZILN+F3cqUAjP1HvP9hwcnHqcJx2ucIAfF76JuKgFa6EqwEmZeY9emqc5hL2M+7I0Y4Bf3GDHQPpjnPyDgOsbokZgb9D+4fbK1U3SBfgDALGeqc3Og/2OqYi495iONx7lGMe5qUS+sZUdWwjY+pioGNXmVOgIQq3f9s4XL1qZSOor/VBAIzsg9NI7XDyO2AiOWxgp1NK17AJ+nr4DjcdCXuWg6/afGY+qI+mUesfVWy7TDXfiQw4he17yJ6XTl++vjbxRvR9shth/8CfOPeGU5nlkBv0avrI2EgHlUOCJ8DAoanctj1h3exDqMk7yBDRbHDyIU/a9hlogMBvq1yAeIHdPk84QcU0mrUEuRQ0ICkvQGH8WF+IZ56XDKF7wZKZs4JRsA=
