@@ -86,6 +86,7 @@ def default_search_result_row(entry):
 
 # TODO: implement threads with event-loops
 
+
 class ReloadThread(QThread):
     def __init__(self, search_state):
         super(ReloadThread, self).__init__()
@@ -93,6 +94,7 @@ class ReloadThread(QThread):
         QApplication.instance().aboutToQuit.connect(self.quit)
 
     def run(self):
+        threading.current_thread().name = "ReloadThread"
         while True:
             t0 = time.monotonic()
             # Never reload until the last reload finished being
@@ -110,15 +112,29 @@ class ProcessQueriesThread(QThread):
     def __init__(self, search_state):
         super(ProcessQueriesThread, self).__init__()
         self.search_state = search_state
+        self.quitting = False
         QApplication.instance().aboutToQuit.connect(self.quit)
 
     def run(self):
-        while True:
+        threading.current_thread().name = "ProcessQueriesThread"
+        while not self.quitting:
+            query = None
             try:
-                self.search_state.process_queries()
-            except Exception as e:
-                msg.logError(e)
-                msg.showMessage("Unable to query: ", str(e))
+                query = self.search_state.query_queue.get_nowait()
+            except queue.Empty:
+                pass
+
+            if query:
+                try:
+                    self.search_state.process_queries(query)
+                except Exception as e:
+                    msg.logError(e)
+                    msg.showMessage("Unable to query: ", str(e))
+            else:
+                time.sleep(.1)
+
+    def quit(self):
+        self.quitting = True
 
 
 class SearchState(ConfigurableQObject):
@@ -253,18 +269,7 @@ class SearchState(ConfigurableQObject):
             found_new = True
         return found_new
 
-    def process_queries(self):
-        # If there is a backlog, process only the newer query.
-        block = True
-
-        while True:
-            try:
-                query = self.query_queue.get_nowait()
-                block = False
-            except queue.Empty:
-                if block:
-                    query = self.query_queue.get()
-                break
+    def process_queries(self, query):
         log.debug("Submitting query %r", query)
         try:
             t0 = time.monotonic()
