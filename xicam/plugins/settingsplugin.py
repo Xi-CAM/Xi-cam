@@ -59,7 +59,9 @@ class SettingsPlugin(QObject, PluginType):
 
 class ParameterSettingsPlugin(GroupParameter, SettingsPlugin):
     def __init__(self, icon, name: str, paramdicts: List[dict], **kwargs):
-        SettingsPlugin.__init__(self, icon, name, None)
+        self.icon = icon
+        self._name = name
+        self._widget = None
         GroupParameter.__init__(self, name=name, type="group", children=paramdicts, **kwargs)
         self.restore()
 

@@ -227,8 +227,9 @@ class DataResourceTree(QTreeView, DataResourceView):
     sigPreview = Signal(object)
     sigURIChanged = Signal()
 
-    def __init__(self, *args):
-        super(DataResourceTree, self).__init__(*args)
+    def __init__(self, model):
+        super(DataResourceTree, self).__init__(model=model)
+        self.setModel(model)
 
     def refresh(self):
         self.model().refresh()
@@ -317,7 +318,7 @@ class DataResourceBrowser(QWidget):
 
         # Add the required 'Local' browser
         self.addBrowser(DataBrowser(LocalFileSystemTree()), "Local", closable=False)
-        self.addBrowser(DatabrokerCatalogPlugin().controller, "Databroker", closable=False)
+        # self.addBrowser(DatabrokerCatalogPlugin().controller, "Databroker", closable=False)
         self.browsertabbar.setCurrentIndex(index)
 
         vbox.addWidget(self.browsertabwidget)
