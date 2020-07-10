@@ -49,7 +49,7 @@ we can install Xi-CAM using a python package management tool called **pip**.
 Run the following in your open Anaconda Prompt.
 
 ```bash
-pip install xicam2
+pip install xicam
 ```
 
 To ensure everything is installed correctly, you can run Xi-CAM as follows:

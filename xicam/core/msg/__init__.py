@@ -287,7 +287,10 @@ def logError(exception: Exception, value=None, tb=None, **kwargs):
         tb = exception.__traceback__
     kwargs["level"] = ERROR
     if "loggername" not in kwargs:
-        kwargs["loggername"] = sys._getframe().f_back.f_code.co_name
+        frame = sys._getframe()
+        frame = getattr(frame, "f_back", frame) or frame
+        kwargs["loggername"] = frame.f_code.co_name
+
     logMessage("\n", "The following error was handled safely by Xi-cam. It is displayed here for debugging.", **kwargs)
     try:
         logMessage("\n", *traceback.format_exception(exception, value, tb), **kwargs)
