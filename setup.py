@@ -79,7 +79,7 @@ setup(
                       "qtmodern",
                       "databroker>=1.0.0b8",
                       "distributed",
-                      "dask",
+                      "dask[array,bag]",
                       "astropy",
                       "virtualenv",
                       "requests",
