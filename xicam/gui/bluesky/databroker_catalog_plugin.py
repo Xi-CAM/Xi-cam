@@ -98,13 +98,13 @@ class SearchingCatalogController(QWidget):
             for uid, run in search_model.selection_as_catalog.items():
                 self.sigOpen.emit(run)
 
-        def preview_entry(name, catalog: BlueskyRun):
-            self.sigPreview.emit(catalog)
+        def preview_entry(event):
+            self.sigPreview.emit(event.run)
 
         # connect the open_entries in the search model to sigOpen
         open_button.clicked.connect(on_click)
 
-        # self.centralWidget.search_model.preview_entry.connect(preview_entry)
+        search_model.events.active_run.connect(preview_entry)
         layout.addWidget(self.centralWidget)
         layout.addWidget(open_button)
 
