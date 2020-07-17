@@ -8,8 +8,8 @@ from qtpy.QtCore import Signal
 from qtpy.QtWidgets import QPushButton, QVBoxLayout, QWidget
 import logging
 
-from stream_widgets.components.search.searches import Search
-from stream_widgets.qt.searches import QtSearch
+from bluesky_widgets.components.search.searches import Search
+from bluesky_widgets.qt.searches import QtSearch
 
 logger = logging.getLogger("BlueskyPlugin")
 
