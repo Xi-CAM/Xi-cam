@@ -44,10 +44,10 @@ def _main(args, exec=True):
     if getattr(args, 'verbose', False):
         QErrorMessage.qtHandler()
 
-    splash = getattr(args, 'nosplash', False)
+    no_splash = getattr(args, 'nosplash', False)
     # start splash in subprocess
     splash_proc = QProcess()
-    if splash:
+    if not no_splash:
         # splash_proc.started.connect(lambda: print('started splash'))
         # splash_proc.finished.connect(lambda: print('finished splashing'))
         log_file = msg.file_handler.baseFilename
