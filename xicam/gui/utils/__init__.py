@@ -108,8 +108,10 @@ def args_to_params(*args, **kwargs):
     for arg in args + tuple(kwargs.values()):
         if isinstance(arg, Parameter):
             param.addChild(arg)
-        elif isinstance(arg, (list, tuple)):
-            param.addChild(args_to_params(*arg))
+        elif isinstance(arg, (list, tuple)) and len(arg):
+            child = args_to_params(*arg)
+            if len(child.childs):
+                param.addChild(child)
     return param
 
 

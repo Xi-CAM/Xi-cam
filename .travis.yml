@@ -18,38 +18,32 @@ matrix:
     before_install:
     - choco install python --version 3.7.5
     after_script:
-    - pyinstaller --clean --onefile --noconsole --paths C:\Windows\System32\downlevel Xi-cam.spec
+    - pyinstaller --clean --onefile --noconsole --paths C:\Windows\System32\downlevel
+      Xi-cam.spec
     env: PATH=/c/Python37:/c/Python37/Scripts:$PATH
-
 env: TRAVIS=True
-
 cache:
   apt: true
   pip: true
-
 addons:
   apt:
     packages:
     - qtbase5-dev
-
 before_install:
 - python --version
-
 install:
 - pip install --upgrade attrs>=17.4.0
 - pip install --upgrade setuptools wheel
 - pip install .[pyqt5,tests,freeze]
-
 script:
 - 'pylint xicam --errors-only || :'
 - 'pytest --cov=xicam --cov-config=.coveragerc . || :'
-
 deploy:
   skip_cleanup: true
   provider: pypi
-  user: ronpandolfi
+  username: ihumphrey
   password:
-    secure: "Xr2q5cQC917n6f1Q7GxcEp3XprYGQSu8cth0ce8axVdDnx76dMU21TNuj7ojc/eiywWmuuW48Tu+quZhr1+N26AEwmb4ZVYZX+nZdWj5Vhlgj4Au7NScHobV5hMCa0pGh916Z+aYD1V96/90khwoRZ+LMijOzGtB8A3CwEIPHKjsNZ4BXmjjGys3iQe7MlESflmuFr/jDX93hA9QbMeNUhC3Tm/6yEvjrlH6pMxLtPx8UN4wY82V5vC4KH7zh/OK4XO8FQCG7kf9ZFHYC0VS1I8qsxpBhn67wDSpGi0Lde26kJox4FcNhYQUu/zfRHSmJ5zoMFFpUWOEKzUOd/T/NcX0Lr8QiiZZ+Sjauq2Bb6t2uFHHKKvwXQTqKIGMD5Zj+yvUaOIr0ViX8Zh9lEjJ2QiDmLdBczK45JKUZLmc7ybsB/EQDjZb7cWji5G/f1ZsMmkmqcSLmPB+L8jLhLzebe4BkplqKFEhk1TE5k7DvT7WkGzsn1r+U8RNibBs/iJAXpnhzxqxGuvToWjJropuOjF/Qzi4hf9v/ZrG+dyTDwkeiEO1yfYiJhfYW3b8C2y4xFJz5APQ0PZ0rEJoiI5Ie/uEIeUYWuQjDMWgI0uGW+ZqhboguhF6Mg52MLM8GkP9d6/wflRMaBLb8Jl5gFtxE1NezPANdsEiftCcNbHpuBY="
+    secure: "jHw6SQ80qrkFI96uTubLnsyIrkgTy1nBOoh3vBnLv/VJxTDLygJ1R/4PvVEuM5t2/5l9OsoBl6B2EItYlekPVbbTx49Hi90e0m9WXX0Y6rr8yXaoOMePLdgFtRVbWkBEvR0uXbqBEQ4efaEopH5tT2a15eo38j/ZAkBlFFTNdSgABo990dACJvmPzzUnWikXI14VZufWgTSKCY6VM6j4n8hDX6QWnci2DuzGZNR2WaK8DsYKZvabQY62rRL/SZIa8e2DBS50p16OZ/NHSewwxVG25OMDLXduQTGrnXLeVmHrXWUwpGE0nPGCn9sY0Og+2QFNVz2UmfN8LXn0jakIObQ0f/ZhbhTHlTNQ6DzIkl24M4OLuqMIIeA2Ov36rzoN96KBZn9VBL6DqnMy3iAqHsb8lyrWmXMdQhjyrXzsYnDZ8ZimVCcwc/fF6qxy/QoU9JonRNZtAUbHE0wyr08dzY+lxkt8mCJG7aUTlWLftYri6gmUNC9RCDSzT5q/ZISEdDT4ec+TW7F6axcwswS4FrcUIFeCbti4rQtp6LoMK4hH/DEEsLs6iAVcdbDDSF22xPHVvhGBwXzOX+GhPsyQqf+Le2H2AJShWVOsW0JbS9Ki7KyJ9W9hECts1tXv11clQrpRHyETkpOvYOePnx8lztBI/EiQqMPHw+W9CTv7/Tg="
   distributions: sdist bdist_wheel bdist_egg
   on:
     tags: true

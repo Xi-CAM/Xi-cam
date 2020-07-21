@@ -9,17 +9,26 @@ import pyqtgraph as pg
 
 from xicam.plugins import ParameterSettingsPlugin
 
+# Consistently styling the pyqtgraph parametertrees across styles with reasonable colors
+pyqtgraph_parametertree_fixes = """
+QTreeView::item:has-children {
+    background: palette(dark);
+    color: palette(light);
+}
+"""
+
 
 def setDefault():
     QApplication.instance().setStyleSheet("")
 
 
 def setDark():
-    QApplication.instance().setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+    QApplication.instance().setStyleSheet(qdarkstyle.load_stylesheet_pyqt5()+pyqtgraph_parametertree_fixes)
 
 
 def setModern():
     styles.dark(QApplication.instance())
+    QApplication.instance().setStyleSheet(pyqtgraph_parametertree_fixes)
 
 
 def setUglyGreen():

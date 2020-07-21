@@ -10,10 +10,12 @@ from databroker.core import BlueskyRun
 # from pyFAI.geometry import Geometry
 from xicam.core import msg
 from xicam.core.data import MetaXArray
-from xicam.core.data.bluesky_utils import fields_from_stream, streams_from_run
+from xicam.core.data.bluesky_utils import fields_from_stream, streams_from_run, is_image_field
 from xicam.gui.widgets.elidedlabel import ElidedLabel
 from xicam.gui.widgets.ROI import BetterPolyLineROI
 import enum
+from typing import Callable
+from functools import partial
 
 from xicam.plugins import manager as pluginmanager
 import inspect
@@ -47,6 +49,29 @@ class DisplayMode(enum.Enum):
     raw = enum.auto()
     cake = enum.auto()
     remesh = enum.auto()
+
+
+class BetterLayout(ImageView):
+    # Replaces awkward gridlayout with more structured v/hboxlayouts, and removes useless buttons
+    def __init__(self, *args, **kwargs):
+        super(BetterLayout, self).__init__(*args, **kwargs)
+        self.ui.outer_layout = QHBoxLayout()
+        self.ui.left_layout = QVBoxLayout()
+        self.ui.right_layout = QVBoxLayout()
+        self.ui.outer_layout.addLayout(self.ui.left_layout)
+        self.ui.outer_layout.addLayout(self.ui.right_layout)
+        for layout in [self.ui.outer_layout, self.ui.left_layout, self.ui.right_layout]:
+            layout.setContentsMargins(0, 0, 0, 0)
+            layout.setSpacing(0)
+
+        self.ui.left_layout.addWidget(self.ui.graphicsView)
+        self.ui.right_layout.addWidget(self.ui.histogram)
+        # self.ui.right_layout.addWidget(self.ui.roiBtn)
+        # self.ui.right_layout.addWidget(self.ui.menuBtn)
+        QObjectCleanupHandler().add(self.ui.layoutWidget.layout())
+        self.ui.roiBtn.setParent(None)
+        self.ui.menuBtn.setParent(None)
+        self.ui.layoutWidget.setLayout(self.ui.outer_layout)
 
 
 class PixelSpace(ImageView):
@@ -244,7 +269,7 @@ class Crosshair(ImageView):
                 self._vline.setVisible(False)
 
 
-class PixelCoordinates(PixelSpace):
+class PixelCoordinates(PixelSpace, BetterLayout):
     def __init__(self, *args, **kwargs):
         super(PixelCoordinates, self).__init__(*args, **kwargs)
 
@@ -259,7 +284,7 @@ class PixelCoordinates(PixelSpace):
         self._coordslabel.setSizePolicy(
             QSizePolicy.Ignored, QSizePolicy.Ignored
         )  # TODO: set sizehint to take from parent, not text
-        self.ui.gridLayout.addWidget(self._coordslabel, 2, 0, 1, 1, alignment=Qt.AlignHCenter)
+        self.ui.left_layout.addWidget(self._coordslabel, alignment=Qt.AlignHCenter)
 
         self.scene.sigMouseMoved.connect(self.displayCoordinates)
 
@@ -637,40 +662,19 @@ class CatalogView(ImageView):
             pass
 
     def setStream(self, stream):
+        self.clear()
         self.stream = stream
         self._updateCatalog()
         self.sigStreamChanged.emit(stream)
 
     def setField(self, field):
+        self.clear()
         self.field = field
         self._updateCatalog()
         # TODO -- figure out where to put the geometry update
         if QSpace in inspect.getmro(type(self)):
             self.setGeometry(pluginmanager.get_plugin_by_name("xicam.SAXS.calibration", "SettingsPlugin").AI(field))
         self.sigFieldChanged.emit(field)
-
-
-class BetterLayout(ImageView):
-    # Replaces awkward gridlayout with more structured v/hboxlayouts, and removes useless buttons
-    def __init__(self, *args, **kwargs):
-        super(BetterLayout, self).__init__(*args, **kwargs)
-        self.ui.outer_layout = QHBoxLayout()
-        self.ui.left_layout = QVBoxLayout()
-        self.ui.right_layout = QVBoxLayout()
-        self.ui.outer_layout.addLayout(self.ui.left_layout)
-        self.ui.outer_layout.addLayout(self.ui.right_layout)
-        for layout in [self.ui.outer_layout, self.ui.left_layout, self.ui.right_layout]:
-            layout.setContentsMargins(0,0,0,0)
-            layout.setSpacing(0)
-
-        self.ui.left_layout.addWidget(self.ui.graphicsView)
-        self.ui.right_layout.addWidget(self.ui.histogram)
-        # self.ui.right_layout.addWidget(self.ui.roiBtn)
-        # self.ui.right_layout.addWidget(self.ui.menuBtn)
-        QObjectCleanupHandler().add(self.ui.layoutWidget.layout())
-        self.ui.roiBtn.setParent(None)
-        self.ui.menuBtn.setParent(None)
-        self.ui.layoutWidget.setLayout(self.ui.outer_layout)
 
 
 class BetterButtons(BetterLayout):
@@ -714,7 +718,8 @@ class ExportButton(BetterLayout):
 
 
 class StreamSelector(CatalogView, BetterLayout):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, stream_filter=None, **kwargs):
+        self.stream_filter = stream_filter
         self.streamComboBox = QComboBox()
         super(StreamSelector, self).__init__(*args, **kwargs)
         self.ui.right_layout.insertWidget(0, self.streamComboBox)
@@ -727,12 +732,16 @@ class StreamSelector(CatalogView, BetterLayout):
     def updateStreamNames(self, catalog):
         self.streamComboBox.clear()
         if catalog:
-            self.streamComboBox.addItems(streams_from_run(catalog))
+            streams = streams_from_run(catalog)
+            if self.stream_filter:
+                streams = list(filter(is_image_field, streams))
+            self.streamComboBox.addItems(streams)
         return self.streamComboBox.currentText()
 
 
 class FieldSelector(CatalogView, BetterLayout):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, field_filter: Callable = is_image_field, **kwargs):
+        self.field_filter = field_filter
         self.fieldComboBox = QComboBox()
         super(FieldSelector, self).__init__(*args, **kwargs)
 
@@ -744,13 +753,17 @@ class FieldSelector(CatalogView, BetterLayout):
         super(FieldSelector, self).setCatalog(catalog, stream, field, *args, **kwargs)
 
     def setStream(self, stream_name):
-        super(FieldSelector, self).setStream(stream_name)
+        self.stream = stream_name
         self.updateFieldNames(self.catalog, stream_name)
+        super(FieldSelector, self).setStream(stream_name)
 
     def updateFieldNames(self, catalog, stream):
         self.fieldComboBox.clear()
         if catalog and stream:
-            self.fieldComboBox.addItems(fields_from_stream(catalog, stream))
+            fields = fields_from_stream(catalog, stream)
+            if self.field_filter:
+                fields = list(filter(partial(self.field_filter, catalog, stream), fields))
+            self.fieldComboBox.addItems(fields)
         return self.fieldComboBox.currentText()
 
 
