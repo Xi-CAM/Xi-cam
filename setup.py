@@ -94,7 +94,7 @@ setup(
     # $ pip install -e .[dev,tests]
     extras_require={
         "docs": ["sphinx", "recommonmark", "sphinx_bootstrap_theme", "sphinx-markdown-tables"],
-        "tests": ["pytest", "coverage", "coveralls", "codecov", "pylint", "pytest-qt", "pytest-cov"],
+        "tests": ["pytest>=4.6", "coverage", "coveralls", "codecov", "pylint", "pytest-qt", "pytest-cov"],
         "pyqt5": ["pyqt5"],
         "PySide2": ["PySide2"],
     },
