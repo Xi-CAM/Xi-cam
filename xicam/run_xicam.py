@@ -44,13 +44,15 @@ def _main(args, exec=True):
     if getattr(args, 'verbose', False):
         QErrorMessage.qtHandler()
 
+    no_splash = getattr(args, 'nosplash', False)
     # start splash in subprocess
     splash_proc = QProcess()
-    # splash_proc.started.connect(lambda: print('started splash'))
-    # splash_proc.finished.connect(lambda: print('finished splashing'))
-    log_file = msg.file_handler.baseFilename
-    initial_length = os.path.getsize(log_file)
-    splash_proc.start(sys.executable, [splash.__file__, log_file, str(initial_length)])
+    if not no_splash:
+        # splash_proc.started.connect(lambda: print('started splash'))
+        # splash_proc.finished.connect(lambda: print('finished splashing'))
+        log_file = msg.file_handler.baseFilename
+        initial_length = os.path.getsize(log_file)
+        splash_proc.start(sys.executable, [splash.__file__, log_file, str(initial_length)])
 
     from xicam.gui.windows.mainwindow import XicamMainWindow
 
