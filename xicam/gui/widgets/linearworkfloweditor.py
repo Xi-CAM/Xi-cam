@@ -1,6 +1,6 @@
 import pickle
-from qtpy.QtCore import QAbstractTableModel, QMimeData, Qt, Signal, QSize
-from qtpy.QtGui import QIcon, QPixmap
+from qtpy.QtCore import QAbstractTableModel, QMimeData, Qt, Signal, QSize, QPoint
+from qtpy.QtGui import QIcon, QPixmap, QRegion
 from qtpy.QtWidgets import QSplitter, QApplication, QWidget, QAbstractItemView, QToolBar, QToolButton, QMenu, \
     QVBoxLayout, QTableView, QItemDelegate, QGridLayout, QLabel, QPushButton, QSizePolicy, QHeaderView, QCheckBox, \
     QHBoxLayout
@@ -173,7 +173,7 @@ class LinearWorkflowView(QTableView):
         self.setModel(workflowmodel)
         workflowmodel.workflow.attach(self.selectionChanged)
 
-        self.horizontalHeader().close()
+        #self.horizontalHeader().close()
         # self.horizontalHeader().setStretchLastSection(True)
         self.horizontalHeader().setResizeMode(QHeaderView.ResizeToContents)
         self.horizontalHeader().setResizeMode(1, QHeaderView.Stretch)
@@ -259,18 +259,23 @@ class WorkflowModel(QAbstractTableModel):
     def headerData(self, col, orientation, role):
         return None
 
-
+# TODO: DISCUSS THIS....
 class HintsDelegate(QItemDelegate):
     def __init__(self, parent):
         super(HintsDelegate, self).__init__(parent=parent)
         self.view = parent
+        self.widget = QLabel() #HintsWidget(operation, self.view, index)
 
     def paint(self, painter, option, index):
-        if not (self.view.indexWidget(index)):
-            # selected = index in map(lambda index: index.row, self.view.selectedIndexes())
-            operation = self.view.model().workflow.operations[index.row()]
-            widget = HintsWidget(operation, self.view, index)
-            self.view.setIndexWidget(index, widget)
+        operation = self.view.model().workflow.operations[index.row()]
+
+        painter.save()
+        self.widget.setText(operation.name)
+        self.widget.resize(option.rect.size())
+        painter.translate(option.rect.topLeft())
+        self.widget.render(painter, QPoint(), QRegion(), QWidget.DrawChildren)
+        painter.restore()
+
 
 
 class HintsWidget(QWidget):
@@ -304,8 +309,8 @@ class HintsWidget(QWidget):
             self.layout().itemAtPosition(row, 1).widget().setVisible(selected)
         print('size2:', self.name, self.sizeHint())
 
-    def sizeHint(self):
-        return QSize(30, 30)
+    # def sizeHint(self):
+    #    return QSize(30, 30)
 
 
 class DeleteDelegate(QItemDelegate):

@@ -599,6 +599,41 @@ class Workflow(Graph):
 
         self.lastresult = []
 
+    def clone(self):
+        import copy
+
+        wf = Workflow()
+        wf._operations = [op.clone() for op in self.operations]
+
+        for _op, _link in self._inbound_links.items():
+            index = self._operations.index(_op)
+            s_op = wf._operations[index]
+
+            for _op2, l in dict(_link).items():
+                d_index = self._operations.index(_op2)
+                d_op = wf._operations[d_index]
+                for xl in l:
+                    wf._inbound_links[s_op][d_op].append(xl)
+
+        for _op, _link in self._outbound_links.items():
+            index = self._operations.index(_op)
+            s_op = wf._operations[index]
+
+            for _op2, l in dict(_link).items():
+                d_index = self._operations.index(_op2)
+                d_op = wf._operations[d_index]
+                for xl in l:
+                    wf._outbound_links[s_op][d_op].append(xl)
+
+        wf._observers = set()
+        wf._disabled_operations = [wf._operations[self._operations.index(op)] for op in self._disabled_operations ]
+        wf.name = copy.deepcopy(self.name)
+
+        wf.staged = False
+        wf.lastresult = []
+
+        return wf
+
     def stage(self, connection):
         """
         Stages required data resources to the compute resource. Connection will be a Connection object (WIP) keeping a

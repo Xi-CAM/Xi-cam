@@ -169,7 +169,8 @@ class XicamMainWindow(QMainWindow):
         elif isinstance(header, NonDBHeader):
             self.currentGUIPlugin.appendHeader(header)
         else:
-            raise TypeError(f"Cannot open {header}.")
+            self.currentGUIPlugin.appendCatalog(header)
+            #raise TypeError(f"Cannot open {header}.")
 
     def showSettings(self):
         ConfigDialog().show()
