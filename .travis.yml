@@ -9,8 +9,6 @@ matrix:
     - python --version
     - pip install --upgrade pip
     - export DISPLAY=:99.0
-    install:
-    - pip install pyinstaller
     after_success:
     - pip install .[docs]
     - "(cd docs && make html)"
@@ -19,6 +17,7 @@ matrix:
     language: shell
     before_install:
     - choco install python --version 3.7.5
+    - pip install pyinstaller
     after_script:
     - pyinstaller --clean --onefile --noconsole --paths C:\Windows\System32\downlevel
       Xi-cam.spec
