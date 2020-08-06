@@ -5,11 +5,12 @@ from xicam.plugins.catalogplugin import CatalogPlugin
 from xicam.gui.widgets.dataresourcebrowser import QListView
 from databroker.core import BlueskyRun
 from qtpy.QtCore import Signal
-from qtpy.QtWidgets import QPushButton, QVBoxLayout, QWidget
+from qtpy.QtWidgets import QApplication, QPushButton, QVBoxLayout, QWidget
 import logging
 
 from bluesky_widgets.components.search.searches import Search
 from bluesky_widgets.qt.searches import QtSearch
+from bluesky_widgets.qt.threading import wait_for_workers_to_quit
 
 logger = logging.getLogger("BlueskyPlugin")
 
@@ -82,13 +83,20 @@ class SearchingCatalogController(QWidget):
         """
         super(SearchingCatalogController, self).__init__()
 
+        app = QApplication.instance()
+
+        # This QtSearch object below creates a DataLoadWorker which is a
+        # QRunnable and runs on the global QThreadPool. Wait (up to some limit)
+        # for the workers to shut down when the app quits.
+        app.aboutToQuit.connect(wait_for_workers_to_quit)
+
         layout = QVBoxLayout()
         self.setLayout(layout)
 
         layout.setContentsMargins(0, 0, 0, 0)
 
         search_model = Search(root_catalog, columns=columns)
-        self.centralWidget = QtSearch(search_model)
+        self.centralWidget = QtSearch(search_model, parent=self)
 
         # Add a button that does something with the currently-selected Runs
         # when you click it.
