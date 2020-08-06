@@ -1,6 +1,6 @@
 from xicam.plugins import OperationPlugin
 from typing import Callable, List, Union, Tuple
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from xicam.core import msg, execution
 from xicam.core.threads import QThreadFuture, QThreadFutureIterator
 from weakref import ref
@@ -272,12 +272,12 @@ class Graph(object):
         dask_graph = {}
 
         for operation in self.operations:
-            links = {}
+            links = OrderedDict()
             dependent_ids = []
             for dep_operation, inbound_links in self._inbound_links[operation].items():
                 for (source_param, dest_param) in inbound_links:
                     links[dest_param] = source_param
-                dependent_ids.append(dep_operation.id)
+                    dependent_ids.append(dep_operation.id)
 
             node = _OperationWrapper(operation, links)
             dask_graph[operation.id] = (node, *dependent_ids)
@@ -465,6 +465,8 @@ class Graph(object):
 
         # for each operation
         for input_operation in self.operations:
+            if input_operation in self._disabled_operations:
+                continue
 
             # for each input of given operation
             for input_name in input_operation.input_names:
@@ -472,6 +474,8 @@ class Graph(object):
                 matchness = 0
                 # Parse backwards from the given operation, looking for matching outputs
                 for output_operation in reversed(self.operations[: self.operations.index(input_operation)]):
+                    if output_operation in self._disabled_operations:
+                        continue
                     # check each output
                     for output_name in output_operation.output_names:
                         # if matching name
@@ -537,16 +541,32 @@ class _OperationWrapper:
     # args = [{'name':value}]
 
     def __call__(self, *args):
+        # Potential inputs:
+        # args is an empty tuple ()
+        # args is a single length tuple with one-element dict ({'x': 1},)
+        # args is a single length tuple with n-element dict ({'x': 1, 'y': 2},)
+        # TODO: is multiple length tuple possible here? ({'x': 1}, {'y': 2})
+        # print(f"Node name: {self.node.name}\n\tcall args: {args}\n\tnamed_args: {self.named_args}")
         node_args = {}
-        for arg, (input_name, sender_operation_name) in zip(args, self.named_args.items()):
-            node_args[input_name] = arg[sender_operation_name]
+        # Only try to extract input args when we are not at a start node
+        if len(args):
+            # Map the source args names and values to the destination op's inputs
+            for arg, (input_name, sender_input_name) in zip(args, self.named_args.items()):
+                node_args[input_name] = arg[sender_input_name]
 
         result_keys = self.node.output_names
         result_values = self.node(**node_args)
         if not isinstance(result_values, tuple):
             result_values = (result_values,)
 
-        return dict(zip(result_keys, result_values))
+        results_dict = dict(zip(result_keys, result_values))
+        data_dict = {**results_dict, **node_args}
+
+        if self.node.hints:
+            for hint in self.node.hints:
+                hint.set_data(data_dict)
+
+        return results_dict
 
     def __repr__(self):
         # return getattr(self.node, "name", self.node.__class__.__name__)

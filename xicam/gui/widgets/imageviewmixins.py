@@ -51,6 +51,29 @@ class DisplayMode(enum.Enum):
     remesh = enum.auto()
 
 
+class BetterLayout(ImageView):
+    # Replaces awkward gridlayout with more structured v/hboxlayouts, and removes useless buttons
+    def __init__(self, *args, **kwargs):
+        super(BetterLayout, self).__init__(*args, **kwargs)
+        self.ui.outer_layout = QHBoxLayout()
+        self.ui.left_layout = QVBoxLayout()
+        self.ui.right_layout = QVBoxLayout()
+        self.ui.outer_layout.addLayout(self.ui.left_layout)
+        self.ui.outer_layout.addLayout(self.ui.right_layout)
+        for layout in [self.ui.outer_layout, self.ui.left_layout, self.ui.right_layout]:
+            layout.setContentsMargins(0, 0, 0, 0)
+            layout.setSpacing(0)
+
+        self.ui.left_layout.addWidget(self.ui.graphicsView)
+        self.ui.right_layout.addWidget(self.ui.histogram)
+        # self.ui.right_layout.addWidget(self.ui.roiBtn)
+        # self.ui.right_layout.addWidget(self.ui.menuBtn)
+        QObjectCleanupHandler().add(self.ui.layoutWidget.layout())
+        self.ui.roiBtn.setParent(None)
+        self.ui.menuBtn.setParent(None)
+        self.ui.layoutWidget.setLayout(self.ui.outer_layout)
+
+
 class PixelSpace(ImageView):
     def __init__(self, *args, **kwargs):
         # Add axes
@@ -246,7 +269,7 @@ class Crosshair(ImageView):
                 self._vline.setVisible(False)
 
 
-class PixelCoordinates(PixelSpace):
+class PixelCoordinates(PixelSpace, BetterLayout):
     def __init__(self, *args, **kwargs):
         super(PixelCoordinates, self).__init__(*args, **kwargs)
 
@@ -261,7 +284,7 @@ class PixelCoordinates(PixelSpace):
         self._coordslabel.setSizePolicy(
             QSizePolicy.Ignored, QSizePolicy.Ignored
         )  # TODO: set sizehint to take from parent, not text
-        self.ui.gridLayout.addWidget(self._coordslabel, 2, 0, 1, 1, alignment=Qt.AlignHCenter)
+        self.ui.left_layout.addWidget(self._coordslabel, alignment=Qt.AlignHCenter)
 
         self.scene.sigMouseMoved.connect(self.displayCoordinates)
 
@@ -652,29 +675,6 @@ class CatalogView(ImageView):
         if QSpace in inspect.getmro(type(self)):
             self.setGeometry(pluginmanager.get_plugin_by_name("xicam.SAXS.calibration", "SettingsPlugin").AI(field))
         self.sigFieldChanged.emit(field)
-
-
-class BetterLayout(ImageView):
-    # Replaces awkward gridlayout with more structured v/hboxlayouts, and removes useless buttons
-    def __init__(self, *args, **kwargs):
-        super(BetterLayout, self).__init__(*args, **kwargs)
-        self.ui.outer_layout = QHBoxLayout()
-        self.ui.left_layout = QVBoxLayout()
-        self.ui.right_layout = QVBoxLayout()
-        self.ui.outer_layout.addLayout(self.ui.left_layout)
-        self.ui.outer_layout.addLayout(self.ui.right_layout)
-        for layout in [self.ui.outer_layout, self.ui.left_layout, self.ui.right_layout]:
-            layout.setContentsMargins(0,0,0,0)
-            layout.setSpacing(0)
-
-        self.ui.left_layout.addWidget(self.ui.graphicsView)
-        self.ui.right_layout.addWidget(self.ui.histogram)
-        # self.ui.right_layout.addWidget(self.ui.roiBtn)
-        # self.ui.right_layout.addWidget(self.ui.menuBtn)
-        QObjectCleanupHandler().add(self.ui.layoutWidget.layout())
-        self.ui.roiBtn.setParent(None)
-        self.ui.menuBtn.setParent(None)
-        self.ui.layoutWidget.setLayout(self.ui.outer_layout)
 
 
 class BetterButtons(BetterLayout):
