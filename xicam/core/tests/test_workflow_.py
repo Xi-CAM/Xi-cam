@@ -799,8 +799,8 @@ class TestMultipleOutputsMultipleOps:
         workflow.add_link(negative_op, sum_op, "negative", "n1")
         workflow.add_link(square_op, sum_op, "square", "n2")
         print(workflow.get_inbound_links(sum_op))
-        from dask import visualize
-        visualize(workflow.as_dask_graph()[0], filename="/home/ihumphrey/graph")
+        #from dask import visualize
+        #visualize(workflow.as_dask_graph()[0], filename="/home/ihumphrey/graph")
         graph = workflow.as_dask_graph()[0]
         print(graph)
         for k, op in graph.items():
