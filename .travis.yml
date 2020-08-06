@@ -12,7 +12,7 @@ matrix:
     after_success:
     - pip install .[docs]
     - "(cd docs && make html)"
-    - bash <(curl -s https://codecov.io/bash)
+    - bash <(curl -s https://codecov.io/bash) -v
   - os: windows
     language: shell
     before_install:
