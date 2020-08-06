@@ -1,7 +1,7 @@
 from pyqtgraph import ROI, PolyLineROI, Point
 from pyqtgraph.graphicsItems.ROI import Handle, RectROI, LineROI
-from qtpy.QtCore import QRectF, QPointF, Qt
-from qtpy.QtGui import QColor, QPainter, QPainterPath, QBrush
+from qtpy.QtCore import QRectF, QPointF, Qt, Signal
+from qtpy.QtGui import QColor, QPainter, QPainterPath, QBrush, QPainterPathStroker
 import numpy as np
 from itertools import count
 from xicam.plugins import OperationPlugin
@@ -133,6 +133,62 @@ class QCircRectF(QRectF):
         self.setTop(self.center.y() - radius)
         self.setBottom(self.center.y() + radius)
         self.setRight(self.center.x() + radius)
+
+
+class BetterCrosshairROI(BetterROI):
+    sigMoved = Signal(object)
+    """A crosshair ROI whose position is at the center of the crosshairs. By default, it is scalable, rotatable and translatable."""
+
+    def __init__(self, pos=None, size=None, parent=None, **kwargs):
+        assert parent
+
+        if size == None:
+            size = [0, 0]
+        if pos == None:
+            pos = [0, 0]
+        self._shape = None
+        super(BetterCrosshairROI, self).__init__(pos, size, parent=parent, **kwargs)
+
+        self.sigRegionChanged.connect(self.invalidate)
+        self.addTranslateHandle(Point(0, 0), Point(0, 0))
+        self.aspectLocked = True
+
+        linepen = pg.mkPen("#FFA500", width=2)
+        self._vline = pg.InfiniteLine((0, 0), angle=90, movable=False, pen=linepen)
+        self._hline = pg.InfiniteLine((0, 0), angle=0, movable=False, pen=linepen)
+        parent.addItem(self._vline)
+        parent.getViewBox().addItem(self._hline)
+
+    def translate(self, *args, **kwargs):
+        super(BetterCrosshairROI, self).translate(*args, **kwargs)
+        self.sigMoved.emit(self.pos())
+
+    def invalidate(self):
+        self._shape = None
+        self.prepareGeometryChange()
+
+    def boundingRect(self):
+        return self.shape().boundingRect()
+
+    def shape(self):
+        if self._shape is None:
+            radius = self.getState()['size'][1]
+            p = QPainterPath()
+            p.moveTo(Point(0, -radius))
+            p.lineTo(Point(0, radius))
+            p.moveTo(Point(-radius, 0))
+            p.lineTo(Point(radius, 0))
+            p = self.mapToDevice(p)
+            stroker = QPainterPathStroker()
+            stroker.setWidth(10)
+            outline = stroker.createStroke(p)
+            self._shape = self.mapFromDevice(outline)
+
+        return self._shape
+
+    def paint(self, p, *args):
+        self._hline.setPos(self.pos()[1])
+        self._vline.setPos(self.pos()[0])
 
 
 class ArcROI(BetterROI):
