@@ -21,6 +21,8 @@ matrix:
     #after_script:
     #- pyinstaller --clean --onefile --noconsole --paths C:\Windows\System32\downlevel
     #  Xi-cam.spec
+    after_success:
+    - bash <(curl -s https://codecov.io/bash) -v
     env: PATH=/c/Python37:/c/Python37/Scripts:$PATH
 env: TRAVIS=True
 cache:
