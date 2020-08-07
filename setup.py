@@ -78,7 +78,7 @@ setup(
                       "qdarkstyle",
                       "qtmodern",
                       "databroker>=1.0.0b8",
-                      "bluesky-widgets>=0.0.2",
+                      "bluesky-widgets>=0.0.3",
                       "distributed",
                       "dask[array,bag]",
                       "astropy",
