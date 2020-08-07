@@ -3,9 +3,12 @@ import os
 import platform
 
 
-user_cache_dir = user_cache_dir(appname="xicam")
-site_config_dir = site_config_dir(appname="xicam")
-user_config_dir = user_config_dir(appname="xicam")
+APP_NAME = "xicam"
+APP_AUTHOR = "CAMERA"
+
+user_cache_dir = user_cache_dir(appname=APP_NAME, appauthor=APP_AUTHOR)
+site_config_dir = site_config_dir(appname=APP_NAME, appauthor=APP_AUTHOR)
+user_config_dir = user_config_dir(appname=APP_NAME, appauthor=APP_AUTHOR)
 user_dev_dir = os.path.expanduser("~/Xi-cam/plugins")
 op_sys = platform.system()
 if op_sys == "Darwin":  # User config dir incompatible with venv on darwin (space in path name conflicts)

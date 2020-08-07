@@ -80,4 +80,3 @@ def main():
 if __name__ == "__main__":
     return_code = main()
     sys.exit(return_code)
-# TODO: check entry log when running entry point

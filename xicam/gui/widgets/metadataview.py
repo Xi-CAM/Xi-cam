@@ -124,7 +124,7 @@ class MetadataWidget(MetadataWidgetBase):
     def doc_consumer(self, name, doc):
         if name == "start":
             self.header.setName(doc["uid"])
-        super(MetadataWidget, self).insert(name, doc, self.groups)
+        super(MetadataWidget, self).insert(name, doc, doc["uid"], self.groups)
 
     def reset(self):
         self.header = HeaderParameter(name=" ")

@@ -72,10 +72,13 @@ formatter = logging.Formatter(fmt=format, datefmt=date_format)
 logging_settings = QSettings().value(LOGGING_SETTINGS_NAME, {})
 if logging_settings:
     # Unserialize the bytes stream (gives us a dict)
-    logging_settings = pickle.loads(logging_settings)
+    try:
+        logging_settings = pickle.loads(logging_settings).get("children", {})
+    except ValueError:
+        logging_settings = {}
     # Since LoggingSettingsPlugin is a ParameterSettingsPlugin,
     # we access the settings (parameters) through the "children" key
-    logging_settings = logging_settings.get("children", {})
+
 
 # Create a file handler for logging to a file
 file_log_level = DEFAULT_FILE_LOG_LEVEL
