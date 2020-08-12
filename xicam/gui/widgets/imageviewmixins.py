@@ -4,8 +4,8 @@ from packaging import version
 import pyqtgraph as pg
 from pyqtgraph import ImageView, InfiniteLine, mkPen, ScatterPlotItem, ImageItem, PlotItem
 from qtpy.QtGui import QTransform, QPolygonF
-from qtpy.QtWidgets import QLabel, QErrorMessage, QSizePolicy, QPushButton, QHBoxLayout, QVBoxLayout, QComboBox
-from qtpy.QtCore import Qt, Signal, Slot, QSize, QPointF, QRectF, QObjectCleanupHandler
+from qtpy.QtWidgets import QLabel, QErrorMessage, QSizePolicy, QPushButton, QHBoxLayout, QVBoxLayout, QComboBox, QWidget
+from qtpy.QtCore import Qt, Signal, Slot, QSize, QPointF, QRectF
 import numpy as np
 from databroker.core import BlueskyRun
 
@@ -63,16 +63,18 @@ class BetterLayout(ImageView):
         self.ui.outer_layout.addLayout(self.ui.left_layout)
         self.ui.outer_layout.addLayout(self.ui.right_layout)
         for layout in [self.ui.outer_layout, self.ui.left_layout, self.ui.right_layout]:
-            layout.setContentsMargins(0, 0, 0, 0)
+            layout.setContentsMargins(0,0,0,0)
             layout.setSpacing(0)
 
         self.ui.left_layout.addWidget(self.ui.graphicsView)
         self.ui.right_layout.addWidget(self.ui.histogram)
-        # self.ui.right_layout.addWidget(self.ui.roiBtn)
-        # self.ui.right_layout.addWidget(self.ui.menuBtn)
-        QObjectCleanupHandler().add(self.ui.layoutWidget.layout())
-        self.ui.roiBtn.setParent(None)
-        self.ui.menuBtn.setParent(None)
+
+        # Must keep the roiBtn around; ImageView expects to be able to check its state
+        self.ui.roiBtn.setParent(self)
+        self.ui.roiBtn.hide()
+
+        # Replace the layout
+        QWidget().setLayout(self.ui.layoutWidget.layout())
         self.ui.layoutWidget.setLayout(self.ui.outer_layout)
 
 

@@ -41,6 +41,7 @@ class ThreadManager(QStandardItemModel):
             if thread._purge:
                 self.removeRow(i)
                 self._threads.remove(thread)
+                thread.deleteLater()
                 continue
             elif thread.done or thread.cancelled or thread.exception:
                 thread._purge = True

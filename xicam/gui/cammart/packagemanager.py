@@ -156,7 +156,7 @@ class pkg_registry(collections.MutableMapping):
     def load(self):
         try:
             with open(user_package_registry, "r") as f:
-                self._store = yaml.load(f.read())
+                self._store = yaml.load(f.read()) or {}
         except FileNotFoundError:
             pass
 
