@@ -85,7 +85,7 @@ def simple_workflow(square_op, sum_op):
 
     square = square_op
     square2 = square_op.__class__()
-    square2.filled_values["n1"] = 2
+    square2.filled_values["n"] = 2
 
     wf.add_operation(square)
     wf.add_operation(square2)
