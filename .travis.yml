@@ -12,14 +12,17 @@ matrix:
     after_success:
     - pip install .[docs]
     - "(cd docs && make html)"
-    - bash <(curl -s https://codecov.io/bash)
+    - bash <(curl -s https://codecov.io/bash) -v
   - os: windows
     language: shell
     before_install:
     - choco install python --version 3.7.5
-    after_script:
-    - pyinstaller --clean --onefile --noconsole --paths C:\Windows\System32\downlevel
-      Xi-cam.spec
+    #- pip install pyinstaller
+    #after_script:
+    #- pyinstaller --clean --onefile --noconsole --paths C:\Windows\System32\downlevel
+    #  Xi-cam.spec
+    after_success:
+    - bash <(curl -s https://codecov.io/bash) -v
     env: PATH=/c/Python37:/c/Python37/Scripts:$PATH
 env: TRAVIS=True
 cache:
@@ -37,7 +40,8 @@ install:
 - pip install .[pyqt5,tests,freeze]
 script:
 - 'pylint xicam --errors-only || :'
-- 'pytest --cov=xicam --cov-config=.coveragerc . || :'
+#- 'pytest --cov=xicam --cov-config=.coveragerc . || :'
+- 'coverage run -m pytest . || :'
 deploy:
   skip_cleanup: true
   provider: pypi

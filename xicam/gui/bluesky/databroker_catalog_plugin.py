@@ -5,13 +5,59 @@ from xicam.plugins.catalogplugin import CatalogPlugin
 from xicam.gui.widgets.dataresourcebrowser import QListView
 from databroker.core import BlueskyRun
 from qtpy.QtCore import Signal
-from qtpy.QtWidgets import QWidget, QVBoxLayout
+from qtpy.QtWidgets import QApplication, QPushButton, QVBoxLayout, QWidget
 import logging
-from typing import List
 
-from xicam.gui.bluesky.central import CentralWidget
+from bluesky_widgets.components.search.searches import Search
+from bluesky_widgets.qt.searches import QtSearch
+from bluesky_widgets.qt.threading import wait_for_workers_to_quit
 
 logger = logging.getLogger("BlueskyPlugin")
+
+# To customize what is displayed in the table of search results, manipulate
+# headings and extract_results_row_from_run, which are combined into a tuple
+# named columns defined below.
+
+# The length of heading must match the length of the return value from
+# extract_results_row_from_run.
+
+headings = (
+    "Unique ID",
+    "Transient Scan ID",
+    "Plan Name",
+    "Start Time",
+    "Duration",
+    "Exit Status",
+)
+
+
+def extract_results_row_from_run(run):
+    """
+    Given a BlueskyRun, format a row for the table of search results.
+    """
+    from datetime import datetime
+
+    metadata = run.describe()["metadata"]
+    start = metadata["start"]
+    stop = metadata["stop"]
+    start_time = datetime.fromtimestamp(start["time"])
+    if stop is None:
+        str_duration = "-"
+    else:
+        duration = datetime.fromtimestamp(stop["time"]) - start_time
+        str_duration = str(duration)
+        str_duration = str_duration[: str_duration.index(".")]
+    return (
+        start["uid"][:8],
+        start.get("scan_id", "-"),
+        start.get("plan_name", "-"),
+        start_time.strftime("%Y-%m-%d %H:%M:%S"),
+        str_duration,
+        "-" if stop is None else stop["exit_status"],
+    )
+
+
+columns = (headings, extract_results_row_from_run)
 
 
 class SearchingCatalogController(QWidget):
@@ -37,24 +83,38 @@ class SearchingCatalogController(QWidget):
         """
         super(SearchingCatalogController, self).__init__()
 
+        app = QApplication.instance()
+
+        # This QtSearch object below creates a DataLoadWorker which is a
+        # QRunnable and runs on the global QThreadPool. Wait (up to some limit)
+        # for the workers to shut down when the app quits.
+        app.aboutToQuit.connect(wait_for_workers_to_quit)
+
         layout = QVBoxLayout()
         self.setLayout(layout)
 
         layout.setContentsMargins(0, 0, 0, 0)
-        self.centralWidget = CentralWidget(menuBar=None, catalog=root_catalog)
 
-        def emit_opened_catalogs(name, catalogs: List[BlueskyRun]):
-            """Emit each selected and opened catalog to sigOpen"""
-            [self.sigOpen.emit(item) for item in catalogs]
+        search_model = Search(root_catalog, columns=columns)
+        self.centralWidget = QtSearch(search_model, parent=self)
 
-        def preview_entry(name, catalog: BlueskyRun):
-            self.sigPreview.emit(catalog)
+        # Add a button that does something with the currently-selected Runs
+        # when you click it.
+        open_button = QPushButton("Open")
+
+        def on_click():
+            for uid, run in search_model.selection_as_catalog.items():
+                self.sigOpen.emit(run)
+
+        def preview_entry(event):
+            self.sigPreview.emit(event.run)
 
         # connect the open_entries in the search model to sigOpen
-        self.centralWidget.search_model.open_entries.connect(emit_opened_catalogs)
-        self.centralWidget.search_model.preview_entry.connect(preview_entry)
-        self.centralWidget.summary_widget.open.connect(emit_opened_catalogs)
+        open_button.clicked.connect(on_click)
+
+        search_model.events.active_run.connect(preview_entry)
         layout.addWidget(self.centralWidget)
+        layout.addWidget(open_button)
 
 
 class DatabrokerCatalogPlugin(CatalogPlugin):

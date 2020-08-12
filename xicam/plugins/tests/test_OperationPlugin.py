@@ -135,6 +135,16 @@ class TestOutputNames:
         op = operation(my_sum)
         assert op.output_names == ("sum",)
 
+    def test_output_names_tuple(self):
+        @output_names("x", "y")
+        def my_solution(n):
+            return n, -1 * n
+
+        assert my_solution.output_names == ("x", "y")
+        # Test operation API
+        op = operation(my_solution)
+        assert op.output_names == ("x", "y")
+
     def test_output_names_none_provided(self, caplog):
         def my_op(a, b):
             return 42
@@ -497,9 +507,8 @@ def test_multiple_instances(square_op, sum_op):
     wf.add_operation(square)
     wf.add_operation(square2)
     wf.add_operation(my_sum)
-    wf.add_link(square, my_sum, "square", "a")
-    wf.add_link(square2, my_sum, "square", "b")
-
+    wf.add_link(square, my_sum, "square", "a")  # 3**3
+    wf.add_link(square2, my_sum, "square", "b") # 2**2
     assert wf.execute_synchronous(executor=executor) == [{"sum": 13}]
 
 
