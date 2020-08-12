@@ -81,7 +81,7 @@ def test_exit_before_decorated_thread(qtbot):
     def long_thread():
         time.sleep(100000)
 
-    for i in range(1000):
+    for i in range(100):
         long_thread()
 
     time.sleep(.01)
