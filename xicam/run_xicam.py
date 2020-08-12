@@ -27,6 +27,8 @@ from qtpy.QtCore import QCoreApplication, QProcess
 
 if qtpy.API_NAME == "PyQt5" and "PySide" in sys.modules:
     del sys.modules["PySide"]
+elif qtpy.API_NAME == "PySide2" and "PyQt5" in sys.modules:
+    del sys.modules["PyQt5"]
 
 QCoreApplication.setOrganizationName("Camera")
 QCoreApplication.setApplicationName("Xi-cam")
