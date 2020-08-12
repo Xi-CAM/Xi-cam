@@ -1,3 +1,4 @@
+import copy
 from xicam.plugins import OperationPlugin
 from typing import Callable, List, Union, Tuple
 from collections import defaultdict, OrderedDict
@@ -589,8 +590,7 @@ class Workflow(Graph):
         # self._operations = []  # type: List[OperationPlugin]
         self._observers = set()
         # self._links = []  # type: List[Tuple[ref, str, ref, str]]
-        if name:
-            self.name = name
+        self.name = name
 
         if operations:
             # self._operations.extend(operations)
@@ -599,40 +599,19 @@ class Workflow(Graph):
 
         self.lastresult = []
 
+    def __reduce__(self):
+        _operations, _inbound_links, _outbound_links, _disabled_operations = copy.deepcopy((self.operations, self._inbound_links, self._outbound_links, self._disabled_operations))
+        return Workflow, tuple(), {'name': self.name,
+                                   '_operations': _operations,
+                                   '_inbound_links': _inbound_links,
+                                   '_outbound_links': _outbound_links,
+                                   '_disabled_operations': _disabled_operations}
+
     def clone(self):
-        import copy
-
-        wf = Workflow()
-        wf._operations = [op.clone() for op in self.operations]
-
-        for _op, _link in self._inbound_links.items():
-            index = self._operations.index(_op)
-            s_op = wf._operations[index]
-
-            for _op2, l in dict(_link).items():
-                d_index = self._operations.index(_op2)
-                d_op = wf._operations[d_index]
-                for xl in l:
-                    wf._inbound_links[s_op][d_op].append(xl)
-
-        for _op, _link in self._outbound_links.items():
-            index = self._operations.index(_op)
-            s_op = wf._operations[index]
-
-            for _op2, l in dict(_link).items():
-                d_index = self._operations.index(_op2)
-                d_op = wf._operations[d_index]
-                for xl in l:
-                    wf._outbound_links[s_op][d_op].append(xl)
-
-        wf._observers = set()
-        wf._disabled_operations = [wf._operations[self._operations.index(op)] for op in self._disabled_operations ]
-        wf.name = copy.deepcopy(self.name)
-
-        wf.staged = False
-        wf.lastresult = []
-
-        return wf
+        cls, args, state = self.__reduce__()
+        clone = cls(*args)
+        clone.__dict__.update(state)
+        return clone
 
     def stage(self, connection):
         """

@@ -1,12 +1,14 @@
 import pytest
 from pytestqt import qtbot
+import io
+import contextlib
 
 from xicam.core import execution
 from xicam.core.execution import localexecutor
 from xicam.core.execution.workflow import Graph, Workflow
 from xicam.plugins.operationplugin import output_names, operation
 
-from xicam.core.tests.workflow_fixtures import a_op, b_op, c_op, graph, double_and_triple_op, sum_op, square_op, negative_op
+from xicam.core.tests.workflow_fixtures import a_op, b_op, c_op, graph, double_and_triple_op, sum_op, square_op, negative_op, simple_workflow
 
 
 # Note that this test relies on the xicam.plugins module
@@ -859,3 +861,24 @@ def test_mutliple_end_nodes(double_and_triple_op, sum_op, square_op):
     assert len(result) == 2
     assert {"double": 10, "triple": 15} in result
     assert {"square": 25} in result
+
+
+def test_copy(simple_workflow:Workflow):
+    f = io.StringIO()
+    with contextlib.redirect_stdout(f):
+        simple_workflow._pretty_print()
+    original = f.getvalue()
+
+    clone = simple_workflow.clone()
+
+    f = io.StringIO()
+    with contextlib.redirect_stdout(f):
+        clone._pretty_print()
+    new = f.getvalue()
+
+    assert original == new
+
+    result1 = simple_workflow.execute_synchronous(n=2)
+    result2 = clone.execute_synchronous(n=2)
+
+    assert result1 == result2

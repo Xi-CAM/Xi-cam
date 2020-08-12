@@ -218,8 +218,9 @@ class OperationPlugin(PluginType):
         #return inst
 
         cls, args, state = self.__reduce__()
-        operation_class = type("WrappedOperationPlugin", (cls,), state)
-        return operation_class()
+        clone = cls(*args)
+        clone.__dict__.update(state)
+        return clone
 
 
 
