@@ -5,7 +5,7 @@ import os
 
 # NOTE: Disabled on travis due to unknown issues
 
-@pytest.mark.skipif(os.environ.get("TRAVIS", False),
+@pytest.mark.skipif(os.environ.get("TRAVIS", 'false').lower() == 'true',
                     reason="Thread tests don't work on travis for unknown reason; temporarily disabled")
 @pytest.mark.skip(reason="Thread test not working on linux (Ubuntu18.04)")
 def test_threads(qtbot):
@@ -29,7 +29,7 @@ def test_threads(qtbot):
 
     qtbot.waitSignals([t.sigFinished, t2.sigFinished])
 
-@pytest.mark.skipif(os.environ.get("TRAVIS", False),
+@pytest.mark.skipif(os.environ.get("TRAVIS", 'false').lower() == 'true',
                     reason="Thread tests don't work on travis for unknown reason; temporarily disabled")
 @pytest.mark.skip(reason="Thread test not working on linux (Ubuntu18.04)")
 def test_threads_iterator(qtbot):
