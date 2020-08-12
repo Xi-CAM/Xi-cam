@@ -308,7 +308,7 @@ class OperationPlugin(PluginType):
         return output_type_map
 
     def __reduce__(self):
-        return OperationPlugin, tuple(), {'_func': self._func,
+        return self.__class__, tuple(), {'_func': self._func,
                                           'filled_values': self.filled_values,
                                           'input_names': self.input_names,
                                           'output_names': self.output_names}
