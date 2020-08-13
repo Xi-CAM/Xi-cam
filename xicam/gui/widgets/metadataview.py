@@ -2,13 +2,14 @@ from pyqtgraph.parametertree import ParameterTree
 from pyqtgraph.parametertree.parameterTypes import Parameter, GroupParameter
 from collections import deque, OrderedDict, defaultdict
 from qtpy.QtGui import QStandardItem, QStandardItemModel
-from qtpy.QtCore import QItemSelectionModel, Signal
+from qtpy.QtCore import QItemSelectionModel, Signal, Qt
 import sys
 import uuid
 import datetime
 import numpy as np
 import warnings
 from typing import Iterable, Sequence
+from databroker.core import BlueskyRun
 from xicam.core import msg
 from xicam.core.data import NonDBHeader
 from xicam.gui.patches.PyQtGraph import CounterGroupParameter, LazyGroupParameter
@@ -43,7 +44,7 @@ class MetadataWidgetBase(ParameterTree):
         LazyGroupParameter.itemClass.initialize_treewidget(self)
         self.kwargs = kwargs
 
-    def insert(self, doctype: str, document, groups: dict):
+    def insert(self, doctype: str, document, uid: str, groups: dict):
         if doctype == "start":
             for group in groups.values():
                 group.clearChildren()
@@ -59,7 +60,7 @@ class MetadataWidgetBase(ParameterTree):
             group.addChildren(
                 [
                     GroupParameter(
-                        name=document["uid"][:6], value=None, type=None, children=new_children, expanded=False, readonly=True
+                        name=uid[:6], value=None, type=None, children=new_children, expanded=False, readonly=True
                     )
                 ]
             )
@@ -123,7 +124,7 @@ class MetadataWidget(MetadataWidgetBase):
     def doc_consumer(self, name, doc):
         if name == "start":
             self.header.setName(doc["uid"])
-        super(MetadataWidget, self).insert(name, doc, self.groups)
+        super(MetadataWidget, self).insert(name, doc, doc["uid"], self.groups)
 
     def reset(self):
         self.header = HeaderParameter(name=" ")
@@ -150,31 +151,32 @@ class MetadataView(MetadataWidgetBase):
         if not index.isValid():
             return
 
-        header = self.headermodel.itemFromIndex(index).header  # type: NonDBHeader
+        catalog: BlueskyRun = self.headermodel.itemFromIndex(index).data(Qt.UserRole)
 
-        if header.startdoc["uid"] != self._last_uid:
+        if catalog.name != self._last_uid:
             self._seen = set()
 
-        if not isinstance(header, HeaderBuffer):
-            headerbuffer = HeaderBuffer(
-                header.startdoc["uid"], HeaderParameter(name=header.startdoc["uid"]), docs=header.documents()
-            )
-
-        param = headerbuffer.param
+        param = HeaderParameter(name=catalog.name)
         groups = param.groups
 
         # TODO: make compatible with actively streaming header
 
         # filter out documents already emitted in the stream
-        for doctype, document in header.stream():
-            if document["uid"] in self._seen:
+        for doctype, document in catalog.read_canonical():
+            uid = document["uid"]
+
+            # for event-page's, make the uid value hashable by joining
+            if isinstance(document["uid"], list):
+                uid = ', '.join(uid)
+
+            if uid in self._seen:
                 continue
 
-            self._seen.add(document["uid"])
-            self.insert(doctype, document, groups)
+            self._seen.add(uid)
+            self.insert(doctype, document, uid, groups)
 
-        if headerbuffer.uid != self._last_uid:
-            self._last_uid = headerbuffer.uid
+        if catalog.name != self._last_uid:
+            self._last_uid = catalog.name
             # try:
             self.setParameters(param, showTop=False)
 
@@ -187,6 +189,7 @@ class HeaderParameter(GroupParameter):
             "start": CounterGroupParameter(name="start", title="Start", expanded=False),
             "descriptor": CounterGroupParameter(name="descriptor", title="Descriptors", expanded=False),
             "event": CounterGroupParameter(name="event", title="Events", expanded=False),
+            "event_page": CounterGroupParameter(name="event_page", title="Event Pages", expanded=False),
             "stop": CounterGroupParameter(name="stop", title="Stop", expanded=False),
         }
         self.addChildren(self.groups.values())

@@ -29,10 +29,10 @@ class DynImageView(ImageView):
         sl = [slice(None)] * data.ndim
         sl[ax] = slice(None, None, max(1, int(data.size // 1e6)))
         data = data[sl]
-        return (
+        return [(
             np.nanpercentile(np.where(data > np.nanmin(data), data, np.nanmax(data)), 2),
             np.nanpercentile(np.where(data < np.nanmax(data), data, np.nanmin(data)), 98),
-        )
+        )]
 
     def setImage(self, img, **kwargs):
         super(DynImageView, self).setImage(img, **kwargs)

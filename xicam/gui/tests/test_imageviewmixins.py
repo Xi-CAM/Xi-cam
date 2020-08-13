@@ -5,8 +5,6 @@ def test_logIntensity(qtbot):
     from xicam.gui.widgets.imageviewmixins import LogScaleIntensity
     import numpy as np
 
-
-
     windows = []
 
     data1 = np.fromfunction(lambda x, y: np.exp((x ** 2 + y ** 2) / 10000.0), (100, 100)) - 2
@@ -23,13 +21,11 @@ def test_logIntensity(qtbot):
 
 def test_xarrayview(qtbot):
     from xicam.gui.widgets.imageviewmixins import XArrayView
-    from xicam.core.data import MetaXArray
     from xarray import DataArray
     import numpy as np
 
     data = np.random.random((100, 10, 10,))
     xdata = DataArray(data, dims=['E (eV)', 'y (μm)', 'x (μm)'], coords=[np.arange(100)*100, np.arange(10)/10., np.arange(10)/10.])
-    metaxdata = MetaXArray(xdata)
 
     w = XArrayView()
 
@@ -38,3 +34,17 @@ def test_xarrayview(qtbot):
     w.show()
     # qtbot.stopForInteraction()
 
+
+def test_betterlayout(qtbot):
+    from xicam.gui.widgets.imageviewmixins import BetterLayout
+    from xarray import DataArray
+    import numpy as np
+
+    data = np.random.random((10, 10,))
+
+    w = BetterLayout()
+
+    w.setImage(data)
+
+    w.show()
+    #qtbot.stopForInteraction()

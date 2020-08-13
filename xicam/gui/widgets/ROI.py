@@ -10,16 +10,18 @@ from xicam.plugins import OperationPlugin
 from pyqtgraph.parametertree import Parameter, parameterTypes
 import pyqtgraph as pg
 
+from xicam.plugins.operationplugin import operation, output_names
+
 
 class ROIProcessingPlugin(OperationPlugin):
     name = 'ROI'
-    output_names = ('ROI', 'data')
+    output_names = ('roi', 'data')
+    input_names = ('data', 'image')
 
     def __init__(self, ROI: ROI):
         super(ROIProcessingPlugin, self).__init__()
         self.ROI = ROI
         self._param = None  # type: Parameter
-
         self.name = f"ROI #{self.ROI.index}"
 
     def _func(self, data, image):

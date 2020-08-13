@@ -69,20 +69,20 @@ date_format = "%a %b %d %H:%M:%S %Y"
 formatter = logging.Formatter(fmt=format, datefmt=date_format)
 
 # Use the QSettings set up for us by LoggingSettingsPlugin
-logging_settings = QSettings().value(LOGGING_SETTINGS_NAME, {})
+logging_settings = QSettings().value(LOGGING_SETTINGS_NAME, {}) or {}
 if logging_settings:
     # Unserialize the bytes stream (gives us a dict)
-    logging_settings = pickle.loads(logging_settings)
+    try:
+        logging_settings = pickle.loads(logging_settings).get("children", {})
+    except ValueError:
+        logging_settings = {}
     # Since LoggingSettingsPlugin is a ParameterSettingsPlugin,
     # we access the settings (parameters) through the "children" key
-    logging_settings = logging_settings.get("children", {})
+
 
 # Create a file handler for logging to a file
-file_log_level = DEFAULT_FILE_LOG_LEVEL
-# See if we have the file logging level available to us
-file_log_settings = logging_settings.get(FILE_LOG_LEVEL_SETTINGS_NAME, {}).get("value")
-if logging_settings and file_log_settings:
-    file_log_level = file_log_settings
+file_log_level = logging_settings.get(FILE_LOG_LEVEL_SETTINGS_NAME, {}).get("value") or DEFAULT_FILE_LOG_LEVEL
+
 # By default, append to log file
 file_handler = logging.FileHandler(os.path.join(log_dir, log_file))
 file_handler.setLevel(file_log_level)  # minimum level shown
@@ -287,7 +287,10 @@ def logError(exception: Exception, value=None, tb=None, **kwargs):
         tb = exception.__traceback__
     kwargs["level"] = ERROR
     if "loggername" not in kwargs:
-        kwargs["loggername"] = sys._getframe().f_back.f_code.co_name
+        frame = sys._getframe()
+        frame = getattr(frame, "f_back", frame) or frame
+        kwargs["loggername"] = frame.f_code.co_name
+
     logMessage("\n", "The following error was handled safely by Xi-cam. It is displayed here for debugging.", **kwargs)
     try:
         logMessage("\n", *traceback.format_exception(exception, value, tb), **kwargs)

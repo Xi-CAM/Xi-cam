@@ -2,6 +2,7 @@ import sys
 import os
 import signal
 import trace
+import atexit
 from xicam.core.args import parse_args
 
 print("args:", sys.argv)
@@ -26,6 +27,8 @@ from qtpy.QtCore import QCoreApplication, QProcess
 
 if qtpy.API_NAME == "PyQt5" and "PySide" in sys.modules:
     del sys.modules["PySide"]
+elif qtpy.API_NAME == "PySide2" and "PyQt5" in sys.modules:
+    del sys.modules["PyQt5"]
 
 QCoreApplication.setOrganizationName("Camera")
 QCoreApplication.setApplicationName("Xi-cam")
@@ -72,12 +75,34 @@ def main():
     args = parse_args(exit_on_fail=True)
     if args.verbose > 1:
         tracer = trace.Trace(count=False, trace=True)
-        tracer.run("_main(args)")
+        tracer.run(f"_main(None)")  # TODO: map args into main
     else:
         return _main(args)
+
+
+def exit_checks():
+    from xicam.core import msg
+    import threading
+    msg.logMessage('Background threads:', threading.active_count()-1)
+    # msg.logMessage('Active background threads:', len([thread for thread in threading.enumerate() if not isinstance(thread, threading._DummyThread)])-1)
+    msg.logMessage('Active background threads:',
+                   len(list(filter(lambda thread: not isinstance(thread, threading._DummyThread),
+                                   threading.enumerate())))-1)
+
+    for thread in threading.enumerate():
+        if thread is threading.current_thread() or isinstance(thread, threading._DummyThread):# or thread.daemon
+            continue
+        msg.logMessage('Waiting for thread:', thread.name)
+
+        thread.join(timeout=3)
+        msg.logError(TimeoutError(f'Thread named "{thread.name}" took too long to exit as Xi-CAM was closing. '
+                                       # 'Please report this.')
+        ))
+
+
+atexit.register(exit_checks)
 
 
 if __name__ == "__main__":
     return_code = main()
     sys.exit(return_code)
-# TODO: check entry log when running entry point

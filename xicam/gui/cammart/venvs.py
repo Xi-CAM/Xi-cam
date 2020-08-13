@@ -5,19 +5,20 @@ import sys
 import venv
 
 import pathlib
-from appdirs import user_config_dir, site_config_dir, user_cache_dir
 from qtpy.QtGui import QIcon
 from qtpy.QtWidgets import QLabel
 
+from xicam.core.paths import user_cache_dir, user_config_dir, site_config_dir
 from xicam.gui.static import path
 from xicam.plugins import SettingsPlugin
 
+
 op_sys = platform.system()
 if op_sys == "Darwin":  # User config dir incompatible with venv on darwin (space in path name conflicts)
-    user_venv_dir = os.path.join(user_cache_dir(appname="xicam"), "venvs")
+    user_venv_dir = os.path.join(user_cache_dir, "venvs")
 else:
-    user_venv_dir = os.path.join(user_config_dir(appname="xicam"), "venvs")
-site_venv_dir = os.path.join(site_config_dir(appname="xicam"), "venvs")
+    user_venv_dir = os.path.join(user_config_dir, "venvs")
+site_venv_dir = os.path.join(site_config_dir, "venvs")
 
 venvs = {}
 observers = []

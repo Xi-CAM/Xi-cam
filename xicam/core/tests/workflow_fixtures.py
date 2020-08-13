@@ -1,3 +1,4 @@
+from typing import Tuple
 import pytest
 
 from xicam.core import execution
@@ -11,6 +12,15 @@ from pyqtgraph.parametertree import Parameter
 @pytest.fixture()
 def graph():
     return Graph()
+
+
+@pytest.fixture()
+def double_and_triple_op():
+    @operation
+    @output_names("double", "triple")
+    def double_and_triple(n: int) -> Tuple[int, int]:
+        return 2*n, 3*n
+    return double_and_triple()
 
 
 @pytest.fixture()
@@ -38,6 +48,33 @@ def negative_op():
         return -1 * num
 
     return negative()
+
+
+@pytest.fixture()
+def a_op():
+    @operation
+    @output_names("n")
+    def a(n: int) -> int:
+        return n + 1
+    return a()
+
+
+@pytest.fixture()
+def b_op():
+    @operation
+    @output_names("n")
+    def b(n: int) -> int:
+        return n - 1
+    return b()
+
+
+@pytest.fixture()
+def c_op():
+    @operation
+    @output_names("n")
+    def c(n: int) -> int:
+        return n * n
+    return c()
 
 
 @pytest.fixture()

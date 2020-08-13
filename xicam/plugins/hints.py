@@ -13,11 +13,12 @@ from xicam.gui.widgets.plotwidgetmixins import CurveLabels
 class Hint(object):
     canvas_cls = None
 
-    def __init__(self, **kwargs):
+    def __init__(self, group:str = None, **kwargs):
         self.parent = None
         self.checked = False
         self.enabled = True
         self._name = None
+        self.group = group
 
     def init_canvas(self, **kwargs):
         return self.canvas_cls()
@@ -40,18 +41,39 @@ class Hint(object):
 class PlotHint(Hint):
     canvas_cls = CurveLabels
 
-    def __init__(self, x: np.ndarray, y: np.ndarray, xLog: bool = False, yLog: bool = False, labels=None, **kwargs):
-        super(PlotHint, self).__init__()
+    def __init__(self,
+                 xKey: str,
+                 yKey: str,
+                 xLog: bool = False,
+                 yLog: bool = False,
+                 group: str = None,
+                 labels=None,
+                 **kwargs):
+        super(PlotHint, self).__init__(group)
         if kwargs.get("name"):
             self._name = kwargs["name"]
-        self.x = x
-        self.y = y
+        self.group = group or self._name
+        self.x = self.y = []
+        self.xKey = xKey
+        self.yKey = yKey
         self.kwargs = kwargs
         self.item = None
         self.canvas = None
         self.xLog = xLog
         self.yLog = yLog
         self.labels = labels
+
+    @property
+    def x_key(self):
+        return self.xKey
+
+    @property
+    def y_key(self):
+        return self.yKey
+
+    def set_data(self, data: dict):
+        self.x = data.get(self.x_key, [])
+        self.y = data.get(self.y_key, [])
 
     def init_canvas(self, addLegend=False, **kwargs):
         canvas = super(PlotHint, self).init_canvas(**kwargs)
@@ -72,7 +94,7 @@ class PlotHint(Hint):
 
     def visualize(self, canvas, color=None):
         plotItem = canvas.plotItem
-        plotItem.setLabels(**(self.labels or {}))
+        plotItem.setLabels(**(self.labels or {"bottom": self.x_key, "left": self.y_key}))
         plotItem.setLogMode(x=self.xLog, y=self.yLog)
         if self.kwargs.get("name"):
             self.item = canvas.plot(self.x, self.y, **self.kwargs)
@@ -148,15 +170,16 @@ class ImageHint(Hint):
     ref_count = count(0)
 
     def __init__(
-        self, image, name="", invertY=False, xlabel: str = None, ylabel: str = None, transform=None, z: int = None, **kwargs
+        self, imagekey, name="", invertY=False, labels=None, transform=None, z: int = None, **kwargs
     ):
         self._name = name
         super(ImageHint, self).__init__()
+        self.group = self._name
         self.count = next(self.ref_count)
-        self.image = image
+        self.image = None
+        self.imagekey = imagekey
         self.invertY = invertY
-        self.xlabel = xlabel
-        self.ylabel = ylabel
+        self.labels = labels
         self.transform = transform
         if transform is None:
             transform = QTransform()
@@ -168,8 +191,17 @@ class ImageHint(Hint):
         self.enabled = False
         self.canvas = None
 
+    @property
+    def image_key(self):
+        return self.imagekey
+
+    def set_data(self, data: dict):
+        self.image = data.get(self.imagekey, [])
+
     def init_canvas(self, **kwargs):
-        self.canvas = self.canvas_cls(view=pg.PlotItem(labels=dict(left=self.xlabel, bottom=self.ylabel)))
+        x = self.labels["left"] or f"{self.image_key}<sub>1</sub>"
+        y = self.labels["bottom"] or f"{self.image_key}<sub>2</sub>"
+        self.canvas = self.canvas_cls(view=pg.PlotItem(labels=dict(left=y, bottom=x)))
         self.canvas.view.invertY(self.invertY)
         return self.canvas
 
@@ -177,6 +209,7 @@ class ImageHint(Hint):
     def name(self):
         if not self._name:
             self._name = "Image " + str(self.count)
+            self.group = self._name
         return self._name
 
     def visualize(self, canvas):
