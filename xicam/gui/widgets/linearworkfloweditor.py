@@ -13,6 +13,7 @@ from xicam.plugins import manager as pluginmanager
 from functools import partial
 from typing import List
 from xicam.plugins import manager as pluginmanager, OperationPlugin
+from xicam.core import threads
 from functools import partial, lru_cache
 
 
@@ -67,7 +68,10 @@ class WorkflowEditor(QSplitter):
             for child in group.children():
                 child.blockSignals(True)
             self.operationeditor.setParameters(group, showTop=False)
-            QApplication.processEvents()
+            threads.invoke_as_event(self._unblock_group, group)
+
+    @staticmethod
+    def _unblock_group(group):
             group.blockSignals(False)
             for child in group.children():
                 child.blockSignals(False)
