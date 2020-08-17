@@ -209,14 +209,6 @@ class OperationPlugin(PluginType):
         self.visible = self.visible.copy()
 
     def clone(self):
-
-        #TODO: RON will evaluate the return values of state
-        import copy
-        #cls, args, state = self.__reduce__()
-        #inst = self.__class__(*args, **copy.deepcopy(state))
-        # inst.__dict__ = copy.deepcopy(state)
-        #return inst
-
         cls, args, state = self.__reduce__()
         clone = cls(*args)
         clone.__dict__.update(state)
