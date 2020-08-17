@@ -8,7 +8,7 @@ from qtpy.QtGui import QIcon
 from qtpy.QtCore import Signal
 from xicam.gui.static import path
 
-from pyqtgraph.parametertree.parameterTypes import WidgetParameterItem
+from pyqtgraph.parametertree.parameterTypes import WidgetParameterItem, ListParameter
 
 GradientEditorItem.__dict__["Gradients"] = OrderedDict(
     [
@@ -409,3 +409,11 @@ class LazyGroupParameter(BetterGroupParameter):
 
 
 registerParameterType("lazygroup", LazyGroupParameter, override=True)
+
+
+class EnumListParameter(ListParameter):
+    def __init__(self, **opts):
+        super(EnumListParameter, self).__init__(**opts)
+        self.setLimits(opts['limits'])
+
+registerParameterType('EnumMeta', EnumListParameter, override=True)
