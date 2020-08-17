@@ -1,3 +1,4 @@
+import copy
 from xicam.plugins import OperationPlugin
 from typing import Callable, List, Union, Tuple
 from collections import defaultdict, OrderedDict
@@ -589,8 +590,7 @@ class Workflow(Graph):
         # self._operations = []  # type: List[OperationPlugin]
         self._observers = set()
         # self._links = []  # type: List[Tuple[ref, str, ref, str]]
-        if name:
-            self.name = name
+        self.name = name
 
         if operations:
             # self._operations.extend(operations)
@@ -598,6 +598,20 @@ class Workflow(Graph):
         self.staged = False
 
         self.lastresult = []
+
+    def __reduce__(self):
+        _operations, _inbound_links, _outbound_links, _disabled_operations = copy.deepcopy((self.operations, self._inbound_links, self._outbound_links, self._disabled_operations))
+        return Workflow, tuple(), {'name': self.name,
+                                   '_operations': _operations,
+                                   '_inbound_links': _inbound_links,
+                                   '_outbound_links': _outbound_links,
+                                   '_disabled_operations': _disabled_operations}
+
+    def clone(self):
+        cls, args, state = self.__reduce__()
+        clone = cls(*args)
+        clone.__dict__.update(state)
+        return clone
 
     def stage(self, connection):
         """

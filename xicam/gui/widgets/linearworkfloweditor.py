@@ -1,6 +1,7 @@
 import pickle
-from qtpy.QtCore import QAbstractTableModel, QMimeData, Qt, Signal, QSize
-from qtpy.QtGui import QIcon, QPixmap
+from collections import defaultdict
+from qtpy.QtCore import QAbstractTableModel, QMimeData, Qt, Signal, QSize, QVariant
+from qtpy.QtGui import QIcon, QPixmap, QRegion
 from qtpy.QtWidgets import QSplitter, QApplication, QWidget, QAbstractItemView, QToolBar, QToolButton, QMenu, \
     QVBoxLayout, QTableView, QItemDelegate, QGridLayout, QLabel, QPushButton, QSizePolicy, QHeaderView, QCheckBox, \
     QHBoxLayout
@@ -13,6 +14,7 @@ from xicam.plugins import manager as pluginmanager
 from functools import partial
 from typing import List
 from xicam.plugins import manager as pluginmanager, OperationPlugin
+from xicam.core import threads
 from functools import partial, lru_cache
 
 
@@ -22,6 +24,7 @@ from functools import partial, lru_cache
 #  LinearWorkflowView
 #   WorkflowModel
 
+# TODO: Move Run buttons to subclass of WorkflowWidget
 
 class WorkflowEditor(QSplitter):
     sigWorkflowChanged = Signal()
@@ -67,7 +70,10 @@ class WorkflowEditor(QSplitter):
             for child in group.children():
                 child.blockSignals(True)
             self.operationeditor.setParameters(group, showTop=False)
-            QApplication.processEvents()
+            threads.invoke_as_event(self._unblock_group, group)
+
+    @staticmethod
+    def _unblock_group(group):
             group.blockSignals(False)
             for child in group.children():
                 child.blockSignals(False)
@@ -129,21 +135,21 @@ class WorkflowWidget(QWidget):
     def _run_workflow(self, _):
         self._workflow
 
+    # TODO: support more than one depth of categories
     def populateFunctionMenu(self):
         self.functionmenu.clear()
-        sortingDict = {}
+        sortingDict = defaultdict(list)
         for plugin in pluginmanager.get_plugins_of_type("OperationPlugin"):
-            typeOfOperationPlugin = plugin.categories
-            # TODO : should OperationPlugin be responsible for initializing categories
-            # to some placeholder value (instead of [])?
-            if typeOfOperationPlugin == []:
-                typeOfOperationPlugin = "uncategorized"  # put found operations into a default category
-            if not typeOfOperationPlugin in sortingDict.keys():
-                sortingDict[typeOfOperationPlugin] = []
-            sortingDict[typeOfOperationPlugin].append(plugin)
+            typesOfOperationPlugin = plugin.categories
+            if not typesOfOperationPlugin:
+                typesOfOperationPlugin = ["Uncategorized"]  # put found operations into a default category
+            for typeOfOperationPlugin in typesOfOperationPlugin:
+                # TODO : should OperationPlugin be responsible for initializing categories
+                # to some placeholder value (instead of [])?
+                sortingDict[typeOfOperationPlugin].append(plugin)
         for key in sortingDict.keys():
             self.functionmenu.addSeparator()
-            self.functionmenu.addAction(key)
+            self.functionmenu.addAction(key[0])
             self.functionmenu.addSeparator()
             for plugin in sortingDict[key]:
                 self.functionmenu.addAction(plugin.name, partial(self.addOperation, plugin, autoconnectall=True))
@@ -168,12 +174,12 @@ class LinearWorkflowView(QTableView):
         super(LinearWorkflowView, self).__init__(*args, **kwargs)
 
         self.setItemDelegateForColumn(0, DisableDelegate(self))
-        self.setItemDelegateForColumn(1, HintsDelegate(self))
 
         self.setModel(workflowmodel)
-        workflowmodel.workflow.attach(self.selectionChanged)
+        workflowmodel.workflow.attach(self.changeSelection)
+        self.selectionModel().selectionChanged.connect(self.changeSelection)
 
-        self.horizontalHeader().close()
+        #self.horizontalHeader().close()
         # self.horizontalHeader().setStretchLastSection(True)
         self.horizontalHeader().setResizeMode(QHeaderView.ResizeToContents)
         self.horizontalHeader().setResizeMode(1, QHeaderView.Stretch)
@@ -188,22 +194,14 @@ class LinearWorkflowView(QTableView):
         self.setSelectionMode(QAbstractItemView.SingleSelection)
         self.setSelectionBehavior(QAbstractItemView.SelectRows)
 
-    def selectionChanged(self, selected=None, deselected=None):
+        self.setWordWrap(False)
+
+    def changeSelection(self, selected=None, deselected=None):
         if self.selectedIndexes() and self.selectedIndexes()[0].row() < self.model().rowCount():
             operation = self.model().workflow.operations[self.selectedIndexes()[0].row()]  # type: OperationPlugin
             self.sigShowParameter.emit(operation)
         else:
             self.sigShowParameter.emit(None)
-        for child in self.children():
-            if hasattr(child, "repaint"):
-                child.repaint()
-
-        selectedrows = set(map(lambda index: index.row(), self.selectedIndexes()))
-        for row in range(self.model().rowCount()):
-            widget = self.indexWidget(self.model().index(row, 1))
-            if hasattr(widget, "setSelectedVisibility"):
-                widget.setSelectedVisibility(row in selectedrows)
-        # self.resizeRowsToContents()
 
 
 class WorkflowModel(QAbstractTableModel):
@@ -247,65 +245,15 @@ class WorkflowModel(QAbstractTableModel):
         operation = self.workflow.operations[index.row()]
         if not index.isValid():
             return None
-        elif role != Qt.DisplayRole:
-            return None
         elif index.column() == 0:
             return partial(self.workflow.toggle_disabled, operation)
-        elif index.column() == 1:
-            # return getattr(process, 'name', process.__class__.__name__)
-            return None
-        return ""
+        elif role == Qt.DisplayRole:
+            return operation.name
+        else:
+            return QVariant()
 
     def headerData(self, col, orientation, role):
         return None
-
-
-class HintsDelegate(QItemDelegate):
-    def __init__(self, parent):
-        super(HintsDelegate, self).__init__(parent=parent)
-        self.view = parent
-
-    def paint(self, painter, option, index):
-        if not (self.view.indexWidget(index)):
-            # selected = index in map(lambda index: index.row, self.view.selectedIndexes())
-            operation = self.view.model().workflow.operations[index.row()]
-            widget = HintsWidget(operation, self.view, index)
-            self.view.setIndexWidget(index, widget)
-
-
-class HintsWidget(QWidget):
-    def __init__(self, operation, view, index):
-        super(HintsWidget, self).__init__()
-        self.view = view
-        self.setLayout(QGridLayout())
-        self.layout().addWidget(QLabel(operation.name), 0, 0, 1, 2)
-        self.hints = operation.hints
-
-        enabledhints = [hint for hint in self.hints if hint.enabled]
-
-        for i, hint in enumerate(enabledhints):
-            enablebutton = QPushButton(icon=mk_enableicon())
-            sp = QSizePolicy()
-            sp.setWidthForHeight(True)
-            enablebutton.setSizePolicy(sp)
-            enablebutton.setVisible(False)
-            label = QLabel(hint.name)
-            label.setVisible(False)
-            self.layout().addWidget(enablebutton, i + 1, 0, 1, 1)
-            self.layout().addWidget(label)
-
-        self.name = operation.name
-
-        print('size1:', operation.name, self.sizeHint())
-
-    def setSelectedVisibility(self, selected):
-        for row in range(1, self.layout().rowCount()):
-            self.layout().itemAtPosition(row, 0).widget().setVisible(selected)
-            self.layout().itemAtPosition(row, 1).widget().setVisible(selected)
-        print('size2:', self.name, self.sizeHint())
-
-    def sizeHint(self):
-        return QSize(30, 30)
 
 
 class DeleteDelegate(QItemDelegate):
