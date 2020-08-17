@@ -1,4 +1,7 @@
+import inspect
+from typing import List
 from pyqtgraph.parametertree import Parameter, parameterTypes, ParameterTree
+from pyqtgraph.parametertree.Parameter import PARAM_TYPES
 from qtpy.QtWidgets import QDialog, QVBoxLayout, QDialogButtonBox
 from qtpy.QtCore import Qt
 
@@ -136,3 +139,57 @@ class ParameterDialog(QDialog):
         result = super(ParameterDialog, self).exec_()
         if result != self.Accepted:
             raise InterruptedError("Execution aborted by user.")
+
+
+def signature_to_param(signature: inspect.Signature,
+                       opts: dict = None,
+                       filled_values: dict = None,
+                       display_names: dict = None,
+                       limits: dict = None,
+                       units: dict = None,
+                       fixed: dict = None,
+                       visible: dict = None,
+                       fixable: dict = None,
+                       type_blacklist: List[str] = None):
+
+    if not opts: opts = {}
+    if not filled_values: filled_values = {}
+    if not display_names: display_names = {}
+    if not limits: limits = {}
+    if not units: units = {}
+    if not fixed: fixed = {}
+    if not fixable: fixable = {}
+    if not visible: visible = {}
+
+    parameter_dicts = []
+
+    for name, parameter in signature.parameters.items():
+
+        param_type = None
+
+        if getattr(parameter.annotation, '__name__', None) in PARAM_TYPES:
+            param_type = getattr(parameter.annotation, '__name__', None)
+        elif getattr(getattr(parameter.annotation, '__class__', object), '__name__', None) in PARAM_TYPES:
+            param_type = getattr(getattr(parameter.annotation, '__class__', object), '__name__', None)
+
+        parameter_dict = dict()
+        parameter_dict.update(opts.get(name, {}))
+        parameter_dict['name'] = name
+        parameter_dict[
+            'default'] = parameter.default if parameter.default is not inspect.Parameter.empty else None
+        parameter_dict['value'] = filled_values[
+            name] if name in filled_values else parameter_dict['default']
+        parameter_dict['type'] = param_type
+        if name in limits:
+            parameter_dict['limits'] = limits[name]
+        elif param_type == 'EnumMeta':
+            parameter_dict['limits'] = [enum_value.value for enum_value in list(parameter.annotation)]
+        parameter_dict['units'] = units.get(name)
+        parameter_dict['fixed'] = fixed.get(name)
+        parameter_dict['fixable'] = fixable.get(name)
+        parameter_dict['visible'] = visible.get(name, True)
+        parameter_dict.update(opts.get(name, {}))
+
+        parameter_dicts.append(parameter_dict)
+
+    return parameter_dicts

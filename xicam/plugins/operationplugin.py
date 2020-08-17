@@ -338,48 +338,9 @@ class OperationPlugin(PluginType):
         For more information about pyqtgraph and Parameters,
         see http://www.pyqtgraph.org/documentation/parametertree/parameter.html?highlight=create#pyqtgraph.parametertree.Parameter.create
         """
-        from pyqtgraph.parametertree.Parameter import PARAM_TYPES
+        from xicam.gui.utils import signature_to_param
 
-        parameter_dicts = []
-        for name, parameter in inspect.signature(self._func).parameters.items():
-            if getattr(parameter.annotation, '__name__', None) in PARAM_TYPES:
-                parameter_dict = dict()
-                parameter_dict.update(self.opts.get(name, {}))
-                parameter_dict['name'] = name
-                parameter_dict[
-                    'default'] = parameter.default if parameter.default is not inspect.Parameter.empty else None
-                parameter_dict['value'] = self.filled_values[
-                    name] if name in self.filled_values else parameter_dict['default']
-
-                parameter_dict['type'] = getattr(self.input_types[name], '__name__', None)
-                if name in self.limits:
-                    parameter_dict['limits'] = self.limits[name]
-                parameter_dict['units'] = self.units.get(name)
-                parameter_dict['fixed'] = self.fixed.get(name)
-                parameter_dict['fixable'] = self.fixable.get(name)
-                parameter_dict['visible'] = self.visible.get(name, True)
-                parameter_dict.update(self.opts.get(name, {}))
-
-                parameter_dicts.append(parameter_dict)
-
-            elif getattr(self.input_types[name], "__name__", None) == "Enum":
-                parameter_dict = dict()
-                parameter_dict['name'] = name
-                parameter_dict['value'] = self.filled_values[
-                    name] if name in self.filled_values else parameter.default
-                parameter_dict['values'] = self.limits.get(name) or ["---"],
-                parameter_dict['default'] = parameter.default
-                parameter_dict['type'] = "list",
-                if name in self.limits:
-                    parameter_dict['limits'] = self.limits[name]
-                parameter_dict['units'] = self.units.get(name)
-                parameter_dict['fixed'] = self.fixed.get(name)  # TODO: Does this need a default value
-                parameter_dict['fixable'] = self.fixable.get(name)
-                parameter_dict['visible'] = self.visible.get(name, True)  # TODO: should we store the defaults at top?
-                parameter_dict.update(self.opts.get(name, {}))
-
-                parameter_dicts.append(parameter_dict)
-        return parameter_dicts
+        return signature_to_param(inspect.signature(self._func))
 
     def wireup_parameter(self, parameter: Parameter):
         """Wire up a Parameter (created from an operation) to update the operation's state.
