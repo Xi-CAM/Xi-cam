@@ -232,8 +232,9 @@ class ImageParameterItem(WidgetParameterItem):
         ## TODO: fix so that superclass method can be called
         ## (WidgetParameter should just natively support this style)
         # WidgetParameterItem.treeWidgetChanged(self)
-        self.treeWidget().setFirstItemColumnSpanned(self.subItem, True)
-        self.treeWidget().setItemWidget(self.subItem, 0, self.widget)
+        if self.treeWidget():
+            self.treeWidget().setFirstItemColumnSpanned(self.subItem, True)
+            self.treeWidget().setItemWidget(self.subItem, 0, self.widget)
 
         # for now, these are copied from ParameterItem.treeWidgetChanged
         self.setHidden(not self.param.opts.get("visible", True))
