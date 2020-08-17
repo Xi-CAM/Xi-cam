@@ -1,5 +1,6 @@
 import pickle
-from qtpy.QtCore import QAbstractTableModel, QMimeData, Qt, Signal, QSize, QPoint
+from collections import defaultdict
+from qtpy.QtCore import QAbstractTableModel, QMimeData, Qt, Signal, QSize, QVariant
 from qtpy.QtGui import QIcon, QPixmap, QRegion
 from qtpy.QtWidgets import QSplitter, QApplication, QWidget, QAbstractItemView, QToolBar, QToolButton, QMenu, \
     QVBoxLayout, QTableView, QItemDelegate, QGridLayout, QLabel, QPushButton, QSizePolicy, QHeaderView, QCheckBox, \
@@ -133,21 +134,21 @@ class WorkflowWidget(QWidget):
     def _run_workflow(self, _):
         self._workflow
 
+    # TODO: support more than one depth of categories
     def populateFunctionMenu(self):
         self.functionmenu.clear()
-        sortingDict = {}
+        sortingDict = defaultdict(list)
         for plugin in pluginmanager.get_plugins_of_type("OperationPlugin"):
-            typeOfOperationPlugin = plugin.categories
-            # TODO : should OperationPlugin be responsible for initializing categories
-            # to some placeholder value (instead of [])?
-            if typeOfOperationPlugin == []:
-                typeOfOperationPlugin = "uncategorized"  # put found operations into a default category
-            if not typeOfOperationPlugin in sortingDict.keys():
-                sortingDict[typeOfOperationPlugin] = []
-            sortingDict[typeOfOperationPlugin].append(plugin)
+            typesOfOperationPlugin = plugin.categories
+            if not typesOfOperationPlugin:
+                typesOfOperationPlugin = ["Uncategorized"]  # put found operations into a default category
+            for typeOfOperationPlugin in typesOfOperationPlugin:
+                # TODO : should OperationPlugin be responsible for initializing categories
+                # to some placeholder value (instead of [])?
+                sortingDict[typeOfOperationPlugin].append(plugin)
         for key in sortingDict.keys():
             self.functionmenu.addSeparator()
-            self.functionmenu.addAction(key)
+            self.functionmenu.addAction(key[0])
             self.functionmenu.addSeparator()
             for plugin in sortingDict[key]:
                 self.functionmenu.addAction(plugin.name, partial(self.addOperation, plugin, autoconnectall=True))
