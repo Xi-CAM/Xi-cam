@@ -162,9 +162,9 @@ class WorkflowWidget(QWidget):
         self.view.setCurrentIndex(self.view.model().index(self.view.model().rowCount() - 1, 0))
 
     def deleteOperation(self):
-        for index in self.view.selectedIndexes():
-            operation = self.view.model().workflow.operations[index.row()]
-            self.view.model().workflow.remove_operation(operation)
+        index = self.view.currentIndex()
+        operation = self.view.model().workflow.operations[index.row()]
+        self.view.model().workflow.remove_operation(operation)
 
 
 class LinearWorkflowView(QTableView):
@@ -176,18 +176,20 @@ class LinearWorkflowView(QTableView):
         self.setItemDelegateForColumn(0, DisableDelegate(self))
 
         self.setModel(workflowmodel)
-        workflowmodel.workflow.attach(self.changeSelection)
-        self.selectionModel().selectionChanged.connect(self.changeSelection)
+        workflowmodel.workflow.attach(self.showCurrentParameter)
+        self.selectionModel().currentChanged.connect(self.showCurrentParameter)
 
         #self.horizontalHeader().close()
         # self.horizontalHeader().setStretchLastSection(True)
         self.horizontalHeader().setResizeMode(QHeaderView.ResizeToContents)
         self.horizontalHeader().setResizeMode(1, QHeaderView.Stretch)
+        self.horizontalHeader().setVisible(False)
 
         # self.horizontalHeader().setSectionMovable(True)
         # self.horizontalHeader().setDragEnabled(True)
         # self.horizontalHeader().setDragDropMode(QAbstractItemView.InternalMove)
         self.verticalHeader().setResizeMode(QHeaderView.ResizeToContents)
+        self.verticalHeader().setVisible(False)
         self.setDragDropMode(QAbstractItemView.InternalMove)
         self.setDragEnabled(True)
         self.setDropIndicatorShown(True)
@@ -196,9 +198,10 @@ class LinearWorkflowView(QTableView):
 
         self.setWordWrap(False)
 
-    def changeSelection(self, selected=None, deselected=None):
-        if self.selectedIndexes() and self.selectedIndexes()[0].row() < self.model().rowCount():
-            operation = self.model().workflow.operations[self.selectedIndexes()[0].row()]  # type: OperationPlugin
+    def showCurrentParameter(self, *args):
+        current = self.currentIndex()
+        if current.isValid() and current.row() < self.model().rowCount():
+            operation = self.model().workflow.operations[current.row()]  # type: OperationPlugin
             self.sigShowParameter.emit(operation)
         else:
             self.sigShowParameter.emit(None)
@@ -244,10 +247,11 @@ class WorkflowModel(QAbstractTableModel):
     def data(self, index, role):
         operation = self.workflow.operations[index.row()]
         if not index.isValid():
-            return None
-        elif index.column() == 0:
+            return QVariant()
+        # piggy-back on displayrole; get's pulled out in DisableDelegate
+        elif index.column() == 0 and role == Qt.DisplayRole:
             return partial(self.workflow.toggle_disabled, operation)
-        elif role == Qt.DisplayRole:
+        elif index.column() == 1 and role == Qt.DisplayRole:
             return operation.name
         else:
             return QVariant()
