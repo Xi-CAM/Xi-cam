@@ -5,7 +5,6 @@ import itertools
 import warnings
 
 import entrypoints
-from appdirs import user_config_dir, site_config_dir, user_cache_dir
 
 from xicam.core import msg
 from xicam.core import threads
@@ -41,14 +40,6 @@ from contextlib import contextmanager
 from timeit import default_timer
 
 import time
-
-op_sys = platform.system()
-if op_sys == "Darwin":  # User config dir incompatible with venv on darwin (space in path name conflicts)
-    user_plugin_dir = os.path.join(user_cache_dir(appname="xicam"), "plugins")
-else:
-    user_plugin_dir = os.path.join(user_config_dir(appname="xicam"), "plugins")
-site_plugin_dir = os.path.join(site_config_dir(appname="xicam"), "plugins")
-
 
 
 @contextmanager
@@ -452,9 +443,3 @@ class LiveEntryPoint(entrypoints.EntryPoint):
 
     def load(self):
         return self.object
-
-
-from ._version import get_versions
-
-__version__ = get_versions()["version"]
-del get_versions

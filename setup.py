@@ -78,6 +78,7 @@ setup(
                       "qdarkstyle",
                       "qtmodern",
                       "databroker>=1.0.0b8",
+                      "bluesky-widgets>=0.0.3",
                       "distributed",
                       "dask[array,bag]",
                       "astropy",
@@ -85,7 +86,7 @@ setup(
                       "requests",
                       "appdirs",
                       "entrypoints",
-                      "pyqtgraph==0.10.0",
+                      "pyqtgraph==0.11.0",
                       "qtconsole", ],
     setup_requires=["cython"],  # cython is a missing required dep of astropy
     # List additional groups of dependencies here (e.g. development

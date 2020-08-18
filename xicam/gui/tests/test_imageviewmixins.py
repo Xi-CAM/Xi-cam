@@ -47,5 +47,5 @@ def test_betterlayout(qtbot):
     w.setImage(data)
 
     w.show()
-    qtbot.stopForInteraction()
+    #qtbot.stopForInteraction()
 

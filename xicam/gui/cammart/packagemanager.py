@@ -5,7 +5,6 @@ import os, sys
 import pkg_resources
 import requests
 import yaml
-from appdirs import user_config_dir, site_config_dir, user_cache_dir
 import platform
 import subprocess
 from xicam.core import msg
@@ -13,6 +12,7 @@ from importlib import reload
 import pip
 from pathlib import Path
 
+from xicam.core.paths import user_config_dir, site_config_dir, user_cache_dir
 from . import venvs
 
 
@@ -47,10 +47,10 @@ def pipmain(args):
 
 op_sys = platform.system()
 if op_sys == "Darwin":  # User config dir incompatible with venv on darwin (space in path name conflicts)
-    user_package_registry = Path(user_cache_dir(appname="xicam")) / "packages.yml"
+    user_package_registry = Path(user_cache_dir) / "packages.yml"
 else:
-    user_package_registry = Path(user_config_dir(appname="xicam")) / "packages.yml"
-site_package_registry = Path(site_config_dir(appname="xicam")) / "packages.yml"
+    user_package_registry = Path(user_config_dir) / "packages.yml"
+site_package_registry = Path(site_config_dir) / "packages.yml"
 
 
 def install(name: str):
@@ -156,7 +156,7 @@ class pkg_registry(collections.MutableMapping):
     def load(self):
         try:
             with open(user_package_registry, "r") as f:
-                self._store = yaml.load(f.read())
+                self._store = yaml.load(f.read()) or {}
         except FileNotFoundError:
             pass
 
