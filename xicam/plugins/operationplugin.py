@@ -332,7 +332,15 @@ class OperationPlugin(PluginType):
         """
         from xicam.gui.utils import signature_to_param
 
-        return signature_to_param(inspect.signature(self._func))
+        return signature_to_param(inspect.signature(self._func),
+                                  opts=self.opts,
+                                  filled_values=self.filled_values,
+                                  display_names=self.input_names,
+                                  limits=self.limits,
+                                  units=self.units,
+                                  fixed=self.fixed,
+                                  visible=self.visible,
+                                  fixable=self.fixable)
 
     def wireup_parameter(self, parameter: Parameter):
         """Wire up a Parameter (created from an operation) to update the operation's state.
