@@ -247,7 +247,7 @@ class OperationPlugin(PluginType):
         # def func(a): return
         for name, prop in input_properties.items():
             for arg in prop.keys():
-                if arg not in cls.input_names:
+                if arg not in inspect.signature(cls._func).parameters.keys():
                     invalid_msg += f"\"{arg}\" is not a valid input for \"{name}\". "
 
         # Warn if there are no output_names defined
