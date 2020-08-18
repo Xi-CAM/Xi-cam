@@ -1,5 +1,5 @@
 import inspect
-from typing import List
+from typing import List, Union
 from pyqtgraph.parametertree import Parameter, parameterTypes, ParameterTree
 from pyqtgraph.parametertree.Parameter import PARAM_TYPES
 from qtpy.QtWidgets import QDialog, QVBoxLayout, QDialogButtonBox
@@ -149,8 +149,7 @@ def signature_to_param(signature: inspect.Signature,
                        units: dict = None,
                        fixed: dict = None,
                        visible: dict = None,
-                       fixable: dict = None,
-                       type_blacklist: List[str] = None):
+                       fixable: dict = None):
 
     if not opts: opts = {}
     if not filled_values: filled_values = {}
@@ -163,18 +162,14 @@ def signature_to_param(signature: inspect.Signature,
 
     parameter_dicts = []
 
-    for name, parameter in signature.parameters.items():
+    for display_name, (name, parameter) in zip(display_names, signature.parameters.items()):
+        param_type = param_type_from_annotation(parameter.annotation)
 
-        param_type = None
-
-        if getattr(parameter.annotation, '__name__', None) in PARAM_TYPES:
-            param_type = getattr(parameter.annotation, '__name__', None)
-        elif getattr(getattr(parameter.annotation, '__class__', object), '__name__', None) in PARAM_TYPES:
-            param_type = getattr(getattr(parameter.annotation, '__class__', object), '__name__', None)
+        if not param_type: continue
 
         parameter_dict = dict()
         parameter_dict.update(opts.get(name, {}))
-        parameter_dict['name'] = name
+        parameter_dict['name'] = display_name or name
         parameter_dict[
             'default'] = parameter.default if parameter.default is not inspect.Parameter.empty else None
         parameter_dict['value'] = filled_values[
@@ -193,3 +188,17 @@ def signature_to_param(signature: inspect.Signature,
         parameter_dicts.append(parameter_dict)
 
     return parameter_dicts
+
+
+def param_type_from_annotation(annotation) -> str:
+    if getattr(annotation, '__name__', None) in PARAM_TYPES:
+        return getattr(annotation, '__name__', None)
+    elif getattr(getattr(annotation, '__class__', object), '__name__', None) in PARAM_TYPES:
+        return getattr(getattr(annotation, '__class__', object), '__name__', None)
+    elif getattr(annotation, '__origin__', None) is Union:  # For Union, try types in sequence
+        for unioned_type in annotation.__args__:
+            type_name = getattr(unioned_type, '__name__')
+            if type_name in PARAM_TYPES:
+                return type_name
+    else:
+        return None
