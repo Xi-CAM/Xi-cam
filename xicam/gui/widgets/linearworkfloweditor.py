@@ -1,21 +1,18 @@
-import pickle
+
 from collections import defaultdict
-from qtpy.QtCore import QAbstractTableModel, QMimeData, Qt, Signal, QSize, QVariant
-from qtpy.QtGui import QIcon, QPixmap, QRegion
-from qtpy.QtWidgets import QSplitter, QApplication, QWidget, QAbstractItemView, QToolBar, QToolButton, QMenu, \
-    QVBoxLayout, QTableView, QItemDelegate, QGridLayout, QLabel, QPushButton, QSizePolicy, QHeaderView, QCheckBox, \
+from qtpy.QtCore import QAbstractListModel, QMimeData, Qt, Signal,  QVariant, QModelIndex
+from qtpy.QtGui import QIcon
+from qtpy.QtWidgets import QSplitter,  QWidget, QAbstractItemView, QToolBar, QToolButton, QMenu, \
+    QVBoxLayout, QListView, QPushButton,  QCheckBox, \
     QHBoxLayout
 from xicam.core.execution.workflow import Workflow
-from xicam.plugins import OperationPlugin
-from pyqtgraph.parametertree import ParameterTree, Parameter
+from pyqtgraph.parametertree import ParameterTree
 from pyqtgraph.parametertree.parameterTypes import GroupParameter
 from xicam.gui.static import path
-from xicam.plugins import manager as pluginmanager
-from functools import partial
-from typing import List
+from typing import Iterable, Any
 from xicam.plugins import manager as pluginmanager, OperationPlugin
 from xicam.core import threads
-from functools import partial, lru_cache
+from functools import partial
 
 
 # WorkflowEditor
@@ -167,29 +164,36 @@ class WorkflowWidget(QWidget):
         self.view.model().workflow.remove_operation(operation)
 
 
-class LinearWorkflowView(QTableView):
+class DisablableListView(QListView):
+    """
+    Replaces the check indicator with checkmark/x images
+    """
+
+    def __init__(self, *args, **kwargs):
+        super(DisablableListView, self).__init__(*args, **kwargs)
+        # TODO: find an icon for indeterminate stae
+        self.setStyleSheet("""
+        QListView::indicator:checked {
+            image: url(""" + path('icons/enable.png').replace('\\', '/') + """);
+        }
+        QListView::indicator:indeterminate {
+            image: url(""" + path('icons/enable.png').replace('\\', '/') + """);
+        }
+        QListView::indicator:unchecked {
+            image: url(""" + path('icons/disable.png').replace('\\', '/') + """);
+        }""")
+
+
+class LinearWorkflowView(DisablableListView):
     sigShowParameter = Signal(object)
 
     def __init__(self, workflowmodel=None, *args, **kwargs):
         super(LinearWorkflowView, self).__init__(*args, **kwargs)
 
-        self.setItemDelegateForColumn(0, DisableDelegate(self))
-
         self.setModel(workflowmodel)
         workflowmodel.workflow.attach(self.showCurrentParameter)
         self.selectionModel().currentChanged.connect(self.showCurrentParameter)
 
-        #self.horizontalHeader().close()
-        # self.horizontalHeader().setStretchLastSection(True)
-        self.horizontalHeader().setResizeMode(QHeaderView.ResizeToContents)
-        self.horizontalHeader().setResizeMode(1, QHeaderView.Stretch)
-        self.horizontalHeader().setVisible(False)
-
-        # self.horizontalHeader().setSectionMovable(True)
-        # self.horizontalHeader().setDragEnabled(True)
-        # self.horizontalHeader().setDragDropMode(QAbstractItemView.InternalMove)
-        self.verticalHeader().setResizeMode(QHeaderView.ResizeToContents)
-        self.verticalHeader().setVisible(False)
         self.setDragDropMode(QAbstractItemView.InternalMove)
         self.setDragEnabled(True)
         self.setDropIndicatorShown(True)
@@ -207,12 +211,12 @@ class LinearWorkflowView(QTableView):
             self.sigShowParameter.emit(None)
 
 
-class WorkflowModel(QAbstractTableModel):
+class WorkflowModel(QAbstractListModel):
     def __init__(self, workflow: Workflow):
         self.workflow = workflow
         super(WorkflowModel, self).__init__()
 
-        self.workflow.attach(partial(self.layoutChanged.emit))
+        self.workflow.attach(self.layoutChanged.emit)
 
     def mimeTypes(self):
         return ["text/plain"]
@@ -236,79 +240,27 @@ class WorkflowModel(QAbstractTableModel):
     def flags(self, index):
         if not index.isValid():
             return Qt.ItemIsEnabled
-        return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled | Qt.ItemIsDropEnabled
+        return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled | Qt.ItemIsDropEnabled | Qt.ItemIsUserCheckable
 
     def rowCount(self, *args, **kwargs):
         return len(self.workflow.operations)
-
-    def columnCount(self, *args, **kwargs):
-        return 2
 
     def data(self, index, role):
         operation = self.workflow.operations[index.row()]
         if not index.isValid():
             return QVariant()
-        # piggy-back on displayrole; get's pulled out in DisableDelegate
-        elif index.column() == 0 and role == Qt.DisplayRole:
-            return partial(self.workflow.toggle_disabled, operation)
-        elif index.column() == 1 and role == Qt.DisplayRole:
+        elif role == Qt.CheckStateRole:
+            disabled = self.workflow.disabled(operation)
+            if disabled:
+                return Qt.Unchecked
+            else:
+                return Qt.Checked
+        elif role == Qt.DisplayRole:
             return operation.name
         else:
             return QVariant()
 
-    def headerData(self, col, orientation, role):
-        return None
-
-
-class DeleteDelegate(QItemDelegate):
-    def __init__(self, parent=None):
-        super(DeleteDelegate, self).__init__(parent)
-        self._parent = parent
-
-    def paint(self, painter, option, index):
-        if not self._parent.indexWidget(index):
-            button = QToolButton(self.parent())
-            button.setAutoRaise(True)
-            button.setText("Delete Operation")
-            button.setIcon(QIcon(path("icons/trash.png")))
-            sp = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
-            sp.setWidthForHeight(True)
-            button.setSizePolicy(sp)
-            button.clicked.connect(index.data())
-
-            self._parent.setIndexWidget(index, button)
-
-
-class DisableDelegate(QItemDelegate):
-    class DelegateClass(QToolButton):
-        def __init__(self, parent=None):
-            super(DisableDelegate.DelegateClass, self).__init__(parent=parent)
-            self.setText("i")
-            self.setAutoRaise(True)
-
-            self.setIcon(mk_enableicon())
-            self.setCheckable(True)
-            sp = QSizePolicy()
-            sp.setWidthForHeight(True)
-            self.setSizePolicy(sp)
-
-    def __init__(self, parent):
-        super(DisableDelegate, self).__init__(parent)
-        self._parent = parent
-
-    def paint(self, painter, option, index):
-        if not self._parent.indexWidget(index):
-            button = self.DelegateClass(self.parent())
-            button.clicked.connect(index.data())
-            self._parent.setIndexWidget(index, button)
-
-    def sizeHint(self, QStyleOptionViewItem, QModelIndex):
-        return QSize(30, 30)
-
-
-@lru_cache()
-def mk_enableicon():
-    enableicon = QIcon()
-    enableicon.addPixmap(QPixmap(path("icons/enable.png")), state=enableicon.Off)
-    enableicon.addPixmap(QPixmap(path("icons/disable.png")), state=enableicon.On)
-    return enableicon
+    def setData(self, index: QModelIndex, value: Any, role: int = ...) -> bool:
+        if role == Qt.CheckStateRole:
+            self.workflow.set_disabled(self.workflow.operations[index.row()], not value)
+            return True
