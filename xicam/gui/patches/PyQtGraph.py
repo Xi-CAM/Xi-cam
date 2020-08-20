@@ -8,7 +8,7 @@ from qtpy.QtGui import QIcon
 from qtpy.QtCore import Signal
 from xicam.gui.static import path
 
-from pyqtgraph.parametertree.parameterTypes import WidgetParameterItem
+from pyqtgraph.parametertree.parameterTypes import WidgetParameterItem, ListParameter
 
 GradientEditorItem.__dict__["Gradients"] = OrderedDict(
     [
@@ -232,8 +232,9 @@ class ImageParameterItem(WidgetParameterItem):
         ## TODO: fix so that superclass method can be called
         ## (WidgetParameter should just natively support this style)
         # WidgetParameterItem.treeWidgetChanged(self)
-        self.treeWidget().setFirstItemColumnSpanned(self.subItem, True)
-        self.treeWidget().setItemWidget(self.subItem, 0, self.widget)
+        if self.treeWidget():
+            self.treeWidget().setFirstItemColumnSpanned(self.subItem, True)
+            self.treeWidget().setItemWidget(self.subItem, 0, self.widget)
 
         # for now, these are copied from ParameterItem.treeWidgetChanged
         self.setHidden(not self.param.opts.get("visible", True))
@@ -408,3 +409,11 @@ class LazyGroupParameter(BetterGroupParameter):
 
 
 registerParameterType("lazygroup", LazyGroupParameter, override=True)
+
+
+class EnumListParameter(ListParameter):
+    def __init__(self, **opts):
+        super(EnumListParameter, self).__init__(**opts)
+        self.setLimits(opts['limits'])
+
+registerParameterType('EnumMeta', EnumListParameter, override=True)
