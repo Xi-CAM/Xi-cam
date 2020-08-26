@@ -8,9 +8,13 @@ from xarray import DataArray
 import numpy as np
 from typing import Tuple, Dict
 from xicam.gui.widgets.ROI import BetterCrosshairROI
+from xicam.core import threads
+
+# TODO: block efficient subsampling
 
 
 class NDImageView(QWidget):
+    sigImageChanged = Signal()
     """
     Top-level NDViewer widget
 
@@ -31,18 +35,98 @@ class NDImageView(QWidget):
         self.layout().setContentsMargins(0, 0, 0, 0)
         self.layout().setSpacing(0)
 
+        self.lut = None
+        self.levels = None
+        self.data = None
+        self.histogram_subsampling_axes = None
+        self.histogram_max_sample_size = 1e6
+
         self.graphics_view = SliceablePanel(parent=self)
+        self.lut_widget = HistogramLUTWidget(parent=self)
+        self.lut_widget.item.setImageItem(self)
 
         self.layout().addWidget(self.graphics_view)
-        self.layout().addWidget(HistogramLUTWidget())
+        self.layout().addWidget(self.lut_widget)
+
+        self.setStyleSheet('NDImageView {background-color:black;}')
 
     def setData(self, data: DataArray):
+        self.data = data
         self.graphics_view.setData(data, view_dims=data.dims[:2], slc={dim: 0 for dim in data.dims})
+        self.sigImageChanged.emit()
 
     def updateSlicing(self, slice):
         print('newslice:', slice)
         for widget in self.findChildren(SliceablePanel):
             widget.updateSlicing(slice)
+
+    def setLookupTable(self, lut):
+        self.lut = lut
+        for image_item in self.getImageItems():
+            image_item.setLookupTable(self.lut)
+
+    def setLevels(self, levels):
+        self.levels = levels
+        for image_item in self.getImageItems():
+            image_item.setLevels(levels)
+
+    def getImageItems(self):
+        return [child.image_item for child in self.findChildren(SliceableGraphicsView)]
+
+    def getHistogram(self):
+        """Returns x and y arrays containing the histogram values for the current image.
+                For an explanation of the return format, see numpy.histogram().
+
+                The *step* argument causes pixels to be skipped when computing the histogram to save time.
+                If *step* is 'auto', then a step is chosen such that the analyzed data has
+                dimensions roughly *targetImageSize* for each axis.
+
+                The *bins* argument and any extra keyword arguments are passed to
+                np.histogram(). If *bins* is 'auto', then a bin number is automatically
+                chosen based on the image characteristics:
+
+                * Integer images will have approximately *targetHistogramSize* bins,
+                  with each bin having an integer width.
+                * All other types will have *targetHistogramSize* bins.
+
+                If *perChannel* is True, then the histogram is computed once per channel
+                and the output is a list of the results.
+
+                This method is also used when automatically computing levels.
+                """
+        if self.data is None:
+            return None,
+
+        subsample_axes = self.histogram_subsampling_axes
+        if not subsample_axes:
+            subsample_axes = self.data.dims
+
+        # slices = {axis:slice() for axis in self.data.dims}
+
+        while subsample_axes:
+            required_subsampling_factor = max(np.prod(self.data.shape) / self.histogram_max_sample_size, 1.)
+            subsampling_per_axis = int(np.round(required_subsampling_factor ** (1 / len(subsample_axes))))
+
+            for axis in subsample_axes:
+                # if this axis can't be subsampled (not wide enough)
+                if subsampling_per_axis>self.data.shape[self.data.dims.index(axis)]:
+                    subsample_axes.remove(axis)
+                    continue
+            if subsample_axes:
+                break
+        else:
+            raise ValueError('A suitable subsampling over the given axes could not be found.')
+
+        chunking = {axis:slice(None, None, subsampling_per_axis) for axis in subsample_axes}
+        print('chunking:', chunking)
+        subsampled_data = self.data[chunking]
+
+        hist = np.histogram(subsampled_data)
+
+        return hist[1][:-1], hist[0]
+
+    def channels(self):
+        ...
 
 
 class SliceablePanel(QWidget):
@@ -108,13 +192,17 @@ class SliceablePanel(QWidget):
         if enable:
             if not self.right_view:
                 self.right_view = SliceablePanel(parent=self)
+                self.right_view.full_view.image_item.lut = self.full_view.image_item.lut
+                self.right_view.full_view.image_item.levels = self.full_view.image_item.levels
                 if self.data is not None:
                     # get the coordinate of the vertical slice
                     # slice = self.full_view.crosshair.pos()[1]
 
                     # set the right view to the same xarray, but with the second coordinate pre-sliced
                     self.right_view.setData(self.data, view_dims=self.getViewDims('right'), slc=self.slice)
-            self.layout().addWidget(self.right_view, 1, 1, 1, 1)
+                self.layout().addWidget(self.right_view, 1, 1, 1, 1)
+            else:
+                self.right_view.show()
         else:
             self.right_view.hide()
 
@@ -122,13 +210,17 @@ class SliceablePanel(QWidget):
         if enable:
             if not self.top_view:
                 self.top_view = SliceablePanel(parent=self)
+                self.top_view.full_view.image_item.lut = self.full_view.image_item.lut
+                self.top_view.full_view.image_item.levels = self.full_view.image_item.levels
                 if self.data is not None:
                     # get the coordinate of the horizontal slice
                     # slice = self.full_view.crosshair.pos()[0]
 
                     # set the top view to the same xarray, but with the first coordinate pre-sliced
                     self.top_view.setData(self.data, view_dims=self.getViewDims('top'), slc=self.slice)
-            self.layout().addWidget(self.top_view, 0, 0, 1, 1)
+                self.layout().addWidget(self.top_view, 0, 0, 1, 1)
+            else:
+                self.top_view.show()
         else:
             self.top_view.hide()
 
@@ -167,8 +259,8 @@ class SliceableGraphicsView(GraphicsView):
 
     def setData(self, data):
 
-        xvals = data.coords[data.dims[-2]]
-        yvals = data.coords[data.dims[-1]]
+        xvals = data.coords[data.dims[-1]]
+        yvals = data.coords[data.dims[-2]]
         xmin = float(xvals.min())
         xmax = float(xvals.max())
         ymin = float(yvals.min())
@@ -178,7 +270,8 @@ class SliceableGraphicsView(GraphicsView):
         shape = data.shape
         a = [(0, shape[-2]), (shape[-1] - 1, shape[-2]), (shape[-1] - 1, 1), (0, 1)]
 
-        b = [(ymin, xmin), (ymax, xmin), (ymax, xmax), (ymin, xmax)]
+        # b = [(ymin, xmax), (ymax, xmax), (ymax, xmin), (ymin, xmin)]
+        b = [(xmax, ymin), (xmax, ymax), (xmin, ymax), (xmin, ymin)]
 
         quad1 = QPolygonF()
         quad2 = QPolygonF()
@@ -191,7 +284,7 @@ class SliceableGraphicsView(GraphicsView):
 
         # Bind coords from the xarray to the timeline axis
         # super(SliceableGraphicsView, self).setImage(img, autoRange, autoLevels, levels, axes, np.asarray(img.coords[img.dims[0]]), pos, scale, transform, autoHistogramRange, levelMode)
-        self.image_item.setImage(np.asarray(data))
+        self.image_item.setImage(np.asarray(data), autoLevels=False)
         self.image_item.setTransform(transform)
 
         # Label the image axes
