@@ -920,7 +920,10 @@ def categories(*categories: Tuple[Union[tuple, str]]):
     def decorator(func):
         if not hasattr(func, 'categories'):
             func.categories = []
-        func.categories.append(categories)
+        if isinstance(categories, (list, tuple)):
+            func.categories.extend(categories)
+        elif isinstance(categories, str):
+            func.categories.append(categories)
         return func
 
     return decorator

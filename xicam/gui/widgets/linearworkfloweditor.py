@@ -1,15 +1,14 @@
-
 from collections import defaultdict
-from qtpy.QtCore import QAbstractListModel, QMimeData, Qt, Signal,  QVariant, QModelIndex
+from qtpy.QtCore import QAbstractListModel, QMimeData, Qt, Signal, QVariant, QModelIndex
 from qtpy.QtGui import QIcon
-from qtpy.QtWidgets import QSplitter,  QWidget, QAbstractItemView, QToolBar, QToolButton, QMenu, \
-    QVBoxLayout, QListView, QPushButton,  QCheckBox, \
+from qtpy.QtWidgets import QSplitter, QWidget, QAbstractItemView, QToolBar, QToolButton, QMenu, \
+    QVBoxLayout, QListView, QPushButton, QCheckBox, \
     QHBoxLayout
 from xicam.core.execution.workflow import Workflow
 from pyqtgraph.parametertree import ParameterTree
 from pyqtgraph.parametertree.parameterTypes import GroupParameter
 from xicam.gui.static import path
-from typing import Iterable, Any
+from typing import Iterable, Any, Callable
 from xicam.plugins import manager as pluginmanager, OperationPlugin
 from xicam.core import threads
 from functools import partial
@@ -23,11 +22,32 @@ from functools import partial
 
 # TODO: Move Run buttons to subclass of WorkflowWidget
 
+class MenuDict(defaultdict):
+    def __init__(self):
+        super(MenuDict, self).__init__(self._default)
+
+    def _default(self, key):
+        if key == "___":
+            return []
+        else:
+            return MenuDict()
+
+    def __missing__(self, key):
+        if self.default_factory is None:
+            raise KeyError(key)
+        else:
+            ret = self[key] = self.default_factory(key)
+            return ret
+
+    def __iter__(self):
+        return iter(sorted(super(MenuDict, self).__iter__()))
+
+
 class WorkflowEditor(QSplitter):
     sigWorkflowChanged = Signal()
     sigRunWorkflow = Signal()
 
-    def __init__(self, workflow: Workflow, **kwargs):
+    def __init__(self, workflow: Workflow, operation_filter: Callable[[OperationPlugin], bool] = None, **kwargs):
         super(WorkflowEditor, self).__init__()
         self.workflow = workflow
         self.kwargs = kwargs
@@ -37,9 +57,10 @@ class WorkflowEditor(QSplitter):
         self.workflowview = LinearWorkflowView(WorkflowModel(workflow))
 
         self.addWidget(self.operationeditor)
-        workflow_widget = WorkflowWidget(self.workflowview)
+        workflow_widget = WorkflowWidget(self.workflowview, operation_filter=operation_filter)
         self.addWidget(workflow_widget)
         workflow_widget.sigRunWorkflow.connect(self.sigRunWorkflow.emit)
+        workflow_widget.sigRunWorkflow.connect(self.run_workflow)
         # Should this work internally? How would the start operations get their inputs?
         # Would the ExamplePlugin need to explicitly set the parameter value (even for hidden image)?
         # It would be nice to just have this work easily... (to ExamplePlugin's perspective)
@@ -51,8 +72,10 @@ class WorkflowEditor(QSplitter):
 
         workflow.attach(self.sigWorkflowChanged.emit)
 
-    def run_workflow(self, _):
-        self.workflow.execute(**self.kwargs)
+    def run_workflow(self, **kwargs):
+        mixed_kwargs = self.kwargs.copy()
+        mixed_kwargs.update(kwargs)
+        self.workflow.execute(**mixed_kwargs)
 
     def setParameters(self, operation: OperationPlugin):
         if operation:
@@ -68,12 +91,14 @@ class WorkflowEditor(QSplitter):
                 child.blockSignals(True)
             self.operationeditor.setParameters(group, showTop=False)
             threads.invoke_as_event(self._unblock_group, group)
+        else:
+            self.operationeditor.clear()
 
     @staticmethod
     def _unblock_group(group):
-            group.blockSignals(False)
-            for child in group.children():
-                child.blockSignals(False)
+        group.blockSignals(False)
+        for child in group.children():
+            child.blockSignals(False)
 
 
 class WorkflowOperationEditor(ParameterTree):
@@ -83,11 +108,13 @@ class WorkflowOperationEditor(ParameterTree):
 class WorkflowWidget(QWidget):
     sigAddFunction = Signal(object)
     sigRunWorkflow = Signal(object)
+
     # TODO -- emit Workflow from sigRunWorkflow
 
-    def __init__(self, workflowview: QAbstractItemView):
+    def __init__(self, workflowview: QAbstractItemView, operation_filter: Callable[[OperationPlugin], bool] = None):
         super(WorkflowWidget, self).__init__()
 
+        self.operation_filter = operation_filter
         self.view = workflowview
 
         self.autorun_checkbox = QCheckBox("Run Automatically")
@@ -132,24 +159,45 @@ class WorkflowWidget(QWidget):
     def _run_workflow(self, _):
         self._workflow
 
-    # TODO: support more than one depth of categories
     def populateFunctionMenu(self):
         self.functionmenu.clear()
-        sortingDict = defaultdict(list)
-        for plugin in pluginmanager.get_plugins_of_type("OperationPlugin"):
-            typesOfOperationPlugin = plugin.categories
-            if not typesOfOperationPlugin:
-                typesOfOperationPlugin = ["Uncategorized"]  # put found operations into a default category
-            for typeOfOperationPlugin in typesOfOperationPlugin:
-                # TODO : should OperationPlugin be responsible for initializing categories
-                # to some placeholder value (instead of [])?
-                sortingDict[typeOfOperationPlugin].append(plugin)
-        for key in sortingDict.keys():
-            self.functionmenu.addSeparator()
-            self.functionmenu.addAction(key[0])
-            self.functionmenu.addSeparator()
-            for plugin in sortingDict[key]:
-                self.functionmenu.addAction(plugin.name, partial(self.addOperation, plugin, autoconnectall=True))
+        sortingDict = MenuDict()
+        operations = pluginmanager.get_plugins_of_type("OperationPlugin")
+        if self.operation_filter is not None:
+            operations = filter(self.operation_filter, operations)
+        for operation in operations:
+
+            categories = operation.categories
+            if not categories:
+                categories = [("Uncategorized",)]  # put found operations into a default category
+
+            for categories_tuple in categories:
+                if isinstance(categories_tuple, str):
+                    categories_tuple = (categories_tuple,)
+                submenu = sortingDict
+                categories_list = list(categories_tuple)
+                while categories_list:
+                    category = categories_list.pop(0)
+                    submenu = submenu[category]
+
+                submenu['___'].append(operation)
+
+        self._mkMenu(sortingDict)
+
+    def _mkMenu(self, sorting_dict, menu=None):
+        if menu is None:
+            menu = self.functionmenu
+            menu.clear()
+
+        for key in sorting_dict:
+            if key == '___':
+                menu.addSeparator()
+                for operation in sorting_dict['___']:
+                    menu.addAction(operation.name, partial(self.addOperation, operation, autoconnectall=True))
+            else:
+                submenu = QMenu(title=key, parent=menu)
+                menu.addMenu(submenu)
+                self._mkMenu(sorting_dict[key], submenu)
 
     def addOperation(self, operation: OperationPlugin, autoconnectall=True):
         self.view.model().workflow.add_operation(operation())
@@ -162,6 +210,7 @@ class WorkflowWidget(QWidget):
         index = self.view.currentIndex()
         operation = self.view.model().workflow.operations[index.row()]
         self.view.model().workflow.remove_operation(operation)
+        self.view.setCurrentIndex(QModelIndex())
 
 
 class DisablableListView(QListView):
