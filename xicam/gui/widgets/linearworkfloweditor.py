@@ -107,7 +107,7 @@ class WorkflowOperationEditor(ParameterTree):
 
 class WorkflowWidget(QWidget):
     sigAddFunction = Signal(object)
-    sigRunWorkflow = Signal(object)
+    sigRunWorkflow = Signal()
 
     # TODO -- emit Workflow from sigRunWorkflow
 
@@ -122,6 +122,7 @@ class WorkflowWidget(QWidget):
         self.autorun_checkbox.stateChanged.connect(self._autorun_state_changed)
         self.run_button = QPushButton("Run Workflow")
         self.run_button.clicked.connect(self.sigRunWorkflow.emit)
+        self.view.model().workflow.attach(self._autorun)
         # TODO -- actually hook up the auto run OR dependent class needs to connect (see SAXSGUIPlugin)
 
         self.toolbar = QToolBar()
@@ -156,8 +157,9 @@ class WorkflowWidget(QWidget):
         else:
             self.run_button.setDisabled(False)
 
-    def _run_workflow(self, _):
-        self._workflow
+    def _autorun(self):
+        if self.autorun_checkbox.isChecked():
+            self.sigRunWorkflow.emit()
 
     def populateFunctionMenu(self):
         self.functionmenu.clear()
