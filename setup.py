@@ -138,6 +138,14 @@ setup(
         "xicam.plugins.CatalogPlugin": [
             "databroker_catalog_plugin = xicam.gui.bluesky.databroker_catalog_plugin:DatabrokerCatalogPlugin"
         ],
+        "xicam.plugins.OperationPlugin": [
+            "random_array = xicam.core.operations:random_array",
+            "raccoon_face = xicam.core.operations:raccoon_face",
+            "fourier_transform = xicam.core.operations:fourier_transform",
+            "low_band_pass = xicam.core.operations:low_band_pass",
+            "inverse_fourier_transform = xicam.core.operations:inverse_fourier_transform",
+            "absolute_square = xicam.core.operations:absolute_square"
+        ]
     },
     ext_modules=[],
     include_package_data=True,
