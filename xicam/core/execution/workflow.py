@@ -264,7 +264,7 @@ class Graph(object):
         check inputs and remove dependency nodes, what is left is unique ones
         """
 
-        end_tasks = set(self.operations) - self._outbound_links.keys()
+        end_tasks = list(filter(lambda op: not self.disabled(op), set(self.operations) - self._outbound_links.keys()))
 
         msg.logMessage("End tasks:", *[task.name for task in end_tasks], msg.DEBUG)
         return end_tasks
@@ -273,6 +273,9 @@ class Graph(object):
         dask_graph = {}
 
         for operation in self.operations:
+            if self.disabled(operation):
+                continue
+
             links = OrderedDict()
             dependent_ids = []
             for dep_operation, inbound_links in self._inbound_links[operation].items():
@@ -486,7 +489,7 @@ class Graph(object):
                                 bestmatch = output_operation, output_name
                                 matchness = 1
                                 # if a name+type match hasn't been found
-                                if output_operation.output_types[output_name] == input_operation.input_types[input_name]:
+                                if output_operation.output_types.get(output_name) == input_operation.input_types.get(input_name):
                                     if matchness < 2:
                                         bestmatch = output_operation, output_name
                                         matchness = 2
