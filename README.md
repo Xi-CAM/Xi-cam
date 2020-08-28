@@ -16,10 +16,8 @@ open-source Python 3 project licensed under BSD.
 The latest stable Xi-CAM is available on pypi
 
 ```bash
-pip install xicam pyqtgraph==0.10.0
+pip install xicam
 ```
-
-_For now, `pyqtgraph==0.10.0` will be necessary when installing from pypi._
 
 For more information, see the [installation documentation](https://xi-cam.readthedocs.io/en/latest/quickstart.html).
 
