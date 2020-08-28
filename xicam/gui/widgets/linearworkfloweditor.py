@@ -1,19 +1,17 @@
-import pickle
-from qtpy.QtCore import QAbstractTableModel, QMimeData, Qt, Signal, QSize
-from qtpy.QtGui import QIcon, QPixmap
-from qtpy.QtWidgets import QSplitter, QApplication, QWidget, QAbstractItemView, QToolBar, QToolButton, QMenu, \
-    QVBoxLayout, QTableView, QItemDelegate, QGridLayout, QLabel, QPushButton, QSizePolicy, QHeaderView, QCheckBox, \
+from collections import defaultdict
+from qtpy.QtCore import QAbstractListModel, QMimeData, Qt, Signal, QVariant, QModelIndex
+from qtpy.QtGui import QIcon
+from qtpy.QtWidgets import QSplitter, QWidget, QAbstractItemView, QToolBar, QToolButton, QMenu, \
+    QVBoxLayout, QListView, QPushButton, QCheckBox, \
     QHBoxLayout
 from xicam.core.execution.workflow import Workflow
-from xicam.plugins import OperationPlugin
-from pyqtgraph.parametertree import ParameterTree, Parameter
+from pyqtgraph.parametertree import ParameterTree
 from pyqtgraph.parametertree.parameterTypes import GroupParameter
 from xicam.gui.static import path
-from xicam.plugins import manager as pluginmanager
-from functools import partial
-from typing import List
+from typing import Iterable, Any, Callable
 from xicam.plugins import manager as pluginmanager, OperationPlugin
-from functools import partial, lru_cache
+from xicam.core import threads
+from functools import partial
 
 
 # WorkflowEditor
@@ -22,12 +20,34 @@ from functools import partial, lru_cache
 #  LinearWorkflowView
 #   WorkflowModel
 
+# TODO: Move Run buttons to subclass of WorkflowWidget
+
+class MenuDict(defaultdict):
+    def __init__(self):
+        super(MenuDict, self).__init__(self._default)
+
+    def _default(self, key):
+        if key == "___":
+            return []
+        else:
+            return MenuDict()
+
+    def __missing__(self, key):
+        if self.default_factory is None:
+            raise KeyError(key)
+        else:
+            ret = self[key] = self.default_factory(key)
+            return ret
+
+    def __iter__(self):
+        return iter(sorted(super(MenuDict, self).__iter__()))
+
 
 class WorkflowEditor(QSplitter):
     sigWorkflowChanged = Signal()
     sigRunWorkflow = Signal()
 
-    def __init__(self, workflow: Workflow, **kwargs):
+    def __init__(self, workflow: Workflow, operation_filter: Callable[[OperationPlugin], bool] = None, **kwargs):
         super(WorkflowEditor, self).__init__()
         self.workflow = workflow
         self.kwargs = kwargs
@@ -37,9 +57,10 @@ class WorkflowEditor(QSplitter):
         self.workflowview = LinearWorkflowView(WorkflowModel(workflow))
 
         self.addWidget(self.operationeditor)
-        workflow_widget = WorkflowWidget(self.workflowview)
+        workflow_widget = WorkflowWidget(self.workflowview, operation_filter=operation_filter)
         self.addWidget(workflow_widget)
         workflow_widget.sigRunWorkflow.connect(self.sigRunWorkflow.emit)
+        workflow_widget.sigRunWorkflow.connect(self.run_workflow)
         # Should this work internally? How would the start operations get their inputs?
         # Would the ExamplePlugin need to explicitly set the parameter value (even for hidden image)?
         # It would be nice to just have this work easily... (to ExamplePlugin's perspective)
@@ -51,8 +72,10 @@ class WorkflowEditor(QSplitter):
 
         workflow.attach(self.sigWorkflowChanged.emit)
 
-    def run_workflow(self, _):
-        self.workflow.execute(**self.kwargs)
+    def run_workflow(self, **kwargs):
+        mixed_kwargs = self.kwargs.copy()
+        mixed_kwargs.update(kwargs)
+        self.workflow.execute(**mixed_kwargs)
 
     def setParameters(self, operation: OperationPlugin):
         if operation:
@@ -67,10 +90,15 @@ class WorkflowEditor(QSplitter):
             for child in group.children():
                 child.blockSignals(True)
             self.operationeditor.setParameters(group, showTop=False)
-            QApplication.processEvents()
-            group.blockSignals(False)
-            for child in group.children():
-                child.blockSignals(False)
+            threads.invoke_as_event(self._unblock_group, group)
+        else:
+            self.operationeditor.clear()
+
+    @staticmethod
+    def _unblock_group(group):
+        group.blockSignals(False)
+        for child in group.children():
+            child.blockSignals(False)
 
 
 class WorkflowOperationEditor(ParameterTree):
@@ -79,12 +107,14 @@ class WorkflowOperationEditor(ParameterTree):
 
 class WorkflowWidget(QWidget):
     sigAddFunction = Signal(object)
-    sigRunWorkflow = Signal(object)
+    sigRunWorkflow = Signal()
+
     # TODO -- emit Workflow from sigRunWorkflow
 
-    def __init__(self, workflowview: QAbstractItemView):
+    def __init__(self, workflowview: QAbstractItemView, operation_filter: Callable[[OperationPlugin], bool] = None):
         super(WorkflowWidget, self).__init__()
 
+        self.operation_filter = operation_filter
         self.view = workflowview
 
         self.autorun_checkbox = QCheckBox("Run Automatically")
@@ -92,6 +122,7 @@ class WorkflowWidget(QWidget):
         self.autorun_checkbox.stateChanged.connect(self._autorun_state_changed)
         self.run_button = QPushButton("Run Workflow")
         self.run_button.clicked.connect(self.sigRunWorkflow.emit)
+        self.view.model().workflow.attach(self._autorun)
         # TODO -- actually hook up the auto run OR dependent class needs to connect (see SAXSGUIPlugin)
 
         self.toolbar = QToolBar()
@@ -126,27 +157,49 @@ class WorkflowWidget(QWidget):
         else:
             self.run_button.setDisabled(False)
 
-    def _run_workflow(self, _):
-        self._workflow
+    def _autorun(self):
+        if self.autorun_checkbox.isChecked():
+            self.sigRunWorkflow.emit()
 
     def populateFunctionMenu(self):
         self.functionmenu.clear()
-        sortingDict = {}
-        for plugin in pluginmanager.get_plugins_of_type("OperationPlugin"):
-            typeOfOperationPlugin = plugin.categories
-            # TODO : should OperationPlugin be responsible for initializing categories
-            # to some placeholder value (instead of [])?
-            if typeOfOperationPlugin == []:
-                typeOfOperationPlugin = "uncategorized"  # put found operations into a default category
-            if not typeOfOperationPlugin in sortingDict.keys():
-                sortingDict[typeOfOperationPlugin] = []
-            sortingDict[typeOfOperationPlugin].append(plugin)
-        for key in sortingDict.keys():
-            self.functionmenu.addSeparator()
-            self.functionmenu.addAction(key)
-            self.functionmenu.addSeparator()
-            for plugin in sortingDict[key]:
-                self.functionmenu.addAction(plugin.name, partial(self.addOperation, plugin, autoconnectall=True))
+        sortingDict = MenuDict()
+        operations = pluginmanager.get_plugins_of_type("OperationPlugin")
+        if self.operation_filter is not None:
+            operations = filter(self.operation_filter, operations)
+        for operation in operations:
+
+            categories = operation.categories
+            if not categories:
+                categories = [("Uncategorized",)]  # put found operations into a default category
+
+            for categories_tuple in categories:
+                if isinstance(categories_tuple, str):
+                    categories_tuple = (categories_tuple,)
+                submenu = sortingDict
+                categories_list = list(categories_tuple)
+                while categories_list:
+                    category = categories_list.pop(0)
+                    submenu = submenu[category]
+
+                submenu['___'].append(operation)
+
+        self._mkMenu(sortingDict)
+
+    def _mkMenu(self, sorting_dict, menu=None):
+        if menu is None:
+            menu = self.functionmenu
+            menu.clear()
+
+        for key in sorting_dict:
+            if key == '___':
+                menu.addSeparator()
+                for operation in sorting_dict['___']:
+                    menu.addAction(operation.name, partial(self.addOperation, operation, autoconnectall=True))
+            else:
+                submenu = QMenu(title=key, parent=menu)
+                menu.addMenu(submenu)
+                self._mkMenu(sorting_dict[key], submenu)
 
     def addOperation(self, operation: OperationPlugin, autoconnectall=True):
         self.view.model().workflow.add_operation(operation())
@@ -156,62 +209,65 @@ class WorkflowWidget(QWidget):
         self.view.setCurrentIndex(self.view.model().index(self.view.model().rowCount() - 1, 0))
 
     def deleteOperation(self):
-        for index in self.view.selectedIndexes():
-            operation = self.view.model().workflow.operations[index.row()]
-            self.view.model().workflow.remove_operation(operation)
+        index = self.view.currentIndex()
+        operation = self.view.model().workflow.operations[index.row()]
+        self.view.model().workflow.remove_operation(operation)
+        self.view.setCurrentIndex(QModelIndex())
 
 
-class LinearWorkflowView(QTableView):
+class DisablableListView(QListView):
+    """
+    Replaces the check indicator with checkmark/x images
+    """
+
+    def __init__(self, *args, **kwargs):
+        super(DisablableListView, self).__init__(*args, **kwargs)
+        # TODO: find an icon for indeterminate stae
+        self.setStyleSheet("""
+        QListView::indicator:checked {
+            image: url(""" + path('icons/enable.png').replace('\\', '/') + """);
+        }
+        QListView::indicator:indeterminate {
+            image: url(""" + path('icons/enable.png').replace('\\', '/') + """);
+        }
+        QListView::indicator:unchecked {
+            image: url(""" + path('icons/disable.png').replace('\\', '/') + """);
+        }""")
+
+
+class LinearWorkflowView(DisablableListView):
     sigShowParameter = Signal(object)
 
     def __init__(self, workflowmodel=None, *args, **kwargs):
         super(LinearWorkflowView, self).__init__(*args, **kwargs)
 
-        self.setItemDelegateForColumn(0, DisableDelegate(self))
-        self.setItemDelegateForColumn(1, HintsDelegate(self))
-
         self.setModel(workflowmodel)
-        workflowmodel.workflow.attach(self.selectionChanged)
+        workflowmodel.workflow.attach(self.showCurrentParameter)
+        self.selectionModel().currentChanged.connect(self.showCurrentParameter)
 
-        self.horizontalHeader().close()
-        # self.horizontalHeader().setStretchLastSection(True)
-        self.horizontalHeader().setResizeMode(QHeaderView.ResizeToContents)
-        self.horizontalHeader().setResizeMode(1, QHeaderView.Stretch)
-
-        # self.horizontalHeader().setSectionMovable(True)
-        # self.horizontalHeader().setDragEnabled(True)
-        # self.horizontalHeader().setDragDropMode(QAbstractItemView.InternalMove)
-        self.verticalHeader().setResizeMode(QHeaderView.ResizeToContents)
         self.setDragDropMode(QAbstractItemView.InternalMove)
         self.setDragEnabled(True)
         self.setDropIndicatorShown(True)
         self.setSelectionMode(QAbstractItemView.SingleSelection)
         self.setSelectionBehavior(QAbstractItemView.SelectRows)
 
-    def selectionChanged(self, selected=None, deselected=None):
-        if self.selectedIndexes() and self.selectedIndexes()[0].row() < self.model().rowCount():
-            operation = self.model().workflow.operations[self.selectedIndexes()[0].row()]  # type: OperationPlugin
+        self.setWordWrap(False)
+
+    def showCurrentParameter(self, *args):
+        current = self.currentIndex()
+        if current.isValid() and current.row() < self.model().rowCount():
+            operation = self.model().workflow.operations[current.row()]  # type: OperationPlugin
             self.sigShowParameter.emit(operation)
         else:
             self.sigShowParameter.emit(None)
-        for child in self.children():
-            if hasattr(child, "repaint"):
-                child.repaint()
-
-        selectedrows = set(map(lambda index: index.row(), self.selectedIndexes()))
-        for row in range(self.model().rowCount()):
-            widget = self.indexWidget(self.model().index(row, 1))
-            if hasattr(widget, "setSelectedVisibility"):
-                widget.setSelectedVisibility(row in selectedrows)
-        # self.resizeRowsToContents()
 
 
-class WorkflowModel(QAbstractTableModel):
+class WorkflowModel(QAbstractListModel):
     def __init__(self, workflow: Workflow):
         self.workflow = workflow
         super(WorkflowModel, self).__init__()
 
-        self.workflow.attach(partial(self.layoutChanged.emit))
+        self.workflow.attach(self.layoutChanged.emit)
 
     def mimeTypes(self):
         return ["text/plain"]
@@ -235,128 +291,27 @@ class WorkflowModel(QAbstractTableModel):
     def flags(self, index):
         if not index.isValid():
             return Qt.ItemIsEnabled
-        return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled | Qt.ItemIsDropEnabled
+        return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled | Qt.ItemIsDropEnabled | Qt.ItemIsUserCheckable
 
     def rowCount(self, *args, **kwargs):
         return len(self.workflow.operations)
 
-    def columnCount(self, *args, **kwargs):
-        return 2
-
     def data(self, index, role):
         operation = self.workflow.operations[index.row()]
         if not index.isValid():
-            return None
-        elif role != Qt.DisplayRole:
-            return None
-        elif index.column() == 0:
-            return partial(self.workflow.toggle_disabled, operation)
-        elif index.column() == 1:
-            # return getattr(process, 'name', process.__class__.__name__)
-            return None
-        return ""
+            return QVariant()
+        elif role == Qt.CheckStateRole:
+            disabled = self.workflow.disabled(operation)
+            if disabled:
+                return Qt.Unchecked
+            else:
+                return Qt.Checked
+        elif role == Qt.DisplayRole:
+            return operation.name
+        else:
+            return QVariant()
 
-    def headerData(self, col, orientation, role):
-        return None
-
-
-class HintsDelegate(QItemDelegate):
-    def __init__(self, parent):
-        super(HintsDelegate, self).__init__(parent=parent)
-        self.view = parent
-
-    def paint(self, painter, option, index):
-        if not (self.view.indexWidget(index)):
-            # selected = index in map(lambda index: index.row, self.view.selectedIndexes())
-            operation = self.view.model().workflow.operations[index.row()]
-            widget = HintsWidget(operation, self.view, index)
-            self.view.setIndexWidget(index, widget)
-
-
-class HintsWidget(QWidget):
-    def __init__(self, operation, view, index):
-        super(HintsWidget, self).__init__()
-        self.view = view
-        self.setLayout(QGridLayout())
-        self.layout().addWidget(QLabel(operation.name), 0, 0, 1, 2)
-        self.hints = operation.hints
-
-        enabledhints = [hint for hint in self.hints if hint.enabled]
-
-        for i, hint in enumerate(enabledhints):
-            enablebutton = QPushButton(icon=mk_enableicon())
-            sp = QSizePolicy()
-            sp.setWidthForHeight(True)
-            enablebutton.setSizePolicy(sp)
-            enablebutton.setVisible(False)
-            label = QLabel(hint.name)
-            label.setVisible(False)
-            self.layout().addWidget(enablebutton, i + 1, 0, 1, 1)
-            self.layout().addWidget(label)
-
-        self.name = operation.name
-
-        print('size1:', operation.name, self.sizeHint())
-
-    def setSelectedVisibility(self, selected):
-        for row in range(1, self.layout().rowCount()):
-            self.layout().itemAtPosition(row, 0).widget().setVisible(selected)
-            self.layout().itemAtPosition(row, 1).widget().setVisible(selected)
-        print('size2:', self.name, self.sizeHint())
-
-    def sizeHint(self):
-        return QSize(30, 30)
-
-
-class DeleteDelegate(QItemDelegate):
-    def __init__(self, parent=None):
-        super(DeleteDelegate, self).__init__(parent)
-        self._parent = parent
-
-    def paint(self, painter, option, index):
-        if not self._parent.indexWidget(index):
-            button = QToolButton(self.parent())
-            button.setAutoRaise(True)
-            button.setText("Delete Operation")
-            button.setIcon(QIcon(path("icons/trash.png")))
-            sp = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
-            sp.setWidthForHeight(True)
-            button.setSizePolicy(sp)
-            button.clicked.connect(index.data())
-
-            self._parent.setIndexWidget(index, button)
-
-
-class DisableDelegate(QItemDelegate):
-    class DelegateClass(QToolButton):
-        def __init__(self, parent=None):
-            super(DisableDelegate.DelegateClass, self).__init__(parent=parent)
-            self.setText("i")
-            self.setAutoRaise(True)
-
-            self.setIcon(mk_enableicon())
-            self.setCheckable(True)
-            sp = QSizePolicy()
-            sp.setWidthForHeight(True)
-            self.setSizePolicy(sp)
-
-    def __init__(self, parent):
-        super(DisableDelegate, self).__init__(parent)
-        self._parent = parent
-
-    def paint(self, painter, option, index):
-        if not self._parent.indexWidget(index):
-            button = self.DelegateClass(self.parent())
-            button.clicked.connect(index.data())
-            self._parent.setIndexWidget(index, button)
-
-    def sizeHint(self, QStyleOptionViewItem, QModelIndex):
-        return QSize(30, 30)
-
-
-@lru_cache()
-def mk_enableicon():
-    enableicon = QIcon()
-    enableicon.addPixmap(QPixmap(path("icons/enable.png")), state=enableicon.Off)
-    enableicon.addPixmap(QPixmap(path("icons/disable.png")), state=enableicon.On)
-    return enableicon
+    def setData(self, index: QModelIndex, value: Any, role: int = ...) -> bool:
+        if role == Qt.CheckStateRole:
+            self.workflow.set_disabled(self.workflow.operations[index.row()], not value)
+            return True
