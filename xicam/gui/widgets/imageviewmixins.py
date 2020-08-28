@@ -572,8 +572,8 @@ class LogScaleImageItem(ImageItem):
         self.qimage = fn.makeQImage(argb, alpha, transpose=False)
 
 
-class LogScaleIntensity(ComposableItemImageView):
-    def __init__(self, *args, **kwargs):
+class LogScaleIntensity(BetterLayout, ComposableItemImageView):
+    def __init__(self, *args, log_scale=True, **kwargs):
         # Composes a new type consisting of any ImageItem types in imageItem_bases with this classes's helper ImageItem
         # class (LogScaleImageItem)
         self.imageItem_bases += (LogScaleImageItem,)
@@ -582,7 +582,8 @@ class LogScaleIntensity(ComposableItemImageView):
             del kwargs["imageItem"]
         super(LogScaleIntensity, self).__init__(imageItem=imageItem, *args, **kwargs)
 
-        self.logScale = True
+
+        self.logScale = log_scale
 
         # Setup log scale button
         self.logIntensityButton = QPushButton("Log Intensity")
@@ -592,9 +593,9 @@ class LogScaleIntensity(ComposableItemImageView):
         sizePolicy.setHeightForWidth(self.logIntensityButton.sizePolicy().hasHeightForWidth())
         self.logIntensityButton.setSizePolicy(sizePolicy)
         self.logIntensityButton.setObjectName("logIntensity")
-        self.ui.gridLayout.addWidget(self.logIntensityButton, 3, 2, 1, 1)
+        self.ui.right_layout.addWidget(self.logIntensityButton)
         self.logIntensityButton.setCheckable(True)
-        self.setLogScale(True)
+        self.setLogScale(self.logScale)
         self.logIntensityButton.clicked.connect(self._setLogScale)
 
     def _setLogScale(self, value):
@@ -702,6 +703,7 @@ class BetterButtons(BetterLayout):
         # self.resetLUTBtn.setObjectName("resetLUTBtn")
         self.ui.right_layout.addWidget(self.resetLUTBtn)
         self.resetLUTBtn.clicked.connect(self.autoLevels)
+
 
 class ExportButton(BetterLayout):
     def __init__(self, *args, **kwargs):
