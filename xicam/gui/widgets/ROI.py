@@ -152,7 +152,7 @@ class BetterCrosshairROI(BetterROI):
         super(BetterCrosshairROI, self).__init__(pos, size, parent=parent, **kwargs)
 
         self.sigRegionChanged.connect(self.invalidate)
-        self.addTranslateHandle(Point(0, 0), Point(0, 0))
+        self.addTranslateHandle(Point(0, 0))
         self.aspectLocked = True
 
         linepen = pg.mkPen("#FFA500", width=2)
@@ -585,17 +585,8 @@ if __name__ == "__main__":
     imageview.setImage(data)
 
     # roi = ArcROI(center=(5, 5), radius=5)
-    roi = SegmentedRectROI(pos=(0, 0), size=(10, 10))
+    roi = BetterCrosshairROI((0, 0), parent=imageview.view)
     imageview.view.addItem(roi)
 
-    imageview2 = pg.ImageView()
-    imageview2.view.invertY(False)
-
-    def showroi(*_, **__):
-        imageview2.setImage(roi.getLabelArray(data, imageview.imageItem))
-
-    roi.sigRegionChanged.connect(showroi)
-
     imageview.show()
-    imageview2.show()
     qapp.exec_()

@@ -641,7 +641,7 @@ class LogScaleImageItem(ImageItem):
 
 
 class LogScaleIntensity(BetterLayout, ComposableItemImageView):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, log_scale=True, **kwargs):
         # Composes a new type consisting of any ImageItem types in imageItem_bases with this classes's helper ImageItem
         # class (LogScaleImageItem)
         self.imageItem_bases += (LogScaleImageItem,)
@@ -650,7 +650,8 @@ class LogScaleIntensity(BetterLayout, ComposableItemImageView):
             del kwargs["imageItem"]
         super(LogScaleIntensity, self).__init__(imageItem=imageItem, *args, **kwargs)
 
-        self.logScale = True
+
+        self.logScale = log_scale
 
         # Setup log scale button
         self.logIntensityButton = QPushButton("Log Intensity")
@@ -662,7 +663,7 @@ class LogScaleIntensity(BetterLayout, ComposableItemImageView):
         self.logIntensityButton.setObjectName("logIntensity")
         self.ui.right_layout.addWidget(self.logIntensityButton)
         self.logIntensityButton.setCheckable(True)
-        self.setLogScale(True)
+        self.setLogScale(self.logScale)
         self.logIntensityButton.clicked.connect(self._setLogScale)
 
     def _setLogScale(self, value):
@@ -853,6 +854,19 @@ class DepthPlot(XArrayView):
         x, y = self.region_roi.pos()
         self._plotitem.setData(x=np.asarray(self.image.coords[self.image.dims[0]]),
                                y=self.image.sel(**{self.image.dims[2]: x, self.image.dims[1]: y}, method='nearest'))
+
+class ExportButton(BetterLayout):
+    def __init__(self, *args, **kwargs):
+        super(ExportButton, self).__init__(*args, **kwargs)
+
+        # Export button
+        self.exportBtn = QPushButton('Export')
+        sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(1)
+        sizePolicy.setHeightForWidth(self.exportBtn.sizePolicy().hasHeightForWidth())
+        self.ui.right_layout.addWidget(self.exportBtn)
+        self.exportBtn.clicked.connect(self.export)
 
 
 class StreamSelector(CatalogView, BetterLayout):

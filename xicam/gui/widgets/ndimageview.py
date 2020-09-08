@@ -1,3 +1,5 @@
+from functools import partial
+from itertools import zip_longest
 from pyqtgraph import ImageView, InfiniteLine, mkPen, ScatterPlotItem, ImageItem, PlotItem, HistogramLUTWidget, \
     GraphicsView
 from qtpy.QtGui import QTransform, QPolygonF
@@ -45,15 +47,31 @@ class NDImageView(QWidget):
         self.lut_widget = HistogramLUTWidget(parent=self)
         self.lut_widget.item.setImageItem(self)
 
+        self.graphics_view.sigMakePrimary.connect(self.setPrimary)
+
         self.layout().addWidget(self.graphics_view)
         self.layout().addWidget(self.lut_widget)
 
         self.setStyleSheet('NDImageView {background-color:black;}')
 
-    def setData(self, data: DataArray):
+    def setData(self, data: DataArray, view_dims=None, slc=None):
         self.data = data
-        self.graphics_view.setData(data, view_dims=data.dims[:2], slc={dim: 0 for dim in data.dims})
+
+        full_slc = {dim: 0 for dim in data.dims}
+        if slc:
+            full_slc.update(slc)
+
+        if view_dims:
+            new_dims = [dim for dim in dict(zip_longest(view_dims+data.dims, [None])).keys()]
+            data = data.transpose(*new_dims)
+        else:
+            view_dims = data.dims[:2]
+
+        self.graphics_view.setData(data, view_dims=view_dims, slc=full_slc)
         self.sigImageChanged.emit()
+
+    def setPrimary(self, view_dims, slc):
+        self.setData(self.data, view_dims, slc)
 
     def updateSlicing(self, slice):
         print('newslice:', slice)
@@ -131,6 +149,7 @@ class NDImageView(QWidget):
 
 class SliceablePanel(QWidget):
     sigSlicingChanged = Signal(object)
+    sigMakePrimary = Signal(object, object)
 
     def __init__(self, parent=None):
         super(SliceablePanel, self).__init__(parent=parent)
@@ -153,6 +172,12 @@ class SliceablePanel(QWidget):
 
         self.full_view.sigToggleHorizontalSlice.connect(self.toggleHorizontalSlice)
         self.full_view.sigToggleVerticalSlice.connect(self.toggleVerticalSlice)
+        self.full_view.sigMakePrimary.connect(self.sigMakePrimary)
+
+        if isinstance(parent, SliceablePanel):
+            self.full_view.image_item.lut = parent.full_view.image_item.lut
+            self.full_view.image_item.levels = parent.full_view.image_item.levels
+            self.sigMakePrimary.connect(parent.sigMakePrimary)
 
         # Find top-level (NDImageView) widget
         parent = self.parent()
@@ -188,12 +213,16 @@ class SliceablePanel(QWidget):
 
         self.full_view.setData(self.sliced_data)
 
+        if self.right_view:
+            self.right_view.setData(data, view_dims=self.getViewDims('right'), slc=slc)
+
+        if self.top_view:
+            self.top_view.setData(data, view_dims=self.getViewDims('top'), slc=slc)
+
     def toggleHorizontalSlice(self, enable):
         if enable:
             if not self.right_view:
                 self.right_view = SliceablePanel(parent=self)
-                self.right_view.full_view.image_item.lut = self.full_view.image_item.lut
-                self.right_view.full_view.image_item.levels = self.full_view.image_item.levels
                 if self.data is not None:
                     # get the coordinate of the vertical slice
                     # slice = self.full_view.crosshair.pos()[1]
@@ -210,8 +239,6 @@ class SliceablePanel(QWidget):
         if enable:
             if not self.top_view:
                 self.top_view = SliceablePanel(parent=self)
-                self.top_view.full_view.image_item.lut = self.full_view.image_item.lut
-                self.top_view.full_view.image_item.levels = self.full_view.image_item.levels
                 if self.data is not None:
                     # get the coordinate of the horizontal slice
                     # slice = self.full_view.crosshair.pos()[0]
@@ -235,6 +262,7 @@ class SliceablePanel(QWidget):
 class SliceableGraphicsView(GraphicsView):
     sigToggleHorizontalSlice = Signal(bool)
     sigToggleVerticalSlice = Signal(bool)
+    sigMakePrimary = Signal(object, object)
 
     def __init__(self):
         super(SliceableGraphicsView, self).__init__()
@@ -248,14 +276,15 @@ class SliceableGraphicsView(GraphicsView):
         self.setCentralItem(self.view)
         self.view.sigToggleVerticalSlice.connect(self.sigToggleVerticalSlice)
         self.view.sigToggleHorizontalSlice.connect(self.sigToggleHorizontalSlice)
+        self.view.sigMakePrimary.connect(self.sigMakePrimary)
 
         # Add imageitem
         self.image_item = ImageItem()
         self.view.addItem(self.image_item)
 
         # add crosshair
-        self.crosshair = BetterCrosshairROI((0, 0), parent=self.view)
-        self.view.addItem(self.crosshair)
+        self.crosshair = BetterCrosshairROI((0, 0), parent=self.view, resizable=False)
+        self.view.getViewBox().addItem(self.crosshair)
 
     def setData(self, data):
 
@@ -268,7 +297,7 @@ class SliceableGraphicsView(GraphicsView):
 
         # Position the image according to coords
         shape = data.shape
-        a = [(0, shape[-2]), (shape[-1] - 1, shape[-2]), (shape[-1] - 1, 1), (0, 1)]
+        a = [(0, shape[-1]), (shape[-2] - 1, shape[-1]), (shape[-2] - 1, 1), (0, 1)]
 
         # b = [(ymin, xmax), (ymax, xmax), (ymax, xmin), (ymin, xmin)]
         b = [(xmax, ymin), (xmax, ymax), (xmin, ymax), (xmin, ymin)]
@@ -335,6 +364,7 @@ class SliceableGraphicsView(GraphicsView):
 class SliceableAxes(PlotItem):
     sigToggleHorizontalSlice = Signal(bool)
     sigToggleVerticalSlice = Signal(bool)
+    sigMakePrimary = Signal(object, object)
 
     def __init__(self):
         super(SliceableAxes, self).__init__()
@@ -355,6 +385,13 @@ class SliceableAxes(PlotItem):
         vertical_action.setCheckable(True)
         menu.addAction(vertical_action)
 
+        make_primary_action = QAction('Set as Primary View', menu)
+        make_primary_action.triggered.connect(self.makePrimary)
+        menu.addAction(make_primary_action)
+
         self._menu = menu
 
         return menu
+
+    def makePrimary(self):
+        self.sigMakePrimary.emit(self.getViewWidget().parent().view_dims, self.getViewWidget().parent().slice)
