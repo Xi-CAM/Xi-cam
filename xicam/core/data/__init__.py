@@ -29,15 +29,13 @@ def detect_mimetypes(filename: str) -> List[str]:
         # future if we discover reason to. Therefore, sniffers should not
         # assume that they will receive this exact number of bytes.
         first_bytes = file.read(64)
-    for ep in entrypoints.get_group_all("databroker.sniffers"):
-        try:
-            content_sniffer = ep.load()  # TODO: only load sniffers once
-        except Exception as ex:
-            msg.logError(ex)
-        else:
-            matched_mimetype = content_sniffer(filename, first_bytes)
-            if matched_mimetype:
-                matched_mimetypes.append(matched_mimetype)
+
+    from xicam.plugins import manager as plugin_manager
+
+    for sniffer in plugin_manager.get_plugins_of_type("sniffers"):
+        matched_mimetype = sniffer(filename, first_bytes)
+        if matched_mimetype:
+            matched_mimetypes.append(matched_mimetype)
 
     # Guessing the mimetype from the mimemtype db is quick, lets do it always
     matched_mimetype = mimetypes.guess_type(filename)[0]
@@ -56,14 +54,12 @@ def applicable_ingestors(filename, mimetype):
     """
     # Find ingestor(s) for this mimetype.
     ingestors = []
-    for ep in entrypoints.get_group_all("databroker.ingestors"):
-        if ep.name == mimetype:
-            try:
-                ingestor = ep.load()
-            except Exception as ex:
-                msg.logError(ex)
-            else:
-                ingestors.append(ingestor)
+
+    from xicam.plugins import manager as plugin_manager
+
+    for ingestor in plugin_manager.get_plugins_of_type("ingestors"):
+        if ingestor._name == mimetype:
+            ingestors.append(ingestor)
 
     return ingestors
 
