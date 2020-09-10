@@ -14,3 +14,4 @@ class IngestorPlugin():
     """
 
     entrypoint_prefix = 'databroker.'
+    needs_qt = False
