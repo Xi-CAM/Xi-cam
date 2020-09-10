@@ -10,7 +10,6 @@ from warnings import warn
 import mimetypes
 import warnings
 
-import entrypoints
 
 # Load neglected mimetypes into mimetypes database
 mimetypes.add_type('application/x-hdf5', '.h5')  # This one is already being added to the next version of `mimetypes`
