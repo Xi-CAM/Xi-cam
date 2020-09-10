@@ -1,11 +1,15 @@
 from pytestqt import qtbot
+from qtpy.QtWidgets import QApplication
 import dask.array as da
 from xarray import DataArray
 import numpy as np
 import pytest
 from xicam.core.data import load_header
+from xicam.plugins import manager as plugin_manager
+
 
 size = 100
+
 
 @pytest.fixture
 def complex_big_data():
@@ -29,9 +33,9 @@ def simple_small_data():
                                      chunks=10,
                                      dtype=float),
                      dims=['y (μm)', 'x (μm)', 'E (eV)', 'T (K)', 't (s)'],
-                     coords=[np.arange(size) / 10.,
-                             np.arange(size) / 1.,
-                             np.arange(size) * 10,
+                     coords=[np.arange(size) / 10.+10,
+                             np.arange(size) / 1.+1,
+                             np.arange(size) * 10+10,
                              np.arange(size) * 100.,
                              np.arange(size) * 1000.])
 
@@ -51,7 +55,10 @@ def project_arpes(catalog):
 
 @pytest.fixture
 def arpes_data():
-    from xicam.spectral.ingestors.arpes_fits import ingest_NXarpes
+    plugin_manager.collect_plugins()
+    required_task = next(filter(lambda task: task.name=='application/x-fits', plugin_manager._tasks))
+    plugin_manager._load_plugin(required_task)
+    plugin_manager._instantiate_plugin(required_task)
     catalog = load_header(['C:\\Users\\LBL\\PycharmProjects\\merged-repo\\Xi-cam.spectral\\xicam\\spectral\\ingestors\\20161214_00034.fits'])
     data = project_arpes(catalog)
     return data
