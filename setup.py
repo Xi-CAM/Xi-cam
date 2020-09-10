@@ -126,6 +126,8 @@ setup(
             'OperationPlugin = xicam.plugins.operationplugin:OperationPlugin',
             "SettingsPlugin = xicam.plugins.settingsplugin:SettingsPlugin",
             "QWidgetPlugin = xicam.plugins.widgetplugin:QWidgetPlugin",
+            "ingestors = xicam.plugins.ingestorplugin:IngestorPlugin",
+            "sniffers = xicam.plugins.snifferplugin:SnifferPlugin"
         ],
         "xicam.plugins.SettingsPlugin": [
             "logging = xicam.gui.settings.logging:LoggingSettingsPlugin",

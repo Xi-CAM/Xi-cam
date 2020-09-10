@@ -10,7 +10,6 @@ from xicam.core import msg
 from xicam.core import threads
 from xicam.core.args import parse_args
 
-from .datahandlerplugin import DataHandlerPlugin
 from .catalogplugin import CatalogPlugin
 from .guiplugin import GUIPlugin, GUILayout
 from .operationplugin import OperationPlugin
@@ -170,11 +169,11 @@ class XicamPluginManager:
     def _discover_plugins(self):
         self.state = State.DISCOVERING
         # for each plugin type
-        for type_name in self.plugin_types.keys():
+        for type_name, plugin_type in self.plugin_types.items():
 
             # get all entrypoints matching that group
-            group = entrypoints.get_group_named(f"xicam.plugins.{type_name}")
-            group_all = entrypoints.get_group_all(f"xicam.plugins.{type_name}")
+            group = entrypoints.get_group_named(f"{getattr(plugin_type,'entrypoint_prefix', 'xicam.plugins.')}{type_name}")
+            group_all = entrypoints.get_group_all(f"{getattr(plugin_type,'entrypoint_prefix', 'xicam.plugins.')}{type_name}")
 
             # check for duplicate names
             self._check_shadows(group, group_all)
