@@ -23,7 +23,7 @@ if ".zip/" in os.__file__:
 os.environ["QT_API"] = "pyqt5"
 import qtpy
 from qtpy.QtWidgets import QApplication, QErrorMessage
-from qtpy.QtCore import QCoreApplication, QProcess
+from qtpy.QtCore import QCoreApplication, QProcess, QTimer
 
 if qtpy.API_NAME == "PyQt5" and "PySide" in sys.modules:
     del sys.modules["PySide"]
@@ -33,8 +33,21 @@ elif qtpy.API_NAME == "PySide2" and "PyQt5" in sys.modules:
 QCoreApplication.setOrganizationName("Camera")
 QCoreApplication.setApplicationName("Xi-cam")
 
+mainwindow = None
+splash_proc = None
+show_check_timer = None
+
+
+def check_show_mainwindow():
+    if splash_proc and splash_proc.state() != QProcess.NotRunning and mainwindow:
+        # splash_proc.waitForFinished()
+        mainwindow.show()
+        mainwindow.activateWindow()
+        show_check_timer.stop()
+
 
 def _main(args, exec=True):
+    global mainwindow, splash_proc, show_check_timer
     # import pydm
     # app = QApplication([])
     # app = pydm.PyDMApplication()
@@ -55,16 +68,14 @@ def _main(args, exec=True):
     initial_length = os.path.getsize(log_file)
     splash_proc.start(sys.executable, [splash.__file__, log_file, str(initial_length)])
 
+    show_check_timer = QTimer()
+    show_check_timer.timeout.connect(check_show_mainwindow)
+    show_check_timer.start(100)
+
     from xicam.gui.windows.mainwindow import XicamMainWindow
 
     mainwindow = XicamMainWindow()
-    while splash_proc.state() != QProcess.NotRunning:
-        app.processEvents()
-    # splash_proc.waitForFinished()
-    mainwindow.show()
-    mainwindow.activateWindow()
 
-    # splash = splash.XicamSplashScreen(args=args)
     if exec:
         return app.exec_()
     else:
