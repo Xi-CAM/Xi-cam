@@ -191,7 +191,7 @@ class XicamPluginManager:
 
     def _discover_plugins(self):
         # for each plugin type
-        for type_name in self.plugin_types.keys():
+        for type_name, plugin_type in self.plugin_types.items():
             tasks = []
 
             # get all entrypoints matching that group
