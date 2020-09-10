@@ -14,3 +14,4 @@ class SnifferPlugin():
     """
 
     entrypoint_prefix = 'databroker.'
+    needs_qt = False
