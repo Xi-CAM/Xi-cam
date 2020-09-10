@@ -262,7 +262,7 @@ class XicamPluginManager:
             with load_timer() as elapsed:
                 load_task.plugin_class = entrypoint.load()
         except (Exception, SystemError) as ex:
-            msg.logMessage(f"Unable to load {entrypoint.name} plugin from module: {entrypoint.module_name}", msg.ERROR)
+            msg.logMessage(f"Unable to load {entrypoint.name} plugin from module: {entrypoint.module_name}", level=msg.ERROR)
             msg.logError(ex)
             msg.notifyMessage(
                 repr(ex), title=f'An error occurred while starting the "{entrypoint.name}" plugin.', level=msg.CRITICAL
