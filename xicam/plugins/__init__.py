@@ -274,9 +274,14 @@ class XicamPluginManager:
             self._instantiate_queue.put(load_task)
             load_task.status = Status.InstantiateQueue
 
-    def _instantiate_plugin(self):
-        if not self._instantiate_queue.empty():
-            instantiate_task = self._instantiate_queue.get()
+    def _instantiate_plugin(self, instantiate_task: PluginTask=None):
+        """
+        Instantiate a single plugin by request or from the queue. This is typically invoked by an event, and will re-post
+        an event to the event queue to repeat until the task queue is emptied.
+        """
+
+        if instantiate_task or not self._instantiate_queue.empty():
+            instantiate_task = instantiate_task or self._instantiate_queue.get()
             entrypoint = instantiate_task.entry_point
             type_name = instantiate_task.type_name
             plugin_class = instantiate_task.plugin_class
