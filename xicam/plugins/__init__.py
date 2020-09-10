@@ -407,7 +407,7 @@ class XicamPluginManager:
 
         # wait for it to load
         with load_timer() as elapsed:
-            while match_task.Status not in [Status.Success, Status.FailedInstantiate, Status.FailedLoad]:
+            while match_task.status not in [Status.Success, Status.FailedInstantiate, Status.FailedLoad]:
                 if threads.is_main_thread():
                     from qtpy.QtWidgets import QApplication  # Required as late import to avoid loading Qt things too soon
                     QApplication.processEvents()
@@ -416,10 +416,10 @@ class XicamPluginManager:
                 if elapsed() > timeout:
                     raise TimeoutError(f"Plugin named {name} waited too long to instantiate and timed out")
 
-        if match_task.Status in [Status.FailedInstantiate, Status.FailedLoad]:
+        if match_task.status in [Status.FailedInstantiate, Status.FailedLoad]:
             raise NameError(f"The plugin named {name} of type {type_name} failed to load while we were waiting for it.")
 
-        elif match_task.Status == Status.Success:
+        elif match_task.status == Status.Success:
             return_plugin = self._get_plugin_by_name(name, type_name)
 
         return return_plugin
