@@ -54,7 +54,7 @@ class NDImageView(QWidget):
 
         self.setStyleSheet('NDImageView {background-color:black;}')
 
-    def setData(self, data: DataArray, view_dims=None, slc=None):
+    def setData(self, data: DataArray, view_dims=None, slc=None, reset_crosshairs=True):
         self.data = data
 
         full_slc = {dim: 0 for dim in data.dims}
@@ -68,10 +68,18 @@ class NDImageView(QWidget):
             view_dims = data.dims[:2]
 
         self.graphics_view.setData(data, view_dims=view_dims, slc=full_slc)
+
+        if reset_crosshairs:
+            self.resetCrosshairs()
+
         self.sigImageChanged.emit()
 
+    def resetCrosshairs(self):
+        for child in self.findChildren(SliceableGraphicsView):
+            child.resetCrosshair()
+
     def setPrimary(self, view_dims, slc):
-        self.setData(self.data, view_dims, slc)
+        self.setData(self.data, view_dims, slc, reset_crosshairs=False)
 
     def updateSlicing(self, slice):
         print('newslice:', slice)
@@ -212,6 +220,7 @@ class SliceablePanel(QWidget):
         self.slice = slc
 
         self.full_view.setData(self.sliced_data)
+        self.full_view.crosshair.setPos(slc[view_dims[1]],slc[view_dims[0]])
 
         if self.right_view:
             self.right_view.setData(data, view_dims=self.getViewDims('right'), slc=slc)
@@ -319,6 +328,12 @@ class SliceableGraphicsView(GraphicsView):
         # Label the image axes
         self.view.setLabel('left', data.dims[-2])
         self.view.setLabel('bottom', data.dims[-1])
+
+    def resetCrosshair(self):
+        transform = self.image_item.viewTransform()
+        new_pos = transform.map(self.image_item.boundingRect().center())
+        self.crosshair.setPos(new_pos)
+        self.crosshair.sigMoved.emit(new_pos)
 
     def updateImage(self, autoHistogramRange=True):
         ## Redraw image on screen
