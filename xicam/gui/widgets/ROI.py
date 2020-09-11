@@ -148,22 +148,29 @@ class BetterCrosshairROI(BetterROI):
             size = [0, 0]
         if pos == None:
             pos = [0, 0]
+
         self._shape = None
+        linepen = pg.mkPen("#FFA500", width=2)
+        self._vline = pg.InfiniteLine((0, 0), angle=90, movable=False, pen=linepen)
+        self._hline = pg.InfiniteLine((0, 0), angle=0, movable=False, pen=linepen)
+
         super(BetterCrosshairROI, self).__init__(pos, size, parent=parent, **kwargs)
 
         self.sigRegionChanged.connect(self.invalidate)
         self.addTranslateHandle(Point(0, 0))
         self.aspectLocked = True
 
-        linepen = pg.mkPen("#FFA500", width=2)
-        self._vline = pg.InfiniteLine((0, 0), angle=90, movable=False, pen=linepen)
-        self._hline = pg.InfiniteLine((0, 0), angle=0, movable=False, pen=linepen)
         parent.addItem(self._vline)
         parent.getViewBox().addItem(self._hline)
 
     def translate(self, *args, **kwargs):
         super(BetterCrosshairROI, self).translate(*args, **kwargs)
         self.sigMoved.emit(self.pos())
+
+    def stateChanged(self, finish=True):
+        super(BetterCrosshairROI, self).stateChanged()
+        self._hline.setPos(self.pos().y())
+        self._vline.setPos(self.pos().x())
 
     def invalidate(self):
         self._shape = None
@@ -187,10 +194,6 @@ class BetterCrosshairROI(BetterROI):
             self._shape = self.mapFromDevice(outline)
 
         return self._shape
-
-    def paint(self, p, *args):
-        self._hline.setPos(self.pos()[1])
-        self._vline.setPos(self.pos()[0])
 
 
 class ArcROI(BetterROI):
