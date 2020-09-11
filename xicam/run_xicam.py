@@ -39,7 +39,7 @@ show_check_timer = None
 
 
 def check_show_mainwindow():
-    if splash_proc and splash_proc.state() != QProcess.NotRunning and mainwindow:
+    if splash_proc and splash_proc.state() == QProcess.NotRunning and mainwindow:
         # splash_proc.waitForFinished()
         mainwindow.show()
         mainwindow.activateWindow()
