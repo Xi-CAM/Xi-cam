@@ -113,7 +113,8 @@ setup(
     # "scripts" keyword. Entry points provide cross-platform support and allow
     # pip to create the appropriate form of executable for the target platform.
     entry_points={
-        "gui_scripts": ["xicam=xicam.run_xicam:main"],
+        "gui_scripts": ["xicam=xicam.run_xicam:main",
+                        "splash_xicam=xicam.gui.windows.splash:main"],
         "xicam.plugins.DataHandlerPlugin": ["npy = xicam.core.formats.NPYPlugin:NPYPlugin"],
         "xicam.plugins.PluginType": [
             "CatalogPlugin = xicam.plugins.catalogplugin:CatalogPlugin",
