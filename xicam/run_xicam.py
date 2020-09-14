@@ -12,14 +12,6 @@ if sys.argv[0].endswith("Xi-cam"):
     root = os.path.dirname(sys.argv[0])
     sys.path = [path for path in sys.path if os.path.abspath(root) in os.path.abspath(path)]
 
-# Quickly extract zip file to make imports easier
-if ".zip/" in os.__file__:
-    import zipfile
-
-    zip_ref = zipfile.ZipFile(os.path.dirname(os.__file__), "r")
-    zip_ref.extractall(os.path.dirname(os.path.dirname(os.__file__)))
-    zip_ref.close()
-
 os.environ["QT_API"] = "pyqt5"
 import qtpy
 from qtpy.QtWidgets import QApplication, QErrorMessage
@@ -54,7 +46,6 @@ def _main(args, exec=True):
     app = QApplication.instance() or QApplication([])
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
-    from xicam.gui.windows import splash
     from xicam.core import msg
 
     if getattr(args, 'verbose', False):
@@ -66,7 +57,7 @@ def _main(args, exec=True):
     # splash_proc.finished.connect(lambda: print('finished splashing'))
     log_file = msg.file_handler.baseFilename
     initial_length = os.path.getsize(log_file)
-    splash_proc.start(sys.executable, [splash.__file__, log_file, str(initial_length)])
+    splash_proc.start('splash_xicam', [log_file, str(initial_length)])
 
     show_check_timer = QTimer()
     show_check_timer.timeout.connect(check_show_mainwindow)
