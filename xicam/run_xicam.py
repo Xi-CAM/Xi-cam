@@ -47,17 +47,17 @@ def _main(args, exec=True):
     signal.signal(signal.SIGINT, signal.SIG_DFL)
 
     from xicam.core import msg
+    from xicam.gui.windows import splash
 
     if getattr(args, 'verbose', False):
         QErrorMessage.qtHandler()
 
     # start splash in subprocess
     splash_proc = QProcess()
-    # splash_proc.started.connect(lambda: print('started splash'))
-    # splash_proc.finished.connect(lambda: print('finished splashing'))
+
     log_file = msg.file_handler.baseFilename
     initial_length = os.path.getsize(log_file)
-    splash_proc.start('splash_xicam', [log_file, str(initial_length)])
+    splash_proc.start(sys.executable, [splash.__file__, log_file, str(initial_length)])
 
     show_check_timer = QTimer()
     show_check_timer.timeout.connect(check_show_mainwindow)
