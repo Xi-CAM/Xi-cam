@@ -270,6 +270,9 @@ class XicamPluginManager:
 
         else:
             msg.logMessage(f"{int(elapsed() * 1000)} ms elapsed while loading {entrypoint.name}", level=msg.INFO)
+
+        # If nothing went wrong, put it at the front of the instantiate stack
+        if load_task.status in [Status.InstantiateQueue, Status.Loading]:
             self._instantiate_queue.put(load_task)
             load_task.status = Status.InstantiateQueue
 
