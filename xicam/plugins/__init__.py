@@ -195,8 +195,8 @@ class XicamPluginManager:
             tasks = []
 
             # get all entrypoints matching that group
-            group = entrypoints.get_group_named(f"{getattr(plugin_type,'entrypoint_prefix', 'xicam.plugins.')}{type_name}")
-            group_all = entrypoints.get_group_all(f"{getattr(plugin_type,'entrypoint_prefix', 'xicam.plugins.')}{type_name}")
+            group = entrypoints.get_group_named(f"{getattr(plugin_type, 'entrypoint_prefix', 'xicam.plugins.')}{type_name}")
+            group_all = entrypoints.get_group_all(f"{getattr(plugin_type, 'entrypoint_prefix', 'xicam.plugins.')}{type_name}")
 
             # check for duplicate names
             self._check_shadows(group, group_all)

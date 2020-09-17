@@ -1,6 +1,7 @@
 """TODO Module docstring"""
 import inspect
 import weakref
+import functools
 from typing import Collection, Tuple, Type, Union, List, Callable, Sequence
 from collections import OrderedDict
 from collections.abc import MutableMapping
@@ -927,3 +928,35 @@ def categories(*categories: Tuple[Union[tuple, str]]):
         return func
 
     return decorator
+
+
+def apply_signature(func: Callable):
+    """
+    Decorator to apply the signature of another function to this operation.
+
+    This is intended to be used in cases where you'd want to preserve the original function without duplicating the
+    signature in a wrapper function. This eliminates the need to have to update the wrapper when the original function
+    is edited
+
+    Parameters
+    ----------
+    func : Callable
+        A sequence of categories. Each item is a tuple or str. If an item is a tuple, each item in the tuple is considered
+        as an additional depth in the menu structure.
+
+    Example
+    --------
+
+    >>> def my_func(a:int=1, b:bool=True):
+    >>>     return True
+    >>>
+    >>> @operation
+    >>> @apply_signature(my_func)
+    >>> def wrapper_func(*args, **kwargs):
+    >>>     return my_func(*args, **kwargs)
+
+    The signature of the `wrapper_func` will then be `<Signature (a: int = 1, b: bool = False)>`, and Xi-cam
+    will use that information as it inspects this operation.
+    """
+
+    return functools.wraps(func)

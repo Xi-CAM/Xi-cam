@@ -1,4 +1,5 @@
 import pytest
+import inspect
 
 import numpy as np
 
@@ -18,6 +19,7 @@ from xicam.plugins.operationplugin import (
     visible,
     ValidationError,
     operation,
+    apply_signature
 )
 
 
@@ -510,6 +512,19 @@ def test_multiple_instances(square_op, sum_op):
     wf.add_link(square, my_sum, "square", "a")  # 3**3
     wf.add_link(square2, my_sum, "square", "b") # 2**2
     assert wf.execute_synchronous(executor=executor) == [{"sum": 13}]
+
+
+def test_quick_wrap():
+    def some_external_function(a:int=1, b:bool=False):
+        return 2, True
+
+    @operation
+    @apply_signature(some_external_function)
+    def wrapped_external_function(*args, **kwargs):
+        return some_external_function(*args, **kwargs)
+
+    assert 'a' in inspect.signature(wrapped_external_function._func).parameters
+    assert 'b' in inspect.signature(wrapped_external_function._func).parameters
 
 
 #
