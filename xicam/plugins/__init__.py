@@ -250,31 +250,23 @@ class XicamPluginManager:
     def _load_plugin(self, load_task:PluginTask):
         entrypoint = load_task.entry_point
 
-        # if the entrypoint is queueing to load
-        if load_task.status is Status.LoadingQueue:
-            load_task.status = Status.Loading
+        try:
+            # Load the entrypoint (unless already cached), cache it, and put it on the instantiate queue
+            msg.logMessage(f"Loading entrypoint {entrypoint.name} from module: {entrypoint.module_name}")
+            with load_timer() as elapsed:
+                load_task.plugin_class = entrypoint.load()
+        except (Exception, SystemError) as ex:
+            msg.logMessage(f"Unable to load {entrypoint.name} plugin from module: {entrypoint.module_name}", level=msg.ERROR)
+            msg.logError(ex)
+            msg.notifyMessage(
+                repr(ex), title=f'An error occurred while starting the "{entrypoint.name}" plugin.', level=msg.CRITICAL
+            )
+            load_task.status = Status.FailedLoad
 
-            try:
-                # Load the entrypoint (unless already cached), cache it, and put it on the instantiate queue
-                msg.logMessage(f"Loading entrypoint {entrypoint.name} from module: {entrypoint.module_name}")
-                with load_timer() as elapsed:
-                    load_task.plugin_class = entrypoint.load()
-            except (Exception, SystemError) as ex:
-                msg.logMessage(f"Unable to load {entrypoint.name} plugin from module: {entrypoint.module_name}", level=msg.ERROR)
-                msg.logError(ex)
-                msg.notifyMessage(
-                    repr(ex), title=f'An error occurred while starting the "{entrypoint.name}" plugin.', level=msg.CRITICAL
-                )
-                load_task.status = Status.FailedLoad
-
-            else:
-                msg.logMessage(f"{int(elapsed() * 1000)} ms elapsed while loading {entrypoint.name}", level=msg.INFO)
-                self._instantiate_queue.put(load_task)
-                load_task.status = Status.InstantiateQueue
-
-        # if the entrypoint was already loaded into cache and queued
-        elif load_task.status is Status.InstantiateQueue:
+        else:
+            msg.logMessage(f"{int(elapsed() * 1000)} ms elapsed while loading {entrypoint.name}", level=msg.INFO)
             self._instantiate_queue.put(load_task)
+            load_task.status = Status.InstantiateQueue
 
     def _instantiate_plugin(self, instantiate_task: PluginTask=None):
         """
@@ -398,12 +390,18 @@ class XicamPluginManager:
 
         # Otherwise, prioritize it
         elif match_task:
-            self._load_plugin(match_task)
+            # If its queued to load, load it immediately in the main thread
+            if match_task.status is Status.LoadingQueue:
+                self._load_plugin(match_task)
 
+            # If its queued to instantiate, instantiate it next
+            if match_task.status is Status.InstantiateQueue:
+                self._instantiate_queue.put(match_task)
+
+            # If the instantiate event chain isn't running, run it now
             if not self.instantiating:
                 threads.invoke_as_event(self._instantiate_plugin)
                 self.instantiating = True
-
 
         # Or, if there was no match
         else:
