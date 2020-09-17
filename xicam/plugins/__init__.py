@@ -77,7 +77,7 @@ class PluginTask:
     name: str
     entry_point: entrypoints.EntryPoint = field(compare=False)
     plugin_class: Type = field(default=None, compare=False)
-    status: Status = field(default=Status.Loading, compare=False)
+    status: Status = field(default=Status.LoadingQueue, compare=False)
 
 
 class XicamPluginManager:
@@ -160,6 +160,7 @@ class XicamPluginManager:
         live_entry_point = LiveEntryPoint(plugin_name, plugin_class)
         task = PluginTask(type_name, plugin_name, live_entry_point, plugin_class)
         if task not in self._tasks:
+            task.status = Status.LoadingQueue
             self._load_queue.put(task)
             self._tasks.append(task)
         else:
@@ -249,12 +250,6 @@ class XicamPluginManager:
     def _load_plugin(self, load_task:PluginTask):
         entrypoint = load_task.entry_point
 
-        # if the entrypoint was already loaded into cache and queued, do nothing
-        if load_task.plugin_class is not None:
-            return
-        else:
-            load_task.status = Status.Loading
-
         try:
             # Load the entrypoint (unless already cached), cache it, and put it on the instantiate queue
             msg.logMessage(f"Loading entrypoint {entrypoint.name} from module: {entrypoint.module_name}")
@@ -273,14 +268,19 @@ class XicamPluginManager:
             self._instantiate_queue.put(load_task)
             load_task.status = Status.InstantiateQueue
 
-    def _instantiate_plugin(self, instantiate_task: PluginTask=None):
+    def _instantiate_plugin(self, instantiate_task_request: PluginTask=None):
         """
         Instantiate a single plugin by request or from the queue. This is typically invoked by an event, and will re-post
         an event to the event queue to repeat until the task queue is emptied.
         """
+        instantiate_task = None
 
-        if instantiate_task or not self._instantiate_queue.empty():
-            instantiate_task = instantiate_task or self._instantiate_queue.get()
+        if instantiate_task_request or not self._instantiate_queue.empty():
+            if instantiate_task_request:
+                instantiate_task = instantiate_task_request
+            else:
+                instantiate_task = self._instantiate_queue.get()
+
             entrypoint = instantiate_task.entry_point
             type_name = instantiate_task.type_name
             plugin_class = instantiate_task.plugin_class
@@ -321,7 +321,8 @@ class XicamPluginManager:
                 msg.showProgress(self._progress_count(), maxval=self._task_count())
 
             # mark it as completed
-            self._instantiate_queue.task_done()
+            if instantiate_task_request is None:
+                self._instantiate_queue.task_done()
             instantiate_task.status = Status.Success
 
         # If this was the last plugin
@@ -332,7 +333,7 @@ class XicamPluginManager:
             self.instantiating = False
             self._tasks.clear()
 
-        else:  # if we haven't reached the last task, but there's nothing queued
+        elif instantiate_task_request is None:  # if we haven't reached the last task, but there's nothing queued
             threads.invoke_as_event(self._instantiate_plugin)  # return to the event loop, but come back soon
 
     def _get_plugin_by_name(self, name, type_name):
@@ -395,12 +396,18 @@ class XicamPluginManager:
 
         # Otherwise, prioritize it
         elif match_task:
-            self._load_plugin(match_task)
+            # If its queued to load, load it immediately in the main thread
+            if match_task.status is Status.LoadingQueue:
+                self._load_plugin(match_task)
 
+            # If its queued to instantiate, instantiate it immediately
+            if match_task.status is Status.InstantiateQueue:
+                self._instantiate_plugin(match_task)
+
+            # If the instantiate event chain isn't running, run it now
             if not self.instantiating:
                 threads.invoke_as_event(self._instantiate_plugin)
                 self.instantiating = True
-
 
         # Or, if there was no match
         else:
