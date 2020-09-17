@@ -77,7 +77,7 @@ class PluginTask:
     name: str
     entry_point: entrypoints.EntryPoint = field(compare=False)
     plugin_class: Type = field(default=None, compare=False)
-    status: Status = field(default=Status.Loading, compare=False)
+    status: Status = field(default=Status.LoadingQueue, compare=False)
 
 
 class XicamPluginManager:
@@ -160,6 +160,7 @@ class XicamPluginManager:
         live_entry_point = LiveEntryPoint(plugin_name, plugin_class)
         task = PluginTask(type_name, plugin_name, live_entry_point, plugin_class)
         if task not in self._tasks:
+            task.status = Status.LoadingQueue
             self._load_queue.put(task)
             self._tasks.append(task)
         else:
@@ -249,32 +250,31 @@ class XicamPluginManager:
     def _load_plugin(self, load_task:PluginTask):
         entrypoint = load_task.entry_point
 
-        # if the entrypoint was already loaded into cache and queued, do nothing
-        if load_task.plugin_class is not None:
-            return
-        else:
+        # if the entrypoint is queueing to load
+        if load_task.status is Status.LoadingQueue:
             load_task.status = Status.Loading
 
-        try:
-            # Load the entrypoint (unless already cached), cache it, and put it on the instantiate queue
-            msg.logMessage(f"Loading entrypoint {entrypoint.name} from module: {entrypoint.module_name}")
-            with load_timer() as elapsed:
-                load_task.plugin_class = entrypoint.load()
-        except (Exception, SystemError) as ex:
-            msg.logMessage(f"Unable to load {entrypoint.name} plugin from module: {entrypoint.module_name}", level=msg.ERROR)
-            msg.logError(ex)
-            msg.notifyMessage(
-                repr(ex), title=f'An error occurred while starting the "{entrypoint.name}" plugin.', level=msg.CRITICAL
-            )
-            load_task.status = Status.FailedLoad
+            try:
+                # Load the entrypoint (unless already cached), cache it, and put it on the instantiate queue
+                msg.logMessage(f"Loading entrypoint {entrypoint.name} from module: {entrypoint.module_name}")
+                with load_timer() as elapsed:
+                    load_task.plugin_class = entrypoint.load()
+            except (Exception, SystemError) as ex:
+                msg.logMessage(f"Unable to load {entrypoint.name} plugin from module: {entrypoint.module_name}", level=msg.ERROR)
+                msg.logError(ex)
+                msg.notifyMessage(
+                    repr(ex), title=f'An error occurred while starting the "{entrypoint.name}" plugin.', level=msg.CRITICAL
+                )
+                load_task.status = Status.FailedLoad
 
-        else:
-            msg.logMessage(f"{int(elapsed() * 1000)} ms elapsed while loading {entrypoint.name}", level=msg.INFO)
+            else:
+                msg.logMessage(f"{int(elapsed() * 1000)} ms elapsed while loading {entrypoint.name}", level=msg.INFO)
+                self._instantiate_queue.put(load_task)
+                load_task.status = Status.InstantiateQueue
 
-        # If nothing went wrong, put it at the front of the instantiate stack
-        if load_task.status in [Status.InstantiateQueue, Status.Loading]:
+        # if the entrypoint was already loaded into cache and queued
+        elif load_task.status is Status.InstantiateQueue:
             self._instantiate_queue.put(load_task)
-            load_task.status = Status.InstantiateQueue
 
     def _instantiate_plugin(self, instantiate_task: PluginTask=None):
         """
