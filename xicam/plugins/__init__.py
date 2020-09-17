@@ -268,14 +268,19 @@ class XicamPluginManager:
             self._instantiate_queue.put(load_task)
             load_task.status = Status.InstantiateQueue
 
-    def _instantiate_plugin(self, instantiate_task: PluginTask=None):
+    def _instantiate_plugin(self, instantiate_task_request: PluginTask=None):
         """
         Instantiate a single plugin by request or from the queue. This is typically invoked by an event, and will re-post
         an event to the event queue to repeat until the task queue is emptied.
         """
+        instantiate_task = None
 
-        if instantiate_task or not self._instantiate_queue.empty():
-            instantiate_task = instantiate_task or self._instantiate_queue.get()
+        if instantiate_task_request or not self._instantiate_queue.empty():
+            if instantiate_task_request:
+                instantiate_task = instantiate_task_request
+            else:
+                instantiate_task = self._instantiate_queue.get()
+
             entrypoint = instantiate_task.entry_point
             type_name = instantiate_task.type_name
             plugin_class = instantiate_task.plugin_class
@@ -316,7 +321,8 @@ class XicamPluginManager:
                 msg.showProgress(self._progress_count(), maxval=self._task_count())
 
             # mark it as completed
-            self._instantiate_queue.task_done()
+            if instantiate_task_request is None:
+                self._instantiate_queue.task_done()
             instantiate_task.status = Status.Success
 
         # If this was the last plugin
@@ -327,7 +333,7 @@ class XicamPluginManager:
             self.instantiating = False
             self._tasks.clear()
 
-        else:  # if we haven't reached the last task, but there's nothing queued
+        elif instantiate_task_request is None:  # if we haven't reached the last task, but there's nothing queued
             threads.invoke_as_event(self._instantiate_plugin)  # return to the event loop, but come back soon
 
     def _get_plugin_by_name(self, name, type_name):
@@ -394,9 +400,9 @@ class XicamPluginManager:
             if match_task.status is Status.LoadingQueue:
                 self._load_plugin(match_task)
 
-            # If its queued to instantiate, instantiate it next
+            # If its queued to instantiate, instantiate it immediately
             if match_task.status is Status.InstantiateQueue:
-                self._instantiate_queue.put(match_task)
+                self._instantiate_plugin(match_task)
 
             # If the instantiate event chain isn't running, run it now
             if not self.instantiating:
