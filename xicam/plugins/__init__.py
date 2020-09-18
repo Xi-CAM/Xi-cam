@@ -19,6 +19,8 @@ from .dataresourceplugin import DataResourcePlugin
 from .controllerplugin import ControllerPlugin
 from .widgetplugin import QWidgetPlugin
 from .plugin import PluginType
+# TODO : rename (since IntentCanvas is now a PluginType within Xi-CAM)
+from .intentcanvasplugin import IntentCanvasPlugin
 
 try:
     # try to find the venvs entrypoint

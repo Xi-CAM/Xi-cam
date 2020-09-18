@@ -126,6 +126,7 @@ setup(
             'OperationPlugin = xicam.plugins.operationplugin:OperationPlugin',
             "SettingsPlugin = xicam.plugins.settingsplugin:SettingsPlugin",
             "QWidgetPlugin = xicam.plugins.widgetplugin:QWidgetPlugin",
+            "IntentCanvasPlugin = xicam.plugins.intentcanvasplugin:IntentCanvasPlugin",
         ],
         "xicam.plugins.SettingsPlugin": [
             "logging = xicam.gui.settings.logging:LoggingSettingsPlugin",
@@ -145,7 +146,10 @@ setup(
             "low_band_pass = xicam.core.operations:low_band_pass",
             "inverse_fourier_transform = xicam.core.operations:inverse_fourier_transform",
             "absolute_square = xicam.core.operations:absolute_square"
-        ]
+        ],
+        "xicam.plugins.IntentCanvasPlugin": [
+            "plot_canvas = xicam.gui.canvases:plot_canvas",
+        ],
     },
     ext_modules=[],
     include_package_data=True,

@@ -1,30 +1,40 @@
-from abc import ABC
+from abc import ABC, abstractmethod
 from pyqtgraph import ImageView, PlotWidget
+from matplotlib import pyplot as plt
 
 
-# View should destroy / disown canvases when they have no Intents.
-# widget.setParent(None)
+# IntentCanvas -> SingleIntentCanvas -> ImageIntentCanvas
+#              -> MultipleIntentCanvas -> PlotItentCanvas
+
+# IntentCanvas.serialize() -> raise NIE
+# IntentCanvas.deserialize() -> raise NIE
+# not implemented for most derived classes
 
 
-# CanvasView's model is the proxyModel (attached to tree source model)
-# CanvasView manages canvases
-# Canvases it will display are the top 4 in the proxy model (e.g)
-# Using selected layout, puts canvas widgets into layout
-# needs bookkeeping for the canvas widgets (if layout changes)
+# How do we be friendly to Jupyter land?
+# Use a manager object that sits above Xi-cam land and Generic land
+# manager object has a standardized interface for dispatching intents to canvases
+# Xi-cam: ProxyModel
+# JupyterLand: whatever implements that interface
 
 
-class IntentCanvas(ABC):
-    def __init__(self):
-        self._intents = []
+# # TODO: fix TypeError: metaclass conflict: the metaclass of a derived class must be a (non-strict) subclass of the metaclasses of all its bases
+# # class IntentCanvas(ABC):
+# class IntentCanvas(PluginType):
+#     def __init__(self):
+#         pass
+#     #     # self._intents = []
+#
+#     # @abstractmethod
+#     def render(self, intent):
+#         pass
+#
+#     # @abstractmethod
+#     def unrender(self, intent):
+#         pass
 
-    def render(self, intent):
-        raise NotImplementedError
 
-    def unrender(self, intent):
-        raise NotImplementedError
-
-
-class ImageIntentCanvas(ImageView, IntentCanvas):
+class ImageIntentCanvas(ImageView):
     def __init__(self, *args, **kwargs):
         super(ImageIntentCanvas, self).__init__(*args, **kwargs)
 
@@ -35,22 +45,39 @@ class ImageIntentCanvas(ImageView, IntentCanvas):
         pass
 
 
-class PlotIntentCanvas(PlotWidget, IntentCanvas):
+class PlotIntentCanvas(PlotWidget):
     def __init__(self, *args, **kwargs):
         super(PlotIntentCanvas, self).__init__(*args, **kwargs)
 
-    def render(self, intent):
+    def render(self, intent):#):
         return self.plot(x=intent.x.compute(), y=intent.y.compute())
+
+    def unrender(self, intent):
+        ...
+
+
+class MatplotlibImageCanvas(ImageIntentCanvas):
+    def render(self, intent):
+        return plt.imshow(intent.image)
 
     def unrender(self, intent):
         pass
 
 
+plot_canvas = PlotIntentCanvas
+
+
 if __name__ == "__main__":
+    import numpy as np
     from qtpy.QtWidgets import QApplication
+    from xicam.core.intents import ImageIntent, PlotIntent
+
     app = QApplication([])
-    ih = ImageIntentCanvas()
-    ph = PlotIntentCanvas()
-    print(ih._intents)
-    print(ph._intents)
+
+    widget = QWidget()
+    canvas = MatplotlibImageCanvas()
+    img = np.random.random(size=(100, 100))
+    intent = ImageIntent(image=img)
+    canvas.render()
+
     app.exec()

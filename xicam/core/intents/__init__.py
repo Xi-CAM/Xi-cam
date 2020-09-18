@@ -1,24 +1,18 @@
-from xarray import Dataset
+from typing import Union
+import numpy as np
+import xarray
+import dask.array
 
 
 class Intent:
-    def __init__(self, name="", category=""):
+    def __init__(self, name=""):
         self._name = name
-        # self._category = category
+        self.match_key = None
 
     @property
     def name(self):
         return self._name
 
-    # # TODO : WIP (this is not part of an intent inherently yet, just testing)
-    # @property
-    # def category(self):
-    #     return self._category
-
-
-# class MatplotlibImageCanvas(ImageIntentCanvas):
-#     def render(self, ...):
-#         matplotlib.imshow(...)
 
 
 class ImageIntent(Intent):
@@ -30,13 +24,22 @@ class ImageIntent(Intent):
 
 
 class PlotIntent(Intent):
-    canvas = {"qt": "plot_canvas"}
+    # canvas = {"qt": "plot_canvas"}
+    canvas = "plot_canvas"
 
-    def __init__(self, x: Dataset, y: Dataset, *args, **kwargs):
+    def __init__(self, x: Union[np.ndarray, xarray.Dataset, dask.array.array],
+                 y: Union[np.ndarray, xarray.Dataset, dask.array.array],
+                 *args,
+                 labels=None,
+                 **kwargs):
         super(PlotIntent, self).__init__(*args, **kwargs)
+        self.labels = labels
         self.x = x
         self.y = y
+        self.match_key = hash(frozenset(self.labels.items()))
 
     @property
     def name(self):
-        return self.x.name + ", " + self.y.name
+        y_name = self.labels.get("left", "")
+        x_name = self.labels.get("bottom", "")
+        return x_name + ", " + y_name
