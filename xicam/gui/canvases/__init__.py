@@ -32,28 +32,46 @@ from matplotlib import pyplot as plt
 #     # @abstractmethod
 #     def unrender(self, intent):
 #         pass
+from xicam.plugins.intentcanvasplugin import IntentCanvas
 
 
-class ImageIntentCanvas(ImageView):
+class XicamIntentCanvas(IntentCanvas):
+    def __init__(self):
+        self.intent_to_item = {}
+
+
+class ImageIntentCanvas(ImageView, XicamIntentCanvas):
     def __init__(self, *args, **kwargs):
         super(ImageIntentCanvas, self).__init__(*args, **kwargs)
 
     def render(self, intent):
+        # TODO: add rendering logic for ROI intents
         return self.setImage(intent.image)
 
-    def unrender(self, intent):
-        pass
+    def unrender(self, intent) -> bool:
+        ...
 
 
-class PlotIntentCanvas(PlotWidget):
+class PlotIntentCanvas(PlotWidget, XicamIntentCanvas):
     def __init__(self, *args, **kwargs):
         super(PlotIntentCanvas, self).__init__(*args, **kwargs)
 
-    def render(self, intent):#):
-        return self.plot(x=intent.x.compute(), y=intent.y.compute())
+    def render(self, intent):
+        plot_item = self.plot(x=intent.x.compute(), y=intent.y.compute())
+        self.intent_to_item[intent] = plot_item
+        return plot_item
 
-    def unrender(self, intent):
-        ...
+    def unrender(self, intent) -> bool:
+        """Un-render the intent from the canvas and return if the canvas can be removed."""
+        if intent in self.intent_to_item:
+            item = self.intent_to_item[intent]
+            self.plotItem.removeItem(item)
+            del self.intent_to_item[intent]
+        if len(self.intent_to_item.items()) == 0:
+            return True
+        return False
+
+
 
 
 class MatplotlibImageCanvas(ImageIntentCanvas):

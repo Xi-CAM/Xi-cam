@@ -14,6 +14,7 @@ class TreeItem(object):
         self.itemData = {}
         self.childItems = []
         self.checked_state = 0
+        # TODO: refactor to not store checked_state (it can be stored in itemData)
 
     def appendChild(self, item):
         self.childItems.append(item)
@@ -72,7 +73,7 @@ class TreeModel(QAbstractItemModel):
 
         self._invisibleRootItem = TreeItem()
         self.rootItem = TreeItem(self._invisibleRootItem)
-        self.rootItem.setData("Tree thing", Qt.DisplayRole)
+        self.rootItem.setData("Tree Model", Qt.DisplayRole)
         self._invisibleRootItem.appendChild(self.rootItem)
 
     def invisibleRootItem(self):
@@ -88,17 +89,16 @@ class TreeModel(QAbstractItemModel):
         if not index.isValid():
             return None
 
-        item = index.internalPointer()
-
-        if role == Qt.CheckStateRole:
-            return item.checkState()
-
-        # if role != Qt.DisplayRole:
-        #     return None
-
         item = self.getItem(index)
 
-        # return item.data(index.column())
+        if role == Qt.CheckStateRole:
+            # checkstate = item.itemData.get(Qt.CheckStateRole)
+            # if checkstate is None:
+            #     item.itemData[Qt.CheckStateRole] = 0
+            # return checkstate
+
+            return item.checkState()
+
         return item.itemData.get(role)
 
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
@@ -188,6 +188,9 @@ class TreeModel(QAbstractItemModel):
             parent = parent.parent()
 
     def setData(self, index: QModelIndex, value: Any, role: Qt.ItemDataRole = Qt.EditRole) -> bool:
+        if not index.isValid():
+            return False
+
         item = self.getItem(index)
 
         if role == Qt.DisplayRole:
@@ -195,14 +198,14 @@ class TreeModel(QAbstractItemModel):
             self.dataChanged.emit(index, index, [role])
             return True
 
-        if role == Qt.CheckStateRole:
+        elif role == Qt.CheckStateRole:
             item_checked = self._determineCheckState(item)
             # Subsequently set all childrens' check states
             self._setItemAndChildrenCheckState(item, item_checked)
             self._setParentItemCheckState(item, item_checked)
 
             highest_parent_index = index.parent()
-            while highest_parent_index.isValid():
+            while highest_parent_index.parent().isValid():
                 highest_parent_index = highest_parent_index.parent()
 
             def find_lowest_index(idx):
@@ -224,11 +227,13 @@ class TreeModel(QAbstractItemModel):
             self.dataChanged.emit(highest_parent_index, lowest_index, [role])
             return True
 
-        if index.isValid() and role == Qt.EditRole:
+        elif role == Qt.EditRole:
             index.internalPointer().itemData[index.column()] = value
             self.dataChanged.emit(index, index, [role])
             return True
-        return False
+
+        else:
+            return False
 
 
 if __name__ == '__main__':
@@ -264,21 +269,21 @@ if __name__ == '__main__':
     proxy = CanvasProxyModel()
     proxy.setSourceModel(model)
 
-    # n_children = 2
-    # n_gchildren = 3
-    # n_ggchildren = 3
-    # for child in range(n_children):
-    #     child_item = TreeItem(model.rootItem)
-    #     child_item.setData(f"{child} child", Qt.DisplayRole)
-    #     for gchild in range(n_gchildren):
-    #         gchild_item = TreeItem(child_item)
-    #         gchild_item.setData(f"{gchild} gchild", Qt.DisplayRole)
-    #         for ggchild in range(n_ggchildren):
-    #             ggchild_item = TreeItem(gchild_item)
-    #             ggchild_item.setData(f"{ggchild} ggchild", Qt.DisplayRole)
-    #             gchild_item.appendChild(ggchild_item)
-    #         child_item.appendChild(gchild_item)
-    #     model.rootItem.appendChild(child_item)
+    n_children = 2
+    n_gchildren = 3
+    n_ggchildren = 3
+    for child in range(n_children):
+        child_item = TreeItem(model.rootItem)
+        child_item.setData(f"{child} child", Qt.DisplayRole)
+        for gchild in range(n_gchildren):
+            gchild_item = TreeItem(child_item)
+            gchild_item.setData(f"{gchild} gchild", Qt.DisplayRole)
+            for ggchild in range(n_ggchildren):
+                ggchild_item = TreeItem(gchild_item)
+                ggchild_item.setData(f"{ggchild} ggchild", Qt.DisplayRole)
+                gchild_item.appendChild(ggchild_item)
+            child_item.appendChild(gchild_item)
+        model.rootItem.appendChild(child_item)
 
     view = QTreeView()
     view.setModel(model)

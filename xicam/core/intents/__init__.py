@@ -29,8 +29,8 @@ class PlotIntent(Intent):
 
     def __init__(self, x: Union[np.ndarray, xarray.Dataset, dask.array.array],
                  y: Union[np.ndarray, xarray.Dataset, dask.array.array],
+                 labels,
                  *args,
-                 labels=None,
                  **kwargs):
         super(PlotIntent, self).__init__(*args, **kwargs)
         self.labels = labels
