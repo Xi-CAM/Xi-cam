@@ -742,30 +742,34 @@ class XArrayView(ImageView):
         self.axesItem.setLabel('bottom', img.dims[-1])
 
     def updateImage(self, autoHistogramRange=True):
-        ## Redraw image on screen
-        if self.image is None:
-            return
+        if hasattr(self.image, 'dims'):
+            ## Redraw image on screen
+            if self.image is None:
+                return
 
-        image = self.getProcessedImage()
+            image = self.getProcessedImage()
 
-        if autoHistogramRange:
-            self.ui.histogram.setHistogramRange(self.levelMin, self.levelMax)
+            if autoHistogramRange:
+                self.ui.histogram.setHistogramRange(self.levelMin, self.levelMax)
 
-        # Transpose image into order expected by ImageItem
-        if self.imageItem.axisOrder == 'col-major':
-            axorder = ['t', 'x', 'y', 'c']
+            # Transpose image into order expected by ImageItem
+            if self.imageItem.axisOrder == 'col-major':
+                axorder = ['t', 'x', 'y', 'c']
+            else:
+                axorder = ['t', 'y', 'x', 'c']
+            axorder = [self.axes[ax] for ax in axorder if self.axes[ax] is not None]
+            ax_swap = [image.dims[ax_index] for ax_index in axorder]
+            image = image.transpose(*ax_swap)
+
+            # Select time index
+            if self.axes['t'] is not None:
+                self.ui.roiPlot.show()
+                image = image[self.currentIndex]
+
+            self.imageItem.updateImage(np.asarray(image))
+
         else:
-            axorder = ['t', 'y', 'x', 'c']
-        axorder = [self.axes[ax] for ax in axorder if self.axes[ax] is not None]
-        ax_swap = [image.dims[ax_index] for ax_index in axorder]
-        image = image.transpose(*ax_swap)
-
-        # Select time index
-        if self.axes['t'] is not None:
-            self.ui.roiPlot.show()
-            image = image[self.currentIndex]
-
-        self.imageItem.updateImage(np.asarray(image))
+            super(XArrayView, self).updateImage(autoHistogramRange)
 
     def quickMinMax(self, data):
         """
