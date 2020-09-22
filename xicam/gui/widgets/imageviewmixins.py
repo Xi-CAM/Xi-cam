@@ -14,7 +14,7 @@ from xicam.core import msg
 from xicam.core.data import MetaXArray
 from xicam.core.data.bluesky_utils import fields_from_stream, streams_from_run, is_image_field
 from xicam.gui.widgets.elidedlabel import ElidedLabel
-from xicam.gui.widgets.ROI import BetterPolyLineROI
+from xicam.gui.widgets.ROI import BetterPolyLineROI, BetterCrosshairROI
 import enum
 from typing import Callable
 from functools import partial
@@ -61,12 +61,12 @@ class BetterTicks(ImageView):
         # Make ticks span the whole Y range (good for plots)
         self.frameTicks.setYRange([0, 1])
 
-    def setImage(self, img, autoRange=True, autoLevels=True, levels=None, axes=None, xvals=None, pos=None, scale=None, transform=None, autoHistogramRange=True, levelMode=None):
+    def setImage(self, img, **kwargs):
         # Only show ticks if they don't drown out everything else
         if img is not None:
             self.frameTicks.setVisible(img.shape[0] < 100)
 
-        super(BetterTicks, self).setImage(img, autoRange, autoLevels, levels, axes, xvals, pos, scale, transform, autoHistogramRange, levelMode)
+        super(BetterTicks, self).setImage(img, **kwargs)
 
 
 class BetterPlots(BetterTicks):
@@ -838,35 +838,37 @@ class CatalogView(XArrayView):
         self.sigFieldChanged.emit(field)
 
 
-class DepthPlot(XArrayView):
+class CrosshairROI(ImageView):
+
+    def __init__(self, *args, **kwargs):
+        super(CrosshairROI, self).__init__(*args, **kwargs)
+
+        self.crosshair = BetterCrosshairROI(parent=self.view)
+
+    def setImage(self, *args, reset_crosshair=True, **kwargs):
+        super(CrosshairROI, self).setImage(*args, **kwargs)
+
+        if reset_crosshair:
+            transform = self.imageItem.viewTransform()
+            new_pos = transform.map(self.imageItem.boundingRect().center())
+            self.crosshair.setPos(new_pos)
+            self.crosshair.sigMoved.emit(new_pos)
+
+
+class DepthPlot(XArrayView, CrosshairROI):
     def __init__(self, *args, **kwargs):
         super(DepthPlot, self).__init__()
 
         # self.roi = pg.RectROI((0,0), (1,1))
         # self.region_roi = pg.RectROI((0,0), (1,1))
-        self.region_roi = pg.CrosshairROI((0,0), rotatable=False, resizable=False)
-        self.view.addItem(self.region_roi)
 
-        self.region_roi.sigRegionChanged.connect(self.plotDepth)
+        self.crosshair.sigMoved.connect(self.plotDepth)
         self._plotitem = self.ui.roiPlot.plot()  # type: pg.PlotDataItem
 
     def plotDepth(self):
-        x, y = self.region_roi.pos()
+        x, y = self.crosshair.pos()
         self._plotitem.setData(x=np.asarray(self.image.coords[self.image.dims[0]]),
                                y=self.image.sel(**{self.image.dims[2]: x, self.image.dims[1]: y}, method='nearest'))
-
-class ExportButton(BetterLayout):
-    def __init__(self, *args, **kwargs):
-        super(ExportButton, self).__init__(*args, **kwargs)
-
-        # Export button
-        self.exportBtn = QPushButton('Export')
-        sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(1)
-        sizePolicy.setHeightForWidth(self.exportBtn.sizePolicy().hasHeightForWidth())
-        self.ui.right_layout.addWidget(self.exportBtn)
-        self.exportBtn.clicked.connect(self.export)
 
 
 class StreamSelector(CatalogView, BetterLayout):
