@@ -14,9 +14,9 @@ class Intent:
         return self._name
 
 
-
 class ImageIntent(Intent):
-    canvas = {"qt": "image_canvas"}
+    # TODO: register as entrypoint
+    canvas = "image_canvas"
 
     def __init__(self, image, *args, **kwargs):
         super(ImageIntent, self).__init__(*args, **kwargs)
@@ -24,6 +24,7 @@ class ImageIntent(Intent):
 
 
 class PlotIntent(Intent):
+    # TODO: better labeling
     # canvas = {"qt": "plot_canvas"}
     canvas = "plot_canvas"
 

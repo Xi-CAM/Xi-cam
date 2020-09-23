@@ -36,6 +36,7 @@ from xicam.plugins.intentcanvasplugin import IntentCanvas
 
 
 class XicamIntentCanvas(IntentCanvas):
+    """Xi-CAM specific canvas."""
     def __init__(self):
         self.intent_to_item = {}
 
@@ -72,8 +73,6 @@ class PlotIntentCanvas(PlotWidget, XicamIntentCanvas):
         return False
 
 
-
-
 class MatplotlibImageCanvas(ImageIntentCanvas):
     def render(self, intent):
         return plt.imshow(intent.image)
@@ -87,7 +86,7 @@ plot_canvas = PlotIntentCanvas
 
 if __name__ == "__main__":
     import numpy as np
-    from qtpy.QtWidgets import QApplication
+    from qtpy.QtWidgets import QApplication, QWidget
     from xicam.core.intents import ImageIntent, PlotIntent
 
     app = QApplication([])

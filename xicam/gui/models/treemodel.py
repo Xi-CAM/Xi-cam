@@ -236,74 +236,74 @@ class TreeModel(QAbstractItemModel):
             return False
 
 
-if __name__ == '__main__':
-
-    # TODO: do we want canvasmanager's bound to a model or view?
-    # (e.g. CanvasProxyModel, EnsembleModel(TreeModel) vs. ResultsView, ResultsSplitView, ...
-
-    from qtpy.QtWidgets import QApplication, QWidget, QHBoxLayout, QTreeView, QPushButton
-
-    from databroker.in_memory import BlueskyInMemoryCatalog
-    from qtpy.QtWidgets import QApplication, QMainWindow, QSplitter, QListView, QTreeView
-    from xicam.XPCS.ingestors import ingest_nxXPCS
-    from xicam.XPCS.models import Ensemble, EnsembleModel
-    from xicam.XPCS.models import CanvasProxyModel
-
-
-    app = QApplication([])
-    window = QWidget()
-
-    uris = ["/home/ihumphrey/Downloads/B009_Aerogel_1mm_025C_att1_Lq0_001_0001-10000.nxs"]
-    document = list(ingest_nxXPCS(uris))
-    uid = document[0][1]["uid"]
-    catalog = BlueskyInMemoryCatalog()
-    catalog.upsert(document[0][1], document[-1][1], ingest_nxXPCS, [uris], {})
-    cat = catalog[uid]
-
-    # model = TreeModel()
-    source_model = EnsembleModel()
-    ensemble = Ensemble()
-    ensemble.append_catalog(cat)
-    source_model.add_ensemble(ensemble)
-    model = source_model
-    proxy = CanvasProxyModel()
-    proxy.setSourceModel(model)
-
-    n_children = 2
-    n_gchildren = 3
-    n_ggchildren = 3
-    for child in range(n_children):
-        child_item = TreeItem(model.rootItem)
-        child_item.setData(f"{child} child", Qt.DisplayRole)
-        for gchild in range(n_gchildren):
-            gchild_item = TreeItem(child_item)
-            gchild_item.setData(f"{gchild} gchild", Qt.DisplayRole)
-            for ggchild in range(n_ggchildren):
-                ggchild_item = TreeItem(gchild_item)
-                ggchild_item.setData(f"{ggchild} ggchild", Qt.DisplayRole)
-                gchild_item.appendChild(ggchild_item)
-            child_item.appendChild(gchild_item)
-        model.rootItem.appendChild(child_item)
-
-    view = QTreeView()
-    view.setModel(model)
-
-    from xicam.SAXS.widgets.views import ResultsViewThing
-    view2 = ResultsViewThing()
-    view2.setModel(proxy)
-
-    def update(*_):
-        ix = model.index(0, 0, QModelIndex())
-        model.setData(ix, "BLAH", Qt.DisplayRole)
-    button = QPushButton()
-    button.clicked.connect(update)
-    layout = QHBoxLayout()
-    layout.addWidget(view)
-    layout.addWidget(view2)
-    layout.addWidget(button)
-
-    window.setLayout(layout)
-    window.setWindowTitle("Simple Tree Model")
-    window.show()
-
-    app.exec_()
+# if __name__ == '__main__':
+#
+#     # TODO: do we want canvasmanager's bound to a model or view?
+#     # (e.g. CanvasProxyModel, EnsembleModel(TreeModel) vs. ResultsView, ResultsSplitView, ...
+#
+#     from qtpy.QtWidgets import QApplication, QWidget, QHBoxLayout, QTreeView, QPushButton
+#
+#     from databroker.in_memory import BlueskyInMemoryCatalog
+#     from qtpy.QtWidgets import QApplication, QMainWindow, QSplitter, QListView, QTreeView
+#     from xicam.XPCS.ingestors import ingest_nxXPCS
+#     from xicam.XPCS.models import Ensemble, EnsembleModel
+#     from xicam.XPCS.models import CanvasProxyModel
+#
+#
+#     app = QApplication([])
+#     window = QWidget()
+#
+#     uris = ["/home/ihumphrey/Downloads/B009_Aerogel_1mm_025C_att1_Lq0_001_0001-10000.nxs"]
+#     document = list(ingest_nxXPCS(uris))
+#     uid = document[0][1]["uid"]
+#     catalog = BlueskyInMemoryCatalog()
+#     catalog.upsert(document[0][1], document[-1][1], ingest_nxXPCS, [uris], {})
+#     cat = catalog[uid]
+#
+#     # model = TreeModel()
+#     source_model = EnsembleModel()
+#     ensemble = Ensemble()
+#     ensemble.append_catalog(cat)
+#     source_model.add_ensemble(ensemble)
+#     model = source_model
+#     proxy = CanvasProxyModel()
+#     proxy.setSourceModel(model)
+#
+#     n_children = 2
+#     n_gchildren = 3
+#     n_ggchildren = 3
+#     for child in range(n_children):
+#         child_item = TreeItem(model.rootItem)
+#         child_item.setData(f"{child} child", Qt.DisplayRole)
+#         for gchild in range(n_gchildren):
+#             gchild_item = TreeItem(child_item)
+#             gchild_item.setData(f"{gchild} gchild", Qt.DisplayRole)
+#             for ggchild in range(n_ggchildren):
+#                 ggchild_item = TreeItem(gchild_item)
+#                 ggchild_item.setData(f"{ggchild} ggchild", Qt.DisplayRole)
+#                 gchild_item.appendChild(ggchild_item)
+#             child_item.appendChild(gchild_item)
+#         model.rootItem.appendChild(child_item)
+#
+#     view = QTreeView()
+#     view.setModel(model)
+#
+#     from xicam.SAXS.widgets.views import ResultsViewThing
+#     view2 = ResultsViewThing()
+#     view2.setModel(proxy)
+#
+#     def update(*_):
+#         ix = model.index(0, 0, QModelIndex())
+#         model.setData(ix, "BLAH", Qt.DisplayRole)
+#     button = QPushButton()
+#     button.clicked.connect(update)
+#     layout = QHBoxLayout()
+#     layout.addWidget(view)
+#     layout.addWidget(view2)
+#     layout.addWidget(button)
+#
+#     window.setLayout(layout)
+#     window.setWindowTitle("Simple Tree Model")
+#     window.show()
+#
+#     app.exec_()
