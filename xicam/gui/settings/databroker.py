@@ -1,15 +1,19 @@
 from collections import defaultdict
-from pathlib import Path
 
-from databroker import catalog, catalog_search_path, Broker
+from databroker import catalog, Broker
 from qtpy.QtCore import Signal, Qt, QItemSelection
 from qtpy.QtGui import QIcon, QStandardItem, QStandardItemModel
-from qtpy.QtWidgets import QAbstractItemView, QHBoxLayout, QLabel, QLineEdit, QTreeView, QVBoxLayout, QWidget, QFrame
+from qtpy.QtWidgets import QAbstractItemView, QHBoxLayout, QLabel, QTreeView, QVBoxLayout, QWidget, QFrame
 
 from xicam.core import threads
 from xicam.plugins.settingsplugin import SettingsPlugin
 from xicam.gui import static
 
+
+# TODO:
+# - pick a better icon
+# - add first column as representing checked/unchecked as a radio button
+# - use selection model on view to enforce single selection of a broker
 
 class BrokerModel(QStandardItemModel):
     """Qt standard item model that stores Brokers (which are Catalogs in databroker v2) in a tree hierarchy."""
@@ -19,7 +23,7 @@ class BrokerModel(QStandardItemModel):
 
     def __init__(self, *args, **kwargs):
         super(BrokerModel, self).__init__(*args, **kwargs)
-        self.setHorizontalHeaderLabels(["Select a broker for Run Engine"])
+        self.setHorizontalHeaderLabels(["Select a Broker for Run Engine to Use"])
 
     @threads.method()
     def add_catalogs(self):
@@ -43,6 +47,12 @@ class BrokerModel(QStandardItemModel):
 
 
 class BrokerView(QTreeView):
+    """Tree-like view onto a list of Brokers.
+
+    Each parent node is a directory, each child node is a Broker in the parent directory.
+
+    Emits sigCurrentBrokerChanged anytime the current/active broker is changed in the view.
+    """
     sigCurrentBrokerChanged = Signal(Broker)
 
     def __init__(self, parent=None):
@@ -66,9 +76,8 @@ class BrokerView(QTreeView):
 
 
 class DatabrokerSettingsPlugin(SettingsPlugin):
+    """Settings plugin to configure a Broker for internal Xi-CAM RE instance."""
     def __init__(self):
-
-        self.activate_configuration = None
 
         self._model = BrokerModel()
         self._model.add_catalogs()
@@ -102,7 +111,3 @@ class DatabrokerSettingsPlugin(SettingsPlugin):
         icon = QIcon(static.path("icons/z.png"))
         super(DatabrokerSettingsPlugin, self).__init__(icon, name, self._widget)
         self.restore()
-
-    @property
-    def current_configuration(self) -> str:
-        return self._selected_broker.text()
