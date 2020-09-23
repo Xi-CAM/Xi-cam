@@ -69,7 +69,7 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=["PyQt5>=5.9.2",
+    install_requires=["PyQt5>=5.9.2,<=5.15.0",
                       "pathlib",
                       "qtpy",
                       "astropy",
@@ -127,6 +127,8 @@ setup(
             "SettingsPlugin = xicam.plugins.settingsplugin:SettingsPlugin",
             "QWidgetPlugin = xicam.plugins.widgetplugin:QWidgetPlugin",
             "IntentCanvasPlugin = xicam.plugins.intentcanvasplugin:IntentCanvasPlugin",
+            "ingestors = xicam.plugins.ingestorplugin:IngestorPlugin",
+            "sniffers = xicam.plugins.snifferplugin:SnifferPlugin"
         ],
         "xicam.plugins.SettingsPlugin": [
             "logging = xicam.gui.settings.logging:LoggingSettingsPlugin",
