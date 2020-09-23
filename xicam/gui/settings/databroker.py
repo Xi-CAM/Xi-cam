@@ -1,63 +1,68 @@
+from collections import defaultdict
 from pathlib import Path
 
-from databroker import catalog_search_path
+from databroker import catalog, catalog_search_path, Broker
 from qtpy.QtCore import Signal, Qt, QItemSelection
 from qtpy.QtGui import QIcon, QStandardItem, QStandardItemModel
-from qtpy.QtWidgets import QAbstractItemView, QHBoxLayout, QLabel, QLineEdit, QTreeView, QVBoxLayout, QWidget
+from qtpy.QtWidgets import QAbstractItemView, QHBoxLayout, QLabel, QLineEdit, QTreeView, QVBoxLayout, QWidget, QFrame
 
+from xicam.core import threads
 from xicam.plugins.settingsplugin import SettingsPlugin
 from xicam.gui import static
 
-EXTENSIONS = [".yaml", ".yml"]
 
-
-class DatabrokerConfigModel(QStandardItemModel):
+class BrokerModel(QStandardItemModel):
+    """Qt standard item model that stores Brokers (which are Catalogs in databroker v2) in a tree hierarchy."""
     config_file_role = Qt.UserRole + 1
+    catalog_role = Qt.UserRole + 2
+    broker_role = catalog_role
 
     def __init__(self, *args, **kwargs):
-        super(DatabrokerConfigModel, self).__init__(*args, **kwargs)
-        self.setHorizontalHeaderLabels(["Databroker Configuration Files"])
+        super(BrokerModel, self).__init__(*args, **kwargs)
+        self.setHorizontalHeaderLabels(["Select a broker for Run Engine"])
 
-    def add_config_dirs(self, config_dirs):
-        for config_dir in config_dirs:
-            self.add_config_dir(config_dir)
+    @threads.method()
+    def add_catalogs(self):
+        config_file_to_broker = defaultdict(list)
+        catalog_names = list(catalog)
 
-    def add_config_dir(self, config_dir):
-        # Expecting a configuration directory that may contain databroker configuration files
-        config_path = Path(config_dir)
-        config_files = []
-        if config_path.exists():
-            config_path_item = QStandardItem()
-            config_path_item.setData(str(config_path), Qt.DisplayRole)
-            self.appendRow(config_path_item)
-            config_files.extend([str(f) for f in config_path.iterdir() if f.suffix in EXTENSIONS])
+        for name in catalog_names:
+            broker = Broker.named(name)
+            config_file = broker.v2.metadata["catalog_dir"]
+            config_file_to_broker[config_file].append(broker)
 
-            for config_file in config_files:
-                config_file_item = QStandardItem()
-                config_file_item.setData(str(config_file), Qt.DisplayRole)
-                config_file_item.setData(config_file, self.config_file_role)
-                config_path_item.appendRow(config_file_item)
+        for config_file, brokers in config_file_to_broker.items():
+            config_file_item = QStandardItem()
+            config_file_item.setData(config_file, Qt.DisplayRole)
+            self.appendRow(config_file_item)
+            for broker in brokers:
+                broker_item = QStandardItem()
+                broker_item.setData(broker.name, Qt.DisplayRole)
+                broker_item.setData(broker, self.broker_role)
+                config_file_item.appendRow(broker_item)
 
 
-class DatabrokerConfigView(QTreeView):
-    sigConfigurationChanged = Signal(str)
+class BrokerView(QTreeView):
+    sigCurrentBrokerChanged = Signal(Broker)
 
     def __init__(self, parent=None):
-        super(DatabrokerConfigView, self).__init__(parent)
+        super(BrokerView, self).__init__(parent)
         self.setSelectionBehavior(QAbstractItemView.SelectRows)
         # self.setSelectionMode(QAbstractItemView.SingleSelection)
         self.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self._current_broker = None
 
     def selectionChanged(self, selected: QItemSelection, deselected: QItemSelection):
         selected_indexes = selected.indexes()
         if not selected_indexes:
             return
-        data = selected_indexes[0].data(DatabrokerConfigModel.config_file_role)
-        if data:
+        data = selected_indexes[0].data(BrokerModel.broker_role)
+        if data and data != self._current_broker:
             print(data)
-            self.sigConfigurationChanged.emit(data)
+            self._current_broker = data
+            self.sigCurrentBrokerChanged.emit(data)
 
-        super(DatabrokerConfigView, self).selectionChanged(selected, deselected)
+        super(BrokerView, self).selectionChanged(selected, deselected)
 
 
 class DatabrokerSettingsPlugin(SettingsPlugin):
@@ -65,43 +70,39 @@ class DatabrokerSettingsPlugin(SettingsPlugin):
 
         self.activate_configuration = None
 
-        # Grab all the databroker config (YAML) files
-        self._model = DatabrokerConfigModel()
-        self._model.add_config_dirs(catalog_search_path())
+        self._model = BrokerModel()
+        self._model.add_catalogs()
 
-        # self._selectionModel = QItemSelectionModel(self._model)
-
-        self._view = DatabrokerConfigView()
+        self._view = BrokerView()
         self._view.setModel(self._model)
-        # self._view.setSelectionModel(self._selectionModel)
-        self._view.expandAll()
 
-        self._current_configuration = QLineEdit("(None)")
-        self._current_configuration.setReadOnly(True)
+        self._selected_broker = QLabel("(None)")
+        self._selected_broker.setFrameStyle(QFrame.Box)
 
-        def update_current_configuration_text(config_text):
-            self._current_configuration.setText(config_text)
+        def update_current_configuration_text(broker):
+            self._selected_broker.setText(broker.name)
 
-        self._view.sigConfigurationChanged.connect(update_current_configuration_text)
+        self._view.sigCurrentBrokerChanged.connect(update_current_configuration_text)
 
         layout = QVBoxLayout()
         layout.addWidget(self._view)
 
         inner_layout = QHBoxLayout()
-        label = QLabel("Selected Databroker:")
+        label = QLabel("active broker:")
+        label.setAlignment(Qt.AlignRight)
         inner_layout.addWidget(label)
-        inner_layout.addWidget(self._current_configuration)
+        inner_layout.addWidget(self._selected_broker)
 
         layout.addLayout(inner_layout)
 
         self._widget = QWidget()
         self._widget.setLayout(layout)
 
-        name = "Databroker Configuration Files"
+        name = "Broker Configuration"
         icon = QIcon(static.path("icons/z.png"))
         super(DatabrokerSettingsPlugin, self).__init__(icon, name, self._widget)
         self.restore()
 
     @property
     def current_configuration(self) -> str:
-        return self._current_configuration.text()
+        return self._selected_broker.text()
