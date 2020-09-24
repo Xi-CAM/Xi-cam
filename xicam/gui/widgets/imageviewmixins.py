@@ -691,55 +691,51 @@ class XArrayView(ImageView):
 
         self.view.invertY(False)
 
-    def setImage(self, img,
-                 autoRange=True,
-                 autoLevels=True,
-                 levels=None,
-                 axes=None,
-                 xvals=None,
-                 pos=None,
-                 scale=None,
-                 transform=None,
-                 autoHistogramRange=True,
-                 levelMode=None):
+    def setImage(self, img, **kwargs):
 
-        if xvals or transform:
-            raise ValueError("")
+        if hasattr(img, 'coords'):
 
-        xvals = img.coords[img.dims[-2]]
-        yvals = img.coords[img.dims[-1]]
-        xmin = float(xvals.min())
-        xmax = float(xvals.max())
-        ymin = float(yvals.min())
-        ymax = float(yvals.max())
+            if 'transform' not in kwargs:
 
-        # Position the image according to coords
-        shape = img.shape
-        a = [(0, shape[-2]), (shape[-1]-1, shape[-2]), (shape[-1]-1, 1), (0, 1)]
+                xvals = img.coords[img.dims[-2]]
+                yvals = img.coords[img.dims[-1]]
+                xmin = float(xvals.min())
+                xmax = float(xvals.max())
+                ymin = float(yvals.min())
+                ymax = float(yvals.max())
 
-        b = [(ymin, xmin), (ymax, xmin), (ymax, xmax), (ymin, xmax)]
+                # Position the image according to coords
+                shape = img.shape
+                a = [(0, shape[-2]), (shape[-1]-1, shape[-2]), (shape[-1]-1, 1), (0, 1)]
 
-        quad1 = QPolygonF()
-        quad2 = QPolygonF()
-        for p, q in zip(a, b):
-            quad1.append(QPointF(*p))
-            quad2.append(QPointF(*q))
+                b = [(ymin, xmin), (ymax, xmin), (ymax, xmax), (ymin, xmax)]
 
-        transform = QTransform()
-        QTransform.quadToQuad(quad1, quad2, transform)
+                quad1 = QPolygonF()
+                quad2 = QPolygonF()
+                for p, q in zip(a, b):
+                    quad1.append(QPointF(*p))
+                    quad2.append(QPointF(*q))
+
+                transform = QTransform()
+                QTransform.quadToQuad(quad1, quad2, transform)
+
+                kwargs['transform'] = transform
+
+            if 'xvals' not in kwargs:
+                kwargs['xvals'] = np.asarray(img.coords[img.dims[0]])
+
+            # Set the timeline axis label from dims
+            self.ui.roiPlot.setLabel('bottom', img.dims[0])
+
+            # Label the image axes
+            self.axesItem.setLabel('left', img.dims[-2])
+            self.axesItem.setLabel('bottom', img.dims[-1])
+
+            # Add a bit more size
+            self.ui.roiPlot.setMinimumSize(QSize(0, 70))
 
         # Bind coords from the xarray to the timeline axis
-        super(XArrayView, self).setImage(img, autoRange, autoLevels, levels, axes, np.asarray(img.coords[img.dims[0]]), pos, scale, transform, autoHistogramRange, levelMode)
-
-        # Set the timeline axis label from dims
-        self.ui.roiPlot.setLabel('bottom', img.dims[0])
-
-        # Add a bit more size
-        self.ui.roiPlot.setMinimumSize(QSize(0, 70))
-
-        # Label the image axes
-        self.axesItem.setLabel('left', img.dims[-2])
-        self.axesItem.setLabel('bottom', img.dims[-1])
+        super(XArrayView, self).setImage(img, **kwargs)
 
     def updateImage(self, autoHistogramRange=True):
         if hasattr(self.image, 'dims'):
@@ -857,6 +853,10 @@ class CrosshairROI(ImageView):
             new_pos = transform.map(self.imageItem.boundingRect().center())
             self.crosshair.setPos(new_pos)
             self.crosshair.sigMoved.emit(new_pos)
+
+        # Must autorange again, since crosshair just moved
+        if kwargs.get('autoRange'):
+            self.autoRange()
 
 
 class DepthPlot(XArrayView, CrosshairROI):
