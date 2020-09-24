@@ -155,6 +155,7 @@ class BetterCrosshairROI(BetterROI):
         self._hline = pg.InfiniteLine((0, 0), angle=0, movable=False, pen=linepen)
 
         super(BetterCrosshairROI, self).__init__(pos, size, parent=parent, **kwargs)
+        parent.addItem(self)
 
         self.sigRegionChanged.connect(self.invalidate)
         self.addTranslateHandle(Point(0, 0))
