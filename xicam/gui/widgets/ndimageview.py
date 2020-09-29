@@ -82,7 +82,6 @@ class NDImageView(QWidget):
         self.setData(self.data, view_dims, slc, reset_crosshairs=False)
 
     def updateSlicing(self, slice):
-        print('newslice:', slice)
         for widget in self.findChildren(SliceablePanel):
             widget.updateSlicing(slice)
 
