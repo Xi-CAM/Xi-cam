@@ -52,6 +52,25 @@ class WorkflowEditor(QSplitter):
                  kwargs_callable: Callable[[], dict] = None,
                  execute_iterative: bool = False,
                  **kwargs):
+        """
+        A Workflow editor that shows each operation in insertion order. This is useful in simplistic workflows, typically
+        when data passes from through a linear sequence. This order may not represent execution order when
+        a workflow is programmatically composed, or when graph-based editing is supported in the future.
+
+        Parameters
+        ----------
+        workflow : Workflow
+            A workflow instance; may be initially empty.
+        operation_filter: Callable[[OperationPlugin], bool]
+            A callable that can be used to filter which operations to show in the "Add Operation" menu
+        kwargs_callable: Callable[[], dict]
+            A callable that gets called when auto-run is triggered. This callable is expected to generate a dict of
+            kwargs that will be passed into the workflow as inputs.
+        execute_iterative: bool
+            Determines if the attached workflow will be executed with `.execute` or `.execute_all`. When `.execute_all`
+            is used, all input args get zipped, and the workflow is executed over each arg tuple.
+
+        """
         super(WorkflowEditor, self).__init__()
         self.workflow = workflow
         self.kwargs = kwargs
