@@ -1,5 +1,5 @@
 from collections import defaultdict
-from qtpy.QtCore import QAbstractListModel, QMimeData, Qt, Signal, QVariant, QModelIndex
+from qtpy.QtCore import QAbstractListModel, QMimeData, Qt, Signal, QModelIndex
 from qtpy.QtGui import QIcon
 from qtpy.QtWidgets import QSplitter, QWidget, QAbstractItemView, QToolBar, QToolButton, QMenu, \
     QVBoxLayout, QListView, QPushButton, QCheckBox, \
@@ -47,10 +47,35 @@ class WorkflowEditor(QSplitter):
     sigWorkflowChanged = Signal()
     sigRunWorkflow = Signal()
 
-    def __init__(self, workflow: Workflow, operation_filter: Callable[[OperationPlugin], bool] = None, **kwargs):
+    def __init__(self, workflow: Workflow,
+                 operation_filter: Callable[[OperationPlugin], bool] = None,
+                 kwargs_callable: Callable[[], dict] = None,
+                 execute_iterative: bool = False,
+                 **kwargs):
+        """
+        A Workflow editor that shows each operation in insertion order. This is useful in simplistic workflows, typically
+        when data passes from through a linear sequence. This order may not represent execution order when
+        a workflow is programmatically composed, or when graph-based editing is supported in the future.
+
+        Parameters
+        ----------
+        workflow : Workflow
+            A workflow instance; may be initially empty.
+        operation_filter: Callable[[OperationPlugin], bool]
+            A callable that can be used to filter which operations to show in the "Add Operation" menu
+        kwargs_callable: Callable[[], dict]
+            A callable that gets called when auto-run is triggered. This callable is expected to generate a dict of
+            kwargs that will be passed into the workflow as inputs.
+        execute_iterative: bool
+            Determines if the attached workflow will be executed with `.execute` or `.execute_all`. When `.execute_all`
+            is used, all input args get zipped, and the workflow is executed over each arg tuple.
+
+        """
         super(WorkflowEditor, self).__init__()
         self.workflow = workflow
         self.kwargs = kwargs
+        self.kwargs_callable = kwargs_callable
+        self.execute_iterative = execute_iterative
         self.setOrientation(Qt.Vertical)
 
         self.operationeditor = WorkflowOperationEditor()
@@ -74,8 +99,13 @@ class WorkflowEditor(QSplitter):
 
     def run_workflow(self, **kwargs):
         mixed_kwargs = self.kwargs.copy()
+        mixed_kwargs.update(self.kwargs_callable(self))
         mixed_kwargs.update(kwargs)
-        self.workflow.execute(**mixed_kwargs)
+
+        if self.execute_iterative:
+            self.workflow.execute_all(**mixed_kwargs)
+        else:
+            self.workflow.execute(**mixed_kwargs)
 
     def setParameters(self, operation: OperationPlugin):
         if operation:
@@ -299,7 +329,7 @@ class WorkflowModel(QAbstractListModel):
     def data(self, index, role):
         operation = self.workflow.operations[index.row()]
         if not index.isValid():
-            return QVariant()
+            return None
         elif role == Qt.CheckStateRole:
             disabled = self.workflow.disabled(operation)
             if disabled:
@@ -309,7 +339,7 @@ class WorkflowModel(QAbstractListModel):
         elif role == Qt.DisplayRole:
             return operation.name
         else:
-            return QVariant()
+            return None
 
     def setData(self, index: QModelIndex, value: Any, role: int = ...) -> bool:
         if role == Qt.CheckStateRole:

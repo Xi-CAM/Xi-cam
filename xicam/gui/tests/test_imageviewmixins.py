@@ -48,4 +48,3 @@ def test_betterlayout(qtbot):
 
     w.show()
     #qtbot.stopForInteraction()
-

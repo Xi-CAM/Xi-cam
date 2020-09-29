@@ -47,31 +47,12 @@ class PreviewWidget(GraphicsLayoutWidget):
         else:
             self.preview_catalog(data)
 
-    @staticmethod
-    def guess_stream_field(catalog: BlueskyRun):
-        # TODO: use some metadata (techniques?) for guidance about how to get a preview
-
-        streams = bluesky_utils.streams_from_run(catalog)
-        if "primary" in streams:
-            streams.remove("primary")
-            streams.insert(0, "primary")
-
-        for stream in streams:
-            descriptor = bluesky_utils.descriptors_from_stream(catalog, stream)[0]
-            fields = bluesky_utils.fields_from_descriptor(descriptor)
-            for field in fields:
-                field_ndims = bluesky_utils.ndims_from_descriptor(descriptor, field)
-                if field_ndims > 1:
-                    return stream, field
-
     def preview_catalog(self, catalog: BlueskyRun):
         threads.invoke_in_main_thread(self.setText, "LOADING...")
         try:
-            stream, field = self.guess_stream_field(catalog)
-            data = getattr(catalog, stream).to_dask()[field].squeeze()
-            for i in range(len(data.shape) - 2):
-                data = data[0]
-            threads.invoke_in_main_thread(self.setImage, np.asarray(data.compute()))
+            stream, field = bluesky_utils.guess_stream_field(catalog)
+            data = bluesky_utils.preview(catalog, stream, field)
+            threads.invoke_in_main_thread(self.setImage, data)
         except Exception as ex:
             msg.logError(ex)
             threads.invoke_in_main_thread(self.imageitem.clear)

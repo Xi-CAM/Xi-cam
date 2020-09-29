@@ -28,7 +28,8 @@ class DynImageView(ImageView):
         ax = np.argmax(data.shape)
         sl = [slice(None)] * data.ndim
         sl[ax] = slice(None, None, max(1, int(data.size // 1e6)))
-        data = data[sl]
+        for axis_sl in sl:
+            data = data[axis_sl]
         return [(
             np.nanpercentile(np.where(data > np.nanmin(data), data, np.nanmax(data)), 2),
             np.nanpercentile(np.where(data < np.nanmax(data), data, np.nanmin(data)), 98),

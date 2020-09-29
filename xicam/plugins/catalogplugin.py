@@ -71,9 +71,12 @@ class CatalogModel(QAbstractItemModel):
         # fetch more RunCatalogs from the datasource
         self._cache.extend(self.catalog[uid] for uid in new_uids)
 
-        self.beginInsertRows(QModelIndex(), self._rowcount, self._rowcount + to_fetch)
+        start = self._rowcount
+        end = self._rowcount + to_fetch
+        self.beginInsertRows(QModelIndex(), start, end)
         self._rowcount += to_fetch  # Tell the model it now has more rows
         self.endInsertRows()
+        self.dataChanged.emit(self.createIndex(start, 0), self.createIndex(end, 0))
 
     # NOTE: the following methods are expected to be called by an external controller
 

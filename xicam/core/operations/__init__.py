@@ -5,14 +5,22 @@ import scipy.misc
 import scipy.fft
 
 
+
+
+#region "Easy"-difficulty wrapping
+# random_array = operation(np.random.random)
+#endregion
+
+# region "Medium"-difficulty wrapping
 @operation
 @output_names("data")
 @display_name("Random Array")
 @categories(("General", "Mathematics"))
 def random_array(rows: int = 10, columns: int = 10) -> np.ndarray:
     return np.random.random((rows, columns))
+# endregion
 
-
+# region More example operations
 @operation
 @output_names("data")
 @display_name("Raccoon Face")
@@ -59,3 +67,4 @@ def absolute_square(spectral_data: np.ndarray) -> np.ndarray:
 @categories(("General", "Mathematics"))
 def inverse_fourier_transform(spectral_data: np.ndarray) -> np.ndarray:
     return scipy.fft.ifft2(spectral_data)
+# endregion
