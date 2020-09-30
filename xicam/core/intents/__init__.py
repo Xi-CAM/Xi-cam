@@ -33,6 +33,10 @@ class PlotIntent(Intent):
                  labels,
                  *args,
                  **kwargs):
+        temp = kwargs.get('temp')
+        if temp:
+            self._temp_name = temp
+            del kwargs['temp']
         super(PlotIntent, self).__init__(*args, **kwargs)
         self.labels = labels
         self.x = x
@@ -41,6 +45,8 @@ class PlotIntent(Intent):
 
     @property
     def name(self):
-        y_name = self.labels.get("left", "")
         x_name = self.labels.get("bottom", "")
+        y_name = self.labels.get("left", "")
+        if self._temp_name:
+            return x_name + " " + self._temp_name + ", " + y_name
         return x_name + ", " + y_name
