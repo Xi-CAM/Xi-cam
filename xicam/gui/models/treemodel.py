@@ -2,14 +2,15 @@ from typing import Any
 from qtpy.QtCore import Qt, QAbstractItemModel, QModelIndex
 
 
-class TreeItem(object):
-    """Qt-agnostic tree item. Follows general API of QStandardItem for compatibility.
+class TreeItem:
+    """Qt-agnostic tree item. Mocks the general API of QStandardItem for compatibility.
 
     Stores check state integer (can be interfaced with the Qt.CheckState enum).
 
     Single column support only (right now).
     """
     def __init__(self, parent=None):
+        # TODO: make itemData private, access only with data() and setData()
         self.parentItem = parent
         self.itemData = {}
         self.childItems = []
@@ -33,6 +34,7 @@ class TreeItem(object):
         return len(self.itemData)
 
     def checkState(self) -> int:
+        # TODO: remove this (can be accessed via self.data or self.itemData)
         return self.checked_state
 
     def data(self, role):
@@ -51,9 +53,14 @@ class TreeItem(object):
         return 0
 
     def setCheckState(self, state: int):
+        # TODO: this can be removed and replaced with setting the itemData...
         self.checked_state = state
 
     def setData(self, value: Any, key: int):
+        """Mimics QStandardItem.setData.
+
+        Internally sets the itemData's key (role) to the passed value.
+        """
         self.itemData[key] = value
         return True
     # def setData(self, column: int, value: Any) -> bool:
@@ -66,26 +73,39 @@ class TreeItem(object):
 class TreeModel(QAbstractItemModel):
     """Qt-based tree model.
 
-    For now, single-column support only
+    For now, single-column support only.
+
+    This tree model is an AbstractItem model that is designed to contain (not QStandardItems).
+    Two important caveats regarding this:
+    1. We cannot defer to super(...).setData(...) in setData, since the parent implementation always returns False
+    2. We must update the generic items' data via a private _setData call, which then emits a dataChanged signal
     """
     def __init__(self, parent=None):
         super(TreeModel, self).__init__(parent)
 
+        # Create a private invisible root item at the top of the tree, with an accessible child rootItem
+        # TODO: i don't think we need the invisibleRootItem or its accessor method
         self._invisibleRootItem = TreeItem()
         self.rootItem = TreeItem(self._invisibleRootItem)
         self.rootItem.setData("Tree Model", Qt.DisplayRole)
         self._invisibleRootItem.appendChild(self.rootItem)
 
     def invisibleRootItem(self):
+        # TODO: this is unused, remove
         return self._invisibleRootItem
 
-    def columnCount(self, parent: QModelIndex) -> int:
-        if parent.isValid():
-            return parent.internalPointer().columnCount()
+    def columnCount(self, index: QModelIndex) -> int:
+        """Returns the number of columns in the given index."""
+        if index.isValid():
+            return index.internalPointer().columnCount()
+        # For an invalid index, return the number of columns defined at the root item of the tree
         else:
             return self.rootItem.columnCount()
 
     def data(self, index: QModelIndex, role=Qt.DisplayRole) -> Any:
+        # TODO: this is probably not necessary; since the checkstate can be set/accessed via the item.itemData dict
+        """Returns the data of the index with the associated role.
+        """
         if not index.isValid():
             return None
 
@@ -102,6 +122,7 @@ class TreeModel(QAbstractItemModel):
         return item.itemData.get(role)
 
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
+        """Re-implement to additionally ensure that this model is checkable."""
         if not index.isValid():
             return Qt.NoItemFlags
 
@@ -109,6 +130,9 @@ class TreeModel(QAbstractItemModel):
         #return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable
 
     def getItem(self, index: QModelIndex) -> TreeItem:
+        """Convenience method to get a TreeItem from a given index.
+
+        Returns the root item if the index passed is not valid."""
         if index.isValid():
             item = index.internalPointer()
             if item:
@@ -117,12 +141,18 @@ class TreeModel(QAbstractItemModel):
         return self.rootItem
 
     def headerData(self, section: int, orientation: Qt.Orientation, role: Qt.ItemDataRole) -> Any:
+        """Define a horizontal header that uses the root item's DisplayRole to populate its data."""
         if orientation == Qt.Horizontal and role == Qt.DisplayRole:
             return self.rootItem.data(section)
 
         return None
 
     def index(self, row: int, column: int, parent: QModelIndex = QModelIndex()) -> QModelIndex:
+        """Re-implement the index method to appropriately handle tree-like models.
+
+        Returns an invalid (default-constructed) index if hasIndex fails,
+        or if the parent index passed does not have any children.
+        """
         if not self.hasIndex(row, column, parent):
             return QModelIndex()
 
@@ -138,6 +168,10 @@ class TreeModel(QAbstractItemModel):
             return QModelIndex()
 
     def parent(self, index: QModelIndex) -> QModelIndex:
+        """Re-implemented to return an invalid index if the index passed's parent is the root item.
+
+        In other words, an index whose parent is the root item does not have a user/view accessible parent.
+        """
         if not index.isValid():
             return QModelIndex()
 
@@ -149,56 +183,85 @@ class TreeModel(QAbstractItemModel):
 
         return self.createIndex(parentItem.row(), 0, parentItem)
 
-    def rowCount(self, parent: QModelIndex) -> int:
-        if parent.column() > 0:
+    def rowCount(self, index: QModelIndex) -> int:
+        """If an invalid index is passed, returns the childCount of the root item;
+        otherwise, returns the index's childCount.
+        """
+
+        # supports only single-column data
+        if index.column() > 0:
             return 0
 
-        if not parent.isValid():
+        if not index.isValid():
             parentItem = self.rootItem
         else:
-            parentItem = parent.internalPointer()
+            parentItem = index.internalPointer()
 
         return parentItem.childCount()
 
     def _determineCheckState(self, item: TreeItem) -> Qt.CheckState:
-        # Return if item should or shouldn't be checked
-        # Unchecked -> Checked
-        # PartiallyChecked -> Checked
-        # Checked -> Unchecked
+        """Return if item should or shouldn't be checked.
+
+        When an item is currently checked, it should become unchecked when interacted with by a user/view.
+        Otherwise, the item should be checked. (children handled in separate methods, see below)
+        """
+
         if item.checkState() == Qt.Checked:
             return Qt.Unchecked
         else:
             return Qt.Checked
 
     def _setItemAndChildrenCheckState(self, item: TreeItem, state: Qt.CheckState):
+        """Set the item's check state and its children (recursively) to the given state."""
         for row in range(item.childCount()):
             self._setItemAndChildrenCheckState(item.child(row), state)
 
         item.setCheckState(state)
 
     def _setParentItemCheckState(self, item: TreeItem, state: Qt.CheckState):
+        """Set the item's ancestors check state to the given state.
+
+        This will handle either setting the ancestors to Checked or PartiallyChecked,
+        depending on the childrens' check states.
+        """
         parent = item.parent()
         sibling_check_states = [parent.child(row).checkState() for row in range(parent.childCount())]
         while parent and parent != self.rootItem:
             if all(check_state == sibling_check_states[0] for check_state in sibling_check_states):
                 parent.setCheckState(state)
             else:
-                parent.setCheckState(Qt.PartiallyChecked)
+                if parent.checkState() != Qt.PartiallyChecked:
+                    parent.setCheckState(Qt.PartiallyChecked)
 
             parent = parent.parent()
 
+    def _setData(self, index, value, role) -> bool:
+        """Internal setData that sets the generic TreeItem's itemData attribute
+        and emits a dataChanged.
+
+        This is used because QAbstractItemModel.setData() always returns False,
+        and we are using generic items (not QStandardItems).
+        """
+
+        item = self.getItem(index)
+        item.itemData[role] = value
+        self.dataChanged.emit(index, index, [role])
+        return True
+
     def setData(self, index: QModelIndex, value: Any, role: Qt.ItemDataRole = Qt.EditRole) -> bool:
+        """Re-implemented to set the associated item's itemData property and emit dataChanged.
+
+        Special case for CheckStateRole handles checking of all children (recursively)
+        and all ancestors to appropriate check states (including PartiallyChecked states).
+
+        Returns True if the data was successfully set.
+        """
         if not index.isValid():
             return False
 
         item = self.getItem(index)
 
-        if role == Qt.DisplayRole:
-            item.itemData[role] = value
-            self.dataChanged.emit(index, index, [role])
-            return True
-
-        elif role == Qt.CheckStateRole:
+        if role == Qt.CheckStateRole:
             item_checked = self._determineCheckState(item)
             # Subsequently set all childrens' check states
             self._setItemAndChildrenCheckState(item, item_checked)
@@ -224,86 +287,10 @@ class TreeModel(QAbstractItemModel):
             lowest_index = find_lowest_index(index)
 
             # self.dataChanged.emit(index, index, [role])
+            print("TreeModel")
+            print(f"\t{highest_parent_index.data()}, {lowest_index.data()}, {role}\n")
             self.dataChanged.emit(highest_parent_index, lowest_index, [role])
             return True
 
-        elif role == Qt.EditRole:
-            index.internalPointer().itemData[index.column()] = value
-            self.dataChanged.emit(index, index, [role])
-            return True
-
         else:
-            return False
-
-
-# if __name__ == '__main__':
-#
-#     # TODO: do we want canvasmanager's bound to a model or view?
-#     # (e.g. CanvasProxyModel, EnsembleModel(TreeModel) vs. ResultsView, ResultsSplitView, ...
-#
-#     from qtpy.QtWidgets import QApplication, QWidget, QHBoxLayout, QTreeView, QPushButton
-#
-#     from databroker.in_memory import BlueskyInMemoryCatalog
-#     from qtpy.QtWidgets import QApplication, QMainWindow, QSplitter, QListView, QTreeView
-#     from xicam.XPCS.ingestors import ingest_nxXPCS
-#     from xicam.XPCS.models import Ensemble, EnsembleModel
-#     from xicam.XPCS.models import CanvasProxyModel
-#
-#
-#     app = QApplication([])
-#     window = QWidget()
-#
-#     uris = ["/home/ihumphrey/Downloads/B009_Aerogel_1mm_025C_att1_Lq0_001_0001-10000.nxs"]
-#     document = list(ingest_nxXPCS(uris))
-#     uid = document[0][1]["uid"]
-#     catalog = BlueskyInMemoryCatalog()
-#     catalog.upsert(document[0][1], document[-1][1], ingest_nxXPCS, [uris], {})
-#     cat = catalog[uid]
-#
-#     # model = TreeModel()
-#     source_model = EnsembleModel()
-#     ensemble = Ensemble()
-#     ensemble.append_catalog(cat)
-#     source_model.add_ensemble(ensemble)
-#     model = source_model
-#     proxy = CanvasProxyModel()
-#     proxy.setSourceModel(model)
-#
-#     n_children = 2
-#     n_gchildren = 3
-#     n_ggchildren = 3
-#     for child in range(n_children):
-#         child_item = TreeItem(model.rootItem)
-#         child_item.setData(f"{child} child", Qt.DisplayRole)
-#         for gchild in range(n_gchildren):
-#             gchild_item = TreeItem(child_item)
-#             gchild_item.setData(f"{gchild} gchild", Qt.DisplayRole)
-#             for ggchild in range(n_ggchildren):
-#                 ggchild_item = TreeItem(gchild_item)
-#                 ggchild_item.setData(f"{ggchild} ggchild", Qt.DisplayRole)
-#                 gchild_item.appendChild(ggchild_item)
-#             child_item.appendChild(gchild_item)
-#         model.rootItem.appendChild(child_item)
-#
-#     view = QTreeView()
-#     view.setModel(model)
-#
-#     from xicam.SAXS.widgets.views import ResultsViewThing
-#     view2 = ResultsViewThing()
-#     view2.setModel(proxy)
-#
-#     def update(*_):
-#         ix = model.index(0, 0, QModelIndex())
-#         model.setData(ix, "BLAH", Qt.DisplayRole)
-#     button = QPushButton()
-#     button.clicked.connect(update)
-#     layout = QHBoxLayout()
-#     layout.addWidget(view)
-#     layout.addWidget(view2)
-#     layout.addWidget(button)
-#
-#     window.setLayout(layout)
-#     window.setWindowTitle("Simple Tree Model")
-#     window.show()
-#
-#     app.exec_()
+            return self._setData(index, value, role)
