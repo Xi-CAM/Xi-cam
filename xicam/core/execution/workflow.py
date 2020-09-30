@@ -266,7 +266,7 @@ class Graph(object):
 
         end_tasks = list(filter(lambda op: not self.disabled(op), set(self.operations) - self._outbound_links.keys()))
 
-        msg.logMessage("End tasks:", *[task.name for task in end_tasks], msg.DEBUG)
+        msg.logMessage("End tasks:", *[task.name for task in end_tasks], level=msg.DEBUG)
         return end_tasks
 
     def _dask_graph(self):
