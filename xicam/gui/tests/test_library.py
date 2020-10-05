@@ -112,5 +112,4 @@ def test_library_view(qtbot, random_data_catalog):
     w.show()
 
     qtbot.addWidget(w)
-    qtbot.stopForInteraction()
-
+    # qtbot.stopForInteraction()
