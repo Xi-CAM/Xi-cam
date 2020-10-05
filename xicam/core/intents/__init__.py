@@ -34,6 +34,7 @@ class PlotIntent(Intent):
                  *args,
                  **kwargs):
         temp = kwargs.get('temp')
+        self._temp_name = None
         if temp:
             self._temp_name = temp
             del kwargs['temp']
@@ -47,6 +48,6 @@ class PlotIntent(Intent):
     def name(self):
         x_name = self.labels.get("bottom", "")
         y_name = self.labels.get("left", "")
-        if self._temp_name:
+        if self._temp_name is not None:
             return x_name + " " + self._temp_name + ", " + y_name
         return x_name + ", " + y_name
