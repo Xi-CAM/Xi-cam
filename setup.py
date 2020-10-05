@@ -150,7 +150,8 @@ setup(
             "absolute_square = xicam.core.operations:absolute_square"
         ],
         "xicam.plugins.IntentCanvasPlugin": [
-            "plot_canvas = xicam.gui.canvases:plot_canvas",
+            "plot_canvas = xicam.gui.canvases:PlotIntentCanvas",
+            "image_canvas = xicam.gui.canvases:ImageIntentCanvas"
         ],
     },
     ext_modules=[],
