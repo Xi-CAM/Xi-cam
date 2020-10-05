@@ -85,9 +85,6 @@ class MatplotlibImageCanvas(ImageIntentCanvas):
         pass
 
 
-plot_canvas = PlotIntentCanvas
-
-
 if __name__ == "__main__":
     import numpy as np
     from qtpy.QtWidgets import QApplication, QWidget
