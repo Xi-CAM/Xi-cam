@@ -64,16 +64,14 @@ class PlotIntentCanvas(PlotWidget, XicamIntentCanvas):
 
     def unrender(self, intent) -> bool:
         """Un-render the intent from the canvas and return if the canvas can be removed."""
-        print(f"ImageCanvas UNRENDER {intent}")
         if intent in self.intent_to_item:
             item = self.intent_to_item[intent]
             self.plotItem.removeItem(item)
-            if intent in self.intent_to_item:
-                print("Removing.")
-                del self.intent_to_item[intent]
-        self.show()
+            del self.intent_to_item[intent]
+
         if len(self.intent_to_item.items()) == 0:
             return True
+
         return False
 
 
