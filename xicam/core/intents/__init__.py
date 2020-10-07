@@ -5,13 +5,18 @@ import dask.array
 
 
 class Intent:
-    def __init__(self, name=""):
-        self._name = name
+    def __init__(self, item_name="", canvas_name=""):
+        self._item_name = item_name
+        self._canvas_name = canvas_name
         self.match_key = None
 
     @property
-    def name(self):
-        return self._name
+    def item_name(self):
+        return self._item_name
+
+    @property
+    def canvas_name(self):
+        return self._canvas_name
 
 
 class ImageIntent(Intent):
@@ -19,6 +24,8 @@ class ImageIntent(Intent):
     canvas = "image_canvas"
 
     def __init__(self, image, *args, **kwargs):
+        if "canvas_name" not in kwargs:
+            kwargs["canvas_name"] = kwargs.get("item_name")
         super(ImageIntent, self).__init__(*args, **kwargs)
         self.image = image
 
@@ -41,9 +48,9 @@ class PlotIntent(Intent):
         self.match_key = hash(frozenset(self.labels.items()))
 
     @property
-    def name(self):
-        if not self._name:
+    def canvas_name(self):
+        if not self._canvas_name:
             x_name = self.labels.get("bottom", "")
             y_name = self.labels.get("left", "")
             return x_name + ", " + y_name
-        return self._name
+        return self._canvas_name
