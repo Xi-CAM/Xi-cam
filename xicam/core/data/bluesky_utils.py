@@ -83,3 +83,17 @@ def preview(catalog: BlueskyRun, stream: str, field: str):
     for i in range(len(data.shape) - 2):
         data = data[0]
     return np.asarray(data.compute())
+
+
+def display_name(catalog: BlueskyRun):
+    name = ""
+
+    if 'sample_name' in catalog.metadata['start']:
+        name += catalog.metadata['start']['sample_name']
+
+    if 'scan_id' in catalog.metadata['start']:
+        name += f"<{catalog.metadata['start']['scan_id']}>"
+
+    name += f"#{catalog.metadata['start']['uid'][:5]}"
+
+    return name
