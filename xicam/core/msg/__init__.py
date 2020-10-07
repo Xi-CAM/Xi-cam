@@ -209,7 +209,7 @@ def notifyMessage(*args, timeout=8000, title="", level: int = INFO):
         threads.invoke_in_main_thread(lambda *_: QTimer.singleShot(timeout, trayicon.hide))
         # trayicon.showMessage(title, ''.join(args), icon, timeout)  # TODO: check if title and message are swapped?
 
-    logMessage(*args)
+    logMessage(*args, level=level)
 
 
 def showMessage(*args, timeout=5, **kwargs):
