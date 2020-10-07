@@ -1,10 +1,12 @@
 import copy
-from xicam.plugins import OperationPlugin
 from typing import Callable, List, Union, Tuple
+from weakref import ref
 from collections import defaultdict, OrderedDict
+import time
+import event_model
+from xicam.plugins import OperationPlugin
 from xicam.core import msg, execution
 from xicam.core.threads import QThreadFuture, QThreadFutureIterator
-from weakref import ref
 
 
 # TODO: add debug flag that checks mutations by hashing inputs
@@ -804,15 +806,25 @@ class Workflow(Graph):
         for observer in self._observers:
             observer()
 
-    @property
-    def hints(self):
-        hints = []
-        for operation in self._operations:
-            hints.extend(operation.hints)
-        return hints
 
-    def visualize(self, canvas, **canvases):
-        canvasinstances = {name: canvas() if callable(canvas) else canvas for name, canvas in canvases.items()}
-        for operation in self._operations:
-            for hint in operation.hints:
-                hint.visualize(canvas)
+def ingest_result_set(workflow:Workflow, result_set):
+    timestamp = time.time()
+    run_bundle = event_model.compose_run()
+    yield "start", run_bundle.start_doc
+
+    end_ops = workflow._end_operations()
+
+    for end_op, result in zip(end_ops, result_set):
+        frame_data_keys = {}
+        for name, value in result.items():
+            frame_data_keys[name] = {"source": 'Xi-cam Workflow',
+                                            "dtype": "number",  # TODO: map dtype and shape
+                                            "shape": value.shape}
+        frame_stream_bundle = run_bundle.compose_descriptor(data_keys=frame_data_keys, name=end_op.name)
+        yield "descriptor", frame_stream_bundle.descriptor_doc
+
+        yield "event", frame_stream_bundle.compose_event(data=result,
+                                                         timestamps={name: timestamp for name in result})
+
+    yield "stop", run_bundle.compose_stop()
+
