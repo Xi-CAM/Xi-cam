@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import numpy as np
 from pyqtgraph import ImageView, PlotWidget
 from matplotlib import pyplot as plt
 
@@ -58,7 +59,7 @@ class PlotIntentCanvas(PlotWidget, XicamIntentCanvas):
         super(PlotIntentCanvas, self).__init__(*args, **kwargs)
 
     def render(self, intent):
-        plot_item = self.plot(x=intent.x.compute(), y=intent.y.compute())
+        plot_item = self.plot(x=np.asarray(intent.x), y=np.asarray(intent.y))
         self.intent_to_item[intent] = plot_item
         return plot_item
 
