@@ -39,10 +39,7 @@ from xicam.plugins.intentcanvasplugin import IntentCanvas
 class XicamIntentCanvas(IntentCanvas):
     """Xi-CAM specific canvas."""
     def __init__(self, *args, **kwargs):
-        name = kwargs.pop('name', None)
-        if not name:
-            name = args[-1]
-        super(XicamIntentCanvas, self).__init__(name)
+        super(XicamIntentCanvas, self).__init__(*args, **kwargs)
         self.intent_to_item = {}
 
 

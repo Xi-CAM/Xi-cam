@@ -2,9 +2,10 @@ from . import PluginType
 
 
 # TODO : ABC inherit
-class IntentCanvas:
+class IntentCanvas(object):
 
-    def __init__(self, name=None):
+    def __init__(self, name=None, *args, **kwargs):
+        super(IntentCanvas, self).__init__(*args, **kwargs)
         self._name = name
 
     def render(self, intent):
