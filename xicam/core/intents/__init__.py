@@ -42,6 +42,8 @@ class PlotIntent(Intent):
 
     @property
     def name(self):
-        x_name = self.labels.get("bottom", "")
-        y_name = self.labels.get("left", "")
-        return x_name + ", " + y_name
+        if not self._name:
+            x_name = self.labels.get("bottom", "")
+            y_name = self.labels.get("left", "")
+            return x_name + ", " + y_name
+        return self._name

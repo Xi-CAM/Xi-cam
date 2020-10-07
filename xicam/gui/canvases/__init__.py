@@ -38,11 +38,15 @@ from xicam.plugins.intentcanvasplugin import IntentCanvas
 
 class XicamIntentCanvas(IntentCanvas):
     """Xi-CAM specific canvas."""
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
+        name = kwargs.pop('name', None)
+        if not name:
+            name = args[-1]
+        super(XicamIntentCanvas, self).__init__(name)
         self.intent_to_item = {}
 
 
-class ImageIntentCanvas(ImageView, XicamIntentCanvas):
+class ImageIntentCanvas(XicamIntentCanvas, ImageView):
     def __init__(self, *args, **kwargs):
         super(ImageIntentCanvas, self).__init__(*args, **kwargs)
 
@@ -54,7 +58,7 @@ class ImageIntentCanvas(ImageView, XicamIntentCanvas):
         ...
 
 
-class PlotIntentCanvas(PlotWidget, XicamIntentCanvas):
+class PlotIntentCanvas(XicamIntentCanvas, PlotWidget):
     def __init__(self, *args, **kwargs):
         super(PlotIntentCanvas, self).__init__(*args, **kwargs)
 

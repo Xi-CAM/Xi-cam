@@ -692,7 +692,7 @@ def intent(intent_type: Type[Intent], name="", output_map={}, *args, **kwargs):
 # TODO: need an image_hint decorator? coplot_hint decorator?
 def image_hint(*args, **kwargs):
     def decorator(func):
-        msg.notifyMessage(f"Operation {func.__module__}.{func.__name__}: "
+        msg.logMessage(f"Operation {func.__module__}.{func.__name__}: "
                           f"@image_hint will be deprecated; use @intent instead", level=msg.WARNING)
         if not hasattr(func, 'hints'):
             func.hints = []
@@ -723,7 +723,7 @@ def plot_hint(*args, **kwargs):
     TODO examples may be helpful in these...
     """
     def decorator(func):
-        msg.notifyMessage(f"Operation {func.__module__}.{func.__name__}: "
+        msg.logMessage(f"Operation {func.__module__}.{func.__name__}: "
                           f"@plot_hint will be deprecated; use @intent instead", level=msg.WARNING)
         if not hasattr(func, 'hints'):
 
