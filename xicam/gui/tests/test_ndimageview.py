@@ -63,8 +63,30 @@ def arpes_data():
     data = project_arpes(catalog)
     return data
 
+def project_nxstxm(catalog):
+    # TODO: single-source
+    ENERGY_FIELD = 'E (eV)'
+    SAMPLE_X_FIELD = 'Sample X (μm)'
+    SAMPLE_Y_FIELD = 'Sample Y (μm)'
 
-def test_NDViewer(arpes_data, qtbot):
+    data = catalog.primary.to_dask()
+    raw_data = data['raw'][0]
+    raw_data = raw_data.assign_coords({name:np.asarray(data[name][0]) for name in [SAMPLE_X_FIELD, SAMPLE_Y_FIELD, ENERGY_FIELD]})
+    return raw_data.transpose('Sample Y (μm)', 'Sample X (μm)', 'E (eV)')
+
+@pytest.fixture
+def ir_stxm_data():
+    plugin_manager.collect_plugins()
+    required_task = next(filter(lambda task: task.name == 'application/x-hdf5', plugin_manager._tasks))
+    plugin_manager._load_plugin(required_task)
+    plugin_manager._instantiate_plugin(required_task)
+    catalog = load_header([
+                              'C:\\Users\\LBL\\PycharmProjects\\merged-repo\\ir_stxm.h5'])
+    data = project_nxstxm(catalog)
+    return data
+
+
+def test_NDViewer(ir_stxm_data, qtbot):
     from xicam.gui.widgets.ndimageview import NDImageView
     from skimage.transform import rescale, resize, downscale_local_mean
 
@@ -72,7 +94,7 @@ def test_NDViewer(arpes_data, qtbot):
     w = NDImageView()
     w.histogram_subsampling_axes = ['E (eV)']
 
-    w.setData(arpes_data)
+    w.setData(ir_stxm_data)
 
     w.show()
     # from qtpy.QtWidgets import QApplication
