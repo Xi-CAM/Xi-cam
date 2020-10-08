@@ -1,10 +1,12 @@
+import itertools
 from functools import partial
+import copy
 from itertools import zip_longest
 from pyqtgraph import ImageView, InfiniteLine, mkPen, ScatterPlotItem, ImageItem, PlotItem, HistogramLUTWidget, \
-    GraphicsView
+    GraphicsView, PlotWidget, MultiPlotWidget
 from qtpy.QtGui import QTransform, QPolygonF
 from qtpy.QtWidgets import QLabel, QErrorMessage, QSizePolicy, QPushButton, QHBoxLayout, QVBoxLayout, QComboBox, \
-    QWidget, QMenu, QAction, QGridLayout
+    QWidget, QMenu, QAction, QGridLayout, QFrame
 from qtpy.QtCore import Qt, Signal, Slot, QSize, QPointF, QRectF, QObjectCleanupHandler
 from xarray import DataArray
 import numpy as np
@@ -44,6 +46,9 @@ class NDImageView(QWidget):
         self.histogram_max_sample_size = 1e6
 
         self.graphics_view = SliceablePanel(parent=self)
+        self.graphics_view.toggleHorizontalSlice(True)
+        self.graphics_view.toggleVerticalSlice(True)
+        self.graphics_view.toggleDepthSlice(True)
         self.lut_widget = HistogramLUTWidget(parent=self)
         self.lut_widget.item.setImageItem(self)
 
@@ -57,7 +62,7 @@ class NDImageView(QWidget):
     def setData(self, data: DataArray, view_dims=None, slc=None, reset_crosshairs=True):
         self.data = data
 
-        full_slc = {dim: 0 for dim in data.dims}
+        full_slc = {dim: (data.coords[dim].max()-data.coords[dim].min())/2 for dim in data.dims}
         if slc:
             full_slc.update(slc)
 
@@ -75,7 +80,7 @@ class NDImageView(QWidget):
         self.sigImageChanged.emit()
 
     def resetCrosshairs(self):
-        for child in self.findChildren(SliceableGraphicsView):
+        for child in self.findChildren(SliceablePanel):
             child.resetCrosshair()
 
     def setPrimary(self, view_dims, slc):
@@ -158,7 +163,7 @@ class SliceablePanel(QWidget):
     sigSlicingChanged = Signal(object)
     sigMakePrimary = Signal(object, object)
 
-    def __init__(self, parent=None):
+    def __init__(self, slice_direction='depth', parent=None):
         super(SliceablePanel, self).__init__(parent=parent)
 
         assert parent
@@ -167,7 +172,8 @@ class SliceablePanel(QWidget):
         self.layout().setContentsMargins(0, 0, 0, 0)
         self.layout().setSpacing(0)
 
-        self.full_view = SliceableGraphicsView()
+        self.slice_direction=slice_direction
+        self.full_view = ViewSelector(slice_direction, parent=self)
         self.right_view = None
         self.top_view = None
         self.corner_view = None
@@ -177,14 +183,21 @@ class SliceablePanel(QWidget):
 
         self.layout().addWidget(self.full_view, 1, 0, 1, 1)
 
-        self.full_view.sigToggleHorizontalSlice.connect(self.toggleHorizontalSlice)
-        self.full_view.sigToggleVerticalSlice.connect(self.toggleVerticalSlice)
-        self.full_view.sigMakePrimary.connect(self.sigMakePrimary)
+        for sig, slot in {'sigToggleVerticalSlice': 'toggleVerticalSlice',
+                          'sigToggleHorizontalSlice': 'toggleHorizontalSlice',
+                          'sigToggleDepthSlice': 'toggleDepthSlice',
+                          'sigMakePrimary': 'sigMakePrimary'}.items():
+            if hasattr(self.full_view, sig):
+                getattr(self.full_view, sig).connect(getattr(self, slot))
 
-        if isinstance(parent, SliceablePanel):
-            self.full_view.image_item.lut = parent.full_view.image_item.lut
-            self.full_view.image_item.levels = parent.full_view.image_item.levels
-            self.sigMakePrimary.connect(parent.sigMakePrimary)
+        # self.full_view.sigToggleHorizontalSlice.connect(self.toggleHorizontalSlice)
+        # self.full_view.sigToggleVerticalSlice.connect(self.toggleVerticalSlice)
+        # self.full_view.sigMakePrimary.connect(self.sigMakePrimary)
+
+        # if isinstance(parent, SliceablePanel):
+        #     self.full_view.image_item.lut = parent.full_view.image_item.lut
+        #     self.full_view.image_item.levels = parent.full_view.image_item.levels
+        #     self.sigMakePrimary.connect(parent.sigMakePrimary)
 
         # Find top-level (NDImageView) widget
         parent = self.parent()
@@ -192,11 +205,17 @@ class SliceablePanel(QWidget):
             parent = parent.parent()
 
         self.sigSlicingChanged.connect(parent.updateSlicing)
-        self.full_view.crosshair.sigMoved.connect(self._sliceChangedByCrosshair)
+        self.full_view.sigCrosshairMoved.connect(self._sliceChangedByCrosshair)
 
     def _sliceChangedByCrosshair(self):
         view_dims = reversed(self.view_dims)
-        slc = {key: value for key, value in zip(view_dims, self.full_view.crosshair.pos())}
+        crosshair = self.full_view.view_widget.crosshair
+        if hasattr(crosshair, 'value'):
+            pos = [crosshair.value()]
+        else:
+            pos = crosshair.pos()
+
+        slc = {key: value for key, value in zip(view_dims, pos)}  # TODO: unify crosshair interface (by passing values through sigs)
         self.sigSlicingChanged.emit(slc)
 
     @property
@@ -210,8 +229,20 @@ class SliceablePanel(QWidget):
 
         self.full_view.setData(self.sliced_data)
 
-        new_crosshair_pos = self.slice[self.view_dims[1]], self.slice[self.view_dims[0]]
-        self.full_view.crosshair.setPos(new_crosshair_pos)
+        self.updateCrosshair(slc)
+
+    def updateCrosshair(self, slc:dict):
+        # update crosshair with the number of dims it wants
+
+        pos = self.slice.copy()
+
+        slc = {dim:slc.get(dim,self.slice[dim]) for dim in self.view_dims}
+
+        # self.full_view.updateCrosshair(*(slc[self.view_dims[i]] for i in reversed(range(self.full_view.supported_ndim))))
+        self.full_view.updateCrosshair(*reversed(list(itertools.islice(slc.values(), self.full_view.supported_ndim))))
+
+        # TODO pass slice dicts into updateCrosshair
+
 
     def setData(self, data: DataArray, view_dims: Tuple[str], slc: Dict):
         self.data = data
@@ -219,7 +250,6 @@ class SliceablePanel(QWidget):
         self.slice = slc
 
         self.full_view.setData(self.sliced_data)
-        self.full_view.crosshair.setPos(slc[view_dims[1]],slc[view_dims[0]])
 
         if self.right_view:
             self.right_view.setData(data, view_dims=self.getViewDims('right'), slc=slc)
@@ -227,10 +257,13 @@ class SliceablePanel(QWidget):
         if self.top_view:
             self.top_view.setData(data, view_dims=self.getViewDims('top'), slc=slc)
 
+        if self.corner_view:
+            self.corner_view.setData(data, view_dims=self.getViewDims('corner'), slc=slc)
+
     def toggleHorizontalSlice(self, enable):
         if enable:
             if not self.right_view:
-                self.right_view = SliceablePanel(parent=self)
+                self.right_view = SliceablePanel(slice_direction='horizontal', parent=self)
                 if self.data is not None:
                     # get the coordinate of the vertical slice
                     # slice = self.full_view.crosshair.pos()[1]
@@ -246,7 +279,7 @@ class SliceablePanel(QWidget):
     def toggleVerticalSlice(self, enable):
         if enable:
             if not self.top_view:
-                self.top_view = SliceablePanel(parent=self)
+                self.top_view = SliceablePanel(slice_direction='vertical', parent=self)
                 if self.data is not None:
                     # get the coordinate of the horizontal slice
                     # slice = self.full_view.crosshair.pos()[0]
@@ -259,32 +292,80 @@ class SliceablePanel(QWidget):
         else:
             self.top_view.hide()
 
-    def getViewDims(self, quadrant: str):
-        depth_dim = self.data.dims[max(self.data.dims.index(self.view_dims[1]),self.data.dims.index(self.view_dims[0])) + 1]
+    def toggleDepthSlice(self, enable):
+        if enable:
+            if not self.corner_view:
+                self.corner_view = SliceablePanel(slice_direction='depth', parent=self)
+                if self.data is not None:
+                    self.corner_view.setData(self.data, view_dims=self.getViewDims('corner'), slc=self.slice)
+                self.layout().addWidget(self.corner_view, 0, 1, 1, 1)
+            else:
+                self.corner_view.show()
+        else:
+            self.corner_view.hide()
+
+    def getViewDims(self, quadrant: str) -> Tuple[str, str]:
+        depth_index = max(self.data.dims.index(self.view_dims[1]),self.data.dims.index(self.view_dims[0])) + 1
+
+        view_dims = []
+
         if quadrant == 'right':
-            return self.view_dims[0], depth_dim
+            view_dims.append(self.view_dims[0])
+            if depth_index<len(self.data.dims):
+                view_dims.append(self.data.dims[depth_index])
+
         elif quadrant == 'top':
-            return depth_dim, self.view_dims[1]
+            if depth_index<len(self.data.dims):
+                view_dims.append(self.data.dims[depth_index])
+            view_dims.append(self.view_dims[1])
+
+        elif quadrant == 'corner':
+            # NOTE: Not sure these should be reversed
+            if depth_index+1 < len(self.data.dims):
+                view_dims.append(self.data.dims[depth_index+1])
+            if depth_index<len(self.data.dims):
+                view_dims.append(self.data.dims[depth_index])
+
+        return tuple(view_dims)
+
+    def resetCrosshair(self):
+        self.full_view.resetCrosshair()
 
 
-class SliceableGraphicsView(GraphicsView):
+# Not strictly necessary, but tracks the required members of a view
+class SlicingView():
+    def setData(self):
+        raise NotImplementedError
+
+    def resetCrosshair(self):
+        raise NotImplementedError
+
+
+class SliceableGraphicsView(GraphicsView, SlicingView):
     sigToggleHorizontalSlice = Signal(bool)
     sigToggleVerticalSlice = Signal(bool)
+    sigToggleDepthSlice = Signal(bool)
     sigMakePrimary = Signal(object, object)
+    sigCrosshairMoved = Signal()
 
-    def __init__(self):
-        super(SliceableGraphicsView, self).__init__()
+    SUPPORTED_NDIM = 2
+
+    def __init__(self, slice_direction, parent=None):
+        super(SliceableGraphicsView, self).__init__(parent=parent)
+
+        self.slice_direction = slice_direction
 
         self.setContentsMargins(0, 0, 0, 0)
 
         # Add axes
-        self.view = SliceableAxes()
+        self.view = SliceableAxes(slice_direction)
         self.view.axes["left"]["item"].setZValue(10)
         self.view.axes["top"]["item"].setZValue(10)
         self.setCentralItem(self.view)
-        self.view.sigToggleVerticalSlice.connect(self.sigToggleVerticalSlice)
-        self.view.sigToggleHorizontalSlice.connect(self.sigToggleHorizontalSlice)
-        self.view.sigMakePrimary.connect(self.sigMakePrimary)
+
+        for sig in ['sigToggleVerticalSlice', 'sigToggleHorizontalSlice', 'sigToggleDepthSlice', 'sigMakePrimary']:
+            if hasattr(self.view, sig):
+                getattr(self.view, sig).connect(getattr(self, sig))
 
         # Add imageitem
         self.image_item = ImageItem()
@@ -292,7 +373,16 @@ class SliceableGraphicsView(GraphicsView):
 
         # add crosshair
         self.crosshair = BetterCrosshairROI((0, 0), parent=self.view, resizable=False)
+        self.crosshair.sigMoved.connect(self.sigCrosshairMoved)
         self.view.getViewBox().addItem(self.crosshair)
+
+        # find top-level parent NDImageView
+        while not isinstance(parent, NDImageView):
+            parent = parent.parent()
+
+        # Initialize lut, levels
+        self.image_item.setLevels(parent.levels, update=True)
+        self.image_item.setLookupTable(parent.lut, update=True)
 
     def setData(self, data):
 
@@ -360,6 +450,9 @@ class SliceableGraphicsView(GraphicsView):
 
         self.imageItem.updateImage(np.asarray(image))
 
+    def updateCrosshair(self, x, y):
+        self.crosshair.setPos(x, y)
+
     def quickMinMax(self, data):
         """
         Estimate the min/max values of *data* by subsampling. MODIFIED TO USE THE 99TH PERCENTILE instead of max.
@@ -378,11 +471,17 @@ class SliceableGraphicsView(GraphicsView):
 class SliceableAxes(PlotItem):
     sigToggleHorizontalSlice = Signal(bool)
     sigToggleVerticalSlice = Signal(bool)
+    sigToggleDepthSlice = Signal(bool)
     sigMakePrimary = Signal(object, object)
 
-    def __init__(self):
+    def __init__(self, slice_direction):
         super(SliceableAxes, self).__init__()
         self._menu = None
+        self.slice_direction = slice_direction
+
+        # parent_NDImageView = find_parent_NDImageView()
+        #
+        # self.sigMakePrimary.connect(parent_NDImageView.setPrimary)
 
     def getContextMenus(self, event):
         if self._menu: return None
@@ -390,14 +489,23 @@ class SliceableAxes(PlotItem):
         menu = QMenu(parent=self.getViewWidget())
         menu.setTitle("Slicing")
 
-        horizontal_action = QAction('Horizontal slice', menu)
-        horizontal_action.toggled.connect(self.sigToggleHorizontalSlice)
-        horizontal_action.setCheckable(True)
-        menu.addAction(horizontal_action)
-        vertical_action = QAction('Vertical slice', menu)
-        vertical_action.toggled.connect(self.sigToggleVerticalSlice)
-        vertical_action.setCheckable(True)
-        menu.addAction(vertical_action)
+        if self.slice_direction != 'vertical':
+            horizontal_action = QAction('Horizontal slice', menu)
+            horizontal_action.toggled.connect(self.sigToggleHorizontalSlice)
+            horizontal_action.setCheckable(True)
+            menu.addAction(horizontal_action)
+
+        if self.slice_direction != 'horizontal':
+            vertical_action = QAction('Vertical slice', menu)
+            vertical_action.toggled.connect(self.sigToggleVerticalSlice)
+            vertical_action.setCheckable(True)
+            menu.addAction(vertical_action)
+
+        if self.slice_direction == 'depth':
+            depth_action = QAction('Depth slice', menu)
+            depth_action.toggled.connect(self.sigToggleDepthSlice)
+            depth_action.setCheckable(True)
+            menu.addAction(depth_action)
 
         make_primary_action = QAction('Set as Primary View', menu)
         make_primary_action.triggered.connect(self.makePrimary)
@@ -408,4 +516,149 @@ class SliceableAxes(PlotItem):
         return menu
 
     def makePrimary(self):
-        self.sigMakePrimary.emit(self.getViewWidget().parent().view_dims, self.getViewWidget().parent().slice)
+        self.sigMakePrimary.emit(self.getViewWidget().parent().parent().parent().view_dims, self.getViewWidget().parent().parent().parent().slice)
+
+
+class PlotView(PlotWidget):
+    sigCrosshairMoved = Signal()  # TODO: crosshairs may actually be emitting their pos; using that would be better
+
+    SUPPORTED_NDIM = 1
+
+    def __init__(self, slice_direction, parent):
+        super(PlotView, self).__init__(parent=parent)
+
+        self.slice_direction = slice_direction
+        self._curve = self.plot()
+
+        if slice_direction == 'horizontal':
+            angle=0
+        elif slice_direction in ['vertical', 'depth']:
+            angle=90
+        else:
+            raise NotImplementedError
+        self.crosshair = InfiniteLine(0, angle=angle, movable=True, markers=[('^', 0), ('v', 1)])
+        self.crosshair.sigPositionChanged.connect(self.sigCrosshairMoved)
+        self.addItem(self.crosshair)
+
+    def setData(self, data:DataArray):
+
+        reduced_data = data
+        # TODO: grab coords and dims and display
+        if data.ndim > 1:
+            if self.slice_direction == 'horizontal':
+                reduced_data = data.sum(data.dims[1:])/(data.size/data.shape[0])
+            elif self.slice_direction == 'vertical':
+                sum_dims = list(data.dims)  # dims is a tuple, so list gets a copy we can also pop
+                sum_dims.pop(1)  # Remove the second dim (being careful about there possibly being 2 or more dims
+                reduced_data = data.sum(sum_dims)/(data.size/data.shape[1])
+
+        if self.slice_direction == 'horizontal':
+            self._curve.setData(reduced_data, data.coords[data.dims[0]])
+            self.plotItem.setLabel('left', data.dims[0])
+
+        elif self.slice_direction in ['vertical', 'depth']:
+            if data.ndim == 1:
+                dim_index = 0
+            else:
+                dim_index = 1
+            self._curve.setData(data.coords[data.dims[dim_index]], reduced_data)
+            self.plotItem.setLabel('bottom', data.dims[dim_index])
+
+    def updateCrosshair(self, pos):
+        self.crosshair.setPos(pos)
+
+    def resetCrosshair(self):
+        if self.slice_direction == 'horizontal':
+            data = self._curve.yData
+        elif self.slice_direction in ['vertical', 'depth']:
+            data = self._curve.xData
+
+        new_pos = (data.max()-data.min())/2
+
+        self.crosshair.setPos(new_pos)
+
+class ViewSelector(QWidget, SlicingView):
+    sigToggleHorizontalSlice = Signal(bool)
+    sigToggleVerticalSlice = Signal(bool)
+    sigToggleDepthSlice = Signal(bool)
+    sigMakePrimary = Signal(object, object)
+    sigCrosshairMoved = Signal()
+
+    view_options = {'Image': SliceableGraphicsView,
+                    'Plot': PlotView,}
+
+    def __init__(self, slice_direction, default_view_key:str='Image', parent=None):
+        super(ViewSelector, self).__init__(parent=parent)
+
+        self.slice_direction = slice_direction
+        self.view_widget = None
+        self._data = None
+
+        self.setLayout(QVBoxLayout())
+
+        self.view_frame = QFrame()
+        self.view_frame.setLayout(QVBoxLayout())
+        self.layout().addWidget(self.view_frame)
+
+        self.selector = QComboBox()
+        self.selector.addItems(self.view_options.keys())
+        self.selector.currentTextChanged.connect(self._set_view)
+        self.layout().addWidget(self.selector)
+
+        self.set_view(view_key=default_view_key)
+
+    def setData(self, data):
+        self._data = data
+        if data.ndim < 2 and self.view_widget.SUPPORTED_NDIM == 2:
+            # set to 1-d data mode
+            self.set_view('Plot')
+        self.view_widget.setData(data)
+
+    def set_view(self, view_key):
+        self.selector.setCurrentText(view_key)
+        self._set_view(view_key)
+
+    def _set_view(self, view_key):
+        if self.view_widget is not None:
+            self.view_widget.setParent(None)
+
+        self.view_widget = self._make_view(view_key, self.slice_direction, parent=self.view_frame)
+        self.view_frame.layout().addWidget(self.view_widget)
+
+        for sig in ['sigToggleHorizontalSlice',
+                    'sigToggleVerticalSlice',
+                    'sigToggleDepthSlice',
+                    'sigMakePrimary',
+                    'sigCrosshairMoved']:
+
+            if hasattr(self.view_widget, sig):
+                getattr(self.view_widget, sig).connect(getattr(self, sig))
+
+        if self._data is not None:
+            self.view_widget.setData(self._data)
+
+    def _make_view(self, view_key, slice_direction, parent):
+        return self.view_options[view_key](slice_direction=slice_direction, parent=parent)
+
+    # def resetCrosshair(self):
+    #     transform = self.image_item.viewTransform()
+    #     new_pos = transform.map(self.image_item.boundingRect().center())
+    #     self.crosshair.setPos(new_pos)
+    #     self.crosshair.sigMoved.emit(new_pos)
+
+    def updateCrosshair(self, *pos):
+        self.view_widget.updateCrosshair(*pos)
+
+    @property
+    def supported_ndim(self):
+        return self.view_widget.SUPPORTED_NDIM
+
+    def resetCrosshair(self):
+        self.view_widget.resetCrosshair()
+
+
+def find_parent_NDImageView(widget):
+    parent = widget.parent()
+    while not isinstance(parent, NDImageView):
+        parent = parent.parent()
+    return parent
