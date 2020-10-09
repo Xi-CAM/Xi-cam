@@ -5,10 +5,10 @@ import dask.array
 
 
 class Intent:
-    def __init__(self, item_name="", canvas_name="", **kwargs):
+    def __init__(self, item_name="", canvas_name="", match_key=None, **kwargs):
         self._item_name = item_name
         self._canvas_name = canvas_name
-        self.match_key = None
+        self.match_key = match_key
         self.kwargs = kwargs
 
     @property
@@ -46,7 +46,7 @@ class PlotIntent(Intent):
         self.labels = labels
         self.x = x
         self.y = y
-        self.match_key = hash(frozenset(self.labels.items()))
+        self.match_key = kwargs.get("match_key", hash(frozenset(self.labels.items())))
 
     @property
     def canvas_name(self):
