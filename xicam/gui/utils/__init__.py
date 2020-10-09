@@ -178,7 +178,7 @@ def signature_to_param(signature: inspect.Signature,
         if name in limits:
             parameter_dict['limits'] = limits[name]
         elif param_type == 'EnumMeta':
-            parameter_dict['limits'] = [enum_value.value for enum_value in list(parameter.annotation)]
+            parameter_dict['limits'] = {enum.name: enum.value for enum in parameter.annotation.__members__.values()}
         parameter_dict['units'] = units.get(name)
         parameter_dict['fixed'] = fixed.get(name)
         parameter_dict['fixable'] = fixable.get(name)

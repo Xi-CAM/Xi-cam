@@ -10,6 +10,11 @@ from warnings import warn
 import mimetypes
 import warnings
 
+
+# Load neglected mimetypes into mimetypes database
+mimetypes.add_type('application/x-hdf5', '.h5')  # This one is already being added to the next version of `mimetypes`
+
+
 def detect_mimetypes(filename: str) -> List[str]:
     """
     Take in a filename; return a mimetype string like 'image/tiff'.

@@ -11,16 +11,17 @@ import warnings
 from typing import Iterable, Sequence
 from databroker.core import BlueskyRun
 from xicam.core import msg
-from xicam.core.data import NonDBHeader
 from xicam.gui.patches.PyQtGraph import CounterGroupParameter, LazyGroupParameter
 
 # TODO: map list to groupparameter
 
 # TODO: suggest integration of type mapping into pyqtgraph
 typemap = {
+    bool: "bool",
     int: "int",
     float: "float",
-    np.float64: "float",
+    np.floating: "float",
+    np.integer: "int",
     str: "str",
     dict: "lazygroup",
     OrderedDict: "lazygroup",
@@ -28,9 +29,7 @@ typemap = {
     type(None): None,
     tuple: "lazygroup",
     datetime.datetime: "str",
-    np.float: "float",
     np.ndarray: "ndarray",
-    np.int: "int",
 }
 
 
@@ -78,19 +77,36 @@ class MetadataWidgetBase(ParameterTree):
                 subchildren = MetadataView._from_dict(value)
                 key = f"{str(key)} {type(value)}"
                 value = None
+
+            param_type = None
+
+            if type(value) in typemap:
+                param_type = type(value)
+
+            if param_type is None:
+                for map_type in typemap:
+                    if isinstance(value, map_type):
+                        param_type = map_type
+                        break
+
+            if param_type is None and value:
+                msg.logError(TypeError(f'An embedded value of type {type(value)} could not be mapped to a Parameter: {value}'))
+                return children
+
             try:
                 children.append(
                     Parameter.create(
                         name=str(key),
                         value=value,
-                        type=typemap[type(value)],
+                        type=typemap[param_type],
                         children=subchildren,
                         expanded=False,
                         readonly=True,
                     )
                 )
-            except KeyError:
-                warnings.warn(f"Failed to display a {type(value)}: {value}")
+            except Exception as ex:
+                msg.logMessage("Error during parameterizing metadata:")
+                msg.logError(ex)
                 children.append(
                     Parameter.create(
                         name=str(key),
@@ -162,7 +178,7 @@ class MetadataView(MetadataWidgetBase):
         # TODO: make compatible with actively streaming header
 
         # filter out documents already emitted in the stream
-        for doctype, document in catalog.read_canonical():
+        for doctype, document in catalog.canonical(fill='no'):
             uid = document["uid"]
 
             # for event-page's, make the uid value hashable by joining

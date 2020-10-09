@@ -69,7 +69,11 @@ date_format = "%a %b %d %H:%M:%S %Y"
 formatter = logging.Formatter(fmt=format, datefmt=date_format)
 
 # Use the QSettings set up for us by LoggingSettingsPlugin
-logging_settings = QSettings().value(LOGGING_SETTINGS_NAME, {}) or {}
+try:
+    logging_settings = QSettings().value(LOGGING_SETTINGS_NAME, {}) or {}
+except Exception:
+    logging_settings = {}
+
 if logging_settings:
     # Unserialize the bytes stream (gives us a dict)
     try:
