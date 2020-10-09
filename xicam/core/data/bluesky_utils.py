@@ -86,14 +86,14 @@ def preview(catalog: BlueskyRun, stream: str, field: str):
 
 
 def display_name(catalog: BlueskyRun):
-    name = ""
+    name = []
 
     if 'sample_name' in catalog.metadata['start']:
-        name += catalog.metadata['start']['sample_name']
+        name.append(catalog.metadata['start']['sample_name'])
 
     if 'scan_id' in catalog.metadata['start']:
-        name += f"<{catalog.metadata['start']['scan_id']}>"
+        name.append(f"<{catalog.metadata['start']['scan_id']}>")
 
-    name += f"#{catalog.metadata['start']['uid'][:5]}"
+    name.append(f"#{catalog.metadata['start']['uid'][:5]}")
 
-    return name
+    return ' '.join(name)

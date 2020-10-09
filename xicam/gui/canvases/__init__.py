@@ -75,11 +75,18 @@ class PlotIntentCanvas(XicamIntentCanvas, PlotIntentCanvasBlend):
         self.setLogMode(x=x_log_mode, y=y_log_mode)
         self.setLabels(**kwargs.get("labels", {}))
 
+    def colorize(self):
+        count = len(self.intent_to_item)
+        for i, item in enumerate(self.intent_to_item.values()):
+            if count < 9:
+                color = pg.mkColor(i)
+            else:
+                color = pg.intColor(i, hues=count, minHue=180, maxHue=300)
+
+            item.setPen(color)
+
     def render(self, intent):
-
-        color = pg.mkColor(len(self.intent_to_item))
-
-        plot_item = self.plot(x=np.asarray(intent.x), y=np.asarray(intent.y), pen=color, name=intent.item_name)
+        plot_item = self.plot(x=np.asarray(intent.x), y=np.asarray(intent.y), name=intent.item_name)
         # Use most recent intent's log mode for the canvas's log mode
         x_log_mode = intent.kwargs.get("xLogMode", self.plotItem.getAxis("bottom").logMode)
         y_log_mode = intent.kwargs.get("yLogMode", self.plotItem.getAxis("left").logMode)
@@ -89,8 +96,7 @@ class PlotIntentCanvas(XicamIntentCanvas, PlotIntentCanvasBlend):
 
         self.intent_to_item[intent] = plot_item
 
-
-
+        self.colorize()
         return plot_item
 
     def unrender(self, intent) -> bool:
@@ -99,6 +105,7 @@ class PlotIntentCanvas(XicamIntentCanvas, PlotIntentCanvasBlend):
             item = self.intent_to_item[intent]
             self.plotItem.removeItem(item)
             del self.intent_to_item[intent]
+            self.colorize()
 
         if len(self.intent_to_item.items()) == 0:
             return True
