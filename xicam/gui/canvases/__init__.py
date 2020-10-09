@@ -33,6 +33,7 @@ from matplotlib import pyplot as plt
 #     # @abstractmethod
 #     def unrender(self, intent):
 #         pass
+from xicam.gui.widgets.plotwidgetmixins import HoverHighlight, CurveLabels
 from xicam.plugins.intentcanvasplugin import IntentCanvas
 
 
@@ -55,12 +56,35 @@ class ImageIntentCanvas(XicamIntentCanvas, ImageView):
         ...
 
 
+# class XLogPlotWidget(CurveLabels):
+#     def __init__(self, *args, **kwargs):
+#         super(TestClassThing, self).__init__(*args, **kwargs)
+#         self.setLogMode
+
+# TODO:
+# * legend
+# * plot colors
+# * axes labels
+
+# (not priority - why is racoon sometimes rotated 90? (depending on os)
+
+
 class PlotIntentCanvas(XicamIntentCanvas, PlotWidget):
     def __init__(self, *args, **kwargs):
+        # Intercept kwargs that we want to control PlotWidget behavior
+        # Get the x & y log mode (default false, which is linear)
+        x_log_mode = kwargs.pop("xLogMode", False)
+        y_log_mode = kwargs.pop("yLogMode", False)
         super(PlotIntentCanvas, self).__init__(*args, **kwargs)
+
+        self.setLogMode(x=x_log_mode, y=y_log_mode)
 
     def render(self, intent):
         plot_item = self.plot(x=np.asarray(intent.x), y=np.asarray(intent.y))
+        # Use most recent intent's log mode for the canvas's log mode
+        x_log_mode = intent.kwargs.get("xLogMode", self.plotItem.getAxis("bottom").logMode)
+        y_log_mode = intent.kwargs.get("yLogMode", self.plotItem.getAxis("left").logMode)
+        self.plotItem.setLogMode(x=x_log_mode, y=y_log_mode)
         self.intent_to_item[intent] = plot_item
         return plot_item
 
