@@ -99,7 +99,8 @@ class WorkflowEditor(QSplitter):
 
     def run_workflow(self, **kwargs):
         mixed_kwargs = self.kwargs.copy()
-        mixed_kwargs.update(self.kwargs_callable(self))
+        if self.kwargs_callable is not None:
+            mixed_kwargs.update(self.kwargs_callable(self))
         mixed_kwargs.update(kwargs)
 
         if self.execute_iterative:
