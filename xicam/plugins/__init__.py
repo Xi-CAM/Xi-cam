@@ -296,12 +296,12 @@ class XicamPluginManager:
                 plugin_class._name = entrypoint.name
 
                 # ... and instantiate it (as long as its supposed to be singleton)
-
+                plugin_object = plugin_class
                 try:
                     if getattr(plugin_class, "is_singleton", False):
                         msg.logMessage(f"Instantiating {entrypoint.name} plugin object.", level=msg.INFO)
                         with load_timer() as elapsed:
-                            self.type_mapping[type_name][entrypoint.name] = plugin_class()
+                            self.type_mapping[type_name][entrypoint.name] = plugin_object = plugin_class()
 
                         msg.logMessage(
                             f"{int(elapsed() * 1000)} ms elapsed while instantiating {entrypoint.name}", level=msg.INFO
@@ -318,6 +318,10 @@ class XicamPluginManager:
                     instantiate_task.status = Status.FailedInstantiate
 
                 else:
+                    # inject useful info into plugin
+                    plugin_object._entrypoint_name = entrypoint.name
+                    plugin_object._plugin_type = type_name
+
                     msg.logMessage(f"Successfully collected {entrypoint.name} plugin.", level=msg.INFO)
                     self._notify(Filters.UPDATE)
 
@@ -353,6 +357,7 @@ class XicamPluginManager:
 
         return return_plugin
 
+    # TODO: FIX THIS
     def _get_entrypoint_by_name(self, name, type_name):
         return_entrypoint = None
         return_type = None
