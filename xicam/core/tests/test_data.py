@@ -1,3 +1,6 @@
+from fabio.edfimage import EdfImage
+
+
 def test_lazyfield():
     import fabio
     from xicam.core.data import lazyfield

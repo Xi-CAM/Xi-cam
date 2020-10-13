@@ -7,7 +7,9 @@ from xicam.core.data import load_header
 
 @fixture
 def catalog():
-    return load_header(["C:\\Users\\LBL\\PycharmProjects\\merged-repo\\Xi-cam.NCEM\\tests\\twoDatasets.emd"])
+    # FIXME: don't rely on a specific absolute path here!
+    filepath = "C:\\Users\\LBL\\PycharmProjects\\merged-repo\\Xi-cam.NCEM\\tests\\twoDatasets.emd"
+    return load_header([filepath])
 
 
 def test_metadataview(qtbot, catalog):

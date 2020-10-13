@@ -2,7 +2,7 @@ import pytest
 from pytestqt import qtbot
 
 def test_IFittableModelPlugin(qtbot):
-    from ..fittablemodelplugin import Fittable1DModelPlugin
+    from xicam.plugins.fittablemodelplugin import Fittable1DModelPlugin
     import numpy as np
     from astropy.modeling.fitting import LevMarLSQFitter
     from astropy.modeling import Parameter
