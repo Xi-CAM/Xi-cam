@@ -25,7 +25,7 @@ def random_array(rows: int = 10, columns: int = 10) -> np.ndarray:
 @output_names("data")
 @display_name("Raccoon Face")
 @categories(("General", "Synthetic Data"))
-@intent(ImageIntent, 'Raccoon Face', output_map={'data': 'image'})
+@intent(ImageIntent, 'Raccoon Face', output_map={'image': 'data'})
 def raccoon_face(gray: bool = True) -> np.ndarray:
     return scipy.misc.face(gray=gray)
 
@@ -34,7 +34,7 @@ def raccoon_face(gray: bool = True) -> np.ndarray:
 @output_names("spectral_data")
 @display_name("Fourier Transform")
 @categories(("General", "Mathematics"))
-@intent(ImageIntent, 'Fourier Transform', output_map={'spectral_data': 'image'})
+@intent(ImageIntent, 'Fourier Transform', output_map={'image': 'spectral_data'})
 @visible('data', False)
 def fourier_transform(data: np.ndarray) -> np.ndarray:
     return scipy.fft.fft2(data)
@@ -43,7 +43,7 @@ def fourier_transform(data: np.ndarray) -> np.ndarray:
 @operation
 @output_names("spectral_data")
 @display_name("Low Band Pass Filter")
-@intent(ImageIntent, 'Low Band Pass Filter', output_map={'spectral_data': 'image'})
+@intent(ImageIntent, 'Low Band Pass Filter', output_map={'image': 'spectral_data'})
 @categories(("General", "Mathematics"))
 @visible('spectral_data', False)
 def low_band_pass(spectral_data: np.ndarray, keep_fraction:float=.1)->np.ndarray:
@@ -63,7 +63,7 @@ def low_band_pass(spectral_data: np.ndarray, keep_fraction:float=.1)->np.ndarray
 @display_name("Absolute Square")
 @categories(("General", "Mathematics"))
 @visible('spectral_data', False)
-@intent(ImageIntent, 'Absolute Square', output_map={'spectral_data': 'image'})
+@intent(ImageIntent, 'Absolute Square', output_map={'image': 'spectral_data'})
 def absolute_square(spectral_data: np.ndarray) -> np.ndarray:
     return np.square(np.abs(spectral_data))
 

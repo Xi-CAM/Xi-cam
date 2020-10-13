@@ -662,8 +662,8 @@ def intent(intent_type: Type[Intent], name="", output_map={}, *args, **kwargs):
     name: str
         Name of the Intent.
     output_map: dict
-        Maps from the output_names defined in the operation to what the Intent expects for data.
-        output_name (str) maps to Intent data argument (str).
+        Maps from what the Intent expects for data to one or more output_names defined in the operation.
+        Intent data argument (str) maps to output_name (str) (e.g. output_name={"image": "output1"} for ImageIntent).
     args:
         Positional arguments for the Intent.
     kwargs:
@@ -675,7 +675,7 @@ def intent(intent_type: Type[Intent], name="", output_map={}, *args, **kwargs):
 
     >>>@operation
     >>>@output_names('output1', 'output2')
-    >>>@intent(PlotHint, name="Output1 v. Output2", output_map={'output1': 'x', 'output2': 'y'}, labels={} pen='r')
+    >>>@intent(PlotHint, name="Output1 v. Output2", output_map={'x': 'output1', 'y': 'output2'}, labels={} pen='r')
     >>>def op():
     >>>    ...
     >>>    return(array_1, array_2)
