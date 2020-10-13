@@ -73,6 +73,6 @@ def absolute_square(spectral_data: np.ndarray) -> np.ndarray:
 @display_name("Inverse Fourier Transform")
 @categories(("General", "Mathematics"))
 @visible('spectral_data', False)
-@intent(ImageIntent, 'Inverse Fourier Transform', output_map={'data': 'image'})
+@intent(ImageIntent, 'Inverse Fourier Transform', output_map={'image': 'data'})
 def inverse_fourier_transform(spectral_data: np.ndarray) -> np.ndarray:
     return scipy.fft.ifft2(spectral_data)
