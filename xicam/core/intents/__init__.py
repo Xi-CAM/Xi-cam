@@ -5,7 +5,7 @@ import dask.array
 
 
 class Intent:
-    def __init__(self, item_name="", canvas_name="", match_key=None, **kwargs):
+    def __init__(self, item_name, canvas_name="", match_key=None, **kwargs):
         self._item_name = item_name
         self._canvas_name = canvas_name
         self.match_key = match_key
