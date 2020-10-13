@@ -93,9 +93,11 @@ class Graph(object):
         self._validate_link_parameters(source, dest, source_param, dest_param)
 
         if source_param not in source.output_names:
-            raise ValueError(f'An output named "{source_param}" could not be found in the source operation, {source.name}')
+            raise ValueError(
+                f'An output named "{source_param}" could not be found in the source operation, {source.name}')
         elif dest_param not in dest.input_names:
-            raise ValueError(f'An input named "{dest_param}" could not be found in the destination operation, {dest.name}')
+            raise ValueError(
+                f'An input named "{dest_param}" could not be found in the destination operation, {dest.name}')
         self._inbound_links[dest][source].append((source_param, dest_param))
         self._outbound_links[source][dest].append((source_param, dest_param))
 
@@ -356,9 +358,9 @@ class Graph(object):
             raise TypeError(f"Expected {operation} to be an OperationPlugin")
         if operation not in self.operations:
             raise ValueError(f'Operation "{operation}" not found')
-        return [
-            (operation, dest, link[0], link[1]) for dest, links in self._outbound_links[operation].items() for link in links
-        ]
+        return [(operation, dest, link[0], link[1])
+                for dest, links in self._outbound_links[operation].items()
+                for link in links]
 
     def disabled_operations(self):
         """Returns the disabled operations (if any) in the workflow."""
@@ -379,9 +381,11 @@ class Graph(object):
         """
         return operation in self._disabled_operations
 
-    def set_disabled(
-        self, operation: OperationPlugin, value: bool = True, remove_orphan_links: bool = True, auto_connect_all: bool = True
-    ):
+    def set_disabled(self,
+                     operation: OperationPlugin,
+                     value: bool = True,
+                     remove_orphan_links: bool = True,
+                     auto_connect_all: bool = True):
         """Set an operation's disabled state in the workflow.
 
         By default when disabling an operation, links connected to the operation will be removed
@@ -491,7 +495,8 @@ class Graph(object):
                                 bestmatch = output_operation, output_name
                                 matchness = 1
                                 # if a name+type match hasn't been found
-                                if output_operation.output_types.get(output_name) == input_operation.input_types.get(input_name):
+                                if output_operation.output_types.get(output_name) == \
+                                        input_operation.input_types.get(input_name):
                                     if matchness < 2:
                                         bestmatch = output_operation, output_name
                                         matchness = 2
@@ -605,7 +610,8 @@ class Workflow(Graph):
         self.lastresult = []
 
     def __reduce__(self):
-        _operations, _inbound_links, _outbound_links, _disabled_operations = copy.deepcopy((self.operations, self._inbound_links, self._outbound_links, self._disabled_operations))
+        _operations, _inbound_links, _outbound_links, _disabled_operations = copy.deepcopy(
+            (self.operations, self._inbound_links, self._outbound_links, self._disabled_operations))
         return Workflow, tuple(), {'name': self.name,
                                    '_operations': _operations,
                                    '_inbound_links': _inbound_links,
@@ -634,17 +640,17 @@ class Workflow(Graph):
         # TODO: use cam-link to mirror installation of plugin packages
 
     def execute(
-        self,
-        executor=None,
-        connection=None,
-        callback_slot=None,
-        finished_slot=None,
-        except_slot=None,
-        default_exhandle=True,
-        lock=None,
-        fill_kwargs=True,
-        threadkey=None,
-        **kwargs,
+            self,
+            executor=None,
+            connection=None,
+            callback_slot=None,
+            finished_slot=None,
+            except_slot=None,
+            default_exhandle=True,
+            lock=None,
+            fill_kwargs=True,
+            threadkey=None,
+            **kwargs,
     ):
         """
         Execute this workflow on the specified host. Connection will be a Connection object (WIP) keeping a connection
@@ -691,17 +697,17 @@ class Workflow(Graph):
         return executor.execute(self)
 
     def execute_all(
-        self,
-        connection=None,
-        executor=None,
-        callback_slot=None,
-        finished_slot=None,
-        except_slot=None,
-        default_exhandle=True,
-        lock=None,
-        fill_kwargs=True,
-        threadkey=None,
-        **kwargs,
+            self,
+            connection=None,
+            executor=None,
+            callback_slot=None,
+            finished_slot=None,
+            except_slot=None,
+            default_exhandle=True,
+            lock=None,
+            fill_kwargs=True,
+            threadkey=None,
+            **kwargs,
     ):
         """
         Execute this workflow on the specified host. Connection will be a Connection object (WIP) keeping a connection
@@ -807,10 +813,14 @@ class Workflow(Graph):
             observer()
 
 
-def ingest_result_set(workflow:Workflow, result_set):
+def ingest_result_set(workflow: Workflow, result_set):
     timestamp = time.time()
+
+    projections = []
+    descriptors = []
+    events = []
+
     run_bundle = event_model.compose_run()
-    yield "start", run_bundle.start_doc
 
     end_ops = workflow._end_operations()
 
@@ -818,13 +828,41 @@ def ingest_result_set(workflow:Workflow, result_set):
         frame_data_keys = {}
         for name, value in result.items():
             frame_data_keys[name] = {"source": 'Xi-cam Workflow',
-                                            "dtype": "number",  # TODO: map dtype and shape
-                                            "shape": value.shape}
-        frame_stream_bundle = run_bundle.compose_descriptor(data_keys=frame_data_keys, name=end_op.name)
-        yield "descriptor", frame_stream_bundle.descriptor_doc
+                                     "dtype": "number",  # TODO: map dtype and shape
+                                     "shape": value.shape}
+        operation_id = f'{end_op.name}:{workflow.operations.index(end_op)}'
+        frame_stream_bundle = run_bundle.compose_descriptor(data_keys=frame_data_keys, name=operation_id)
+        descriptors.append(("descriptor", frame_stream_bundle.descriptor_doc))
 
-        yield "event", frame_stream_bundle.compose_event(data=result,
-                                                         timestamps={name: timestamp for name in result})
+        descriptors.append(("event", frame_stream_bundle.compose_event(data=result,
+                                                                       timestamps={name: timestamp for name in
+                                                                                   result})))
+
+        for intent_type, name, output_map, args, kwargs in end_op.intent_blueprints:
+            projections.append({'name': 'intent',
+                                 'version': '0.1.0',
+                                 'projection':
+                                     {f'intent_type': {'type': 'static',
+                                                       'value': intent_type},
+                                      f'name': {'type': 'static',
+                                                'value': name},
+                                      f'output_map': {'type': 'static',
+                                                      'value': output_map},
+                                      f'args': {'type': 'static',
+                                                'value': args},
+                                      f'kwargs': {'type': 'static',
+                                                  'value': kwargs},
+                                      f'operation_id': {'type': 'static',
+                                                        'value': operation_id}}})
+
+    start_doc = run_bundle.start_doc
+    start_doc['projections'] = projections
+    start_doc['sample_name'] = 'Workflow Execution'
+
+    yield "start", start_doc
+
+    yield from descriptors
+    yield from events
 
     yield "stop", run_bundle.compose_stop()
 
