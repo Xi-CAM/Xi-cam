@@ -128,7 +128,8 @@ setup(
             "QWidgetPlugin = xicam.plugins.widgetplugin:QWidgetPlugin",
             "IntentCanvasPlugin = xicam.plugins.intentcanvasplugin:IntentCanvasPlugin",
             "ingestors = xicam.plugins.ingestorplugin:IngestorPlugin",
-            "sniffers = xicam.plugins.snifferplugin:SnifferPlugin"
+            "sniffers = xicam.plugins.snifferplugin:SnifferPlugin",
+            "intents = xicam.plugins.intentplugin:IntentPlugin",
         ],
         "xicam.plugins.SettingsPlugin": [
             "logging = xicam.gui.settings.logging:LoggingSettingsPlugin",
@@ -151,7 +152,10 @@ setup(
         ],
         "xicam.plugins.IntentCanvasPlugin": [
             "plot_canvas = xicam.gui.canvases:PlotIntentCanvas",
-            "image_canvas = xicam.gui.canvases:ImageIntentCanvas"
+            "image_canvas = xicam.gui.canvases:ImageIntentCanvas"],
+        "databroker.intents": [
+            "PlotIntent = xicam.core.intents:PlotIntent",
+            "ImageIntent = xicam.core.intents:ImageIntent",
         ],
     },
     ext_modules=[],
