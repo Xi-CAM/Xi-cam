@@ -277,6 +277,13 @@ class ImageParameter(Parameter):
 
         return value
 
+    def setDefault(self, val):
+        """Set the default value for this parameter."""
+        if np.all(self.opts['default'] == val):
+            return
+        self.opts['default'] = val
+        self.sigDefaultChanged.emit(self, val)
+
 
 registerParameterType("ndarray", ImageParameter, override=True)
 
