@@ -4,9 +4,10 @@ from weakref import ref
 from collections import defaultdict, OrderedDict
 import time
 import event_model
-from xicam.plugins import OperationPlugin
 from xicam.core import msg, execution
 from xicam.core.threads import QThreadFuture, QThreadFutureIterator
+from xicam.plugins import OperationPlugin
+from xicam.plugins import manager as plugin_manager
 
 
 # TODO: add debug flag that checks mutations by hashing inputs
@@ -829,7 +830,7 @@ def ingest_result_set(workflow: Workflow, result_set):
         for name, value in result.items():
             frame_data_keys[name] = {"source": 'Xi-cam Workflow',
                                      "dtype": "number",  # TODO: map dtype and shape
-                                     "shape": value.shape}
+                                     "shape": getattr(value, 'shape', [])}
         operation_id = f'{end_op.name}:{workflow.operations.index(end_op)}'
         frame_stream_bundle = run_bundle.compose_descriptor(data_keys=frame_data_keys, name=operation_id)
         descriptors.append(("descriptor", frame_stream_bundle.descriptor_doc))
@@ -866,3 +867,23 @@ def ingest_result_set(workflow: Workflow, result_set):
 
     yield "stop", run_bundle.compose_stop()
 
+
+def project_intents(run_catalog):
+    intents = []
+
+    for projection in run_catalog.metadata['start']['projections']:
+        if projection['name'] == 'intent':
+            intent_class_name = projection['projection']['intent_type']['value']
+            args = projection['projection']['args']['value']
+            kwargs = projection['projection']['kwargs']['value']
+            output_map = projection['projection']['output_map']['value']
+            name = projection['projection']['name']['value']
+            operation_id = projection['projection']['operation_id']['value']
+
+            intent_class = plugin_manager.get_plugin_by_name(intent_class_name, 'intents')
+
+            for intent_kwarg_name, output_name in output_map.items():
+                kwargs[intent_kwarg_name] = getattr(run_catalog, operation_id).to_dask()[output_name]
+            intent = intent_class(item_name=name, *args, **kwargs)
+            intents.append(intent)
+    return intents

@@ -14,7 +14,6 @@ from xicam.plugins.operationplugin import (
     opts,
     output_names,
     output_shape,
-    plot_hint,
     units,
     visible,
     ValidationError,
@@ -230,11 +229,6 @@ class TestOutputShape:
         # Test Operation API
         with pytest.raises(ValidationError):
             operation(func)
-
-
-# def test_plot_hint():
-#     print('tlaktj')
-#     assert False, 'bnlah'
 
 
 # @units

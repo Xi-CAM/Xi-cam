@@ -59,6 +59,7 @@ def arpes_data():
     required_task = next(filter(lambda task: task.name=='application/x-fits', plugin_manager._tasks))
     plugin_manager._load_plugin(required_task)
     plugin_manager._instantiate_plugin(required_task)
+    # FIXME: don't rely on absolute file path here!
     catalog = load_header(['C:\\Users\\LBL\\PycharmProjects\\merged-repo\\Xi-cam.spectral\\xicam\\spectral\\ingestors\\20161214_00034.fits'])
     data = project_arpes(catalog)
     return data

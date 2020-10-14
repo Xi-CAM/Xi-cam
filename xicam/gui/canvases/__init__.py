@@ -86,7 +86,7 @@ class PlotIntentCanvas(XicamIntentCanvas, PlotIntentCanvasBlend):
             item.setPen(color)
 
     def render(self, intent):
-        plot_item = self.plot(x=np.asarray(intent.x), y=np.asarray(intent.y), name=intent.item_name)
+        plot_item = self.plot(x=np.asarray(intent.x).squeeze(), y=np.asarray(intent.y).squeeze(), name=intent.item_name)
         # Use most recent intent's log mode for the canvas's log mode
         x_log_mode = intent.kwargs.get("xLogMode", self.plotItem.getAxis("bottom").logMode)
         y_log_mode = intent.kwargs.get("yLogMode", self.plotItem.getAxis("left").logMode)

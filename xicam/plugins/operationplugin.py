@@ -684,7 +684,7 @@ def intent(intent_type: Type[Intent], name="", output_map={}, *args, **kwargs):
         if not hasattr(func, 'intent_blueprints'):
             func.intent_blueprints = []
 
-        func.intent_blueprints.append(IntentBlueprint(intent_type._entrypoint_name, name, output_map, args, kwargs))
+        func.intent_blueprints.append(IntentBlueprint(intent_type.__name__, name, output_map, args, kwargs))
         return func
 
     return decorator
