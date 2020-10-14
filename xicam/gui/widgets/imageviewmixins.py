@@ -141,7 +141,112 @@ class ExportButton(BetterLayout):
         self.exportBtn.clicked.connect(self.export)
 
 
-class PixelSpace(ImageView):
+class XArrayView(ImageView):
+    def __init__(self, *args, **kwargs):
+        # Add axes
+        self.axesItem = PlotItem()
+        self.axesItem.axes["left"]["item"].setZValue(10)
+        self.axesItem.axes["top"]["item"].setZValue(10)
+
+        if "view" not in kwargs:
+            kwargs["view"] = self.axesItem
+
+        super(XArrayView, self).__init__(*args, **kwargs)
+
+        self.view.invertY(False)
+
+    def setImage(self, img, **kwargs):
+
+        if hasattr(img, 'coords'):
+
+            if 'transform' not in kwargs:
+
+                xvals = img.coords[img.dims[-2]]
+                yvals = img.coords[img.dims[-1]]
+                xmin = float(xvals.min())
+                xmax = float(xvals.max())
+                ymin = float(yvals.min())
+                ymax = float(yvals.max())
+
+                # Position the image according to coords
+                shape = img.shape
+                a = [(0, shape[-2]), (shape[-1]-1, shape[-2]), (shape[-1]-1, 1), (0, 1)]
+
+                b = [(ymin, xmin), (ymax, xmin), (ymax, xmax), (ymin, xmax)]
+
+                quad1 = QPolygonF()
+                quad2 = QPolygonF()
+                for p, q in zip(a, b):
+                    quad1.append(QPointF(*p))
+                    quad2.append(QPointF(*q))
+
+                transform = QTransform()
+                QTransform.quadToQuad(quad1, quad2, transform)
+
+                kwargs['transform'] = transform
+
+            if 'xvals' not in kwargs:
+                kwargs['xvals'] = np.asarray(img.coords[img.dims[0]])
+
+            # Set the timeline axis label from dims
+            self.ui.roiPlot.setLabel('bottom', img.dims[0])
+
+            # Label the image axes
+            self.axesItem.setLabel('left', img.dims[-2])
+            self.axesItem.setLabel('bottom', img.dims[-1])
+
+            # Add a bit more size
+            self.ui.roiPlot.setMinimumSize(QSize(0, 70))
+
+        # Bind coords from the xarray to the timeline axis
+        super(XArrayView, self).setImage(img, **kwargs)
+
+    def updateImage(self, autoHistogramRange=True):
+        if hasattr(self.image, 'dims'):
+            ## Redraw image on screen
+            if self.image is None:
+                return
+
+            image = self.getProcessedImage()
+
+            if autoHistogramRange:
+                self.ui.histogram.setHistogramRange(self.levelMin, self.levelMax)
+
+            # Transpose image into order expected by ImageItem
+            if self.imageItem.axisOrder == 'col-major':
+                axorder = ['t', 'x', 'y', 'c']
+            else:
+                axorder = ['t', 'y', 'x', 'c']
+            axorder = [self.axes[ax] for ax in axorder if self.axes[ax] is not None]
+            ax_swap = [image.dims[ax_index] for ax_index in axorder]
+            image = image.transpose(*ax_swap)
+
+            # Select time index
+            if self.axes['t'] is not None:
+                self.ui.roiPlot.show()
+                image = image[self.currentIndex]
+
+            self.imageItem.updateImage(np.asarray(image))
+
+        else:
+            super(XArrayView, self).updateImage(autoHistogramRange)
+
+    def quickMinMax(self, data):
+        """
+        Estimate the min/max values of *data* by subsampling. MODIFIED TO USE THE 99TH PERCENTILE instead of max.
+        """
+        if data is None:
+            return 0, 0
+
+        sl = slice(None, None, max(1, int(data.size // 1e6)))
+        data = np.asarray(data[sl])
+
+        levels = (np.nanmin(data), np.nanpercentile(np.where(data < np.nanmax(data), data, np.nanmin(data)), 99))
+
+        return [levels]
+
+
+class PixelSpace(XArrayView):
     def __init__(self, *args, **kwargs):
         # Add axes
         self.axesItem = PlotItem()
@@ -341,7 +446,7 @@ class PixelCoordinates(PixelSpace, BetterLayout):
         super(PixelCoordinates, self).__init__(*args, **kwargs)
 
         self._coordslabel = QLabel(
-            "<div style='font-size:12pt;background-color:#111111; " "text-overflow: ellipsis; width:100%;'>&nbsp;</div>"
+            "<div style='font-size:12pt; " "text-overflow: ellipsis; width:100%;'>&nbsp;</div>"
         )
 
         # def sizeHint():
@@ -349,7 +454,7 @@ class PixelCoordinates(PixelSpace, BetterLayout):
         #     return sizehint
         # self._coordslabel.sizeHint = sizeHint
         self._coordslabel.setSizePolicy(
-            QSizePolicy.Ignored, QSizePolicy.Ignored
+            QSizePolicy.MinimumExpanding, QSizePolicy.Minimum
         )  # TODO: set sizehint to take from parent, not text
         self.ui.left_layout.addWidget(self._coordslabel, alignment=Qt.AlignHCenter)
 
@@ -366,7 +471,7 @@ class PixelCoordinates(PixelSpace, BetterLayout):
 
                 self.formatCoordinates(pxpos, pos)
             else:
-                self._coordslabel.setText("<div style='font-size:12pt;background-color:#111111;'>&nbsp;</div>")
+                self._coordslabel.setText("<div style='font-size:12pt;'>&nbsp;</div>")
 
     def formatCoordinates(self, pxpos, pos):
         """
@@ -379,7 +484,7 @@ class PixelCoordinates(PixelSpace, BetterLayout):
             I = 0
 
         self._coordslabel.setText(
-            f"<div style='font-size: 12pt;background-color:#111111; color:#FFFFFF;"
+            f"<div style='font-size: 12pt; color:#FFFFFF;"
             f"text-overflow: ellipsis; width:100%;'>"
             f"x={pxpos.x():0.1f}, "
             f"<span style=''>y={pxpos.y():0.1f}</span>, "
@@ -398,7 +503,7 @@ class QCoordinates(QSpace, PixelCoordinates):
         except IndexError:
             I = 0
         self._coordslabel.setText(
-            f"<div style='font-size: 12pt;background-color:#111111; color:#FFFFFF; "
+            f"<div style='font-size: 12pt; color:#FFFFFF; "
             f"text-overflow: ellipsis; width:100%;'>"
             f"x={pxpos.x():0.1f}, "
             f"<span style=''>y={self.imageItem.image.shape[-2] - pxpos.y():0.1f}</span>, "
@@ -676,109 +781,7 @@ class LogScaleIntensity(BetterLayout, ComposableItemImageView):
         self.logIntensityButton.setChecked(value)
 
 
-class XArrayView(ImageView):
-    def __init__(self, *args, **kwargs):
-        # Add axes
-        self.axesItem = PlotItem()
-        self.axesItem.axes["left"]["item"].setZValue(10)
-        self.axesItem.axes["top"]["item"].setZValue(10)
 
-        if "view" not in kwargs:
-            kwargs["view"] = self.axesItem
-
-        super(XArrayView, self).__init__(*args, **kwargs)
-
-        self.view.invertY(False)
-
-    def setImage(self, img, **kwargs):
-
-        if hasattr(img, 'coords'):
-
-            if 'transform' not in kwargs:
-
-                xvals = img.coords[img.dims[-2]]
-                yvals = img.coords[img.dims[-1]]
-                xmin = float(xvals.min())
-                xmax = float(xvals.max())
-                ymin = float(yvals.min())
-                ymax = float(yvals.max())
-
-                # Position the image according to coords
-                shape = img.shape
-                a = [(0, shape[-2]), (shape[-1]-1, shape[-2]), (shape[-1]-1, 1), (0, 1)]
-
-                b = [(ymin, xmin), (ymax, xmin), (ymax, xmax), (ymin, xmax)]
-
-                quad1 = QPolygonF()
-                quad2 = QPolygonF()
-                for p, q in zip(a, b):
-                    quad1.append(QPointF(*p))
-                    quad2.append(QPointF(*q))
-
-                transform = QTransform()
-                QTransform.quadToQuad(quad1, quad2, transform)
-
-                kwargs['transform'] = transform
-
-            if 'xvals' not in kwargs:
-                kwargs['xvals'] = np.asarray(img.coords[img.dims[0]])
-
-            # Set the timeline axis label from dims
-            self.ui.roiPlot.setLabel('bottom', img.dims[0])
-
-            # Label the image axes
-            self.axesItem.setLabel('left', img.dims[-2])
-            self.axesItem.setLabel('bottom', img.dims[-1])
-
-            # Add a bit more size
-            self.ui.roiPlot.setMinimumSize(QSize(0, 70))
-
-        # Bind coords from the xarray to the timeline axis
-        super(XArrayView, self).setImage(img, **kwargs)
-
-    def updateImage(self, autoHistogramRange=True):
-        if hasattr(self.image, 'dims'):
-            ## Redraw image on screen
-            if self.image is None:
-                return
-
-            image = self.getProcessedImage()
-
-            if autoHistogramRange:
-                self.ui.histogram.setHistogramRange(self.levelMin, self.levelMax)
-
-            # Transpose image into order expected by ImageItem
-            if self.imageItem.axisOrder == 'col-major':
-                axorder = ['t', 'x', 'y', 'c']
-            else:
-                axorder = ['t', 'y', 'x', 'c']
-            axorder = [self.axes[ax] for ax in axorder if self.axes[ax] is not None]
-            ax_swap = [image.dims[ax_index] for ax_index in axorder]
-            image = image.transpose(*ax_swap)
-
-            # Select time index
-            if self.axes['t'] is not None:
-                self.ui.roiPlot.show()
-                image = image[self.currentIndex]
-
-            self.imageItem.updateImage(np.asarray(image))
-
-        else:
-            super(XArrayView, self).updateImage(autoHistogramRange)
-
-    def quickMinMax(self, data):
-        """
-        Estimate the min/max values of *data* by subsampling. MODIFIED TO USE THE 99TH PERCENTILE instead of max.
-        """
-        if data is None:
-            return 0, 0
-
-        sl = slice(None, None, max(1, int(data.size // 1e6)))
-        data = np.asarray(data[sl])
-
-        levels = (np.nanmin(data), np.nanpercentile(np.where(data < np.nanmax(data), data, np.nanmin(data)), 99))
-
-        return [levels]
 
 
 class CatalogView(XArrayView):

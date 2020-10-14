@@ -86,7 +86,8 @@ setup(
                       "appdirs",
                       "entrypoints",
                       "pyqtgraph==0.11.0",
-                      "qtconsole", ],
+                      "qtconsole",
+                      "scipy"],
     setup_requires=["cython"],  # cython is a missing required dep of astropy
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
@@ -125,8 +126,10 @@ setup(
             'OperationPlugin = xicam.plugins.operationplugin:OperationPlugin',
             "SettingsPlugin = xicam.plugins.settingsplugin:SettingsPlugin",
             "QWidgetPlugin = xicam.plugins.widgetplugin:QWidgetPlugin",
+            "IntentCanvasPlugin = xicam.plugins.intentcanvasplugin:IntentCanvasPlugin",
             "ingestors = xicam.plugins.ingestorplugin:IngestorPlugin",
-            "sniffers = xicam.plugins.snifferplugin:SnifferPlugin"
+            "sniffers = xicam.plugins.snifferplugin:SnifferPlugin",
+            "intents = xicam.plugins.intentplugin:IntentPlugin",
         ],
         "xicam.plugins.SettingsPlugin": [
             "logging = xicam.gui.settings.logging:LoggingSettingsPlugin",
@@ -147,7 +150,14 @@ setup(
             "low_band_pass = xicam.core.operations:low_band_pass",
             "inverse_fourier_transform = xicam.core.operations:inverse_fourier_transform",
             "absolute_square = xicam.core.operations:absolute_square"
-        ]
+        ],
+        "xicam.plugins.IntentCanvasPlugin": [
+            "plot_canvas = xicam.gui.canvases:PlotIntentCanvas",
+            "image_canvas = xicam.gui.canvases:ImageIntentCanvas"],
+        "databroker.intents": [
+            "PlotIntent = xicam.core.intents:PlotIntent",
+            "ImageIntent = xicam.core.intents:ImageIntent",
+        ],
     },
     ext_modules=[],
     include_package_data=True,
