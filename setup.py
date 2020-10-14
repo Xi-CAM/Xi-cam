@@ -87,7 +87,8 @@ setup(
                       "appdirs",
                       "entrypoints",
                       "pyqtgraph==0.11.0",
-                      "qtconsole", ],
+                      "qtconsole",
+                      "scipy"],
     setup_requires=["cython"],  # cython is a missing required dep of astropy
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
