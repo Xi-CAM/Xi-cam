@@ -22,7 +22,6 @@ from setuptools import setup, find_packages, find_namespace_packages
 here = path.abspath(path.dirname(__file__))
 with open(path.join(here, "README.md"), encoding="utf-8") as f:
     long_description = f.read()
-
 setup(
     name="xicam",
     # Versions should comply with PEP440.  For a discussion on single-sourcing
@@ -133,6 +132,7 @@ setup(
             "logging = xicam.gui.settings.logging:LoggingSettingsPlugin",
             "appearance = xicam.gui.settings.appearance:AppearanceSettingsPlugin",
             "execution = xicam.gui.settings.execution:ExecutionSettingsPlugin",
+            "databroker = xicam.gui.settings.databroker:DatabrokerSettingsPlugin",
             "connections = xicam.gui.connections:ConnectionSettingsPlugin",
             "cammart = xicam.gui.cammart:CamMartSettingsPlugin",
             "venvs = xicam.gui.cammart.venvs:VenvsSettingsPlugin",
@@ -152,3 +152,4 @@ setup(
     ext_modules=[],
     include_package_data=True,
 )
+
