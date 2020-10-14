@@ -1,5 +1,8 @@
+from typing import Generator, Tuple
+
 from databroker.core import BlueskyRun
 import numpy as np
+from databroker.in_memory import BlueskyInMemoryCatalog
 
 
 class InvalidStreamError(KeyError):
@@ -97,3 +100,16 @@ def display_name(catalog: BlueskyRun):
     name.append(f"#{catalog.metadata['start']['uid'][:5]}")
 
     return ' '.join(name)
+
+
+def run_from_doc_stream(doc_stream: Generator[Tuple[str, dict], None, None])->BlueskyRun:
+    # load data into catalog
+    document = list(doc_stream)
+    uid = document[0][1]["uid"]
+    catalog = BlueskyInMemoryCatalog()
+    # TODO -- change upsert signature to put start and stop as kwargs
+    # TODO -- ask about more convenient way to get a BlueskyRun from a document generator
+    def psuedo_ingestor():
+        yield from document
+    catalog.upsert(document[0][1], document[-1][1], psuedo_ingestor, tuple(), {})
+    return catalog[uid]
