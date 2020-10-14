@@ -64,22 +64,17 @@ def arpes_data():
     return data
 
 
-def test_NDViewer(arpes_data, qtbot):
+def test_NDViewer(simple_small_data, qtbot):
     from xicam.gui.widgets.ndimageview import NDImageView
     from skimage.transform import rescale, resize, downscale_local_mean
 
 
     w = NDImageView()
     w.histogram_subsampling_axes = ['E (eV)']
+    w.setData(simple_small_data)
 
-    w.setData(arpes_data)
-
-    w.show()
-    # from qtpy.QtWidgets import QApplication
-    # from xicam.gui.widgets.debugmenubar import MouseDebugger
-    # md = MouseDebugger()
-    # QApplication.instance().installEventFilter(md)
-    qtbot.stopForInteraction()
+    qtbot.addWidget(w)
+    # qtbot.stopForInteraction()
 
 # @pytest.fixture
 # def xarray_catalog():
