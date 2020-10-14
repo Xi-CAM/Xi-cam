@@ -830,7 +830,7 @@ def ingest_result_set(workflow: Workflow, result_set):
         for name, value in result.items():
             frame_data_keys[name] = {"source": 'Xi-cam Workflow',
                                      "dtype": "number",  # TODO: map dtype and shape
-                                     "shape": value.shape}
+                                     "shape": getattr(value, 'shape', [])}
         operation_id = f'{end_op.name}:{workflow.operations.index(end_op)}'
         frame_stream_bundle = run_bundle.compose_descriptor(data_keys=frame_data_keys, name=operation_id)
         descriptors.append(("descriptor", frame_stream_bundle.descriptor_doc))
