@@ -76,3 +76,12 @@ def absolute_square(spectral_data: np.ndarray) -> np.ndarray:
 @intent(ImageIntent, 'Inverse Fourier Transform', output_map={'image': 'data'})
 def inverse_fourier_transform(spectral_data: np.ndarray) -> np.ndarray:
     return scipy.fft.ifft2(spectral_data)
+
+
+@operation
+@output_names("output")
+@display_name("TupleGroupParameter Test")
+@categories(("General", "Debug"))
+def tuple_test(tuple_no_default: tuple, tuple_with_default: tuple = (1, 2, 3)) -> int:
+    print("TupleGroupParameter Test")
+    return 0

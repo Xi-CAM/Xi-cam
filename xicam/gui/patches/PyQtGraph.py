@@ -6,6 +6,7 @@ from collections import OrderedDict
 from qtpy.QtWidgets import QTreeWidgetItem, QWidget, QPushButton, QCheckBox
 from qtpy.QtGui import QIcon
 from qtpy.QtCore import Signal
+from xicam.core import msg
 from xicam.gui.static import path
 
 from pyqtgraph.parametertree.parameterTypes import WidgetParameterItem, ListParameter
@@ -399,9 +400,18 @@ class TupleGroupParameter(BetterGroupParameter):
         # Create child param dicts (so Parameter.create is used in addChild)
         # where each element in the tuple is marked with a subscript of its index position
         # e.g. gains = (1, 4, 8) -> gains 0, gains 1, gains 2 (note that the numbers are subscript when shown)
+        if values is None:
+            if defaults is None:
+                # FIXME: better exception
+                message = f"TupleGroupParameter named \"{name}\" must have default values provided"
+                msg.notifyMessage(message, level=msg.ERROR)
+                raise Exception(message)
+            else:
+                values = defaults
+
         for i in range(len(values)):
             value = values[i]
-            default_value = defaults[i]  # FIXME this may not work (if defaults not provided)
+            default_value = defaults[i]
             param_type = type(values[i]).__name__
             child_name = f"{name}{subscript(i)}"
             child = {"name": child_name, "type": param_type, "default": default_value, "value": value}
