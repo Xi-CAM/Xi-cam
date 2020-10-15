@@ -1,13 +1,8 @@
 from pytestqt import qtbot
-from pytest import fixture
 from xicam.gui.widgets.metadataview import MetadataView
 from qtpy.QtGui import QStandardItemModel, QStandardItem
 from qtpy.QtCore import QItemSelectionModel, Qt
-from xicam.core.data import load_header
-
-@fixture
-def catalog():
-    return load_header(["C:\\Users\\LBL\\PycharmProjects\\merged-repo\\Xi-cam.NCEM\\tests\\twoDatasets.emd"])
+from xicam.core.tests.fixtures import catalog
 
 
 def test_metadataview(qtbot, catalog):
@@ -25,5 +20,3 @@ def test_metadataview(qtbot, catalog):
 
     w = MetadataView(catalogmodel, selectionmodel)
     w.show()
-
-    qtbot.stopForInteraction()

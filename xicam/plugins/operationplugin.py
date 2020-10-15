@@ -3,14 +3,13 @@ import inspect
 import weakref
 import functools
 from typing import Collection, Tuple, Type, Union, List, Callable, Sequence
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 from collections.abc import MutableMapping
 
 from pyqtgraph.parametertree import Parameter
 
 from xicam.core import msg
-
-from .hints import PlotHint, ImageHint
+from xicam.core.intents import Intent
 from .plugin import PluginType
 
 
@@ -187,6 +186,7 @@ class OperationPlugin(PluginType):
     output_descriptions = {}  # type: dict
     categories = None  # type: Sequence[Union[tuple, str]]
     hints = []
+    intent_blueprints = []
 
     def __init__(self, **filled_values):
         super(OperationPlugin, self).__init__()
@@ -200,6 +200,7 @@ class OperationPlugin(PluginType):
         self.fixed = self.fixed.copy()
         self.fixed.operation = self  # Need to add the operation ref to our OperationDict
         self.hints = self.hints.copy()
+        self.intent_blueprints = self.intent_blueprints.copy()
         self.input_descriptions = self.input_descriptions.copy()
         self.limits = self.limits.copy()
         self.name = self.name or getattr(self._func, "name", self._func.__name__)
@@ -501,7 +502,8 @@ def operation(func: Callable,
         "fixable": fixable or getattr(func, 'fixable', {}),
         "visible": visible or getattr(func, 'visible', {}),
         "opts": opts or getattr(func, 'opts', {}),
-        "hints": getattr(func, 'hints', [])  # TODO: does hints need an arg
+        "hints": getattr(func, 'hints', []),  # TODO: does hints need an arg
+        "intent_blueprints": getattr(func, 'intent_blueprints', [])
     }
 
     if state["name"] is None:
@@ -647,42 +649,42 @@ def limits(arg_name, limit):
     return decorator
 
 
-# TODO: need an image_hint decorator? coplot_hint decorator?
-def image_hint(*args, **kwargs):
-    def decorator(func):
-        if not hasattr(func, 'hints'):
-            func.hints = []
-        func.hints.append(ImageHint(*args, **kwargs))
-        return func
+IntentBlueprint = namedtuple("IntentBlueprint", ["intent_type", "name", "output_map", "args", "kwargs"])
 
-    return decorator
 
-# TODO Check that signature propagates up
-def plot_hint(*args, **kwargs):
-    """Decorator to define plot hints for 1-dimensional outputs. This accepts `kwargs` that get passed to the rendering
-    widget; see :class:`pyqtgraph.PlotDataItem`. This annotation "hints" to Xi-cam that a Plot widget may be generated
-    to represent this data visually.
-
-    >>> @OperationPlugin
-    >>> @output_names('x', 'y')
-    >>> @plot_hint('x', 'y', yLog=True, labels={"left": "y-axis", "bottom": "x-axis"}, pen='r')
-    >>> def op(x):
-    >>>     ...
+def intent(intent_type: Type[Intent], name="", output_map={}, *args, **kwargs):
+    """Decorator that defines a visualization intent for the operation.
 
     Parameters
     ----------
-    args
-        Arguments for `PlotHint`.
-    kwargs
-        Keyword arguments for `PlotHint`.
+    intent_type: Type[Intent]
+        The Intent type that will be used to create an Intent when a workflow is executed.
+    name: str
+        Name of the Intent.
+    output_map: dict
+        Maps from what the Intent expects for data to one or more output_names defined in the operation.
+        Intent data argument (str) maps to output_name (str) (e.g. output_name={"image": "output1"} for ImageIntent).
+    args:
+        Positional arguments for the Intent.
+    kwargs:
+        Keyword arguments for the Intent.
 
-    TODO examples may be helpful in these...
+    Examples
+    --------
+    Make an operation that defines a PlotIntent that displays its plot item with a red line (pen='r' kwarg).
+
+    >>>@operation
+    >>>@output_names('output1', 'output2')
+    >>>@intent(PlotHint, name="Output1 v. Output2", output_map={'x': 'output1', 'y': 'output2'}, labels={} pen='r')
+    >>>def op():
+    >>>    ...
+    >>>    return(array_1, array_2)
     """
-
     def decorator(func):
-        if not hasattr(func, 'hints'):
-            func.hints = []
-        func.hints.append(PlotHint(*args, **kwargs))
+        if not hasattr(func, 'intent_blueprints'):
+            func.intent_blueprints = []
+
+        func.intent_blueprints.append(IntentBlueprint(intent_type.__name__, name, output_map, args, kwargs))
         return func
 
     return decorator

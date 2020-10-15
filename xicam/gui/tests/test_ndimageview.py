@@ -60,6 +60,7 @@ def arpes_data():
     required_task = next(filter(lambda task: task.name=='application/x-fits', plugin_manager._tasks))
     plugin_manager._load_plugin(required_task)
     plugin_manager._instantiate_plugin(required_task)
+    # FIXME: don't rely on absolute file path here!
     catalog = load_header(['C:\\Users\\LBL\\PycharmProjects\\merged-repo\\Xi-cam.spectral\\xicam\\spectral\\ingestors\\20161214_00034.fits'])
     data = project_arpes(catalog)
     return data
@@ -101,18 +102,18 @@ def ir_stxm_data():
     return data
 
 
-def test_NDViewer(ir_stxm_data, qtbot):
+def test_NDViewer(simple_small_data, qtbot):
     from xicam.gui.widgets.ndimageview import NDImageView
     from skimage.transform import rescale, resize, downscale_local_mean
 
 
     w = NDImageView()
     w.histogram_subsampling_axes = ['E (eV)']
-    w.setData(cosmic_data)
+    w.setData(simple_small_data)
 
     qtbot.addWidget(w)
     w.show()
-    qtbot.stopForInteraction()
+    # qtbot.stopForInteraction()
 
 # @pytest.fixture
 # def xarray_catalog():
