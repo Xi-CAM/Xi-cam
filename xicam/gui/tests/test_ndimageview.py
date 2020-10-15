@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 from xicam.core.data import load_header
 from xicam.plugins import manager as plugin_manager
+from xicam.spectral import project_nxCXI_ptycho
 
 
 size = 100
@@ -75,6 +76,20 @@ def project_nxstxm(catalog):
     return raw_data.transpose('Sample Y (μm)', 'Sample X (μm)', 'E (eV)')
 
 @pytest.fixture
+def cosmic_data():
+    plugin_manager.collect_plugins()
+    required_task = next(filter(lambda task: task.name == 'application/x-cxi', plugin_manager._tasks))
+    plugin_manager._load_plugin(required_task)
+    plugin_manager._instantiate_plugin(required_task)
+    catalog = load_header([
+                              'C:\\Users\\LBL\\PycharmProjects\\merged-repo\\NS_200805056.cxi'])
+
+    intents = project_nxCXI_ptycho(catalog)
+    data = intents[0].image
+    return data.transpose('y (nm)', 'x (nm)', 'E (eV)')
+
+
+@pytest.fixture
 def ir_stxm_data():
     plugin_manager.collect_plugins()
     required_task = next(filter(lambda task: task.name == 'application/x-hdf5', plugin_manager._tasks))
@@ -93,14 +108,10 @@ def test_NDViewer(ir_stxm_data, qtbot):
 
     w = NDImageView()
     w.histogram_subsampling_axes = ['E (eV)']
+    w.setData(cosmic_data)
 
-    w.setData(ir_stxm_data)
-
+    qtbot.addWidget(w)
     w.show()
-    # from qtpy.QtWidgets import QApplication
-    # from xicam.gui.widgets.debugmenubar import MouseDebugger
-    # md = MouseDebugger()
-    # QApplication.instance().installEventFilter(md)
     qtbot.stopForInteraction()
 
 # @pytest.fixture
