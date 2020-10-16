@@ -31,6 +31,7 @@ setup(
     cmdclass=versioneer.get_cmdclass(),
     description="The CAMERA platform for synchrotron data management, visualization, and reduction.",
     long_description=long_description,
+    long_description_content_type="text/markdown",
     # The project's main homepage.
     url="https://github.com/Xi-cam/Xi-cam",
     download_url="https://pypi.org/project/xicam/",
