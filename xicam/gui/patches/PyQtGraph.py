@@ -1,14 +1,16 @@
 """
 This patch module adds color gradients like matplotlib's viridis etc. to PyQtGraph
 """
+import numpy as np
 from pyqtgraph.graphicsItems import GradientEditorItem
 from collections import OrderedDict
 from qtpy.QtWidgets import QTreeWidgetItem, QWidget, QPushButton, QCheckBox
-from qtpy.QtGui import QIcon
+from qtpy.QtGui import QIcon, QPainterPath
 from qtpy.QtCore import Signal
 from xicam.gui.static import path
 
 from pyqtgraph.parametertree.parameterTypes import WidgetParameterItem, ListParameter
+import pyqtgraph as pg
 
 GradientEditorItem.__dict__["Gradients"] = OrderedDict(
     [
@@ -129,7 +131,7 @@ from pyqtgraph.parametertree import Parameter, ParameterItem, registerParameterT
 from pyqtgraph.parametertree import parameterTypes
 from pyqtgraph.widgets.SpinBox import SpinBox
 from pyqtgraph.widgets.ColorButton import ColorButton
-from pyqtgraph import ImageView, ROI, PolyLineROI
+from pyqtgraph import ImageView, ROI, PolyLineROI, ErrorBarItem
 import numpy as np
 from qtpy.QtCore import QSize
 from qtpy.QtGui import QBrush, QPalette
@@ -423,4 +425,103 @@ class EnumListParameter(ListParameter):
         super(EnumListParameter, self).__init__(**opts)
         self.setLimits(opts['limits'])
 
+
 registerParameterType('EnumMeta', EnumListParameter, override=True)
+
+
+class LogCompatibleErrorBarItem(ErrorBarItem):
+    def __init__(self, **opts):
+        super(LogCompatibleErrorBarItem, self).__init__(**opts)
+        self.opts['xlog'] = False
+        self.opts['ylog'] = False
+
+    def setLogMode(self, x:bool=None, y:bool=None):
+        if x is not None and x!=self.opts['xlog']:
+            self.setData(xlog=x)
+        if y is not None and y!=self.opts['ylog']:
+            self.setData(ylog=y)
+
+    def drawPath(self):
+        p = QPainterPath()
+
+        x, y = self.opts['x'], self.opts['y']
+        if x is None or y is None:
+            self.path = p
+            return
+
+        if self.opts['xlog']:
+            x = np.log10(x)
+        if self.opts['ylog']:
+            y = np.log10(y)
+
+        beam = self.opts['beam']
+
+        height, top, bottom = self.opts['height'], self.opts['top'], self.opts['bottom']
+        if height is not None or top is not None or bottom is not None:
+            ## draw vertical error bars
+            if height is not None:
+                y1 = y - height / 2.
+                y2 = y + height / 2.
+            else:
+                if bottom is None:
+                    y1 = y
+                else:
+                    y1 = y - bottom
+                if top is None:
+                    y2 = y
+                else:
+                    y2 = y + top
+
+            for i in range(len(x)):
+                p.moveTo(x[i], y1[i])
+                p.lineTo(x[i], y2[i])
+
+            if beam is not None and beam > 0:
+                x1 = x - beam / 2.
+                x2 = x + beam / 2.
+                if height is not None or top is not None:
+                    for i in range(len(x)):
+                        p.moveTo(x1[i], y2[i])
+                        p.lineTo(x2[i], y2[i])
+                if height is not None or bottom is not None:
+                    for i in range(len(x)):
+                        p.moveTo(x1[i], y1[i])
+                        p.lineTo(x2[i], y1[i])
+
+        width, right, left = self.opts['width'], self.opts['right'], self.opts['left']
+        if width is not None or right is not None or left is not None:
+            ## draw vertical error bars
+            if width is not None:
+                x1 = x - width / 2.
+                x2 = x + width / 2.
+            else:
+                if left is None:
+                    x1 = x
+                else:
+                    x1 = x - left
+                if right is None:
+                    x2 = x
+                else:
+                    x2 = x + right
+
+            for i in range(len(x)):
+                p.moveTo(x1[i], y[i])
+                p.lineTo(x2[i], y[i])
+
+            if beam is not None and beam > 0:
+                y1 = y - beam / 2.
+                y2 = y + beam / 2.
+                if width is not None or right is not None:
+                    for i in range(len(x)):
+                        p.moveTo(x2[i], y1[i])
+                        p.lineTo(x2[i], y2[i])
+                if width is not None or left is not None:
+                    for i in range(len(x)):
+                        p.moveTo(x1[i], y1[i])
+                        p.lineTo(x1[i], y2[i])
+
+        self.path = p
+        self.prepareGeometryChange()
+
+
+pg.ErrorBarItem = LogCompatibleErrorBarItem
