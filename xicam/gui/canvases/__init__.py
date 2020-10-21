@@ -1,23 +1,7 @@
-from abc import ABC, abstractmethod
+# from abc import ABC, abstractmethod
 import numpy as np
 from pyqtgraph import ImageView, PlotWidget
 import pyqtgraph as pg
-from matplotlib import pyplot as plt
-
-
-# IntentCanvas -> SingleIntentCanvas -> ImageIntentCanvas
-#              -> MultipleIntentCanvas -> PlotItentCanvas
-
-# IntentCanvas.serialize() -> raise NIE
-# IntentCanvas.deserialize() -> raise NIE
-# not implemented for most derived classes
-
-
-# How do we be friendly to Jupyter land?
-# Use a manager object that sits above Xi-cam land and Generic land
-# manager object has a standardized interface for dispatching intents to canvases
-# Xi-cam: ProxyModel
-# JupyterLand: whatever implements that interface
 
 
 # # TODO: fix TypeError: metaclass conflict: the metaclass of a derived class must be a (non-strict) subclass of the metaclasses of all its bases
@@ -34,7 +18,7 @@ from matplotlib import pyplot as plt
 #     # @abstractmethod
 #     def unrender(self, intent):
 #         pass
-from xicam.gui.widgets.plotwidgetmixins import HoverHighlight, CurveLabels
+from xicam.gui.widgets.plotwidgetmixins import CurveLabels
 from xicam.plugins.intentcanvasplugin import IntentCanvas
 
 
@@ -111,27 +95,3 @@ class PlotIntentCanvas(XicamIntentCanvas, PlotIntentCanvasBlend):
             return True
 
         return False
-
-
-class MatplotlibImageCanvas(ImageIntentCanvas):
-    def render(self, intent):
-        return plt.imshow(intent.image)
-
-    def unrender(self, intent):
-        pass
-
-
-if __name__ == "__main__":
-    import numpy as np
-    from qtpy.QtWidgets import QApplication, QWidget
-    from xicam.core.intents import ImageIntent, PlotIntent
-
-    app = QApplication([])
-
-    widget = QWidget()
-    canvas = MatplotlibImageCanvas()
-    img = np.random.random(size=(100, 100))
-    intent = ImageIntent(image=img)
-    canvas.render()
-
-    app.exec()
