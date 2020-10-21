@@ -1,12 +1,12 @@
-from abc import ABC, abstractmethod
+# from abc import ABC, abstractmethod
 import numpy as np
 from pyqtgraph import ImageView, PlotWidget, ErrorBarItem
 import pyqtgraph as pg
+
 from matplotlib import pyplot as plt
 from xarray import DataArray
 
 from xicam.core.intents import PlotIntent, ErrorBarIntent
-
 
 # IntentCanvas -> SingleIntentCanvas -> ImageIntentCanvas
 #              -> MultipleIntentCanvas -> PlotItentCanvas
@@ -37,7 +37,7 @@ from xicam.core.intents import PlotIntent, ErrorBarIntent
 #     # @abstractmethod
 #     def unrender(self, intent):
 #         pass
-from xicam.gui.widgets.plotwidgetmixins import HoverHighlight, CurveLabels
+from xicam.gui.widgets.plotwidgetmixins import CurveLabels
 from xicam.plugins.intentcanvasplugin import IntentCanvas
 
 
@@ -130,27 +130,3 @@ class PlotIntentCanvas(XicamIntentCanvas, PlotIntentCanvasBlend):
             return True
 
         return False
-
-
-class MatplotlibImageCanvas(ImageIntentCanvas):
-    def render(self, intent):
-        return plt.imshow(intent.image)
-
-    def unrender(self, intent):
-        pass
-
-
-if __name__ == "__main__":
-    import numpy as np
-    from qtpy.QtWidgets import QApplication, QWidget
-    from xicam.core.intents import ImageIntent, PlotIntent
-
-    app = QApplication([])
-
-    widget = QWidget()
-    canvas = MatplotlibImageCanvas()
-    img = np.random.random(size=(100, 100))
-    intent = ImageIntent(image=img)
-    canvas.render()
-
-    app.exec()
