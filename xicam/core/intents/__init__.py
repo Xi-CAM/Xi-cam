@@ -57,16 +57,8 @@ class PlotIntent(Intent):
         return self._canvas_name
 
 
-class ErrorBarIntent(Intent):
+class ErrorBarIntent(PlotIntent):
     """
     For reference on kwargs, see
     https://pyqtgraph.readthedocs.io/en/latest/graphicsItems/errorbaritem.html
     """
-
-    canvas = "plot_canvas"
-
-    def __init__(self, labels, **kwargs):
-        super(ErrorBarIntent, self).__init__(**kwargs)
-        self.labels = labels
-        self.x = kwargs['x']
-        self.y = kwargs['y']

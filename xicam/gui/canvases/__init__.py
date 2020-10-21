@@ -108,7 +108,7 @@ class PlotIntentCanvas(XicamIntentCanvas, PlotIntentCanvasBlend):
             for key, value in kwargs.items():
                 if isinstance(value, DataArray):
                     kwargs[key] = np.asanyarray(value).squeeze()
-            erroritem = ErrorBarItem(**kwargs)
+            erroritem = ErrorBarItem(x=np.asarray(intent.x).squeeze(), y=np.asarray(intent.y).squeeze(), **kwargs)
             self.plotItem.addItem(erroritem)
 
             items.append(erroritem)
