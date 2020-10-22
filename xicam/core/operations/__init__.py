@@ -82,6 +82,6 @@ def inverse_fourier_transform(spectral_data: np.ndarray) -> np.ndarray:
 @output_names("output")
 @display_name("TupleGroupParameter Test")
 @categories(("General", "Debug"))
-def tuple_test(tuple_no_default: tuple, tuple_with_default: tuple = (1, 2, 3)) -> int:
+def tuple_test(tuple_with_default: tuple = (1, 2, 3)) -> int:
     print("TupleGroupParameter Test")
     return 0
