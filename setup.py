@@ -31,6 +31,7 @@ setup(
     cmdclass=versioneer.get_cmdclass(),
     description="The CAMERA platform for synchrotron data management, visualization, and reduction.",
     long_description=long_description,
+    long_description_content_type="text/markdown",
     # The project's main homepage.
     url="https://github.com/Xi-cam/Xi-cam",
     download_url="https://pypi.org/project/xicam/",
@@ -149,7 +150,8 @@ setup(
             "fourier_transform = xicam.core.operations:fourier_transform",
             "low_band_pass = xicam.core.operations:low_band_pass",
             "inverse_fourier_transform = xicam.core.operations:inverse_fourier_transform",
-            "absolute_square = xicam.core.operations:absolute_square"
+            "absolute_square = xicam.core.operations:absolute_square",
+            "tuple_test = xicam.core.operations:tuple_test",
         ],
         "xicam.plugins.IntentCanvasPlugin": [
             "plot_canvas = xicam.gui.canvases:PlotIntentCanvas",
