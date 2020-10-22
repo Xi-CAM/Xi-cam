@@ -7,7 +7,7 @@ from pyqtgraph import ImageView, InfiniteLine, mkPen, ScatterPlotItem, ImageItem
 from qtpy.QtGui import QTransform, QPolygonF
 from qtpy.QtWidgets import QLabel, QErrorMessage, QSizePolicy, QPushButton, QHBoxLayout, QVBoxLayout, QComboBox, \
     QWidget, QMenu, QAction, QGridLayout, QFrame
-from qtpy.QtCore import Qt, Signal, Slot, QSize, QPointF, QRectF, QObjectCleanupHandler
+from qtpy.QtCore import Qt, Signal, Slot, QSize, QPointF, QRectF, QObjectCleanupHandler, QSignalBlocker
 from xarray import DataArray
 import numpy as np
 from typing import Tuple, Dict
@@ -368,7 +368,8 @@ class SliceableGraphicsView(GraphicsView, SlicingView):
                 getattr(self.view, sig).connect(getattr(self, sig))
 
         # Add imageitem
-        self.image_item = ImageItem()
+        self.image_item = ImageItem(axisOrder='row-major')
+        self.image_item.setOpts()
         self.view.addItem(self.image_item)
 
         # add crosshair
@@ -422,7 +423,7 @@ class SliceableGraphicsView(GraphicsView, SlicingView):
         transform = self.image_item.viewTransform()
         new_pos = transform.map(self.image_item.boundingRect().center())
         self.crosshair.setPos(new_pos)
-        self.crosshair.sigMoved.emit(new_pos)
+        # self.crosshair.sigMoved.emit(new_pos)
 
     def updateImage(self, autoHistogramRange=True):
         ## Redraw image on screen
@@ -564,8 +565,9 @@ class PlotView(PlotWidget):
             self._curve.setData(data.coords[data.dims[dim_index]], reduced_data)
             self.plotItem.setLabel('bottom', data.dims[dim_index])
 
-    def updateCrosshair(self, pos):
-        self.crosshair.setPos(pos)
+    def updateCrosshair(self, *pos):
+        with QSignalBlocker(self.crosshair):
+            self.crosshair.setPos(pos)
 
     def resetCrosshair(self):
         if self.slice_direction == 'horizontal':
@@ -573,9 +575,11 @@ class PlotView(PlotWidget):
         elif self.slice_direction in ['vertical', 'depth']:
             data = self._curve.xData
 
-        new_pos = (data.max()-data.min())/2
+        new_pos = (data.max()+data.min())/2
 
-        self.crosshair.setPos(new_pos)
+        with QSignalBlocker(self.crosshair):
+            self.crosshair.setPos(new_pos)
+
 
 class ViewSelector(QWidget, SlicingView):
     sigToggleHorizontalSlice = Signal(bool)
@@ -593,6 +597,7 @@ class ViewSelector(QWidget, SlicingView):
         self.slice_direction = slice_direction
         self.view_widget = None
         self._data = None
+        self._crosshair_pos = None
 
         self.setLayout(QVBoxLayout())
 
@@ -636,6 +641,8 @@ class ViewSelector(QWidget, SlicingView):
 
         if self._data is not None:
             self.view_widget.setData(self._data)
+        if self._crosshair_pos is not None:
+            self.view_widget.updateCrosshair(*self._crosshair_pos)
 
     def _make_view(self, view_key, slice_direction, parent):
         return self.view_options[view_key](slice_direction=slice_direction, parent=parent)
@@ -647,6 +654,7 @@ class ViewSelector(QWidget, SlicingView):
     #     self.crosshair.sigMoved.emit(new_pos)
 
     def updateCrosshair(self, *pos):
+        self._crosshair_pos = pos
         self.view_widget.updateCrosshair(*pos)
 
     @property
