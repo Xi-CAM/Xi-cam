@@ -194,6 +194,14 @@ class StackedCanvasView(CanvasView):
         self.layout.addLayout(self.buttonpanel)
         self.setLayout(self.layout)
 
+    # INTERFACING WITH TOOLBAR (see XPCSToolbar)
+    def view(self):
+        # from xicam.gui.canvases import ImageIntentCanvas
+        view = self.stackedwidget.currentWidget()
+        return view.getView()
+        # return None
+    # DONE INTERFACING
+
     def switch_view(self, id, toggled):
         # when toggled==True, the the button is the new button that was switched to.
         # when False, the button is the previous button
@@ -225,6 +233,9 @@ class CanvasDisplayTabWidget(CanvasDisplayWidget):
         self.layout().addWidget(self._tabWidget)
 
         self.icon = QIcon(path('icons/tabs.png'))
+
+    def getView(self):
+        return self._tabWidget.currentWidget()
 
     def clear_canvases(self):
         self._tabWidget.clear()
