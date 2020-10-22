@@ -1,11 +1,13 @@
 from typing import Tuple
 import pytest
+import numpy as np
 
 from xicam.core import execution
 from xicam.core.execution import localexecutor
 from xicam.core.execution.workflow import Graph, Workflow
+from xicam.core.intents import PlotIntent, ImageIntent
 from xicam.plugins import OperationPlugin
-from xicam.plugins.operationplugin import output_names, operation, display_name
+from xicam.plugins.operationplugin import output_names, operation, display_name, intent
 from pyqtgraph.parametertree import Parameter
 
 
@@ -78,6 +80,26 @@ def c_op():
 
 
 @pytest.fixture()
+def plot_op():
+    @operation
+    @output_names('x', 'y')
+    @intent(PlotIntent, name='Example Plot', output_map={'x':'x', 'y':'y'})
+    def plot() -> Tuple[np.ndarray, np.ndarray]:
+        return np.arange(100), np.random.random((100,))
+    return plot()
+
+
+@pytest.fixture()
+def image_op():
+    @operation
+    @output_names('image')
+    @intent(ImageIntent, name='Example Image', output_map={'image':'image'})
+    def image() -> np.ndarray:
+        return np.random.random((100,100))
+    return image()
+
+
+@pytest.fixture()
 def simple_workflow(square_op, sum_op):
     from xicam.core.execution.workflow import Workflow
 
@@ -125,4 +147,16 @@ def custom_parameter_workflow(custom_parameter_op):
     custom_parameter_op = custom_parameter_op()
 
     wf.add_operation(custom_parameter_op)
+    return wf
+
+
+@pytest.fixture()
+def intents_workflow(plot_op, image_op):
+    from xicam.core.execution.workflow import Workflow
+
+    wf = Workflow()
+
+    wf.add_operation(plot_op)
+    wf.add_operation(image_op)
+
     return wf

@@ -3,13 +3,12 @@ from pytestqt import qtbot
 import io
 import contextlib
 
+from bluesky_live.run_builder import RunBuilder
+
 from xicam.core import execution
 from xicam.core.execution import localexecutor
-from xicam.core.execution.workflow import Graph, Workflow
+from xicam.core.execution.workflow import Graph, Workflow, ingest_result_set, project_intents
 from xicam.plugins.operationplugin import output_names, operation
-
-from xicam.core.tests.workflow_fixtures import a_op, b_op, c_op, graph, double_and_triple_op, sum_op, square_op, negative_op, simple_workflow
-
 
 # Note that this test relies on the xicam.plugins module
 # TODO prevent adding circular links
@@ -882,3 +881,12 @@ def test_copy(simple_workflow:Workflow):
     result2 = clone.execute_synchronous(n=2)
 
     assert result1 == result2
+
+
+def test_ingest_project(intents_workflow:Workflow):
+    result = intents_workflow.execute_synchronous()
+    doc_gen = ingest_result_set(result, intents_workflow)
+
+    run_catalog = RunBuilder()
+    RunBuilder.
+    intents = project_intents(run_catalog)
