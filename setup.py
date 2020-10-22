@@ -159,6 +159,7 @@ setup(
         "databroker.intents": [
             "PlotIntent = xicam.core.intents:PlotIntent",
             "ImageIntent = xicam.core.intents:ImageIntent",
+            "ErrorBarIntent = xicam.core.intents:ErrorBarIntent"
         ],
     },
     ext_modules=[],

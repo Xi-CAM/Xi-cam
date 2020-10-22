@@ -55,3 +55,10 @@ class PlotIntent(Intent):
             y_name = self.labels.get("left", "")
             return x_name + ", " + y_name
         return self._canvas_name
+
+
+class ErrorBarIntent(PlotIntent):
+    """
+    For reference on kwargs, see
+    https://pyqtgraph.readthedocs.io/en/latest/graphicsItems/errorbaritem.html
+    """
