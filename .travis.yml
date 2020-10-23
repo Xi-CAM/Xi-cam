@@ -41,7 +41,7 @@ install:
 script:
 - 'pylint xicam --errors-only || :'
 #- 'pytest --cov=xicam --cov-config=.coveragerc . || :'
-- 'coverage run -m pytest . || :'
+- 'coverage run -m pytest .'
 deploy:
   skip_cleanup: true
   provider: pypi
