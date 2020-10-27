@@ -6,6 +6,7 @@ matrix:
     services:
     - xvfb
     before_install:
+    - ulimit -a
     - ulimit -n 65536
     - python --version
     - pip install --upgrade pip
