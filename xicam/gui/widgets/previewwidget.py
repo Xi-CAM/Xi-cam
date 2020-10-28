@@ -19,8 +19,6 @@ class PreviewWidget(GraphicsLayoutWidget):
         self.imageitem = ImageItem()
         self.textitem = TextItem(anchor=(0.5, 0))
         self.textitem.setFont(QFont("Zero Threes"))
-        self.imgdata = None
-
         self.imageitem.setOpts(axisOrder="row-major")
 
         self.view.addItem(self.imageitem)
@@ -69,9 +67,8 @@ class PreviewWidget(GraphicsLayoutWidget):
     def setImage(self, imgdata):
         self.imageitem.clear()
         self.textitem.hide()
-        self.imgdata = imgdata
-        self.imageitem.setImage(np.log(self.imgdata * (self.imgdata > 0) + (self.imgdata < 1)), autoLevels=True)
-        self.imageitem.setTransform(QTransform(1, 0, 0, -1, 0, self.imgdata.shape[-2]))
+        self.imageitem.setImage(np.log(imgdata * (imgdata > 0) + (imgdata < 1)), autoLevels=True)
+        self.imageitem.setTransform(QTransform(1, 0, 0, -1, 0, imgdata.shape[-2]))
         self.view.autoRange()
 
     def setText(self, text):
