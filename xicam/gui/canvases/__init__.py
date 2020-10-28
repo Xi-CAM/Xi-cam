@@ -1,9 +1,12 @@
-from abc import ABC, abstractmethod
+# from abc import ABC, abstractmethod
 import numpy as np
-from pyqtgraph import ImageView, PlotWidget
+from pyqtgraph import ImageView, PlotWidget, ErrorBarItem
 import pyqtgraph as pg
-from matplotlib import pyplot as plt
 
+from matplotlib import pyplot as plt
+from xarray import DataArray
+
+from xicam.core.intents import PlotIntent, ErrorBarIntent
 
 # IntentCanvas -> SingleIntentCanvas -> ImageIntentCanvas
 #              -> MultipleIntentCanvas -> PlotItentCanvas
@@ -34,7 +37,7 @@ from matplotlib import pyplot as plt
 #     # @abstractmethod
 #     def unrender(self, intent):
 #         pass
-from xicam.gui.widgets.plotwidgetmixins import HoverHighlight, CurveLabels
+from xicam.gui.widgets.plotwidgetmixins import CurveLabels
 from xicam.plugins.intentcanvasplugin import IntentCanvas
 
 
@@ -42,7 +45,7 @@ class XicamIntentCanvas(IntentCanvas):
     """Xi-CAM specific canvas."""
     def __init__(self, *args, **kwargs):
         super(XicamIntentCanvas, self).__init__(*args, **kwargs)
-        self.intent_to_item = {}
+        self.intent_to_items = {}
 
 
 class ImageIntentCanvas(XicamIntentCanvas, ImageView):
@@ -76,62 +79,54 @@ class PlotIntentCanvas(XicamIntentCanvas, PlotIntentCanvasBlend):
         self.setLabels(**kwargs.get("labels", {}))
 
     def colorize(self):
-        count = len(self.intent_to_item)
-        for i, item in enumerate(self.intent_to_item.values()):
+        count = len(self.intent_to_items)
+        for i, items in enumerate(self.intent_to_items.values()):
             if count < 9:
                 color = pg.mkColor(i)
             else:
                 color = pg.intColor(i, hues=count, minHue=180, maxHue=300)
 
-            item.setPen(color)
+            for item in items:
+                item.setData(pen=color)
 
     def render(self, intent):
-        plot_item = self.plot(x=np.asarray(intent.x).squeeze(), y=np.asarray(intent.y).squeeze(), name=intent.item_name)
-        # Use most recent intent's log mode for the canvas's log mode
-        x_log_mode = intent.kwargs.get("xLogMode", self.plotItem.getAxis("bottom").logMode)
-        y_log_mode = intent.kwargs.get("yLogMode", self.plotItem.getAxis("left").logMode)
-        self.plotItem.setLogMode(x=x_log_mode, y=y_log_mode)
+        items = []
 
-        self.setLabels(**intent.labels)
+        if isinstance(intent, (PlotIntent, ErrorBarIntent)):
 
-        self.intent_to_item[intent] = plot_item
+            plotitem = self.plot(x=np.asarray(intent.x).squeeze(), y=np.asarray(intent.y).squeeze(), name=intent.item_name)
+            # Use most recent intent's log mode for the canvas's log mode
+            x_log_mode = intent.kwargs.get("xLogMode", self.plotItem.getAxis("bottom").logMode)
+            y_log_mode = intent.kwargs.get("yLogMode", self.plotItem.getAxis("left").logMode)
+            self.plotItem.setLogMode(x=x_log_mode, y=y_log_mode)
+            self.setLabels(**intent.labels)
 
+            items.append(plotitem)
+
+        if isinstance(intent, ErrorBarIntent):
+            kwargs = intent.kwargs.copy()
+            for key, value in kwargs.items():
+                if isinstance(value, DataArray):
+                    kwargs[key] = np.asanyarray(value).squeeze()
+            erroritem = ErrorBarItem(x=np.asarray(intent.x).squeeze(), y=np.asarray(intent.y).squeeze(), **kwargs)
+            self.plotItem.addItem(erroritem)
+
+            items.append(erroritem)
+
+        self.intent_to_items[intent] = items
         self.colorize()
-        return plot_item
+        return items
 
     def unrender(self, intent) -> bool:
         """Un-render the intent from the canvas and return if the canvas can be removed."""
-        if intent in self.intent_to_item:
-            item = self.intent_to_item[intent]
-            self.plotItem.removeItem(item)
-            del self.intent_to_item[intent]
+        if intent in self.intent_to_items:
+            items = self.intent_to_items[intent]
+            for item in items:
+                self.plotItem.removeItem(item)
+            del self.intent_to_items[intent]
             self.colorize()
 
-        if len(self.intent_to_item.items()) == 0:
+        if not self.intent_to_items:
             return True
 
         return False
-
-
-class MatplotlibImageCanvas(ImageIntentCanvas):
-    def render(self, intent):
-        return plt.imshow(intent.image)
-
-    def unrender(self, intent):
-        pass
-
-
-if __name__ == "__main__":
-    import numpy as np
-    from qtpy.QtWidgets import QApplication, QWidget
-    from xicam.core.intents import ImageIntent, PlotIntent
-
-    app = QApplication([])
-
-    widget = QWidget()
-    canvas = MatplotlibImageCanvas()
-    img = np.random.random(size=(100, 100))
-    intent = ImageIntent(image=img)
-    canvas.render()
-
-    app.exec()
