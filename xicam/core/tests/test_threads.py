@@ -62,7 +62,7 @@ def test_exit_before_thread(qtbot):
     def long_thread():
         time.sleep(100000)
 
-    for i in range(1000):
+    for i in range(50):
         t = threads.QThreadFuture(long_thread)
 
         t.start()
@@ -81,7 +81,7 @@ def test_exit_before_decorated_thread(qtbot):
     def long_thread():
         time.sleep(100000)
 
-    for i in range(100):
+    for i in range(50):
         long_thread()
 
     time.sleep(.01)
@@ -99,7 +99,7 @@ def test_qthreads_and_pythreads(qtbot):
     def long_thread():
         time.sleep(100000)
 
-    for i in range(1000):
+    for i in range(50):
         long_thread()
 
     time.sleep(.01)
