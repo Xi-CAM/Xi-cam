@@ -51,7 +51,7 @@ class ImageIntentCanvas(XicamIntentCanvas, ImageView):
 
     def render(self, intent):
         # TODO: add rendering logic for ROI intents
-        return self.setImage(np.asarray(intent.image))
+        return self.setImage(np.asarray(intent.image).squeeze())
 
     def unrender(self, intent) -> bool:
         ...
