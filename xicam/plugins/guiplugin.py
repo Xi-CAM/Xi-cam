@@ -27,7 +27,10 @@ class GUIPlugin(PluginType):
         and then call `super` at the end of `__init__`.
         """
         super(GUIPlugin, self).__init__()
-        self.stage = list(self.stages.values())[0]
+        # Need this here; otherwise, old GUIPlugin's who super() at end of init will overwrite their stages
+        if not hasattr(self, "_stages"):
+            self._stages = OrderedDict()  # dict's ordered by default since 3.6
+        self._stage = None
 
     def appendHeader(self, header: NonDBHeader, **kwargs):
         # kwargs can include flags for how the data append operation is handled, i.e.:
@@ -73,6 +76,20 @@ class GUIPlugin(PluginType):
     @property
     def exposedvars(self) -> Dict:
         raise NotImplementedError
+
+    @property
+    def stage(self):
+        if not self._stage:
+            first_stage = self._stages
+            # Handle nested stages (see XPCS GUIPlugin for example)
+            while not isinstance(first_stage, GUILayout):
+                first_stage = next(iter(first_stage.values()))
+            self._stage = first_stage
+        return self._stage
+
+    @stage.setter
+    def stage(self, stage):
+        self._stage = stage
 
 
 class PanelState(Enum):
