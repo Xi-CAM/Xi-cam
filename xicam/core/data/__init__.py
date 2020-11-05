@@ -143,7 +143,7 @@ def load_header(uris: List[Union[str, Path]] = None, uuid: str = None):
         catalog = BlueskyInMemoryCatalog()
         # TODO -- change upsert signature to put start and stop as kwargs
         # TODO -- ask about more convenient way to get a BlueskyRun from a document generator
-        catalog.upsert(document[0][1], document[-1][1], ingestor, [uris], {})
+        catalog.upsert(document[0][1], document[-1][1], partial(iter, document), [], {})
         return catalog[uid]
     else:
         warn(f"No applicable ingestor found. Falling-back to DataHandlers")
@@ -562,7 +562,7 @@ class QNonDBHeader(QObject, NonDBHeader):
         self.sigChanged.emit()
 
 
-from functools import lru_cache
+from functools import lru_cache, partial
 import numpy as np
 from xicam.core import msg
 
