@@ -3,8 +3,10 @@ from typing import Union, List, Set
 
 from qtpy.QtCore import Signal, QObject
 
+from databroker.core import BlueskyRun
 from databroker.utils import ALL
 from databroker.in_memory import BlueskyInMemoryCatalog
+from bluesky_live.run_builder import build_one_run_from_documents
 from warnings import warn
 
 import mimetypes
@@ -138,13 +140,20 @@ def load_header(uris: List[Union[str, Path]] = None, uuid: str = None):
                 break
 
     if ingestor:
-        document = list(ingestor(uris))
-        uid = document[0][1]["uid"]
-        catalog = BlueskyInMemoryCatalog()
-        # TODO -- change upsert signature to put start and stop as kwargs
-        # TODO -- ask about more convenient way to get a BlueskyRun from a document generator
-        catalog.upsert(document[0][1], document[-1][1], partial(iter, document), [], {})
-        return catalog[uid]
+        payload = list(ingestor(uris))
+
+        # payload may either be a run, or a list of document-pairs
+        if isinstance(payload, BlueskyRun):
+            return payload
+        else:
+            return build_one_run_from_documents(payload)
+        #
+        # uid = document[0][1]["uid"]
+        # catalog = BlueskyInMemoryCatalog()
+        # # TODO -- change upsert signature to put start and stop as kwargs
+        # # TODO -- ask about more convenient way to get a BlueskyRun from a document generator
+        # catalog.upsert(document[0][1], document[-1][1], partial(iter, document), [], {})
+        # return catalog[uid]
     else:
         warn(f"No applicable ingestor found. Falling-back to DataHandlers")
 

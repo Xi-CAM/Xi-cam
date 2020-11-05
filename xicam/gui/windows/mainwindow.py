@@ -21,6 +21,7 @@ from qtpy.QtWidgets import (
     QSpinBox,
     QMessageBox,
 )
+from bluesky_live.bluesky_run import BlueskyRun
 from xicam import _version as version
 
 from xicam.plugins import manager as pluginmanager
@@ -162,7 +163,7 @@ class XicamMainWindow(QMainWindow):
         if self.currentGUIPlugin is None:
             msg.notifyMessage("Please select a gui plugin from the top before trying to open an image.")
             return
-        if isinstance(header, Catalog):
+        if isinstance(header, (Catalog, BlueskyRun)):
             self.currentGUIPlugin.appendCatalog(header)
         elif isinstance(header, CatalogEntry):
             self.currentGUIPlugin.appendCatalog(header())
