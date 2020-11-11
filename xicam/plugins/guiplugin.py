@@ -80,7 +80,7 @@ class GUIPlugin(PluginType):
     @property
     def stage(self):
         if not self._stage:
-            first_stage = None
+            first_stage = next(iter(self._stages.values()))
             # Handle nested stages (see XPCS GUIPlugin for example)
             while not isinstance(first_stage, GUILayout):
                 first_stage = next(iter(first_stage.values()))
