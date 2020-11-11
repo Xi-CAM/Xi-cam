@@ -1,10 +1,11 @@
 import itertools
 import sys
 
-from qtpy.QtCore import QModelIndex, QPoint, Qt
-from qtpy.QtGui import QIcon
+from qtpy.QtCore import QModelIndex, QPoint, Qt, QAbstractItemModel
+from qtpy.QtGui import QIcon, QMouseEvent, QPainter, QBrush, QFont
 from qtpy.QtWidgets import QAbstractItemView, QApplication, QButtonGroup, QHBoxLayout, QPushButton, \
-                           QSplitter, QStackedWidget, QStyleFactory, QTabWidget, QTreeView, QVBoxLayout, QWidget
+    QSplitter, QStackedWidget, QStyleFactory, QTabWidget, QTreeView, QVBoxLayout, QWidget, QStyledItemDelegate, \
+    QStyleOptionViewItem, QLineEdit, QStyle, QAction
 
 from xicam.gui.static import path
 from xicam.gui.canvasmanager import XicamCanvasManager
@@ -397,8 +398,70 @@ class SplitGridView(SplitView):
             canvas.setVisible(True)
 
 
-class DataSelectorView(QTreeView):
+class MyStyledItemDelegate(QStyledItemDelegate):
     ...
+
+class LineEditDelegate(QStyledItemDelegate):
+    def __init__(self, parent=None):
+        super(LineEditDelegate, self).__init__(parent)
+        self._default_text = "Untitled"
+
+    def createEditor(self, parent: QWidget,
+                     option: QStyleOptionViewItem,
+                     index: QModelIndex) -> QWidget:
+        editor = QLineEdit(parent)
+        editor.setPlaceholderText(self._default_text)
+        editor.setFrame(False)
+        return editor
+
+    def setEditorData(self, editor: QWidget, index: QModelIndex):
+        value = index.model().data(index, Qt.DisplayRole)
+        editor.setText(value)
+
+    def setModelData(self, editor: QWidget,
+                     model: QAbstractItemModel,
+                     index: QModelIndex):
+
+        text = editor.text()
+        if text == "":
+            text = editor.placeholderText()
+        # Update the "default" text to the previous value edited in
+        self._default_text = text
+        model.setData(index, text, Qt.DisplayRole)
+
+    def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
+        # super(LineEditDelegate, self).paint(painter, option, index)
+        # return
+
+        if index.data(role=EnsembleModel.active_role) is True:
+            active_brush = QBrush(Qt.cyan)
+            painter.save()
+            painter.fillRect(option.rect, active_brush)
+            painter.restore()
+
+        super(LineEditDelegate, self).paint(painter, option, index)
+
+
+class DataSelectorView(QTreeView):
+    def __init__(self, parent=None):
+        super(DataSelectorView, self).__init__(parent)
+
+        self.setContextMenuPolicy(Qt.ActionsContextMenu)
+        action = QAction("Rename Collection", self)
+        action.triggered.connect(self._action_edit)
+        self.addAction(action)
+
+        # Don't allow double-clicking for expanding; use it for editing
+        self.setExpandsOnDoubleClick(False)
+        self.setEditTriggers(QAbstractItemView.DoubleClicked)
+
+        # Attach a custom delegate for the editing
+        delegate = LineEditDelegate(self)
+        self.setItemDelegate(delegate)
+
+    def _action_edit(self, _):
+        self.edit(self.currentIndex())
+
 
 
 def main():

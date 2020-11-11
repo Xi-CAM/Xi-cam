@@ -1,7 +1,8 @@
 from typing import Any
 from qtpy.QtCore import Qt, QAbstractItemModel, QModelIndex
 
-
+# TODO: refactor check_state (don't need custom methods, use setData)
+# TODO: refactor flags (don't need custom methods? use setData)
 class TreeItem:
     """Qt-agnostic tree item. Mocks the general API of QStandardItem for compatibility.
 
@@ -15,6 +16,7 @@ class TreeItem:
         self.itemData = {}
         self.childItems = []
         self.checked_state = 0
+        self._flags = Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable
         # TODO: refactor to not store checked_state (it can be stored in itemData)
 
     def appendChild(self, item):
@@ -69,6 +71,12 @@ class TreeItem:
     #     self.itemData[column] = value
     #     return True
 
+    def flags(self):
+        return Qt.ItemFlag(self._flags)
+
+    def setFlags(self, flags):
+        self._flags = flags
+
 
 class TreeModel(QAbstractItemModel):
     """Qt-based tree model.
@@ -112,11 +120,6 @@ class TreeModel(QAbstractItemModel):
         item = self.getItem(index)
 
         if role == Qt.CheckStateRole:
-            # checkstate = item.itemData.get(Qt.CheckStateRole)
-            # if checkstate is None:
-            #     item.itemData[Qt.CheckStateRole] = 0
-            # return checkstate
-
             return item.checkState()
 
         return item.itemData.get(role)
@@ -124,9 +127,12 @@ class TreeModel(QAbstractItemModel):
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
         """Re-implement to additionally ensure that this model is checkable."""
         if not index.isValid():
-            return Qt.NoItemFlags
+            # return Qt.NoItemFlags
+            return super(TreeModel, self).flags(index)
 
-        return super(TreeModel, self).flags(index) | Qt.ItemIsUserCheckable #|Qt.ItemIsEditable
+        return self.getItem(index).flags()
+
+        # return super(TreeModel, self).flags(index) #| Qt.ItemIsUserCheckable | Qt.ItemIsEditable
         #return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable
 
     def getItem(self, index: QModelIndex) -> TreeItem:

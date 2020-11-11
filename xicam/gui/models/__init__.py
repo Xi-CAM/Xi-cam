@@ -1,6 +1,7 @@
 from typing import Any, Callable, Iterable
 
-from PyQt5.QtCore import Qt, QModelIndex, QAbstractItemModel
+from qtpy.QtCore import Qt, QModelIndex, QAbstractItemModel
+from qtpy.QtGui import QFont, QBrush
 from xicam.core.data.bluesky_utils import display_name
 from xicam.core.msg import logMessage, WARNING
 from xicam.core.workspace import WorkspaceDataType, Ensemble
@@ -19,27 +20,33 @@ class EnsembleModel(TreeModel):
     object_role = Qt.UserRole + 1
     data_type_role = Qt.UserRole + 2
     canvas_role = Qt.UserRole + 3
+    active_role = Qt.UserRole + 4  # only tied to Ensemble tree items
 
     def __init__(self, parent=None):
         super(EnsembleModel, self).__init__(parent)
         self.rootItem.setData("Ensembles", Qt.DisplayRole)
 
+        # Keep track of current active item (can be 0 or 1 active items)
+        self._active_item = None
+        # Unnamed items (i.e. no display role text) will get this text set
+        self._defaultDisplayText = "Untitled"
+
     def setData(self, index: QModelIndex, value: Any, role: Qt.ItemDataRole = Qt.EditRole) -> bool:
         if not index.isValid():
             return False
         item = self.getItem(index)
-        # if role in (self.object_role, self.canvas_role, self.data_type_role):
-            # item.itemData[role] = value
-        # if role == Qt.CheckStateRole:
-        #     success = super(EnsembleModel, self).setData(index, True, self.state_changed_role)
-        #     if not success:
-        #         return False
+        if role == self.active_role:
+            self._active_item = item
+            brush = QBrush(Qt.red)
+            self.setData(index, brush, Qt.BackgroundRole)
+
         return super(EnsembleModel, self).setData(index, value, role)
 
-    def add_ensemble(self, ensemble: Ensemble, projector: Callable):
+    def add_ensemble(self, ensemble: Ensemble, projector: Callable, active=True):
+        # TODO: change name to "untitled" type strings
         ensemble_item = TreeItem(self.rootItem)
-        # ensemble_item = ensemble
-        ensemble_item.setData(ensemble.name, Qt.DisplayRole)
+        ensemble_item.setFlags(ensemble_item.flags() | Qt.ItemIsEditable)
+        # Note we do NOT provide display text; then TreeModel handles the naming for us
         ensemble_item.setData(ensemble, self.object_role)
         ensemble_item.setData(WorkspaceDataType.Ensemble, self.data_type_role)
 
@@ -64,6 +71,9 @@ class EnsembleModel(TreeModel):
             ensemble_item.appendChild(catalog_item)
 
         self.rootItem.appendChild(ensemble_item)
+        if active:
+            # ensemble_item.setData(active, self.active_role)
+            self._active_item = ensemble_item
         self.layoutChanged.emit()
 
     def remove_ensemble(self, ensemble):
@@ -79,6 +89,40 @@ class EnsembleModel(TreeModel):
             ensemble = ensemble_item.data(Qt.UserRole)
             ensemble.name = name
             ensemble_item.setData(name, Qt.DisplayRole)
+
+    def data(self, index: QModelIndex, role=Qt.DisplayRole) -> Any:
+        item = self.getItem(index)
+
+        if role == self.active_role:
+            if item == self._active_item:
+                return True
+            return False
+
+        # Handle case where display text not provided
+        if role == Qt.DisplayRole:
+            item = self.getItem(index)
+            data = item.itemData.get(role)
+            font = QFont()
+            # brush = QBrush(Qt.cyan)
+            if data is None or data == self._defaultDisplayText:
+                item.setData(self._defaultDisplayText, role)
+                font.setBold(True)
+            item.setData(font, Qt.FontRole)
+            # item.setData(brush, Qt.BackgroundRole)
+            return item.itemData.get(role)
+
+        if role == Qt.EditRole:
+            brush = QBrush(Qt.red)
+            item.setData(brush, Qt.ForegroundRole)
+            return
+
+        return super(EnsembleModel, self).data(index, role)
+
+    # TODO: should the color background role be set here (instead of using the paint function in item delegate)
+    #  (i think yes)
+    # TODO: should we encapsulate this into a boolean role (like hasbeennamed or something...)
+    # e.g. by default (for Ensemble items) set this to False, and handle the styling appropriately
+    # if it is successfully changed, then update this data to True and handle styling appropriately
 
 
 class IntentsModel(QAbstractItemModel):
