@@ -241,7 +241,7 @@ def showMessage(*args, timeout=5, **kwargs):
     logMessage(*args, **kwargs)
 
 
-def logMessage(*args: Any, level: int = INFO, loggername: str = None, sep=" "):
+def logMessage(*args: Any, level: int = INFO, sep=" ", caller_name=None):
     """
     Logs messages to logging log. Gui widgets can be subscribed to the log with:
         logging.getLogger().addHandler(callable)
@@ -263,10 +263,8 @@ def logMessage(*args: Any, level: int = INFO, loggername: str = None, sep=" "):
 
     # Join the args to a string
     message = sep.join(map(str, args))
-
-    if loggername is not None:
-        warnings.warn("Custom loggername is no longer supported, " "ignored.")
-    caller_name = sys._getframe().f_back.f_code.co_name
+    if caller_name is None:
+        caller_name = sys._getframe().f_back.f_code.co_name
     logger.log(level, message, extra={"caller_name": caller_name})
 
 
@@ -290,10 +288,10 @@ def logError(exception: Exception, value=None, tb=None, **kwargs):
     if not tb:
         tb = exception.__traceback__
     kwargs["level"] = ERROR
-    if "loggername" not in kwargs:
+    if "caller_name" not in kwargs:
         frame = sys._getframe()
         frame = getattr(frame, "f_back", frame) or frame
-        kwargs["loggername"] = frame.f_code.co_name
+        kwargs["caller_name"] = frame.f_code.co_name
 
     logMessage("\n", "The following error was handled safely by Xi-cam. It is displayed here for debugging.", **kwargs)
     try:

@@ -97,7 +97,7 @@ class XicamPluginManager:
         self.instantiating = False
 
         # A QRunnable-based background Worker
-        self.plugin_loader = GeneratorWorker(self._load_plugins)
+        self.plugin_loader = threads.QThreadFutureIterator(self._load_plugins)
 
         # Remember all modules loaded before any plugins are loaded; don't bother unloading these
         self._preloaded_modules = set(sys.modules.keys())
@@ -141,7 +141,7 @@ class XicamPluginManager:
 
         """
         self._discover_plugins()
-        if not self.plugin_loader.is_running:
+        if not self.plugin_loader.isRunning():
             self.plugin_loader.start()
 
     def collect_plugin(self, plugin_name, plugin_class, type_name, replace=False):
