@@ -1,6 +1,6 @@
 from typing import Generator
 
-from PyQt5.QtCore import QModelIndex
+from qtpy.QtCore import QModelIndex
 from xicam.core.intents import Intent
 from xicam.core.workspace import WorkspaceDataType
 from xicam.gui.models import IntentsModel, EnsembleModel, TreeModel
