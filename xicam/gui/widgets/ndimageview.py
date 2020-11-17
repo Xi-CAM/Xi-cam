@@ -163,7 +163,7 @@ class SliceablePanel(QWidget):
     sigSlicingChanged = Signal(object)
     sigMakePrimary = Signal(object, object)
 
-    def __init__(self, slice_direction='depth', parent=None):
+    def __init__(self, slice_direction='depth', xlink=None, ylink=None, parent=None):
         super(SliceablePanel, self).__init__(parent=parent)
 
         assert parent
@@ -173,7 +173,7 @@ class SliceablePanel(QWidget):
         self.layout().setSpacing(0)
 
         self.slice_direction=slice_direction
-        self.full_view = ViewSelector(slice_direction, parent=self)
+        self.full_view = ViewSelector(slice_direction, xlink=xlink, ylink=ylink, parent=self)
         self.right_view = None
         self.top_view = None
         self.corner_view = None
@@ -263,7 +263,7 @@ class SliceablePanel(QWidget):
     def toggleHorizontalSlice(self, enable):
         if enable:
             if not self.right_view:
-                self.right_view = SliceablePanel(slice_direction='horizontal', parent=self)
+                self.right_view = SliceablePanel(slice_direction='horizontal', ylink=self.full_view.view_widget.view.vb, parent=self)
                 if self.data is not None:
                     # get the coordinate of the vertical slice
                     # slice = self.full_view.crosshair.pos()[1]
@@ -279,7 +279,7 @@ class SliceablePanel(QWidget):
     def toggleVerticalSlice(self, enable):
         if enable:
             if not self.top_view:
-                self.top_view = SliceablePanel(slice_direction='vertical', parent=self)
+                self.top_view = SliceablePanel(slice_direction='vertical', xlink=self.full_view.view_widget.view.vb, parent=self)
                 if self.data is not None:
                     # get the coordinate of the horizontal slice
                     # slice = self.full_view.crosshair.pos()[0]
@@ -350,7 +350,7 @@ class SliceableGraphicsView(GraphicsView, SlicingView):
 
     SUPPORTED_NDIM = 2
 
-    def __init__(self, slice_direction, parent=None):
+    def __init__(self, slice_direction, parent=None, xlink=None, ylink=None):
         super(SliceableGraphicsView, self).__init__(parent=parent)
 
         self.slice_direction = slice_direction
@@ -385,7 +385,16 @@ class SliceableGraphicsView(GraphicsView, SlicingView):
         self.image_item.setLevels(parent.levels, update=True)
         self.image_item.setLookupTable(parent.lut, update=True)
 
+        # Link axes
+        if ylink:
+            self.view.vb.setYLink(ylink)
+        if xlink:
+            self.view.vb.setXLink(xlink)
+
     def setData(self, data):
+        # Constrain squareness when units match
+        is_square = data.dims[-2].split('(')[-1] == data.dims[-1].split('(')[-1]
+        self.view.vb.setAspectLocked(is_square)
 
         xvals = data.coords[data.dims[-1]]
         yvals = data.coords[data.dims[-2]]
@@ -396,10 +405,13 @@ class SliceableGraphicsView(GraphicsView, SlicingView):
 
         # Position the image according to coords
         shape = data.shape
-        a = [(0, shape[-1]), (shape[-2] - 1, shape[-1]), (shape[-2] - 1, 1), (0, 1)]
+        a = [(0, shape[-2]), (shape[-1], shape[-2]), (shape[-1], 0), (0, 0)]
 
         # b = [(ymin, xmax), (ymax, xmax), (ymax, xmin), (ymin, xmin)]
-        b = [(xmax, ymin), (xmax, ymax), (xmin, ymax), (xmin, ymin)]
+        if self.slice_direction in ['horizontal', 'depth']:
+            b = [(xmin, ymin), (xmax, ymin), (xmax, ymax), (xmin, ymax)]
+        elif self.slice_direction=='vertical':
+            b = [(xmax, ymax), (xmin, ymax), (xmin, ymin), (xmax, ymin)]
 
         quad1 = QPolygonF()
         quad2 = QPolygonF()
@@ -525,7 +537,7 @@ class PlotView(PlotWidget):
 
     SUPPORTED_NDIM = 1
 
-    def __init__(self, slice_direction, parent):
+    def __init__(self, slice_direction, xlink=None, ylink=None, parent=None):
         super(PlotView, self).__init__(parent=parent)
 
         self.slice_direction = slice_direction
@@ -591,7 +603,7 @@ class ViewSelector(QWidget, SlicingView):
     view_options = {'Image': SliceableGraphicsView,
                     'Plot': PlotView,}
 
-    def __init__(self, slice_direction, default_view_key:str='Image', parent=None):
+    def __init__(self, slice_direction, default_view_key:str='Image', xlink=None, ylink=None, parent=None):
         super(ViewSelector, self).__init__(parent=parent)
 
         self.slice_direction = slice_direction
@@ -609,6 +621,9 @@ class ViewSelector(QWidget, SlicingView):
         self.selector.addItems(self.view_options.keys())
         self.selector.currentTextChanged.connect(self._set_view)
         self.layout().addWidget(self.selector)
+
+        self.xlink = xlink
+        self.ylink = ylink
 
         self.set_view(view_key=default_view_key)
 
@@ -645,7 +660,7 @@ class ViewSelector(QWidget, SlicingView):
             self.view_widget.updateCrosshair(*self._crosshair_pos)
 
     def _make_view(self, view_key, slice_direction, parent):
-        return self.view_options[view_key](slice_direction=slice_direction, parent=parent)
+        return self.view_options[view_key](slice_direction=slice_direction, xlink=self.xlink, ylink=self.ylink, parent=parent)
 
     # def resetCrosshair(self):
     #     transform = self.image_item.viewTransform()
