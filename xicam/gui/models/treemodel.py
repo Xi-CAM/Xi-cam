@@ -189,7 +189,7 @@ class TreeModel(QAbstractItemModel):
 
         return self.createIndex(parentItem.row(), 0, parentItem)
 
-    def rowCount(self, index: QModelIndex) -> int:
+    def rowCount(self, index: QModelIndex = QModelIndex()) -> int:
         """If an invalid index is passed, returns the childCount of the root item;
         otherwise, returns the index's childCount.
         """

@@ -5,7 +5,8 @@ from qtpy.QtCore import QModelIndex, QPoint, Qt, QAbstractItemModel
 from qtpy.QtGui import QIcon, QMouseEvent, QPainter, QBrush, QFont
 from qtpy.QtWidgets import QAbstractItemView, QApplication, QButtonGroup, QHBoxLayout, QPushButton, \
     QSplitter, QStackedWidget, QStyleFactory, QTabWidget, QTreeView, QVBoxLayout, QWidget, QStyledItemDelegate, \
-    QStyleOptionViewItem, QLineEdit, QStyle, QAction
+    QStyleOptionViewItem, QLineEdit, QStyle, QAction, QMenu
+from xicam.core.workspace import WorkspaceDataType
 
 from xicam.gui.static import path
 from xicam.gui.canvasmanager import XicamCanvasManager
@@ -446,10 +447,8 @@ class DataSelectorView(QTreeView):
     def __init__(self, parent=None):
         super(DataSelectorView, self).__init__(parent)
 
-        self.setContextMenuPolicy(Qt.ActionsContextMenu)
-        action = QAction("Rename Collection", self)
-        action.triggered.connect(self._action_edit)
-        self.addAction(action)
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.customMenuRequested)
 
         # Don't allow double-clicking for expanding; use it for editing
         self.setExpandsOnDoubleClick(False)
@@ -462,6 +461,14 @@ class DataSelectorView(QTreeView):
     def _action_edit(self, _):
         self.edit(self.currentIndex())
 
+    def customMenuRequested(self, position):
+        index = self.indexAt(position)  # type: QModelIndex
+        if index.data(EnsembleModel.data_type_role) == WorkspaceDataType.Ensemble:
+            menu = QMenu(self)
+            action = QAction("Rename Collection", menu)
+            action.triggered.connect(self._action_edit)
+            menu.addAction(action)
+            menu.popup(self.viewport().mapToGlobal(position))
 
 
 def main():
