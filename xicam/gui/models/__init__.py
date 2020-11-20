@@ -24,26 +24,63 @@ class EnsembleModel(TreeModel):
 
     def __init__(self, parent=None):
         super(EnsembleModel, self).__init__(parent)
-        self.rootItem.setData("Ensembles", Qt.DisplayRole)
 
         # Keep track of current active item (can be 0 or 1 active items)
-        self._active_item = None
+        self.active_ensemble = None
+        self._active_ensemble_name = "(None)"
         # Unnamed items (i.e. no display role text) will get this text set
         self._defaultDisplayText = "Untitled"
+        # Display the active item as the root title as well
+        self.rootItem.setData(f"Active Item: {self.active_ensemble_name}", Qt.DisplayRole)
+
+    def _update_title(self, name):
+        print(f"\nupdating the title to {name}")
+        self.rootItem.setData(f"Active Item: {name}", Qt.DisplayRole)
+        self.headerDataChanged.emit(Qt.Horizontal, 0, 0)
+
+    @property
+    def active_ensemble_name(self):
+        print(f"\nactive_ensemble_name requested")
+        if self.active_ensemble is not None:
+            self._active_ensemble_name = self.active_ensemble.data(Qt.DisplayRole)
+        else:
+            self._active_ensemble_name = "(None)"
+        print(f"--- {self._active_ensemble_name}")
+        return self._active_ensemble_name
 
     def setData(self, index: QModelIndex, value: Any, role: Qt.ItemDataRole = Qt.EditRole) -> bool:
         if not index.isValid():
             return False
+
         item = self.getItem(index)
+        # This shouldn't be in here..
         if role == self.active_role:
-            self._active_item = item
-            brush = QBrush(Qt.red)
+            print(f"index (display name): {index.data(Qt.DisplayRole)}; value: {value}; role: {role}")
+            brush = QBrush()
+            if value is True:
+                print(f"current active item: {self.active_ensemble}")
+                if self.active_ensemble is not None:
+                    # self.active_ensemble.setData(False, self.active_role)
+                    active_index = self.index(self.active_ensemble.row(), 0)
+                    print(f"disabling the previous active ensemble {active_index} ({active_index.data(Qt.DisplayRole)})")
+                    self.setData(active_index, False, self.active_role)
+                print(f"update the active_ensemble to {item} ({item.itemData[Qt.DisplayRole]})")
+                self.active_ensemble = item
+                self._update_title(self.active_ensemble_name)
+                brush = QBrush(Qt.red)
+            else:
+                self.active_ensemble = None
+            print(f"color: {brush.color()}")
             self.setData(index, brush, Qt.BackgroundRole)
+
+        if role == Qt.DisplayRole:
+            # Intercept display text changes for ensembles (i.e. renaming) so we can update the title
+            if index.data(self.data_type_role) == WorkspaceDataType.Ensemble:
+                self._update_title(value)
 
         return super(EnsembleModel, self).setData(index, value, role)
 
-    def add_ensemble(self, ensemble: Ensemble, projector: Callable, active=True):
-        # TODO: change name to "untitled" type strings
+    def add_ensemble(self, ensemble: Ensemble, projector: Callable):
         ensemble_item = TreeItem(self.rootItem)
         ensemble_item.setFlags(ensemble_item.flags() | Qt.ItemIsEditable)
         # Note we do NOT provide display text; then TreeModel handles the naming for us
@@ -71,9 +108,10 @@ class EnsembleModel(TreeModel):
             ensemble_item.appendChild(catalog_item)
 
         self.rootItem.appendChild(ensemble_item)
-        if active:
-            # ensemble_item.setData(active, self.active_role)
-            self._active_item = ensemble_item
+        print('test')
+        # ensemble_item.setData(True, self.active_role)
+        index = self.index(ensemble_item.row(), 0)
+        self.setData(index, True, self.active_role)
         self.layoutChanged.emit()
 
     def remove_ensemble(self, ensemble):
@@ -94,7 +132,7 @@ class EnsembleModel(TreeModel):
         item = self.getItem(index)
 
         if role == self.active_role:
-            if item == self._active_item:
+            if item == self.active_ensemble:
                 return True
             return False
 
@@ -106,13 +144,13 @@ class EnsembleModel(TreeModel):
             # brush = QBrush(Qt.cyan)
             if data is None or data == self._defaultDisplayText:
                 item.setData(self._defaultDisplayText, role)
-                font.setBold(True)
+                font.setItalic(True)
             item.setData(font, Qt.FontRole)
             # item.setData(brush, Qt.BackgroundRole)
             return item.itemData.get(role)
 
         if role == Qt.EditRole:
-            brush = QBrush(Qt.red)
+            brush = QBrush(Qt.green)
             item.setData(brush, Qt.ForegroundRole)
             return
 

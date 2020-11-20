@@ -402,7 +402,12 @@ class SplitGridView(SplitView):
 class MyStyledItemDelegate(QStyledItemDelegate):
     ...
 
+
 class LineEditDelegate(QStyledItemDelegate):
+    """Custom editing delegate that allows renaming text and updating placeholder text in a line edit.
+
+    This class was written for using with the DataSelectorView.
+    """
     def __init__(self, parent=None):
         super(LineEditDelegate, self).__init__(parent)
         self._default_text = "Untitled"
@@ -428,25 +433,27 @@ class LineEditDelegate(QStyledItemDelegate):
             text = editor.placeholderText()
         # Update the "default" text to the previous value edited in
         self._default_text = text
+        print(f"\nstyled item delegate: updating item to {text}")
         model.setData(index, text, Qt.DisplayRole)
 
     def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
-        # super(LineEditDelegate, self).paint(painter, option, index)
-        # return
-
-        if index.data(role=EnsembleModel.active_role) is True:
-            active_brush = QBrush(Qt.cyan)
-            painter.save()
-            painter.fillRect(option.rect, active_brush)
-            painter.restore()
-
         super(LineEditDelegate, self).paint(painter, option, index)
+        return
+
+        # if index.data(role=EnsembleModel.active_role):
+        #     active_brush = QBrush(Qt.cyan)
+        #     painter.save()
+        #     painter.fillRect(option.rect, active_brush)
+        #     painter.restore()
+        #
+        # super(LineEditDelegate, self).paint(painter, option, index)
 
 
 class DataSelectorView(QTreeView):
     def __init__(self, parent=None):
         super(DataSelectorView, self).__init__(parent)
 
+        # We are implementing our own custom context menu
         self.setContextMenuPolicy(Qt.CustomContextMenu)
         self.customContextMenuRequested.connect(self.customMenuRequested)
 
@@ -458,16 +465,52 @@ class DataSelectorView(QTreeView):
         delegate = LineEditDelegate(self)
         self.setItemDelegate(delegate)
 
-    def _action_edit(self, _):
+    def _rename_action(self, _):
+        # Request editor (see the delegate created in the constructor) to change the ensemble's name
         self.edit(self.currentIndex())
 
+    def _set_active_action(self, checked: bool):
+        # Update the model data with the currentIndex corresponding to where the user right-clicked
+        # Update the active role based on the value of checked
+        self.model().setData(self.currentIndex(), checked, EnsembleModel.active_role)
+
     def customMenuRequested(self, position):
+        """Builds a custom menu for Ensemble type items"""
+        # TODO: should this be available anywhere in the ensemble ?
+        # e.g. if you right-click an intent in this Ensemble, should it still let you edit the Ensemble?
         index = self.indexAt(position)  # type: QModelIndex
         if index.data(EnsembleModel.data_type_role) == WorkspaceDataType.Ensemble:
             menu = QMenu(self)
-            action = QAction("Rename Collection", menu)
-            action.triggered.connect(self._action_edit)
-            menu.addAction(action)
+
+            # Allow renaming the ensemble via the context menu
+            rename_action = QAction("Rename Collection", menu)
+            rename_action.triggered.connect(self._rename_action)
+            menu.addAction(rename_action)
+
+            menu.addSeparator()
+
+            # Allow toggling the active ensemble via the context menu
+            # * there can only be at most 1 active ensemble
+            # * there are only 0 active ensembles when data has not yet been loaded ???
+            # * opening data updates the active ensemble to that data
+            is_active = index.data(EnsembleModel.active_role)
+            active_text = "Active"
+            toggle_active_action = QAction(active_text, menu)
+            toggle_active_action.setCheckable(True)
+            if is_active is True:
+                toggle_active_action.setChecked(True)
+            else:
+                toggle_active_action.setChecked(False)
+                toggle_active_action.setText(f"Not {active_text}")
+
+            # Make sure to update the model with the active / deactivated ensemble
+            toggle_active_action.toggled.connect(self._set_active_action)
+            # Don't allow deactivating the active ensemble if there is only one loaded
+            if self.model().rowCount() == 1:
+                toggle_active_action.setEnabled(False)
+            menu.addAction(toggle_active_action)
+
+            # Display menu wherever the user right-clicked
             menu.popup(self.viewport().mapToGlobal(position))
 
 
