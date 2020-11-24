@@ -131,6 +131,8 @@ setup(
             "ingestors = xicam.plugins.ingestorplugin:IngestorPlugin",
             "sniffers = xicam.plugins.snifferplugin:SnifferPlugin",
             "intents = xicam.plugins.intentplugin:IntentPlugin",
+            "ImageMixinPlugin = xicam.plugins.imagemixinplugin:ImageMixinPlugin",
+            "PlotMixinPlugin = xicam.plugins.plotmixinplugin:PlotMixinPlugin",
         ],
         "xicam.plugins.SettingsPlugin": [
             "logging = xicam.gui.settings.logging:LoggingSettingsPlugin",
@@ -155,11 +157,15 @@ setup(
         ],
         "xicam.plugins.IntentCanvasPlugin": [
             "plot_canvas = xicam.gui.canvases:PlotIntentCanvas",
-            "image_canvas = xicam.gui.canvases:ImageIntentCanvas"],
+            "image_canvas = xicam.gui.canvases:ImageIntentCanvas",
+            "pairplot_canvas = xicam.gui.canvases:PairPlotIntentCanvas"
+        ],
         "databroker.intents": [
             "PlotIntent = xicam.core.intents:PlotIntent",
             "ImageIntent = xicam.core.intents:ImageIntent",
-            "ErrorBarIntent = xicam.core.intents:ErrorBarIntent"
+            "ErrorBarIntent = xicam.core.intents:ErrorBarIntent",
+            "BarIntent = xicam.core.intents:BarIntent",
+            "PairPlotIntent = xicam.core.intents:PairPlotIntent"
         ],
     },
     ext_modules=[],
