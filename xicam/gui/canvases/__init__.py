@@ -159,3 +159,44 @@ class PlotIntentCanvas(XicamIntentCanvas, QWidget):
             return True
 
         return False
+
+
+class PairPlotIntentCanvas(XicamIntentCanvas, QWidget):
+    def __init__(self, *args, **kwargs):
+        super(PairPlotIntentCanvas, self).__init__()
+        self.transform_data = None
+
+        self.plot_widget = PlotIntentCanvasBlend()
+        self.plot_widget.setAspectLocked(True)
+        self.componentA = QComboBox()
+        self.componentB = QComboBox()
+
+        self.setLayout(QVBoxLayout())
+        self.layout().addWidget(self.plot_widget)
+        self.layout().addWidget(self.componentA)
+        self.layout().addWidget(self.componentB)
+
+        # Signals
+        self.componentA.currentIndexChanged.connect(self.show_pair)
+        self.componentB.currentIndexChanged.connect(self.show_pair)
+
+    def render(self, intent: PairPlotIntent):
+        n_components = intent.transform_data.shape[-1]
+        for i in range(n_components):
+            self.componentA.addItem(f'Component {i+1}')
+            self.componentB.addItem(f'Component {i + 1}')
+
+        self.transform_data = intent.transform_data
+
+    def show_pair(self):
+        if self.transform_data is not None:
+            A = self.componentA.currentIndex()
+            B = self.componentB.currentIndex()
+
+            A_data = np.asarray(self.transform_data[:, :, A]).ravel()
+            B_data = np.asarray(self.transform_data[:, :, B]).ravel()
+
+            self.plot_widget.clear()
+            item = pg.ScatterPlotItem(x=B_data, y=A_data)
+            self.plot_widget.addItem(item)
+            self.plot_widget.setLabels(left=f'Component {A+1}', bottom=f'Component {B+1}')
