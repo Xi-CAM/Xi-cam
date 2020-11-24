@@ -24,11 +24,12 @@ class ImageIntent(Intent):
     # TODO: register as entrypoint
     canvas = "image_canvas"
 
-    def __init__(self, image, *args, **kwargs):
+    def __init__(self, image, mixins=None, *args, **kwargs):
         if "canvas_name" not in kwargs:
             kwargs["canvas_name"] = kwargs.get("item_name")
         super(ImageIntent, self).__init__(*args, **kwargs)
         self.image = image
+        self.mixins = mixins
 
 
 class PlotIntent(Intent):
@@ -40,12 +41,14 @@ class PlotIntent(Intent):
                  y: Union[np.ndarray, xarray.Dataset, dask.array.array],
                  labels,
                  *args,
+                 mixins=None,
                  **kwargs):
 
         super(PlotIntent, self).__init__(*args, **kwargs)
         self.labels = labels
         self.x = x
         self.y = y
+        self.mixins=mixins
         self.match_key = kwargs.get("match_key", hash(frozenset(self.labels.items())))
 
     @property
@@ -62,3 +65,43 @@ class ErrorBarIntent(PlotIntent):
     For reference on kwargs, see
     https://pyqtgraph.readthedocs.io/en/latest/graphicsItems/errorbaritem.html
     """
+
+
+class BarIntent(Intent):
+    canvas = "plot_canvas"
+
+    def __init__(self, x: Union[np.ndarray, xarray.Dataset, dask.array.array],
+                 labels,
+                 *args,
+                 **kwargs):
+
+        super(BarIntent, self).__init__(*args, **kwargs)
+        self.labels = labels
+        self.x = x
+        self.match_key = kwargs.get("match_key", hash(frozenset(self.labels.items())))
+
+    @property
+    def canvas_name(self):
+        if not self._canvas_name:
+            x_name = self.labels.get("bottom", "")
+            y_name = self.labels.get("left", "")
+            return x_name + ", " + y_name
+        return self._canvas_name
+
+
+class PairPlotIntent(Intent):
+    canvas = 'pairplot_canvas'
+
+    def __init__(self, transform_data: Union[np.ndarray, xarray.Dataset, dask.array.array], *args, **kwargs):
+        if "canvas_name" not in kwargs:
+            kwargs["canvas_name"] = kwargs.get("item_name")
+        super(PairPlotIntent, self).__init__(*args, **kwargs)
+        self.transform_data = transform_data
+
+
+class IntentSeries(Intent):
+    def __init__(self, intent_type, intent_args, intent_kwargs, *args, **kwargs):
+        super(IntentSeries, self).__init__(*args, **kwargs)
+        self.intent_type = intent_type
+        self.intent_args = intent_args
+        self.intent_kwargs = intent_kwargs
