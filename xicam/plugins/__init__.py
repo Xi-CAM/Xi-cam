@@ -30,7 +30,6 @@ from .intentcanvasplugin import IntentCanvasPlugin
 from .dataresourceplugin import DataResourcePlugin
 from .fittablemodelplugin import Fittable1DModelPlugin
 from .ezplugin import _EZPlugin, EZPlugin
-from .hints import PlotHint, Hint
 
 try:
     # try to find the venvs entrypoint
