@@ -88,7 +88,9 @@ setup(
                       "entrypoints",
                       "pyqtgraph==0.11.0",
                       "qtconsole",
-                      "scipy"],
+                      "scipy",
+                      "matplotlib",
+                      "h5py"],
     setup_requires=["cython"],  # cython is a missing required dep of astropy
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
