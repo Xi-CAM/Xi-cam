@@ -71,7 +71,6 @@ class ImageIntentCanvas(XicamIntentCanvas, QWidget):
         ...
 
 
-# (not priority - why is racoon sometimes rotated 90? (depending on os)
 class PlotIntentCanvasBlend(CurveLabels):
     ...
 
