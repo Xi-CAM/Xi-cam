@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 from xicam.core.data import load_header
 from xicam.plugins import manager as plugin_manager
+from xicam.spectral import project_nxCXI_ptycho
 
 
 size = 100
@@ -64,6 +65,42 @@ def arpes_data():
     data = project_arpes(catalog)
     return data
 
+def project_nxstxm(catalog):
+    # TODO: single-source
+    ENERGY_FIELD = 'E (eV)'
+    SAMPLE_X_FIELD = 'Sample X (μm)'
+    SAMPLE_Y_FIELD = 'Sample Y (μm)'
+
+    data = catalog.primary.to_dask()
+    raw_data = data['raw'][0]
+    raw_data = raw_data.assign_coords({name:np.asarray(data[name][0]) for name in [SAMPLE_X_FIELD, SAMPLE_Y_FIELD, ENERGY_FIELD]})
+    return raw_data.transpose('Sample Y (μm)', 'Sample X (μm)', 'E (eV)')
+
+@pytest.fixture
+def cosmic_data():
+    plugin_manager.collect_plugins()
+    required_task = next(filter(lambda task: task.name == 'application/x-cxi', plugin_manager._tasks))
+    plugin_manager._load_plugin(required_task)
+    plugin_manager._instantiate_plugin(required_task)
+    catalog = load_header([
+                              'C:\\Users\\LBL\\PycharmProjects\\merged-repo\\NS_200805056.cxi'])
+
+    intents = project_nxCXI_ptycho(catalog)
+    data = intents[0].image
+    return data.transpose('y (nm)', 'x (nm)', 'E (eV)')
+
+
+@pytest.fixture
+def ir_stxm_data():
+    plugin_manager.collect_plugins()
+    required_task = next(filter(lambda task: task.name == 'application/x-hdf5', plugin_manager._tasks))
+    plugin_manager._load_plugin(required_task)
+    plugin_manager._instantiate_plugin(required_task)
+    catalog = load_header([
+                              'C:\\Users\\LBL\\PycharmProjects\\merged-repo\\ir_stxm.h5'])
+    data = project_nxstxm(catalog)
+    return data
+
 
 def test_NDViewer(simple_small_data, qtbot):
     from xicam.gui.widgets.ndimageview import NDImageView
@@ -75,6 +112,7 @@ def test_NDViewer(simple_small_data, qtbot):
     w.setData(simple_small_data)
 
     qtbot.addWidget(w)
+    w.show()
     # qtbot.stopForInteraction()
 
 # @pytest.fixture

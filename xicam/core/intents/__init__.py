@@ -24,11 +24,12 @@ class ImageIntent(Intent):
     # TODO: register as entrypoint
     canvas = "image_canvas"
 
-    def __init__(self, image, *args, **kwargs):
+    def __init__(self, image, mixins=None, *args, **kwargs):
         if "canvas_name" not in kwargs:
             kwargs["canvas_name"] = kwargs.get("item_name")
         super(ImageIntent, self).__init__(*args, **kwargs)
         self.image = image
+        self.mixins = mixins
 
 
 class PlotIntent(Intent):
@@ -40,12 +41,14 @@ class PlotIntent(Intent):
                  y: Union[np.ndarray, xarray.Dataset, dask.array.array],
                  labels,
                  *args,
+                 mixins=None,
                  **kwargs):
 
         super(PlotIntent, self).__init__(*args, **kwargs)
         self.labels = labels
         self.x = x
         self.y = y
+        self.mixins=mixins
         self.match_key = kwargs.get("match_key", hash(frozenset(self.labels.items())))
 
     @property

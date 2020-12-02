@@ -30,7 +30,6 @@ from .intentcanvasplugin import IntentCanvasPlugin
 from .dataresourceplugin import DataResourcePlugin
 from .fittablemodelplugin import Fittable1DModelPlugin
 from .ezplugin import _EZPlugin, EZPlugin
-from .hints import PlotHint, Hint
 
 try:
     # try to find the venvs entrypoint
@@ -170,8 +169,10 @@ class XicamPluginManager:
             msg.logMessage(f"A plugin of type {type_name} named {task.name} is already in the queue.",
                            level=msg.WARNING)
 
-        if not self.plugin_loader.is_running:
+        if not self.plugin_loader.isRunning():
             self.plugin_loader.start()
+
+        return self.get_plugin_by_name(plugin_name, type_name)
 
     def _unload_plugins(self):
 
@@ -499,3 +500,13 @@ class LiveEntryPoint(entrypoints.EntryPoint):
 
     def load(self):
         return self.object
+
+
+def live_plugin(type_name: str, replace=False, plugin_name=None):
+    if not isinstance(type_name, str):
+        raise TypeError("A plugin type must be specified.")
+
+    def decorator(cls):
+        manager.collect_plugin(plugin_name or cls.__name__, cls, type_name, replace=replace)
+        return cls
+    return decorator
