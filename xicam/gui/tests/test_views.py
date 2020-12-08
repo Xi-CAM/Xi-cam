@@ -1,22 +1,37 @@
 import pytest
 import numpy as np
+from pyqtgraph import PlotWidget, ImageView
 from qtpy.QtCore import QModelIndex, Qt
 from scipy import misc, ndimage
 from qtpy.QtWidgets import QWidget, QHBoxLayout
 from databroker.in_memory import BlueskyInMemoryCatalog
 from pytestqt import qtbot
-from xicam.plugins import manager as plugin_manager
+from xicam.plugins import manager as plugin_manager, live_plugin
+plugin_manager.qt_is_safe = True
+plugin_manager.initialize_types()
 
 from xicam.core.execution.workflow import Workflow, ingest_result_set, project_intents
 from xicam.core import execution
 from xicam.core.execution.localexecutor import LocalExecutor
-from xicam.core.intents import PlotIntent, ImageIntent
+from xicam.core.intents import PlotIntent, ImageIntent, IntentSeries
 from xicam.core.workspace import Ensemble
 from xicam.gui.widgets.views import DataSelectorView, StackedCanvasView
 from xicam.plugins.operationplugin import operation, output_names, intent
 from xicam.gui.widgets.linearworkfloweditor import WorkflowEditor
 from xicam.gui.models import EnsembleModel, IntentsModel
 
+
+@live_plugin('PlotMixinPlugin', replace=True)
+class PlotMixinTest(PlotWidget):
+    def __init__(self, *args, **kwargs):
+        super(PlotMixinTest, self).__init__(*args, background='g', **kwargs)
+
+
+@live_plugin('ImageMixinPlugin', replace=True)
+class ImageMixinTest(ImageView):
+    def __init__(self, *args, **kwargs):
+        super(ImageMixinTest, self).__init__(*args, **kwargs)
+        self.setStyleSheet('* {background-color:green;}')
 
 # TODO: move these fixtures into workflow_fixtures (when others use it)
 @pytest.fixture()
@@ -35,7 +50,7 @@ def plot_op():
 def abs_plot_op():
     @operation
     @output_names("output1", "output2")
-    @intent(PlotIntent, name="X vs Y", output_map={"x": "output1", "y": "output2"}, labels={"bottom": "x", "left": "y"})
+    @intent(PlotIntent, name="X vs Y", output_map={"x": "output1", "y": "output2"}, labels={"bottom": "x", "left": "y"}, mixins=('PlotMixinTest',))
     def abs_plot(x_arr: np.ndarray, y_arr: np.ndarray):
         return x_arr, np.abs(y_arr)
     return abs_plot()
@@ -55,7 +70,7 @@ def image_op():
 def blur_image_op():
     @operation
     @output_names("output_array")
-    @intent(ImageIntent, name="Blurred Raccoon Image", output_map={"image": "output_array"})
+    @intent(ImageIntent, name="Blurred Raccoon Image", output_map={"image": "output_array"}, mixins=('ImageMixinTest',))
     def blur_image(arr: np.ndarray, blur=5):
         return ndimage.gaussian_filter(arr, sigma=blur)
     return blur_image()
@@ -140,3 +155,4 @@ def test_view(simple_workflow_with_intents, qtbot):
     workflow_editor.run_workflow()
 
     qtbot.wait(7000)
+    qtbot.stopForInteraction()

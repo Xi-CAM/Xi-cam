@@ -1,8 +1,13 @@
 from qtpy.QtWidgets import QApplication
 import pyqtgraph as pg
 import numpy as np
+from xicam.plugins import live_plugin
 
 
+# TODO: refactor to support mixin pattern; conflict with plotwidget's attr magic
+
+
+@live_plugin('PlotMixinPlugin')
 class HoverHighlight(pg.PlotWidget):
     """
     Highlights any scatter spots moused-over, giving a feel that they can be clicked on for more info
@@ -35,7 +40,33 @@ class HoverHighlight(pg.PlotWidget):
                             break
 
 
-class CurveLabels(HoverHighlight):
+@live_plugin('PlotMixinPlugin')
+class ClickHighlight(pg.PlotWidget):
+    def __init__(self, *args, **kwargs):
+        super(ClickHighlight, self).__init__(*args, **kwargs)
+        self._last_highlighted = None
+        self._last_item = None
+        self._last_pen = None
+        self._last_curve_pen = None
+
+    def wireup_item(self, item):
+        item.sigPointsClicked.connect(self.highlight)
+        return item
+
+    def highlight(self, item, points):
+        if self._last_item:
+            self._last_item.setPen(self._last_curve_pen)
+            self._last_item.setZValue(0)
+            self._last_item = None
+
+        self._last_item = item
+        self._last_curve_pen = item.opts['pen']
+        item.setPen(pg.mkPen('w', width=6))
+        item.setZValue(100)
+
+
+@live_plugin('PlotMixinPlugin')
+class CurveLabels(HoverHighlight, ClickHighlight):
     def __init__(self, *args, **kwargs):
         super(CurveLabels, self).__init__(*args, **kwargs)
 
@@ -54,8 +85,10 @@ class CurveLabels(HoverHighlight):
             kwargs["symbolBrush"] = pg.mkBrush((0, 0, 0, 0))
 
         item = self.plotItem.plot(*args, **kwargs)
-
+        # Note: this is sensitive to order of connections; ClickHighlight seems to regenerate all spots, breaking showLabel unless done in this order
         item.sigPointsClicked.connect(self.showLabel)
+        self.wireup_item(item)
+
         return item
 
     def showLabel(self, item, points):
@@ -69,7 +102,7 @@ class CurveLabels(HoverHighlight):
         self._arrow = pg.ArrowItem(angle=90)
         self._arrow.setParentItem(self._curvepoint)
         self._arrow.setZValue(10000)
-        self._text = pg.TextItem(item.name(), anchor=(0.5, -1.0), border=pg.mkPen("w"), fill=pg.mkBrush("k"))
+        self._text = pg.TextItem(f'{item.name()}\nx: {point._data["x"]}\ny: {point._data["y"]}', anchor=(0.5, -.5), border=pg.mkPen("w"), fill=pg.mkBrush("k"))
         self._text.setParentItem(self._curvepoint)
 
         self._curvepoint.setIndex(list(item.scatter.points()).index(point))
