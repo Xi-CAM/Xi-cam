@@ -465,6 +465,8 @@ class DataSelectorView(QTreeView):
         delegate = LineEditDelegate(self)
         self.setItemDelegate(delegate)
 
+        self.setDragEnabled(True)
+
     def _rename_action(self, _):
         # Request editor (see the delegate created in the constructor) to change the ensemble's name
         self.edit(self.currentIndex())

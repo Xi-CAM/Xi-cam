@@ -75,7 +75,8 @@ class EnsembleModel(TreeModel):
 
         if role == Qt.DisplayRole:
             # Intercept display text changes for ensembles (i.e. renaming) so we can update the title
-            if index.data(self.data_type_role) == WorkspaceDataType.Ensemble:
+            # also ONLY update the title if it is the active item
+            if index.data(self.data_type_role) == WorkspaceDataType.Ensemble and index.data(self.active_role):
                 self._update_title(value)
 
         return super(EnsembleModel, self).setData(index, value, role)
@@ -108,7 +109,6 @@ class EnsembleModel(TreeModel):
             ensemble_item.appendChild(catalog_item)
 
         self.rootItem.appendChild(ensemble_item)
-        print('test')
         # ensemble_item.setData(True, self.active_role)
         index = self.index(ensemble_item.row(), 0)
         self.setData(index, True, self.active_role)

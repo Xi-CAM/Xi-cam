@@ -2,7 +2,6 @@ from collections import OrderedDict
 from enum import Enum
 from typing import Dict, List, Union
 from xicam.core.data import NonDBHeader
-from qtpy.QtGui import *
 from databroker.core import BlueskyRun
 
 from .plugin import PluginType
