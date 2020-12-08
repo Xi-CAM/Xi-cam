@@ -351,10 +351,6 @@ class pluginModeWidget(QToolBar):
         return node
 
     def showNode(self, node=None, direction=None):
-        if node is not None:
-            print(f"showNode: {node.name}, parent: {node.parent}, children: {node.children}")
-        else:
-            print(f"showNode: top level")
         if node is None:  # toplevel
             plugin_nodes = [node for node in self._nodes if node.parent is None]
             # TODO: add plugin deactivation
