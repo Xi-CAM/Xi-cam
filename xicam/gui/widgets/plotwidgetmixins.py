@@ -56,13 +56,13 @@ class ClickHighlight(pg.PlotWidget):
     def highlight(self, item, points):
         if self._last_item:
             self._last_item.setPen(self._last_curve_pen)
-            self._last_item.setZValue(0)
+            # self._last_item.setZValue(0)
             self._last_item = None
 
         self._last_item = item
         self._last_curve_pen = item.opts['pen']
         item.setPen(pg.mkPen('w', width=6))
-        item.setZValue(100)
+        # item.setZValue(100)
 
 
 @live_plugin('PlotMixinPlugin')
@@ -103,6 +103,7 @@ class CurveLabels(HoverHighlight, ClickHighlight):
         self._arrow.setParentItem(self._curvepoint)
         self._arrow.setZValue(10000)
         self._text = pg.TextItem(f'{item.name()}\nx: {point._data["x"]}\ny: {point._data["y"]}', anchor=(0.5, -.5), border=pg.mkPen("w"), fill=pg.mkBrush("k"))
+        self._text.setZValue(10000)
         self._text.setParentItem(self._curvepoint)
 
         self._curvepoint.setIndex(list(item.scatter.points()).index(point))

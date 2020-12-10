@@ -64,8 +64,13 @@ class ImageIntentCanvas(XicamIntentCanvas, QWidget):
             self.layout().addWidget(self.canvas_widget)
             self.canvas_widget.imageItem.setOpts(imageAxisOrder='row-major')
 
+        kwargs = intent.kwargs.copy()
+        for key, value in kwargs.items():
+            if isinstance(value, DataArray):
+                kwargs[key] = np.asanyarray(value).squeeze()
+
         # TODO: add rendering logic for ROI intents
-        return self.canvas_widget.setImage(np.asarray(intent.image).squeeze())
+        return self.canvas_widget.setImage(np.asarray(intent.image).squeeze(), **kwargs)
 
     def unrender(self, intent) -> bool:
         ...
@@ -96,9 +101,9 @@ class PlotIntentCanvas(XicamIntentCanvas, QWidget):
 
     def render(self, intent):
         if not self.canvas_widget:
-            bases_names = intent.mixins or tuple()
+            bases_names = getattr(intent, 'mixins', tuple()) or tuple()
             bases = map(lambda name: plugin_manager.type_mapping['PlotMixinPlugin'][name], bases_names)
-            self.canvas_widget = type('PlotViewBlend', (*bases, PlotWidget), {})()
+            self.canvas_widget = type('PlotViewBlend', (*bases, PlotIntentCanvasBlend), {})()
             self.layout().addWidget(self.canvas_widget)
             self.canvas_widget.plotItem.addLegend()
 
@@ -109,15 +114,27 @@ class PlotIntentCanvas(XicamIntentCanvas, QWidget):
             if intent.x is not None:
                 x = np.asarray(intent.x).squeeze()
 
-            plotitem = self.canvas_widget.plot(x=x, y=np.asarray(intent.y).squeeze(), name=intent.item_name)
+            ys = np.asarray(intent.y).squeeze()
+            if ys.ndim==1:
+                ys = [ys]
+                multicurves = False
+            else:
+                multicurves = True
+
+            for i in range(len(ys)):
+                name = intent.item_name
+                if multicurves:
+                    name += f' {i+1}'
+
+                plotitem = self.canvas_widget.plot(x=x, y=ys[i], name=name)
+                items.append(plotitem)
+
             # Use most recent intent's log mode for the canvas's log mode
             x_log_mode = intent.kwargs.get("xLogMode", self.canvas_widget.plotItem.getAxis("bottom").logMode)
             y_log_mode = intent.kwargs.get("yLogMode", self.canvas_widget.plotItem.getAxis("left").logMode)
 
             self.canvas_widget.plotItem.setLogMode(x=x_log_mode, y=y_log_mode)
             self.canvas_widget.setLabels(**intent.labels)
-
-            items.append(plotitem)
 
         if isinstance(intent, ErrorBarIntent):
             kwargs = intent.kwargs.copy()
