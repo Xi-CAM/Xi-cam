@@ -153,7 +153,7 @@ class XicamPluginManager:
             self.type_mapping[type_name].pop(plugin_name, None)
         else:
             try:
-                assert plugin_name not in self.type_mapping[type_name]
+                assert plugin_name not in self.type_mapping.get(type_name, {})
             except AssertionError:
                 raise ValueError(f"A plugin named {plugin_name} has already been loaded. Supply `replace=True` to override.")
 
@@ -289,8 +289,8 @@ class XicamPluginManager:
             type_name = instantiate_task.type_name
             plugin_class = instantiate_task.plugin_class
 
-            # if this plugin was already instantiated earlier, skip it; mark done
-            if self.type_mapping[type_name].get(entrypoint.name, None) is None:
+            # if this plugin was already instantiated earlier, skip it; mark done; also skips if the group isn't active
+            if self.type_mapping.get(type_name, {entrypoint.name: True}).get(entrypoint.name, None) is None:
                 instantiate_task.status = Status.Instantiating
 
                 # inject the entrypoint name into the class
@@ -507,6 +507,10 @@ def live_plugin(type_name: str, replace=False, plugin_name=None):
         raise TypeError("A plugin type must be specified.")
 
     def decorator(cls):
-        manager.collect_plugin(plugin_name or cls.__name__, cls, type_name, replace=replace)
+        if not isinstance(type_name, str):
+            message = f"A plugin type must be specified for plugin named: {plugin_name or cls.__name__}."
+            msg.notifyMessage(message)
+        else:
+            manager.collect_plugin(plugin_name or cls.__name__, cls, type_name, replace=replace)
         return cls
     return decorator
