@@ -18,7 +18,7 @@ import enum
 from typing import Callable
 from functools import partial
 
-from xicam.plugins import manager as pluginmanager
+from xicam.plugins import manager as pluginmanager, live_plugin
 from .ROI import RectROI
 import inspect
 
@@ -984,6 +984,27 @@ class ImageViewHistogramOverflowFix(ComposableItemImageView):
             del kwargs["imageItem"]
         super(ImageViewHistogramOverflowFix, self).__init__(imageItem=imageItem, *args, **kwargs)
 
+
+@live_plugin('ImageMixinPlugin')
+class SliceSelector(BetterLayout):
+
+    def __init__(self, *args, **kwargs):
+        super(SliceSelector, self).__init__(*args, **kwargs)
+
+        self.slice_selector = QComboBox()
+        self.slice_selector.currentIndexChanged.connect(self.setCurrentIndex)
+        self.ui.right_layout.addWidget(self.slice_selector)
+        self.ui.roiPlot.setVisible(False)
+
+    def setImage(self, img, *args, **kwargs):
+        super(SliceSelector, self).setImage(img, *args, **kwargs)
+        self.ui.roiPlot.setVisible(False)
+        self.slice_selector.clear()
+        self.slice_selector.addItems(list(map(str, self.tVals.ravel())))
+
+    def setCurrentIndex(self, ind):
+        super(SliceSelector, self).setCurrentIndex(ind)
+        self.ui.roiPlot.setVisible(False)
 
 if __name__ == "__main__":
     from qtpy.QtWidgets import QApplication
