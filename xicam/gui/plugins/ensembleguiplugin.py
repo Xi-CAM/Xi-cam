@@ -18,6 +18,7 @@ class EnsembleGUIPlugin(GUIPlugin):
     for how to visualize the data.
 
     """
+    supports_ensembles = True
     def __init__(self):
         super(EnsembleGUIPlugin, self).__init__()
 
@@ -33,7 +34,14 @@ class EnsembleGUIPlugin(GUIPlugin):
         self.canvases_view.setModel(self.intents_model)
 
     def appendCatalog(self, catalog: BlueskyRun, projector: Callable = None, **kwargs):
-        ensemble = self.ensemble_model.active_ensemble or Ensemble()
+        # append_to_ensemble = kwargs.get("append_to_existing_ensemble")
+        append = True
+        active_ensemble = self.ensemble_model.active_ensemble
+        if active_ensemble is not None:
+            ensemble = active_ensemble.data(EnsembleModel.object_role)
+        else:
+            # FIXME who controls creating a new vs appending to existing ensemble?
+            ensemble = Ensemble()
         ensemble.append_catalog(catalog)
 
         # TODO: use Dylan's code here instead of default projector
@@ -41,4 +49,8 @@ class EnsembleGUIPlugin(GUIPlugin):
             return catalog
 
         # FIXME: how does the mainwindow discover the appropriate projector to pass here?
-        self.ensemble_model.add_ensemble(ensemble, projector or default_projector)
+        if not append:
+            self.ensemble_model.add_ensemble(ensemble,
+                                             projector or default_projector)
+        else:
+            self.ensemble_model.append_to_ensemble(catalog, ensemble, projector or default_projector)

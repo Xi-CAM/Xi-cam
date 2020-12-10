@@ -3,7 +3,7 @@ from functools import WRAPPER_ASSIGNMENTS
 import pyqtgraph as pg
 from pyqtgraph import ImageView, InfiniteLine, mkPen, ScatterPlotItem, ImageItem, PlotItem
 from qtpy.QtGui import QTransform, QPolygonF
-from qtpy.QtWidgets import QLabel, QErrorMessage, QSizePolicy, QPushButton, QHBoxLayout, QVBoxLayout, QComboBox, QWidget
+from qtpy.QtWidgets import QLabel, QErrorMessage, QSizePolicy, QPushButton, QHBoxLayout, QVBoxLayout, QComboBox, QWidget, QToolBar
 from qtpy.QtCore import Qt, Signal, Slot, QSize, QPointF, QRectF
 import numpy as np
 from databroker.core import BlueskyRun
@@ -19,7 +19,6 @@ from typing import Callable
 from functools import partial
 
 from xicam.plugins import manager as pluginmanager, live_plugin
-from .ROI import RectROI
 import inspect
 
 
@@ -1006,12 +1005,39 @@ class SliceSelector(BetterLayout):
         super(SliceSelector, self).setCurrentIndex(ind)
         self.ui.roiPlot.setVisible(False)
 
+
+class ToolbarMixin(BetterLayout):
+    def __init__(self, *args, toolbar=None, **kwargs):
+        super(ToolbarMixin, self).__init__(*args, **kwargs)
+        self.toolbar = toolbar
+        self.ui.outer_outer_layout = QVBoxLayout()
+        self.ui.outer_outer_layout.addWidget(self.toolbar)
+        self.ui.outer_outer_layout.addLayout(self.ui.layoutWidget.layout())
+
+        # self.ui.outer_outer_layout.addLayout(self.ui.outer_layout)
+        # self.ui.layoutWidget.setLayout(self.ui.outer_outer_layout)
+        # QWidget().setLayout(self.ui.layoutWidget.layout())
+        # self.ui.layoutWidget.setLayout(self.ui.outer_outer_layout)
+
+        # self.ui.toolbar_layout = QVBoxLayout()
+        # self.ui.toolbar_layout.addWidget(toolbar, alignment=Qt.AlignVCenter)
+        # layout = self.ui.layoutWidget.layout()
+        # self.ui.toolbar_layout.addLayout(layout)
+        # # Replace the layout
+        # QWidget().setLayout(self.ui.layoutWidget.layout())
+        # self.ui.layoutWidget.setLayout(self.ui.toolbar_layout)
+
+
 if __name__ == "__main__":
     from qtpy.QtWidgets import QApplication
+
     qapp = QApplication([])
 
-    cls = type('Blend', (StreamSelector, FieldSelector), {})
-    w = cls()
+    # cls = type('Blend', (StreamSelector, FieldSelector), {})
+    cls = type('Blend', (ToolbarMixin,), {})
+    toolbar = QToolBar()
+    toolbar.addAction("BLAH")
+    w = cls(toolbar=toolbar)
     w.show()
 
     qapp.exec_()

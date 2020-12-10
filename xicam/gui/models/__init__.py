@@ -81,7 +81,41 @@ class EnsembleModel(TreeModel):
 
         return super(EnsembleModel, self).setData(index, value, role)
 
+    def _create_catalog_item(self, ensemble_item, catalog, projector):
+        catalog_item = TreeItem(ensemble_item)
+        catalog_name = display_name(catalog)
+        catalog_item.setData(catalog_name, Qt.DisplayRole)
+        catalog_item.setData(catalog, self.object_role)
+        catalog_item.setData(WorkspaceDataType.Catalog, self.data_type_role)
+        try:
+            intents = projector(catalog)
+            for intent in intents:
+                self._create_intent_item(catalog_item, intent)
+        except AttributeError as e:
+            logMessage(e, level=WARNING)
+        ensemble_item.appendChild(catalog_item)
+
+    def _create_intent_item(self, catalog_item, intent):
+            intent_item = TreeItem(catalog_item)
+            intent_item.setData(intent.item_name, Qt.DisplayRole)
+            intent_item.setData(intent, self.object_role)
+            intent_item.setData(WorkspaceDataType.Intent, self.data_type_role)
+            catalog_item.appendChild(intent_item)
+
+    def append_to_ensemble(self, catalog, ensemble, projector: Callable):
+        # Find the active ensemble (may be none if ensemble model is empty)
+        ensemble_item = self.active_ensemble
+        if ensemble_item is not None:
+            end_row = ensemble_item.childCount()
+            # Use begin/end to notify views (e.g. dataselectorview) that it needs to update view after item is inserted
+            self.beginInsertRows(self.index(ensemble_item.row(), 0), end_row, end_row+1)
+            self._create_catalog_item(ensemble_item, catalog, projector)
+            self.endInsertRows()
+        else:
+            self.add_ensemble(ensemble, projector)
+
     def add_ensemble(self, ensemble: Ensemble, projector: Callable):
+        # self.layoutAboutToBeChanged.emit()
         ensemble_item = TreeItem(self.rootItem)
         ensemble_item.setFlags(ensemble_item.flags() | Qt.ItemIsEditable)
         # Note we do NOT provide display text; then TreeModel handles the naming for us
@@ -89,30 +123,13 @@ class EnsembleModel(TreeModel):
         ensemble_item.setData(WorkspaceDataType.Ensemble, self.data_type_role)
 
         for catalog in ensemble.catalogs:
-            catalog_item = TreeItem(ensemble_item)
-            catalog_name = display_name(catalog)
-            catalog_item.setData(catalog_name, Qt.DisplayRole)
-            catalog_item.setData(catalog, self.object_role)
-            catalog_item.setData(WorkspaceDataType.Catalog, self.data_type_role)
-
-            try:
-                intents = projector(catalog)
-                for intent in intents:
-                    intent_item = TreeItem(catalog_item)
-                    intent_item.setData(intent.item_name, Qt.DisplayRole)
-                    intent_item.setData(intent, self.object_role)
-                    intent_item.setData(WorkspaceDataType.Intent, self.data_type_role)
-                    catalog_item.appendChild(intent_item)
-            except AttributeError as e:
-                logMessage(e, level=WARNING)
-
-            ensemble_item.appendChild(catalog_item)
+            self._create_catalog_item(ensemble_item, catalog, projector)
 
         self.rootItem.appendChild(ensemble_item)
         # ensemble_item.setData(True, self.active_role)
         index = self.index(ensemble_item.row(), 0)
         self.setData(index, True, self.active_role)
-        self.layoutChanged.emit()
+        # self.layoutChanged.emit()
 
     def remove_ensemble(self, ensemble):
         # TODO
