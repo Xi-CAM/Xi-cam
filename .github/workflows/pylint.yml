@@ -29,7 +29,9 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install pylint
 
-    - name: Run pytlint
+    - name: Run pylint
+      # Opt out of fail-fast for linting
+      shell: bash {0}
       run: |
         pylint xicam --errors-only
 
