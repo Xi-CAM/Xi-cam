@@ -3,6 +3,10 @@
 
 name: Test with coverage
 
+# Run workflow when there are:
+#   - pushes to master
+#   - PRs into master
+#   - tags (following N.N.N naming)
 on:
   push:
     branches: [ master ]
@@ -14,13 +18,13 @@ on:
 
 jobs:
   build:
-
     runs-on: ${{ matrix.os }}
 
     strategy:
       matrix:
         python-version: [3.7, 3.8]
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        #os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest]
     env:
       OS: ${{ matrix.os }}
       PYTHON: ${{ matrix.python-version }}
@@ -35,15 +39,12 @@ jobs:
 
     - name: Install 
       run: |
+        # Install xicam with tests and doc extra requirements
         source ci/scripts/install.sh -td
 
     - name: Build Documentation
       run: |
         (cd docs && make html)
-
-    - name: Pylint
-      run: |
-        pylint xicam --errors-only
 
     - name: Test with coverage
       run: |
