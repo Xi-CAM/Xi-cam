@@ -37,6 +37,10 @@ jobs:
       run: |
         source ci/scripts/install.sh -td
 
+    - name: Build Documentation
+      run: |
+        (cd docs && make html)
+
     - name: Pylint
       run: |
         pylint xicam --errors-only
