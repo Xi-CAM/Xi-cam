@@ -43,6 +43,8 @@ while getopts ${optstring} arg; do
 done
 
 # Install requirements
+echo $(which python)
+echo $(python --version)
 python -m pip install --upgrade pip
 python -m pip install attrs>=17.4.0 
 python -m pip install --upgrade setuptools wheel
