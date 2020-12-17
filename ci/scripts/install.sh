@@ -47,7 +47,7 @@ python -m pip install --upgrade pip
 python -m pip install attrs>=17.4.0 
 python -m pip install --upgrade setuptools wheel
 if [ -f requirements.txt ]; then
-    pip install -r requirements.txt;
+    python -m pip install -r requirements.txt;
 fi
 
 # If opts indicate any extra requirments, build a well-formed argument for pip
