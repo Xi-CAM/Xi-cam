@@ -33,5 +33,5 @@ jobs:
       # Opt out of fail-fast for linting
       shell: bash {0}
       run: |
-        pylint xicam --errors-only
+        pylint xicam --errors-only || true
 
