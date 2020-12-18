@@ -19,7 +19,7 @@ function usage {
 while getopts ${optstring} arg; do
     case ${arg} in
         d)
-            extras_require+=("doc")
+            extras_require+=("docs")
             ;;
         h)
             usage
@@ -53,7 +53,7 @@ if [ -f requirements.txt ]; then
 fi
 
 # If opts indicate any extra requirments, build a well-formed argument for pip
-# e.g. [tests] or [doc,tests]
+# e.g. [tests] or [docs,tests]
 extras_string=""
 i=0
 if [ ${#extras_require[@]} -gt 0 ]; then
