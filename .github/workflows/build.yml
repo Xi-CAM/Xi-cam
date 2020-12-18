@@ -25,9 +25,9 @@ jobs:
         #python-version: [3.7, 3.8]
         ##os: [ubuntu-latest, macos-latest, windows-latest]
       #fail-fast: false
-    ##env:
-      ##OS: ${{ matrix.os }}
-      ##PYTHON: ${{ matrix.python-version }}
+    env:
+      OS: ubuntu-latest
+      PYTHON: 3.8 
 
     steps:
     - uses: actions/checkout@v2
@@ -60,7 +60,7 @@ jobs:
 
     - name: Test with coverage
       run: |
-        pytest --cov=./ --cov-report=xml
+        pytest --cov=./ --cov-report=xml .
         
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1
