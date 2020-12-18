@@ -695,6 +695,7 @@ class TestWorkflow:
         assert {"square": 100} in results
         assert {"negative": -50} in results
 
+    @pytest.mark.skip(reason="Core dump on github actions")
     def test_execute_all(self, qtbot, sum_op, square_op, negative_op):
         results = [{"negative": (1 + 2) ** 2 * -1},
                    {"negative": (3 + 4) ** 2 * -1},
