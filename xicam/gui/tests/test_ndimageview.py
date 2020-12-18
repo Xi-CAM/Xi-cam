@@ -6,7 +6,14 @@ import numpy as np
 import pytest
 from xicam.core.data import load_header
 from xicam.plugins import manager as plugin_manager
-from xicam.spectral import project_nxCXI_ptycho
+
+_spectral_installed = False
+try:
+    from xicam.spectral import project_nxCXI_ptycho
+except ImportError as e:
+    print("xicam.spectral not installed; not testing project_nxCXI_ptycho components")
+else:
+    _spectral_install = True
 
 
 size = 100
@@ -77,6 +84,7 @@ def project_nxstxm(catalog):
     return raw_data.transpose('Sample Y (μm)', 'Sample X (μm)', 'E (eV)')
 
 @pytest.fixture
+@pytest.mark.skipif(not _spectral_installed, reason="xicam.spectral not installed")
 def cosmic_data():
     plugin_manager.collect_plugins()
     required_task = next(filter(lambda task: task.name == 'application/x-cxi', plugin_manager._tasks))
