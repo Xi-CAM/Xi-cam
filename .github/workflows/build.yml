@@ -46,6 +46,10 @@ jobs:
       run: |
         # Install xicam with tests and doc extra requirements
         #source ci/scripts/install.sh -td
+        echo $(which python)
+        echo $(python --version)
+        echo $(which python3)
+        echo $(python3 --version)
         python -m pip install --upgrade pip
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
         pip install -e .[tests,doc]
