@@ -60,7 +60,7 @@ jobs:
 
     - name: Test with coverage
       run: |
-        pytest -v --cov=./ --cov-report=xml .
+        pytest -v --full-trace --debug . #--cov=./ --cov-report=xml .
         
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v1
