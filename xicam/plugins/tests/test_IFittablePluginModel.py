@@ -1,6 +1,9 @@
+import os
 import pytest
 from pytestqt import qtbot
 
+
+@pytest.mark.skipif(os.getenv("CI") is not None, reason="Core dumps on github actions")
 def test_IFittableModelPlugin(qtbot):
     from xicam.plugins.fittablemodelplugin import Fittable1DModelPlugin
     import numpy as np
