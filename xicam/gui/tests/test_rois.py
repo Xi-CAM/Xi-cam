@@ -1,7 +1,10 @@
+import os
+import pytest
 from pytestqt import qtbot
 from xicam.gui.widgets.ROI import ArcROI
 
 
+@pytest.mark.skipif(os.getenv("CI") is not None, reason="Core dumps on github actions")
 def test_arcroi(qtbot):
     import pyqtgraph as pg
     import numpy as np
