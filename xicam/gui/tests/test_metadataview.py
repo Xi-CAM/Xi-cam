@@ -1,3 +1,5 @@
+import os
+import pytest
 from pytestqt import qtbot
 from xicam.gui.widgets.metadataview import MetadataView
 from qtpy.QtGui import QStandardItemModel, QStandardItem
@@ -5,6 +7,7 @@ from qtpy.QtCore import QItemSelectionModel, Qt
 from xicam.core.tests.fixtures import catalog
 
 
+@pytest.mark.skipif(os.getenv("CI") is not None, reason="Core dumps on github actions")
 def test_metadataview(qtbot, catalog):
     catalogmodel = QStandardItemModel()
     selectionmodel = QItemSelectionModel()
