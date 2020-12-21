@@ -1,3 +1,5 @@
+import os
+import pytest
 from pytestqt import qtbot
 from qtpy.QtWidgets import QApplication
 import dask.array as da
@@ -110,6 +112,7 @@ def ir_stxm_data():
     return data
 
 
+@pytest.mark.skipif(os.getenv("CI") is not None, reason="Core dumps on github actions")
 def test_NDViewer(simple_small_data, qtbot):
     from xicam.gui.widgets.ndimageview import NDImageView
     from skimage.transform import rescale, resize, downscale_local_mean
