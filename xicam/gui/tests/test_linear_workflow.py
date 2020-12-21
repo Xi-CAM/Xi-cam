@@ -1,3 +1,4 @@
+import pytest
 from pytestqt import qtbot
 from xicam.core.execution import Workflow
 from xicam.gui.widgets.linearworkfloweditor import WorkflowEditor
