@@ -5,7 +5,7 @@ from qtpy.QtCore import Signal, Qt, QItemSelection
 from qtpy.QtGui import QIcon, QStandardItem, QStandardItemModel
 from qtpy.QtWidgets import QAbstractItemView, QHBoxLayout, QLabel, QTreeView, QVBoxLayout, QWidget, QFrame
 
-from xicam.core import threads
+from xicam.core import threads, msg
 from xicam.plugins.settingsplugin import SettingsPlugin
 from xicam.gui import static
 
@@ -32,6 +32,9 @@ class BrokerModel(QStandardItemModel):
 
         for name in catalog_names:
             broker = Broker.named(name)
+            if getattr(broker, 'v2', None) is None:
+                msg.logMessage(f'The broker named {name} cannot be cast to a v2 Broker.', msg.WARNING)
+                continue
             config_file = broker.v2.metadata["catalog_dir"]
             config_file_to_broker[config_file].append(broker)
 
