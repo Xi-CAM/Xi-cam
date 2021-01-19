@@ -1,4 +1,5 @@
-from qtpy.QtWidgets import QApplication
+from qtpy.QtWidgets import QApplication, QLabel, QPushButton, QSizePolicy, QVBoxLayout, QWidget, QHBoxLayout, QCheckBox, \
+    QSpinBox, QDoubleSpinBox
 import pyqtgraph as pg
 import numpy as np
 from xicam.plugins import live_plugin
@@ -109,13 +110,114 @@ class CurveLabels(HoverHighlight, ClickHighlight):
         self._curvepoint.setIndex(list(item.scatter.points()).index(point))
 
 
+
+class PlotWidget(QWidget):
+    """Wrapper for pyqtgraph.PlotWidget that allows mixin extensibility.
+
+    Provides three Qt layouts:
+    1. main_layout - vertical box layout that contains the plot view and the bottom widget area
+    2. bottom_layout - vertical box layout that contains extra widgets
+    3. inner_layout - extra horizontal layout inside the bottom layout
+
+    Use the API provided by pyqtgraph.PlotWidget for plotting.
+    """
+    def __init__(self, *args, **kwargs):
+        super(QWidget, self).__init__(*args, **kwargs)
+        self.plot_widget = pg.PlotWidget()
+
+        self.main_layout = QVBoxLayout()
+        self.bottom_layout = QVBoxLayout()
+        self.inner_layout = QHBoxLayout()
+
+        self.main_layout.addWidget(self.plot_widget)
+        self.main_layout.addLayout(self.bottom_layout)
+        self.bottom_layout.addLayout(self.inner_layout)
+
+        self.setLayout(self.main_layout)
+
+    def __getattr__(self, attr):
+        # implicitly wrap methods from plotItem
+        if hasattr(self.plot_widget, attr):
+            m = getattr(self.plot_widget, attr)
+            if hasattr(m, '__call__'):
+                return m
+        raise AttributeError(attr)
+
+
+class AutoRotateCheckbox(PlotWidget):
+    # TODO: move to image view mixins
+    def __init__(self, *args, **kwargs):
+        super(AutoRotateCheckbox, self).__init__(*args, **kwargs)
+        rotate_checkbox = QCheckBox("Rotate")
+        # rotate_checkbox.stateChanged.connect(self._rotate_checkbox_clicked)
+        self.bottom_layout.addWidget(QCheckBox(rotate_checkbox))
+
+    # def _rotate_checkbox_clicked(self, checked):
+    #     if checked:
+    #         ...
+    #     else:
+    #         ...
+
+
+class OffsetPlots(PlotWidget):
+    """Create a visual offset in the plots"""
+    # TODO: implement the offset code
+    def __init__(self, *args, **kwargs):
+        super(OffsetPlots, self).__init__(*args, **kwargs)
+        self.offset_box = QDoubleSpinBox()
+        self.offset_box.setMinimum(0.0)
+        self.offset_box.setDecimals(1)
+        self.offset_box.setSingleStep(0.1)
+        self.offset_button = QPushButton("Enable Offset")
+        self.offset_button.setCheckable(True)
+        self.offset_button.toggled.connect(self._offset_toggled)
+
+        layout = QHBoxLayout()
+        layout.addWidget(self.offset_box)
+        layout.addWidget(self.offset_button)
+        self.inner_layout.addLayout(layout)
+
+    def _offset_toggled(self, enabled):
+        if enabled:
+            self.offset_button.setText("Disable Offset")
+        else:
+            self.offset_button.setText("Enable Offset")
+
+
+class LogButton(PlotWidget):
+    def __init__(self, *args, **kwargs):
+        super(LogButton, self).__init__(*args, **kwargs)
+
+        # Log Button
+        self.x_log_button = QPushButton("Toggle X Log Mode")
+        self.x_log_button.setCheckable(True)
+        sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(1)
+        sizePolicy.setHeightForWidth(self.x_log_button.sizePolicy().hasHeightForWidth())
+        self.x_log_button.clicked.connect(self.setXLogMode)
+        self.inner_layout.addWidget(self.x_log_button)
+
+    def setXLogMode(self):
+        log_mode = self.x_log_button.isChecked()
+        self.setLogMode(x=log_mode, y=False)
+
+
+class BetterPlotWidget(AutoRotateCheckbox, OffsetPlots, LogButton):...
+
+
 if __name__ == "__main__":
     qapp = QApplication([])
-    w = CurveLabels()
-    for i in range(10):
-        pen = pg.mkColor((i, 10))
-        w.plot(np.random.random((100,)) + i * 0.5, name=str(i), pen=pen)
 
+    w = BetterPlotWidget()
+    w.plot(x=[1,2,3], y=[2,5,3])
     w.show()
+
+    # w = LogButton()
+    # for i in range(1, 10):
+    #     pen = pg.mkColor((i, 10))
+    #     w.plot(np.arange(1, 101), np.random.random((100,)) + i * 0.5, name=str(i), pen=pen)
+    #
+    # w.show()
 
     qapp.exec_()
