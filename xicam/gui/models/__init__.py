@@ -22,14 +22,17 @@ class EnsembleModel(TreeModel):
     canvas_role = Qt.UserRole + 3
     active_role = Qt.UserRole + 4  # only tied to Ensemble tree items
 
+    # Unnamed items (i.e. no display role text) will get this text set
+    _defaultDisplayText = "Untitled"
+    NO_ACTIVE_ENSEMBLE_TEXT = "(None)"
+
     def __init__(self, parent=None):
         super(EnsembleModel, self).__init__(parent)
 
         # Keep track of current active item (can be 0 or 1 active items)
         self.active_ensemble = None
-        self._active_ensemble_name = "(None)"
-        # Unnamed items (i.e. no display role text) will get this text set
-        self._defaultDisplayText = "Untitled"
+        self._active_ensemble_name = self.NO_ACTIVE_ENSEMBLE_TEXT
+
         # Display the active item as the root title as well
         self.rootItem.setData(f"Active Item: {self.active_ensemble_name}", Qt.DisplayRole)
 
@@ -44,7 +47,7 @@ class EnsembleModel(TreeModel):
         if self.active_ensemble is not None:
             self._active_ensemble_name = self.active_ensemble.data(Qt.DisplayRole)
         else:
-            self._active_ensemble_name = "(None)"
+            self._active_ensemble_name = self.NO_ACTIVE_ENSEMBLE_TEXT
         print(f"--- {self._active_ensemble_name}")
         return self._active_ensemble_name
 
