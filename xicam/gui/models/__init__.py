@@ -37,18 +37,15 @@ class EnsembleModel(TreeModel):
         self.rootItem.setData(f"Active Item: {self.active_ensemble_name}", Qt.DisplayRole)
 
     def _update_title(self, name):
-        print(f"\nupdating the title to {name}")
         self.rootItem.setData(f"Active Item: {name}", Qt.DisplayRole)
         self.headerDataChanged.emit(Qt.Horizontal, 0, 0)
 
     @property
     def active_ensemble_name(self):
-        print(f"\nactive_ensemble_name requested")
         if self.active_ensemble is not None:
             self._active_ensemble_name = self.active_ensemble.data(Qt.DisplayRole)
         else:
             self._active_ensemble_name = self.NO_ACTIVE_ENSEMBLE_TEXT
-        print(f"--- {self._active_ensemble_name}")
         return self._active_ensemble_name
 
     def setData(self, index: QModelIndex, value: Any, role: Qt.ItemDataRole = Qt.EditRole) -> bool:
@@ -58,22 +55,17 @@ class EnsembleModel(TreeModel):
         item = self.getItem(index)
         # This shouldn't be in here..
         if role == self.active_role:
-            print(f"index (display name): {index.data(Qt.DisplayRole)}; value: {value}; role: {role}")
             brush = QBrush()
             if value is True:
-                print(f"current active item: {self.active_ensemble}")
                 if self.active_ensemble is not None:
                     # self.active_ensemble.setData(False, self.active_role)
                     active_index = self.index(self.active_ensemble.row(), 0)
-                    print(f"disabling the previous active ensemble {active_index} ({active_index.data(Qt.DisplayRole)})")
                     self.setData(active_index, False, self.active_role)
-                print(f"update the active_ensemble to {item} ({item.itemData[Qt.DisplayRole]})")
                 self.active_ensemble = item
                 self._update_title(self.active_ensemble_name)
                 brush = QBrush(Qt.red)
             else:
                 self.active_ensemble = None
-            print(f"color: {brush.color()}")
             self.setData(index, brush, Qt.BackgroundRole)
 
         if role == Qt.DisplayRole:
@@ -246,8 +238,6 @@ class IntentsModel(QAbstractItemModel):
             return 0
 
     def data(self, index, role=Qt.DisplayRole):
-        # print(f"IntentsModel.data({index.data()}, {role} -> {self._source_model.data(index, role)}")
-
         if not index.isValid():
             return None
 
