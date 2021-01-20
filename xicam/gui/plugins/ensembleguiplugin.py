@@ -1,6 +1,7 @@
-from typing import Callable
+from typing import Callable, List
 
 from databroker.core import BlueskyRun
+from xicam.core.intents import Intent
 from xicam.core.workspace import Ensemble
 from xicam.gui.models import EnsembleModel, IntentsModel
 from xicam.gui.widgets.views import DataSelectorView, StackedCanvasView
@@ -33,7 +34,7 @@ class EnsembleGUIPlugin(GUIPlugin):
         self.canvases_view = StackedCanvasView()
         self.canvases_view.setModel(self.intents_model)
 
-    def appendCatalog(self, catalog: BlueskyRun, projector: Callable = None, **kwargs):
+    def appendCatalog(self, catalog: BlueskyRun, projector: Callable[[BlueskyRun], List[Intent]] = None, **kwargs):
         # append_to_ensemble = kwargs.get("append_to_existing_ensemble")
         append = True
         active_ensemble = self.ensemble_model.active_ensemble
@@ -46,7 +47,7 @@ class EnsembleGUIPlugin(GUIPlugin):
 
         # TODO: use Dylan's code here instead of default projector
         def default_projector(catalog):
-            return catalog
+            return []
 
         # FIXME: how does the mainwindow discover the appropriate projector to pass here?
         if not append:

@@ -1,8 +1,10 @@
-from typing import Any, Callable, Iterable
+from typing import Any, Callable, Iterable, List
 
+from databroker.core import BlueskyRun
 from qtpy.QtCore import Qt, QModelIndex, QAbstractItemModel
 from qtpy.QtGui import QFont, QBrush
 from xicam.core.data.bluesky_utils import display_name
+from xicam.core.intents import Intent
 from xicam.core.msg import logMessage, WARNING
 from xicam.core.workspace import WorkspaceDataType, Ensemble
 from xicam.gui.models.treemodel import TreeModel, TreeItem
@@ -109,7 +111,12 @@ class EnsembleModel(TreeModel):
         else:
             self.add_ensemble(ensemble, projector)
 
-    def add_ensemble(self, ensemble: Ensemble, projector: Callable):
+    def add_ensemble(self, ensemble: Ensemble, projector: Callable[[BlueskyRun], List[Intent]]):
+        """Add an ensemble to the model.
+
+        Requires a projector, which is a function that accepts a BluesyRun catalog
+        and returns a list of Intents.
+        """
         # self.layoutAboutToBeChanged.emit()
         ensemble_item = TreeItem(self.rootItem)
         ensemble_item.setFlags(ensemble_item.flags() | Qt.ItemIsEditable)
