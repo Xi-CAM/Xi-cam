@@ -22,7 +22,7 @@ from xicam.plugins import manager as pluginmanager, live_plugin
 import inspect
 
 
-# NOTE: PyQt widget stages have pitfalls; note #2 here: http://trevorius.com/scrapbook/python/pyqt-multiple-inheritance/
+# NOTE: PyQt widget mixins have pitfalls; note #2 here: http://trevorius.com/scrapbook/python/pyqt-multiple-inheritance/
 
 # NOTE: PyFAI geometry position vector is: x = up
 #                                          y = right
@@ -662,9 +662,9 @@ from pyqtgraph import Point
 
 class ComposableItemImageView(ImageView):
     """
-    Used to compose together different image view stages that may use different ItemImage subclasses.
+    Used to compose together different image view mixins that may use different ItemImage subclasses.
     See LogScaleIntensity, LogScaleImageItem, ImageViewHistogramOverflowFIx, ImageItemHistorgramOverflowFix.
-    Note that any imageItem named argument passed into the ImageView stages above will discard the item and instead
+    Note that any imageItem named argument passed into the ImageView mixins above will discard the item and instead
     create a composition of imageItem_bases with their respective ImageItem class.
     """
 
