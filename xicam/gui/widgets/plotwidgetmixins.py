@@ -144,21 +144,6 @@ class PlotWidget(QWidget):
         raise AttributeError(attr)
 
 
-class AutoRotateCheckbox(PlotWidget):
-    # TODO: move to image view mixins
-    def __init__(self, *args, **kwargs):
-        super(AutoRotateCheckbox, self).__init__(*args, **kwargs)
-        rotate_checkbox = QCheckBox("Rotate")
-        # rotate_checkbox.stateChanged.connect(self._rotate_checkbox_clicked)
-        self.bottom_layout.addWidget(QCheckBox(rotate_checkbox))
-
-    # def _rotate_checkbox_clicked(self, checked):
-    #     if checked:
-    #         ...
-    #     else:
-    #         ...
-
-
 class OffsetPlots(PlotWidget):
     """Create a visual offset in the plots"""
     # TODO: implement the offset code
@@ -203,7 +188,7 @@ class LogButton(PlotWidget):
         self.setLogMode(x=log_mode, y=False)
 
 
-class BetterPlotWidget(AutoRotateCheckbox, OffsetPlots, LogButton):...
+class BetterPlotWidget(OffsetPlots, LogButton):...
 
 
 if __name__ == "__main__":
