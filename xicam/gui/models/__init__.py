@@ -149,7 +149,7 @@ class EnsembleModel(TreeModel):
             return False
 
         # Handle case where display text not provided
-        if role == Qt.DisplayRole:
+        elif role == Qt.DisplayRole:
             item = self.getItem(index)
             data = item.itemData.get(role)
             font = QFont()
@@ -161,12 +161,13 @@ class EnsembleModel(TreeModel):
             # item.setData(brush, Qt.BackgroundRole)
             return item.itemData.get(role)
 
-        if role == Qt.EditRole:
+        elif role == Qt.EditRole:
             brush = QBrush(Qt.green)
             item.setData(brush, Qt.ForegroundRole)
             return
 
-        return super(EnsembleModel, self).data(index, role)
+        else:
+            return super(EnsembleModel, self).data(index, role)
 
     # TODO: should the color background role be set here (instead of using the paint function in item delegate)
     #  (i think yes)
