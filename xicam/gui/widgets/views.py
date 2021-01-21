@@ -399,10 +399,6 @@ class SplitGridView(SplitView):
             canvas.setVisible(True)
 
 
-class MyStyledItemDelegate(QStyledItemDelegate):
-    ...
-
-
 class LineEditDelegate(QStyledItemDelegate):
     """Custom editing delegate that allows renaming text and updating placeholder text in a line edit.
 
