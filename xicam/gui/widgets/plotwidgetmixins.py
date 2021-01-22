@@ -1,9 +1,10 @@
 from enum import Enum, auto
 from functools import wraps
 from types import FunctionType
+from typing import Union
 
 from qtpy.QtWidgets import QApplication, QLabel, QPushButton, QSizePolicy, QVBoxLayout, QWidget, QHBoxLayout, QCheckBox, \
-    QSpinBox, QDoubleSpinBox, QGraphicsProxyWidget
+    QSpinBox, QDoubleSpinBox, QGraphicsProxyWidget, QLayout
 import pyqtgraph as pg
 import numpy as np
 from xicam.plugins import live_plugin
@@ -125,9 +126,16 @@ class BetterLayout(pg.PlotWidget):
     def __init__(self, *args, **kwargs):
         super(BetterLayout, self).__init__(*args, **kwargs)
 
-    def create_widget(self, widget: QWidget) -> QGraphicsProxyWidget:
-        """Create a graphics item from a standard QWidget,
-        which can be added to the PlotWidget's layout."""
+    def create_widget(self, widget: Union[QWidget, QLayout]) -> QGraphicsProxyWidget:
+        """Create a graphics item from a standard QWidget (or QLayout),
+        which can be added to the PlotWidget's layout.
+        """
+        if isinstance(widget, QLayout):
+            # Wrap passed layout in widget
+            # FIXME? Note that adding this widget with layout does not follow the style of the PlotWidget
+            container = QWidget()
+            container.setLayout(widget)
+            widget = container
         return self.sceneObj.addWidget(widget)
 
     def layout(self):
@@ -146,31 +154,31 @@ class BetterLayout(pg.PlotWidget):
         self.layout().addItem(graphics_widget, 0, self.layout().columnCount())
 
 
-# class OffsetPlots(PlotWidget):
-#     """Create a visual offset in the plots"""
-#     # TODO: implement the offset code
-#     def __init__(self, *args, **kwargs):
-#         super(OffsetPlots, self).__init__(*args, **kwargs)
-#         self.offset_box = QDoubleSpinBox()
-#         self.offset_box.setMinimum(0.0)
-#         self.offset_box.setDecimals(1)
-#         self.offset_box.setSingleStep(0.1)
-#         self.offset_button = QPushButton("Enable Offset")
-#         self.offset_button.setCheckable(True)
-#         self.offset_button.toggled.connect(self._offset_toggled)
-#
-#         layout = QHBoxLayout()
-#         layout.addWidget(self.offset_box)
-#         layout.addWidget(self.offset_button)
-#         self.inner_layout.addLayout(layout)
-#
-#     def _offset_toggled(self, enabled):
-#         if enabled:
-#             self.offset_button.setText("Disable Offset")
-#         else:
-#             self.offset_button.setText("Enable Offset")
-#
-#
+class OffsetPlots(BetterLayout):
+    """Create a visual offset in the plots"""
+    # TODO: implement the offset code
+    def __init__(self, *args, **kwargs):
+        super(OffsetPlots, self).__init__(*args, **kwargs)
+        self.offset_box = QDoubleSpinBox()
+        self.offset_box.setMinimum(0.0)
+        self.offset_box.setDecimals(1)
+        self.offset_box.setSingleStep(0.1)
+        self.offset_button = QPushButton("Enable Offset")
+        self.offset_button.setCheckable(True)
+        self.offset_button.toggled.connect(self._offset_toggled)
+
+        layout = QHBoxLayout()
+        layout.addWidget(self.offset_box)
+        layout.addWidget(self.offset_button)
+        self.add_widget_to_bottom(layout)
+
+    def _offset_toggled(self, enabled):
+        if enabled:
+            self.offset_button.setText("Disable Offset")
+        else:
+            self.offset_button.setText("Enable Offset")
+
+
 # class XLogButton(PlotWidget):
 #     """Button mixin that can toggle x-axis log mode."""
 #     def __init__(self, *args, **kwargs):
@@ -253,7 +261,7 @@ if __name__ == "__main__":
             self.add_widget_to_right(btn)
 
 
-    class ExampleMixinBlend(LabelMixin, CurveLabels):
+    class ExampleMixinBlend(LabelMixin, CurveLabels, OffsetPlots):
         """Example mixin blend using a BetterLayout-based mixin and a directly derived PlotWidget mixin."""
         ...
 
