@@ -1,3 +1,6 @@
+from functools import wraps
+from types import FunctionType
+
 from qtpy.QtWidgets import QApplication, QLabel, QPushButton, QSizePolicy, QVBoxLayout, QWidget, QHBoxLayout, QCheckBox, \
     QSpinBox, QDoubleSpinBox
 import pyqtgraph as pg
@@ -110,7 +113,6 @@ class CurveLabels(HoverHighlight, ClickHighlight):
         self._curvepoint.setIndex(list(item.scatter.points()).index(point))
 
 
-
 class PlotWidget(QWidget):
     """Wrapper for pyqtgraph.PlotWidget that allows mixin extensibility.
 
@@ -134,6 +136,10 @@ class PlotWidget(QWidget):
         self.bottom_layout.addLayout(self.inner_layout)
 
         self.setLayout(self.main_layout)
+
+    # @property
+    # def plotItem(self):
+    #     return self.plot_widget.plotItem
 
     def __getattr__(self, attr):
         # implicitly wrap methods from plotItem
@@ -169,32 +175,79 @@ class OffsetPlots(PlotWidget):
             self.offset_button.setText("Enable Offset")
 
 
-class LogButton(PlotWidget):
+class XLogButton(PlotWidget):
+    """Button mixin that can toggle x-axis log mode."""
     def __init__(self, *args, **kwargs):
-        super(LogButton, self).__init__(*args, **kwargs)
+        super(XLogButton, self).__init__(*args, **kwargs)
+        self.X_ON_TEXT = "X Log Mode On"
+        self.X_OFF_TEXT = "X Log Mode Off"
 
-        # Log Button
-        self.x_log_button = QPushButton("Toggle X Log Mode")
+        self.x_log_button = QPushButton(self.X_OFF_TEXT)
         self.x_log_button.setCheckable(True)
-        sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(1)
-        sizePolicy.setHeightForWidth(self.x_log_button.sizePolicy().hasHeightForWidth())
-        self.x_log_button.clicked.connect(self.setXLogMode)
+        # sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        # sizePolicy.setHorizontalStretch(0)
+        # sizePolicy.setVerticalStretch(1)
+        # sizePolicy.setHeightForWidth(self.x_log_button.sizePolicy().hasHeightForWidth())
+        self.x_log_button.toggled.connect(self.set_x_log_mode)
+        # Update button check state when pyqtgraph log x checkbox is toggled by user
+        self.getPlotItem().ctrl.logXCheck.toggled.connect(self._update_x_button)
+
         self.inner_layout.addWidget(self.x_log_button)
 
-    def setXLogMode(self):
-        log_mode = self.x_log_button.isChecked()
-        self.setLogMode(x=log_mode, y=False)
+    def _update_x_button(self, state: bool):
+        self.x_log_button.setChecked(state)
+        if state:
+            self.x_log_button.setText(self.X_ON_TEXT)
+        else:
+            self.x_log_button.setText(self.X_OFF_TEXT)
+
+    def set_x_log_mode(self, state: bool):
+        self._update_x_button(state)
+        # Grab existing x log state from pyqtgraph
+        y_log_mode = self.getPlotItem().ctrl.logYCheck.isChecked()
+        self.setLogMode(x=state, y=y_log_mode)
 
 
-class BetterPlotWidget(OffsetPlots, LogButton):...
+class YLogButton(PlotWidget):
+    """Button mixin that can toggle the y-axis log mode."""
+    def __init__(self, *args, **kwargs):
+        super(YLogButton, self).__init__(*args, **kwargs)
+        self.Y_ON_TEXT = "Y Log Mode On"
+        self.Y_OFF_TEXT = "Y Log Mode Off"
+
+        self.y_log_button = QPushButton(self.Y_OFF_TEXT)
+        self.y_log_button.setCheckable(True)
+        # sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        # sizePolicy.setHorizontalStretch(0)
+        # sizePolicy.setVerticalStretch(1)
+        # sizePolicy.setHeightForWidth(self.y_log_button.sizePolicy().hasHeightForWidth())
+        self.y_log_button.toggled.connect(self.set_y_log_mode)
+        # Update button check state when pyqtgraph log y checkbox is toggled by user
+        self.getPlotItem().ctrl.logYCheck.toggled.connect(self._update_y_button)
+
+        self.inner_layout.addWidget(self.y_log_button)
+
+    def _update_y_button(self, state: bool):
+        self.y_log_button.setChecked(state)
+        if state:
+            self.y_log_button.setText(self.Y_ON_TEXT)
+        else:
+            self.y_log_button.setText(self.Y_OFF_TEXT)
+
+    def set_y_log_mode(self, state: bool):
+        self._update_y_button(state)
+        # Grab existing y log state from pyqtgraph
+        x_log_mode = self.getPlotItem().ctrl.logXCheck.isChecked()
+        self.setLogMode(x=x_log_mode, y=state)
 
 
 if __name__ == "__main__":
     qapp = QApplication([])
 
-    w = BetterPlotWidget()
+    class ExampleMixinBlend(OffsetPlots, YLogButton, XLogButton, CurveLabels, HoverHighlight):
+        ...
+
+    w = ExampleMixinBlend()
     w.plot(x=[1,2,3], y=[2,5,3])
     w.show()
 
