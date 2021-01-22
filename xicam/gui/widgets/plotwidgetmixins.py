@@ -133,6 +133,7 @@ class BetterLayout(pg.PlotWidget):
         if isinstance(widget, QLayout):
             # Wrap passed layout in widget
             # FIXME? Note that adding this widget with layout does not follow the style of the PlotWidget
+            # TODO: see QLayout content margins...
             container = QWidget()
             container.setLayout(widget)
             widget = container
@@ -179,70 +180,61 @@ class OffsetPlots(BetterLayout):
             self.offset_button.setText("Enable Offset")
 
 
-# class XLogButton(PlotWidget):
-#     """Button mixin that can toggle x-axis log mode."""
-#     def __init__(self, *args, **kwargs):
-#         super(XLogButton, self).__init__(*args, **kwargs)
-#         self.X_ON_TEXT = "X Log Mode On"
-#         self.X_OFF_TEXT = "X Log Mode Off"
-#
-#         self.x_log_button = QPushButton(self.X_OFF_TEXT)
-#         self.x_log_button.setCheckable(True)
-#         # sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-#         # sizePolicy.setHorizontalStretch(0)
-#         # sizePolicy.setVerticalStretch(1)
-#         # sizePolicy.setHeightForWidth(self.x_log_button.sizePolicy().hasHeightForWidth())
-#         self.x_log_button.toggled.connect(self.set_x_log_mode)
-#         # Update button check state when pyqtgraph log x checkbox is toggled by user
-#         self.getPlotItem().ctrl.logXCheck.toggled.connect(self._update_x_button)
-#
-#         self.inner_layout.addWidget(self.x_log_button)
-#
-#     def _update_x_button(self, state: bool):
-#         self.x_log_button.setChecked(state)
-#         if state:
-#             self.x_log_button.setText(self.X_ON_TEXT)
-#         else:
-#             self.x_log_button.setText(self.X_OFF_TEXT)
-#
-#     def set_x_log_mode(self, state: bool):
-#         self._update_x_button(state)
-#         # Grab existing x log state from pyqtgraph
-#         y_log_mode = self.getPlotItem().ctrl.logYCheck.isChecked()
-#         self.setLogMode(x=state, y=y_log_mode)
-#
-#
-# class YLogButton(PlotWidget):
-#     """Button mixin that can toggle the y-axis log mode."""
-#     def __init__(self, *args, **kwargs):
-#         super(YLogButton, self).__init__(*args, **kwargs)
-#         self.Y_ON_TEXT = "Y Log Mode On"
-#         self.Y_OFF_TEXT = "Y Log Mode Off"
-#
-#         self.y_log_button = QPushButton(self.Y_OFF_TEXT)
-#         self.y_log_button.setCheckable(True)
-#         # sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-#         # sizePolicy.setHorizontalStretch(0)
-#         # sizePolicy.setVerticalStretch(1)
-#         # sizePolicy.setHeightForWidth(self.y_log_button.sizePolicy().hasHeightForWidth())
-#         self.y_log_button.toggled.connect(self.set_y_log_mode)
-#         # Update button check state when pyqtgraph log y checkbox is toggled by user
-#         self.getPlotItem().ctrl.logYCheck.toggled.connect(self._update_y_button)
-#
-#         self.inner_layout.addWidget(self.y_log_button)
-#
-#     def _update_y_button(self, state: bool):
-#         self.y_log_button.setChecked(state)
-#         if state:
-#             self.y_log_button.setText(self.Y_ON_TEXT)
-#         else:
-#             self.y_log_button.setText(self.Y_OFF_TEXT)
-#
-#     def set_y_log_mode(self, state: bool):
-#         self._update_y_button(state)
-#         # Grab existing y log state from pyqtgraph
-#         x_log_mode = self.getPlotItem().ctrl.logXCheck.isChecked()
-#         self.setLogMode(x=x_log_mode, y=state)
+class LogButtons(BetterLayout):
+    """Button mixin that can toggle x/y log modes."""
+    def __init__(self, *args, **kwargs):
+        super(LogButtons, self).__init__(*args, **kwargs)
+        self.X_ON_TEXT = "X Log Mode On"
+        self.X_OFF_TEXT = "X Log Mode Off"
+        self.Y_ON_TEXT = "Y Log Mode On"
+        self.Y_OFF_TEXT = "Y Log Mode Off"
+
+        self.x_log_button = QPushButton(self.X_OFF_TEXT)
+        self.x_log_button.setCheckable(True)
+        self.x_log_button.toggled.connect(self.set_x_log_mode)
+        self.y_log_button = QPushButton(self.Y_OFF_TEXT)
+        self.y_log_button.setCheckable(True)
+        self.y_log_button.toggled.connect(self.set_y_log_mode)
+
+        # Update button check state when pyqtgraph log x checkbox is toggled by user
+        self.getPlotItem().ctrl.logXCheck.toggled.connect(self._update_x_button)
+        # Update button check state when pyqtgraph log y checkbox is toggled by user
+        self.getPlotItem().ctrl.logYCheck.toggled.connect(self._update_y_button)
+
+        # Create a layout to have these buttons side-by-side
+        layout = QHBoxLayout()
+        layout.addWidget(self.x_log_button)
+        layout.addWidget(self.y_log_button)
+        # TODO: BetterLayout
+        #  RightLayout   BottomLayout
+        #  add_widget    add_widget
+        self.add_widget_to_bottom(layout)
+
+    def _update_y_button(self, state: bool):
+        self.y_log_button.setChecked(state)
+        if state:
+            self.y_log_button.setText(self.Y_ON_TEXT)
+        else:
+            self.y_log_button.setText(self.Y_OFF_TEXT)
+
+    def _update_x_button(self, state: bool):
+        self.x_log_button.setChecked(state)
+        if state:
+            self.x_log_button.setText(self.X_ON_TEXT)
+        else:
+            self.x_log_button.setText(self.X_OFF_TEXT)
+
+    def set_x_log_mode(self, state: bool):
+        self._update_x_button(state)
+        # Grab existing x log state from pyqtgraph
+        y_log_mode = self.getPlotItem().ctrl.logYCheck.isChecked()
+        self.setLogMode(x=state, y=y_log_mode)
+
+    def set_y_log_mode(self, state: bool):
+        self._update_y_button(state)
+        # Grab existing y log state from pyqtgraph
+        x_log_mode = self.getPlotItem().ctrl.logXCheck.isChecked()
+        self.setLogMode(x=x_log_mode, y=state)
 
 
 if __name__ == "__main__":
@@ -261,7 +253,7 @@ if __name__ == "__main__":
             self.add_widget_to_right(btn)
 
 
-    class ExampleMixinBlend(LabelMixin, CurveLabels, OffsetPlots):
+    class ExampleMixinBlend(LabelMixin, CurveLabels, OffsetPlots, LogButtons):
         """Example mixin blend using a BetterLayout-based mixin and a directly derived PlotWidget mixin."""
         ...
 
