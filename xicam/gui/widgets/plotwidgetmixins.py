@@ -1,8 +1,9 @@
+from enum import Enum, auto
 from functools import wraps
 from types import FunctionType
 
 from qtpy.QtWidgets import QApplication, QLabel, QPushButton, QSizePolicy, QVBoxLayout, QWidget, QHBoxLayout, QCheckBox, \
-    QSpinBox, QDoubleSpinBox
+    QSpinBox, QDoubleSpinBox, QGraphicsProxyWidget
 import pyqtgraph as pg
 import numpy as np
 from xicam.plugins import live_plugin
@@ -113,138 +114,147 @@ class CurveLabels(HoverHighlight, ClickHighlight):
         self._curvepoint.setIndex(list(item.scatter.points()).index(point))
 
 
-class PlotWidget(QWidget):
-    """Wrapper for pyqtgraph.PlotWidget that allows mixin extensibility.
+class BetterLayout(pg.PlotWidget):
+    """PlotWidget with a more-easily accessible way to add widgets.
 
-    Provides three Qt layouts:
-    1. main_layout - vertical box layout that contains the plot view and the bottom widget area
-    2. bottom_layout - vertical box layout that contains extra widgets
-    3. inner_layout - extra horizontal layout inside the bottom layout
-
-    Use the API provided by pyqtgraph.PlotWidget for plotting.
+    Provides a few helper methods to add QWidget objects into the PlotWidget.
+    For more custom layouts:
+    first, create a proxy graphics widget item from a QWidget-based object (`create_widget`)
+    then, add the item to the layout (`layout().addItem(widget_item, row_position, column_position)`).
     """
     def __init__(self, *args, **kwargs):
-        super(QWidget, self).__init__(*args, **kwargs)
-        self.plot_widget = pg.PlotWidget()
+        super(BetterLayout, self).__init__(*args, **kwargs)
 
-        self.main_layout = QVBoxLayout()
-        self.bottom_layout = QVBoxLayout()
-        self.inner_layout = QHBoxLayout()
+    def create_widget(self, widget: QWidget) -> QGraphicsProxyWidget:
+        """Create a graphics item from a standard QWidget,
+        which can be added to the PlotWidget's layout."""
+        return self.sceneObj.addWidget(widget)
 
-        self.main_layout.addWidget(self.plot_widget)
-        self.main_layout.addLayout(self.bottom_layout)
-        self.bottom_layout.addLayout(self.inner_layout)
+    def layout(self):
+        """Return the graphics layout used in the PlotWidget (QGraphicsGridLayout)."""
+        # For some reason, using self.centralLayout gives C++ wrapper deleted error
+        return self.centralWidget.layout
 
-        self.setLayout(self.main_layout)
+    def add_widget_to_bottom(self, widget: QWidget):
+        """Add a QWidget to the bottom of the PlotWidget."""
+        graphics_widget = self.create_widget(widget)
+        self.layout().addItem(graphics_widget, self.layout().rowCount(), 1)
 
-    # @property
-    # def plotItem(self):
-    #     return self.plot_widget.plotItem
-
-    def __getattr__(self, attr):
-        # implicitly wrap methods from plotItem
-        if hasattr(self.plot_widget, attr):
-            m = getattr(self.plot_widget, attr)
-            if hasattr(m, '__call__'):
-                return m
-        raise AttributeError(attr)
+    def add_widget_to_right(self, widget: QWidget):
+        """Add add QWidget to the right of the PlotWidget."""
+        graphics_widget = self.create_widget(widget)
+        self.layout().addItem(graphics_widget, 0, self.layout().columnCount())
 
 
-class OffsetPlots(PlotWidget):
-    """Create a visual offset in the plots"""
-    # TODO: implement the offset code
-    def __init__(self, *args, **kwargs):
-        super(OffsetPlots, self).__init__(*args, **kwargs)
-        self.offset_box = QDoubleSpinBox()
-        self.offset_box.setMinimum(0.0)
-        self.offset_box.setDecimals(1)
-        self.offset_box.setSingleStep(0.1)
-        self.offset_button = QPushButton("Enable Offset")
-        self.offset_button.setCheckable(True)
-        self.offset_button.toggled.connect(self._offset_toggled)
-
-        layout = QHBoxLayout()
-        layout.addWidget(self.offset_box)
-        layout.addWidget(self.offset_button)
-        self.inner_layout.addLayout(layout)
-
-    def _offset_toggled(self, enabled):
-        if enabled:
-            self.offset_button.setText("Disable Offset")
-        else:
-            self.offset_button.setText("Enable Offset")
-
-
-class XLogButton(PlotWidget):
-    """Button mixin that can toggle x-axis log mode."""
-    def __init__(self, *args, **kwargs):
-        super(XLogButton, self).__init__(*args, **kwargs)
-        self.X_ON_TEXT = "X Log Mode On"
-        self.X_OFF_TEXT = "X Log Mode Off"
-
-        self.x_log_button = QPushButton(self.X_OFF_TEXT)
-        self.x_log_button.setCheckable(True)
-        # sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        # sizePolicy.setHorizontalStretch(0)
-        # sizePolicy.setVerticalStretch(1)
-        # sizePolicy.setHeightForWidth(self.x_log_button.sizePolicy().hasHeightForWidth())
-        self.x_log_button.toggled.connect(self.set_x_log_mode)
-        # Update button check state when pyqtgraph log x checkbox is toggled by user
-        self.getPlotItem().ctrl.logXCheck.toggled.connect(self._update_x_button)
-
-        self.inner_layout.addWidget(self.x_log_button)
-
-    def _update_x_button(self, state: bool):
-        self.x_log_button.setChecked(state)
-        if state:
-            self.x_log_button.setText(self.X_ON_TEXT)
-        else:
-            self.x_log_button.setText(self.X_OFF_TEXT)
-
-    def set_x_log_mode(self, state: bool):
-        self._update_x_button(state)
-        # Grab existing x log state from pyqtgraph
-        y_log_mode = self.getPlotItem().ctrl.logYCheck.isChecked()
-        self.setLogMode(x=state, y=y_log_mode)
-
-
-class YLogButton(PlotWidget):
-    """Button mixin that can toggle the y-axis log mode."""
-    def __init__(self, *args, **kwargs):
-        super(YLogButton, self).__init__(*args, **kwargs)
-        self.Y_ON_TEXT = "Y Log Mode On"
-        self.Y_OFF_TEXT = "Y Log Mode Off"
-
-        self.y_log_button = QPushButton(self.Y_OFF_TEXT)
-        self.y_log_button.setCheckable(True)
-        # sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        # sizePolicy.setHorizontalStretch(0)
-        # sizePolicy.setVerticalStretch(1)
-        # sizePolicy.setHeightForWidth(self.y_log_button.sizePolicy().hasHeightForWidth())
-        self.y_log_button.toggled.connect(self.set_y_log_mode)
-        # Update button check state when pyqtgraph log y checkbox is toggled by user
-        self.getPlotItem().ctrl.logYCheck.toggled.connect(self._update_y_button)
-
-        self.inner_layout.addWidget(self.y_log_button)
-
-    def _update_y_button(self, state: bool):
-        self.y_log_button.setChecked(state)
-        if state:
-            self.y_log_button.setText(self.Y_ON_TEXT)
-        else:
-            self.y_log_button.setText(self.Y_OFF_TEXT)
-
-    def set_y_log_mode(self, state: bool):
-        self._update_y_button(state)
-        # Grab existing y log state from pyqtgraph
-        x_log_mode = self.getPlotItem().ctrl.logXCheck.isChecked()
-        self.setLogMode(x=x_log_mode, y=state)
+# class OffsetPlots(PlotWidget):
+#     """Create a visual offset in the plots"""
+#     # TODO: implement the offset code
+#     def __init__(self, *args, **kwargs):
+#         super(OffsetPlots, self).__init__(*args, **kwargs)
+#         self.offset_box = QDoubleSpinBox()
+#         self.offset_box.setMinimum(0.0)
+#         self.offset_box.setDecimals(1)
+#         self.offset_box.setSingleStep(0.1)
+#         self.offset_button = QPushButton("Enable Offset")
+#         self.offset_button.setCheckable(True)
+#         self.offset_button.toggled.connect(self._offset_toggled)
+#
+#         layout = QHBoxLayout()
+#         layout.addWidget(self.offset_box)
+#         layout.addWidget(self.offset_button)
+#         self.inner_layout.addLayout(layout)
+#
+#     def _offset_toggled(self, enabled):
+#         if enabled:
+#             self.offset_button.setText("Disable Offset")
+#         else:
+#             self.offset_button.setText("Enable Offset")
+#
+#
+# class XLogButton(PlotWidget):
+#     """Button mixin that can toggle x-axis log mode."""
+#     def __init__(self, *args, **kwargs):
+#         super(XLogButton, self).__init__(*args, **kwargs)
+#         self.X_ON_TEXT = "X Log Mode On"
+#         self.X_OFF_TEXT = "X Log Mode Off"
+#
+#         self.x_log_button = QPushButton(self.X_OFF_TEXT)
+#         self.x_log_button.setCheckable(True)
+#         # sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+#         # sizePolicy.setHorizontalStretch(0)
+#         # sizePolicy.setVerticalStretch(1)
+#         # sizePolicy.setHeightForWidth(self.x_log_button.sizePolicy().hasHeightForWidth())
+#         self.x_log_button.toggled.connect(self.set_x_log_mode)
+#         # Update button check state when pyqtgraph log x checkbox is toggled by user
+#         self.getPlotItem().ctrl.logXCheck.toggled.connect(self._update_x_button)
+#
+#         self.inner_layout.addWidget(self.x_log_button)
+#
+#     def _update_x_button(self, state: bool):
+#         self.x_log_button.setChecked(state)
+#         if state:
+#             self.x_log_button.setText(self.X_ON_TEXT)
+#         else:
+#             self.x_log_button.setText(self.X_OFF_TEXT)
+#
+#     def set_x_log_mode(self, state: bool):
+#         self._update_x_button(state)
+#         # Grab existing x log state from pyqtgraph
+#         y_log_mode = self.getPlotItem().ctrl.logYCheck.isChecked()
+#         self.setLogMode(x=state, y=y_log_mode)
+#
+#
+# class YLogButton(PlotWidget):
+#     """Button mixin that can toggle the y-axis log mode."""
+#     def __init__(self, *args, **kwargs):
+#         super(YLogButton, self).__init__(*args, **kwargs)
+#         self.Y_ON_TEXT = "Y Log Mode On"
+#         self.Y_OFF_TEXT = "Y Log Mode Off"
+#
+#         self.y_log_button = QPushButton(self.Y_OFF_TEXT)
+#         self.y_log_button.setCheckable(True)
+#         # sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+#         # sizePolicy.setHorizontalStretch(0)
+#         # sizePolicy.setVerticalStretch(1)
+#         # sizePolicy.setHeightForWidth(self.y_log_button.sizePolicy().hasHeightForWidth())
+#         self.y_log_button.toggled.connect(self.set_y_log_mode)
+#         # Update button check state when pyqtgraph log y checkbox is toggled by user
+#         self.getPlotItem().ctrl.logYCheck.toggled.connect(self._update_y_button)
+#
+#         self.inner_layout.addWidget(self.y_log_button)
+#
+#     def _update_y_button(self, state: bool):
+#         self.y_log_button.setChecked(state)
+#         if state:
+#             self.y_log_button.setText(self.Y_ON_TEXT)
+#         else:
+#             self.y_log_button.setText(self.Y_OFF_TEXT)
+#
+#     def set_y_log_mode(self, state: bool):
+#         self._update_y_button(state)
+#         # Grab existing y log state from pyqtgraph
+#         x_log_mode = self.getPlotItem().ctrl.logXCheck.isChecked()
+#         self.setLogMode(x=x_log_mode, y=state)
 
 
 if __name__ == "__main__":
     qapp = QApplication([])
 
-    class ExampleMixinBlend(OffsetPlots, YLogButton, XLogButton, CurveLabels, HoverHighlight):
+    class LabelMixin(BetterLayout):
+        """Example mixin using BetterLayout.
+
+        Adds a label to the bottom of the plot widget, and a button to the right side.
+        """
+        def __init__(self, *args, **kwargs):
+            super(LabelMixin, self).__init__(*args, **kwargs)
+            label = QLabel("Bottom Label")
+            btn = QPushButton("Right Button")
+            self.add_widget_to_bottom(label)
+            self.add_widget_to_right(btn)
+
+
+    class ExampleMixinBlend(LabelMixin, CurveLabels):
+        """Example mixin blend using a BetterLayout-based mixin and a directly derived PlotWidget mixin."""
         ...
 
     w = ExampleMixinBlend()
