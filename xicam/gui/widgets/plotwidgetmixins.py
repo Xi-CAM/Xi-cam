@@ -133,8 +133,9 @@ class BetterLayout(pg.PlotWidget):
         if isinstance(widget, QLayout):
             # Wrap passed layout in widget
             # FIXME? Note that adding this widget with layout does not follow the style of the PlotWidget
-            # TODO: see QLayout content margins...
             container = QWidget()
+            # Remove margins (padding around widgets in the layout)
+            widget.setContentsMargins(0, 0, 0, 0)
             container.setLayout(widget)
             widget = container
         return self.sceneObj.addWidget(widget)
@@ -184,11 +185,13 @@ class LogButtons(BetterLayout):
     """Button mixin that can toggle x/y log modes."""
     def __init__(self, *args, **kwargs):
         super(LogButtons, self).__init__(*args, **kwargs)
+        # Define single-source of text state
         self.X_ON_TEXT = "X Log Mode On"
         self.X_OFF_TEXT = "X Log Mode Off"
         self.Y_ON_TEXT = "Y Log Mode On"
         self.Y_OFF_TEXT = "Y Log Mode Off"
 
+        # Create checkable buttons
         self.x_log_button = QPushButton(self.X_OFF_TEXT)
         self.x_log_button.setCheckable(True)
         self.x_log_button.toggled.connect(self.set_x_log_mode)
