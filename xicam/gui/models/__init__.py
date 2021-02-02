@@ -2,7 +2,8 @@ from typing import Any, Callable, Iterable, List
 
 from databroker.core import BlueskyRun
 from qtpy.QtCore import Qt, QModelIndex, QAbstractItemModel
-from qtpy.QtGui import QFont, QBrush
+from qtpy.QtGui import QFont, QBrush, QPalette
+from qtpy.QtWidgets import QApplication
 from xicam.core.data.bluesky_utils import display_name
 from xicam.core.intents import Intent
 from xicam.core.msg import logMessage, WARNING
@@ -45,30 +46,41 @@ class EnsembleModel(TreeModel):
     @property
     def active_ensemble_name(self):
         if self.active_ensemble is not None:
+            # self._active_ensemble_name = self.getItem()
             self._active_ensemble_name = self.active_ensemble.data(Qt.DisplayRole)
         else:
             self._active_ensemble_name = self.NO_ACTIVE_ENSEMBLE_TEXT
         return self._active_ensemble_name
 
+    def _set_active_brushes(self, index, is_active):
+        brush = text_brush = self.data(index, Qt.BackgroundRole) or QBrush()
+        font = self.data(index, Qt.FontRole) or QFont()
+        if is_active is True:
+            if self.active_ensemble is not None:
+                # self.active_ensemble.setData(False, self.active_role)
+                active_index = self.index(self.active_ensemble.row(), 0)
+                self.setData(active_index, False, self.active_role)
+            self.active_ensemble = self.getItem(index)
+            self._update_title(self.active_ensemble_name)
+            palette = QApplication.palette()
+            brush = palette.color(QPalette.Normal, QPalette.Highlight)
+            text_brush = palette.color(QPalette.Normal, QPalette.BrightText)
+            font.setBold(True)
+        else:
+            self.active_ensemble = None
+            brush = QBrush()
+            text_brush = QBrush()
+            font.setBold(False)
+        self.setData(index, brush, Qt.BackgroundRole)
+        self.setData(index, text_brush, Qt.ForegroundRole)
+        self.setData(index, font, Qt.FontRole)
+
     def setData(self, index: QModelIndex, value: Any, role: Qt.ItemDataRole = Qt.EditRole) -> bool:
         if not index.isValid():
             return False
 
-        item = self.getItem(index)
-        # This shouldn't be in here..
         if role == self.active_role:
-            brush = QBrush()
-            if value is True:
-                if self.active_ensemble is not None:
-                    # self.active_ensemble.setData(False, self.active_role)
-                    active_index = self.index(self.active_ensemble.row(), 0)
-                    self.setData(active_index, False, self.active_role)
-                self.active_ensemble = item
-                self._update_title(self.active_ensemble_name)
-                brush = QBrush(Qt.red)
-            else:
-                self.active_ensemble = None
-            self.setData(index, brush, Qt.BackgroundRole)
+            self._set_active_brushes(index, value)
 
         if role == Qt.DisplayRole:
             # Intercept display text changes for ensembles (i.e. renaming) so we can update the title
@@ -157,21 +169,13 @@ class EnsembleModel(TreeModel):
 
         # Handle case where display text not provided
         elif role == Qt.DisplayRole:
-            item = self.getItem(index)
             data = item.itemData.get(role)
-            font = QFont()
-            # brush = QBrush(Qt.cyan)
+            font = self.data(index, Qt.FontRole) or QFont()
             if data is None or data == self._defaultDisplayText:
                 item.setData(self._defaultDisplayText, role)
                 font.setItalic(True)
             item.setData(font, Qt.FontRole)
-            # item.setData(brush, Qt.BackgroundRole)
             return item.itemData.get(role)
-
-        elif role == Qt.EditRole:
-            brush = QBrush(Qt.green)
-            item.setData(brush, Qt.ForegroundRole)
-            return
 
         else:
             return super(EnsembleModel, self).data(index, role)
