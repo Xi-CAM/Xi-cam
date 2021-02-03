@@ -40,13 +40,15 @@ class EnsembleModel(TreeModel):
         self.rootItem.setData(f"Active Item: {self.active_ensemble_name}", Qt.DisplayRole)
 
     def _update_title(self, name):
+        # Use default text if there isn't an active ensemble name set yet
+        if name is None:
+            name = self._defaultDisplayText
         self.rootItem.setData(f"Active Item: {name}", Qt.DisplayRole)
         self.headerDataChanged.emit(Qt.Horizontal, 0, 0)
 
     @property
     def active_ensemble_name(self):
         if self.active_ensemble is not None:
-            # self._active_ensemble_name = self.getItem()
             self._active_ensemble_name = self.active_ensemble.data(Qt.DisplayRole)
         else:
             self._active_ensemble_name = self.NO_ACTIVE_ENSEMBLE_TEXT
