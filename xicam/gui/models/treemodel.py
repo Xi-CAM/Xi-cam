@@ -293,8 +293,6 @@ class TreeModel(QAbstractItemModel):
             lowest_index = find_lowest_index(index)
 
             # self.dataChanged.emit(index, index, [role])
-            print("TreeModel")
-            print(f"\t{highest_parent_index.data()}, {lowest_index.data()}, {role}\n")
             self.dataChanged.emit(highest_parent_index, lowest_index, [role])
             return True
 
