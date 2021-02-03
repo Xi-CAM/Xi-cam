@@ -175,13 +175,13 @@ class EnsembleModel(TreeModel):
 
         # Handle case where display text not provided
         elif role == Qt.DisplayRole:
-            data = item.itemData.get(role)
+            data = item.data(role)
             font = self.data(index, Qt.FontRole) or QFont()
             if data is None or data == self._defaultDisplayText:
                 item.setData(self._defaultDisplayText, role)
                 font.setItalic(True)
             item.setData(font, Qt.FontRole)
-            return item.itemData.get(role)
+            return item.data(role)
 
         else:
             return super(EnsembleModel, self).data(index, role)
