@@ -20,8 +20,9 @@ class EnsembleGUIPlugin(GUIPlugin):
 
     """
     supports_ensembles = True
-    def __init__(self):
-        super(EnsembleGUIPlugin, self).__init__()
+
+    def __init__(self, *args, **kwargs):
+        super(EnsembleGUIPlugin, self).__init__(*args, **kwargs)
 
         self.ensemble_model = EnsembleModel()
 
