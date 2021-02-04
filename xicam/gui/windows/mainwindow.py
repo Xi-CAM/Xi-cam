@@ -165,14 +165,10 @@ class XicamMainWindow(QMainWindow):
         if self.currentGUIPlugin is None:
             msg.notifyMessage("Please select a gui plugin from the top before trying to open an image.")
             return
-        append = False
-        if self.currentGUIPlugin.supports_ensembles:
-            print("SUPPORTED")
-            append = True
         if isinstance(header, Catalog):
-            self.currentGUIPlugin.appendCatalog(header, append_to_active_ensemble=append)
+            self.currentGUIPlugin.appendCatalog(header)
         elif isinstance(header, CatalogEntry):
-            self.currentGUIPlugin.appendCatalog(header(), append_to_active_ensemble=append)
+            self.currentGUIPlugin.appendCatalog(header())
         elif isinstance(header, NonDBHeader):
             self.currentGUIPlugin.appendHeader(header)
         else:

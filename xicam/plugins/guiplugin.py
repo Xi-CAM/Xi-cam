@@ -18,7 +18,6 @@ class GUIPlugin(PluginType):
 
     is_singleton = True
     needs_qt = True
-    supports_ensembles = False
 
     def __init__(self):
         """Creates a GUIPlugin.
