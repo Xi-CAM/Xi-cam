@@ -46,7 +46,7 @@ class EnsembleGUIPlugin(GUIPlugin):
         ensemble.append_catalog(catalog)
 
         # TODO: use Dylan's code here instead of default projector
-        def default_projector(catalog):
+        def default_projector(catalog) -> List[Intent]:
             return []
 
         # FIXME: how does the mainwindow discover the appropriate projector to pass here?

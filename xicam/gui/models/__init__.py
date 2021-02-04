@@ -117,7 +117,7 @@ class EnsembleModel(TreeModel):
             intent_item.setData(WorkspaceDataType.Intent, self.data_type_role)
             catalog_item.appendChild(intent_item)
 
-    def append_to_ensemble(self, catalog, ensemble, projector: Callable):
+    def append_to_ensemble(self, catalog, ensemble, projector: Callable[[BlueskyRun], List[Intent]]):
         # Find the active ensemble (may be none if ensemble model is empty)
         ensemble_item = self.active_ensemble
         if ensemble_item is not None:
@@ -146,10 +146,10 @@ class EnsembleModel(TreeModel):
             self._create_catalog_item(ensemble_item, catalog, projector)
 
         self.rootItem.appendChild(ensemble_item)
-        # ensemble_item.setData(True, self.active_role)
-        index = self.index(ensemble_item.row(), 0)
-        self.setData(index, True, self.active_role)
-        # self.layoutChanged.emit()
+        # First ensemble should be activated; others not
+        if self.rowCount() == 1:
+            self.setData(self.index(ensemble_item.row(), 0), True, self.active_role)
+        self.layoutChanged.emit()  # inform any attached views that they need to update
 
     def remove_ensemble(self, ensemble):
         # TODO
@@ -185,12 +185,6 @@ class EnsembleModel(TreeModel):
 
         else:
             return super(EnsembleModel, self).data(index, role)
-
-    # TODO: should the color background role be set here (instead of using the paint function in item delegate)
-    #  (i think yes)
-    # TODO: should we encapsulate this into a boolean role (like hasbeennamed or something...)
-    # e.g. by default (for Ensemble items) set this to False, and handle the styling appropriately
-    # if it is successfully changed, then update this data to True and handle styling appropriately
 
 
 class IntentsModel(QAbstractItemModel):
