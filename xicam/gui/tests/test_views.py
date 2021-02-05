@@ -97,6 +97,7 @@ def test_view(simple_workflow_with_intents, qtbot):
     # Tests ingesting an internally run workflow, projecting it, storing it in a model
     # and using a CanvasView to display it
 
+    print(plugin_manager._observers)
     plugin_manager.qt_is_safe = True
     plugin_manager.initialize_types()
     plugin_manager.collect_plugins()
