@@ -455,6 +455,14 @@ class XicamPluginManager:
         """
         self._observers.append((callback, filter))
 
+    def detach(self, callback, filter=None):
+        """
+        Unsubscribe a callback from receiving notifications. If a filter is used, only the registered callback with the
+        same filter is removed.
+        See `Filters` for options.
+        """
+        self._observers.remove((callback, filter))
+
     def _notify(self, filter=None):
         """ Notify all observers. Observers attached with filters much mach the emitted filter to be notified."""
         for callback, obsfilter in self._observers:

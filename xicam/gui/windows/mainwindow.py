@@ -281,6 +281,7 @@ class XicamMainWindow(QMainWindow):
 
     def closeEvent(self, event):
         QSettings().setValue("geometry", self.saveGeometry())
+        pluginmanager.detach(self.pluginsChanged)
         QMainWindow.closeEvent(self, event)
 
     def readSettings(self):
