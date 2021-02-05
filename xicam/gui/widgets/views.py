@@ -1,10 +1,12 @@
 import itertools
 import sys
 
-from qtpy.QtCore import QModelIndex, QPoint, Qt
-from qtpy.QtGui import QIcon
+from qtpy.QtCore import QModelIndex, QPoint, Qt, QAbstractItemModel
+from qtpy.QtGui import QIcon, QMouseEvent, QPainter, QBrush, QFont
 from qtpy.QtWidgets import QAbstractItemView, QApplication, QButtonGroup, QHBoxLayout, QPushButton, \
-                           QSplitter, QStackedWidget, QStyleFactory, QTabWidget, QTreeView, QVBoxLayout, QWidget
+    QSplitter, QStackedWidget, QStyleFactory, QTabWidget, QTreeView, QVBoxLayout, QWidget, QStyledItemDelegate, \
+    QStyleOptionViewItem, QLineEdit, QStyle, QAction, QMenu
+from xicam.core.workspace import WorkspaceDataType
 
 from xicam.gui.static import path
 from xicam.gui.canvasmanager import XicamCanvasManager
@@ -397,8 +399,119 @@ class SplitGridView(SplitView):
             canvas.setVisible(True)
 
 
+class LineEditDelegate(QStyledItemDelegate):
+    """Custom editing delegate that allows renaming text and updating placeholder text in a line edit.
+
+    This class was written for using with the DataSelectorView.
+    """
+    def __init__(self, parent=None):
+        super(LineEditDelegate, self).__init__(parent)
+        self._default_text = "Untitled"
+
+    def createEditor(self, parent: QWidget,
+                     option: QStyleOptionViewItem,
+                     index: QModelIndex) -> QWidget:
+        editor = QLineEdit(parent)
+        editor.setPlaceholderText(self._default_text)
+        editor.setFrame(False)
+        return editor
+
+    def setEditorData(self, editor: QWidget, index: QModelIndex):
+        value = index.model().data(index, Qt.DisplayRole)
+        editor.setText(value)
+
+    def setModelData(self, editor: QWidget,
+                     model: QAbstractItemModel,
+                     index: QModelIndex):
+
+        text = editor.text()
+        if text == "":
+            text = editor.placeholderText()
+        # Update the "default" text to the previous value edited in
+        self._default_text = text
+        print(f"\nstyled item delegate: updating item to {text}")
+        model.setData(index, text, Qt.DisplayRole)
+
+    def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
+        super(LineEditDelegate, self).paint(painter, option, index)
+        return
+
+        # if index.data(role=EnsembleModel.active_role):
+        #     active_brush = QBrush(Qt.cyan)
+        #     painter.save()
+        #     painter.fillRect(option.rect, active_brush)
+        #     painter.restore()
+        #
+        # super(LineEditDelegate, self).paint(painter, option, index)
+
+
 class DataSelectorView(QTreeView):
-    ...
+    def __init__(self, parent=None):
+        super(DataSelectorView, self).__init__(parent)
+
+        # We are implementing our own custom context menu
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.customMenuRequested)
+
+        # Don't allow double-clicking for expanding; use it for editing
+        self.setExpandsOnDoubleClick(False)
+        self.setEditTriggers(QAbstractItemView.DoubleClicked)
+
+        # Attach a custom delegate for the editing
+        delegate = LineEditDelegate(self)
+        self.setItemDelegate(delegate)
+
+        self.setDragEnabled(True)
+
+        self.setAnimated(True)
+
+    def _rename_action(self, _):
+        # Request editor (see the delegate created in the constructor) to change the ensemble's name
+        self.edit(self.currentIndex())
+
+    def _set_active_action(self, checked: bool):
+        # Update the model data with the currentIndex corresponding to where the user right-clicked
+        # Update the active role based on the value of checked
+        self.model().setData(self.currentIndex(), checked, EnsembleModel.active_role)
+
+    def customMenuRequested(self, position):
+        """Builds a custom menu for Ensemble type items"""
+        # TODO: should this be available anywhere in the ensemble ?
+        # e.g. if you right-click an intent in this Ensemble, should it still let you edit the Ensemble?
+        index = self.indexAt(position)  # type: QModelIndex
+        if index.data(EnsembleModel.data_type_role) == WorkspaceDataType.Ensemble:
+            menu = QMenu(self)
+
+            # Allow renaming the ensemble via the context menu
+            rename_action = QAction("Rename Collection", menu)
+            rename_action.triggered.connect(self._rename_action)
+            menu.addAction(rename_action)
+
+            menu.addSeparator()
+
+            # Allow toggling the active ensemble via the context menu
+            # * there can only be at most 1 active ensemble
+            # * there are only 0 active ensembles when data has not yet been loaded ???
+            # * opening data updates the active ensemble to that data
+            is_active = index.data(EnsembleModel.active_role)
+            active_text = "Active"
+            toggle_active_action = QAction(active_text, menu)
+            toggle_active_action.setCheckable(True)
+            if is_active is True:
+                toggle_active_action.setChecked(True)
+            else:
+                toggle_active_action.setChecked(False)
+                toggle_active_action.setText(f"Not {active_text}")
+
+            # Make sure to update the model with the active / deactivated ensemble
+            toggle_active_action.toggled.connect(self._set_active_action)
+            # Don't allow deactivating the active ensemble if there is only one loaded
+            if self.model().rowCount() == 1:
+                toggle_active_action.setEnabled(False)
+            menu.addAction(toggle_active_action)
+
+            # Display menu wherever the user right-clicked
+            menu.popup(self.viewport().mapToGlobal(position))
 
 
 def main():

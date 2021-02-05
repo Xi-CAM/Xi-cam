@@ -3,7 +3,7 @@ from functools import WRAPPER_ASSIGNMENTS
 import pyqtgraph as pg
 from pyqtgraph import ImageView, InfiniteLine, mkPen, ScatterPlotItem, ImageItem, PlotItem
 from qtpy.QtGui import QTransform, QPolygonF
-from qtpy.QtWidgets import QLabel, QErrorMessage, QSizePolicy, QPushButton, QHBoxLayout, QVBoxLayout, QComboBox, QWidget
+from qtpy.QtWidgets import QLabel, QErrorMessage, QSizePolicy, QPushButton, QHBoxLayout, QVBoxLayout, QComboBox, QWidget, QToolBar
 from qtpy.QtCore import Qt, Signal, Slot, QSize, QPointF, QRectF
 import numpy as np
 from databroker.core import BlueskyRun
@@ -19,7 +19,6 @@ from typing import Callable
 from functools import partial
 
 from xicam.plugins import manager as pluginmanager, live_plugin
-from .ROI import RectROI
 import inspect
 
 
@@ -79,6 +78,18 @@ class BetterLayout(ImageView):
     # Replaces awkward gridlayout with more structured v/hboxlayouts, and removes useless buttons
     def __init__(self, *args, **kwargs):
         super(BetterLayout, self).__init__(*args, **kwargs)
+        self._reset_layout()
+        self._set_layout()
+
+    def _set_layout(self, layout=None):
+        # Replace the layout
+        QWidget().setLayout(self.ui.layoutWidget.layout())
+        if layout is not None:
+            self.ui.layoutWidget.setLayout(layout)
+        else:
+            self.ui.layoutWidget.setLayout(self.ui.outer_layout)
+
+    def _reset_layout(self):
         self.ui.outer_layout = QHBoxLayout()
         self.ui.left_layout = QVBoxLayout()
         self.ui.right_layout = QVBoxLayout()
@@ -95,9 +106,6 @@ class BetterLayout(ImageView):
         self.ui.roiBtn.setParent(self)
         self.ui.roiBtn.hide()
 
-        # Replace the layout
-        QWidget().setLayout(self.ui.layoutWidget.layout())
-        self.ui.layoutWidget.setLayout(self.ui.outer_layout)
 
 
 class BetterButtons(BetterLayout):
@@ -1006,12 +1014,40 @@ class SliceSelector(BetterLayout):
         super(SliceSelector, self).setCurrentIndex(ind)
         self.ui.roiPlot.setVisible(False)
 
+
+@live_plugin("ImageMixinPlugin")
+class ToolbarLayout(BetterLayout):
+    """Mixin to support a toolbar at the top of the ImageView.
+
+    Can pass in the toolbar you want via `toolbar`,
+    and can modify toolbar via the `toolbar` attribute.
+    """
+    def __init__(self, *args, toolbar=None, **kwargs):
+        super(ToolbarLayout, self).__init__(*args, **kwargs)
+        self.toolbar = toolbar
+
+        # Define new layout
+        self.toolbar_outer_layout = QVBoxLayout()
+        self.toolbar_outer_layout.addWidget(self.toolbar)
+
+        # Reinitialize the better layout
+        self._reset_layout()
+
+        # Create new layout hierarchy (in this case, a new outer_layout that contains the original layouts within)
+        self.toolbar_outer_layout.addLayout(self.ui.outer_layout)
+        self._set_layout(self.toolbar_outer_layout)
+
+
 if __name__ == "__main__":
     from qtpy.QtWidgets import QApplication
+
     qapp = QApplication([])
 
-    cls = type('Blend', (StreamSelector, FieldSelector), {})
-    w = cls()
+    # cls = type('Blend', (StreamSelector, FieldSelector), {})
+    cls = type('Blend', (ToolbarLayout,), {})
+    tb = QToolBar()
+    tb.addAction("BLAH")
+    w = cls(toolbar=tb)
     w.show()
 
     qapp.exec_()

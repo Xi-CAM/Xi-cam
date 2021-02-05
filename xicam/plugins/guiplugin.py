@@ -2,7 +2,6 @@ from collections import OrderedDict
 from enum import Enum
 from typing import Dict, List, Union
 from xicam.core.data import NonDBHeader
-from qtpy.QtGui import *
 from databroker.core import BlueskyRun
 
 from .plugin import PluginType
@@ -80,6 +79,7 @@ class GUIPlugin(PluginType):
     @property
     def stage(self):
         if not self._stage:
+            # first_stage = next(iter(self._stages.values()))
             first_stage = self._stages
             # Handle nested stages (see XPCS GUIPlugin for example)
             while not isinstance(first_stage, GUILayout):

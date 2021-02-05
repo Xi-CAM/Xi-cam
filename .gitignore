@@ -14,3 +14,4 @@ dask-worker-space
 *.ui
 ui/
 *.dist-info/
+.eggs/

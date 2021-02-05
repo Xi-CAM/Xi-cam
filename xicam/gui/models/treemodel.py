@@ -6,16 +6,24 @@ class TreeItem:
     """Qt-agnostic tree item. Mocks the general API of QStandardItem for compatibility.
 
     Stores check state integer (can be interfaced with the Qt.CheckState enum).
-
     Single column support only (right now).
+
+    Parameters
+    ----------
+    parent: TreeItem
+        Parent TreeItem for the item you are creating.
+        All TreeItems should have a parent except for the root/header item.
+        Default is None.
     """
     def __init__(self, parent=None):
-        # TODO: make itemData private, access only with data() and setData()
         self.parentItem = parent
-        self.itemData = {}
+        self._itemData = {}
         self.childItems = []
-        self.checked_state = 0
-        # TODO: refactor to not store checked_state (it can be stored in itemData)
+        self._flags = Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable
+        # All TreeItems will have a parent unless it is the root (header) item.
+        # Header item will not get a check state role applied to it.
+        if parent:
+            self.setData(Qt.Unchecked, Qt.CheckStateRole)
 
     def appendChild(self, item):
         self.childItems.append(item)
@@ -29,16 +37,13 @@ class TreeItem:
         return len(self.childItems)
 
     def columnCount(self) -> int:
+        return 1
         # TODO support multiple columns
         # assert len(self.itemData) == 1
-        return len(self.itemData)
-
-    def checkState(self) -> int:
-        # TODO: remove this (can be accessed via self.data or self.itemData)
-        return self.checked_state
+        # return len(self.itemData)
 
     def data(self, role):
-        return self.itemData.get(role)
+        return self._itemData.get(role)
 
     def hasChildren(self) -> int:
         return self.childCount() > 0
@@ -52,22 +57,20 @@ class TreeItem:
 
         return 0
 
-    def setCheckState(self, state: int):
-        # TODO: this can be removed and replaced with setting the itemData...
-        self.checked_state = state
-
     def setData(self, value: Any, key: int):
-        """Mimics QStandardItem.setData.
+        """Mimics QStandardItem.setData(value, role).
 
+        Pass in a value and key, maps as key -> role
         Internally sets the itemData's key (role) to the passed value.
         """
-        self.itemData[key] = value
+        self._itemData[key] = value
         return True
-    # def setData(self, column: int, value: Any) -> bool:
-    #     if column < 0 or column >= len(self.itemData):
-    #         return False
-    #     self.itemData[column] = value
-    #     return True
+
+    def flags(self):
+        return Qt.ItemFlag(self._flags)
+
+    def setFlags(self, flags):
+        self._flags = flags
 
 
 class TreeModel(QAbstractItemModel):
@@ -110,23 +113,17 @@ class TreeModel(QAbstractItemModel):
             return None
 
         item = self.getItem(index)
-
-        if role == Qt.CheckStateRole:
-            # checkstate = item.itemData.get(Qt.CheckStateRole)
-            # if checkstate is None:
-            #     item.itemData[Qt.CheckStateRole] = 0
-            # return checkstate
-
-            return item.checkState()
-
-        return item.itemData.get(role)
+        return item.data(role)
 
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
         """Re-implement to additionally ensure that this model is checkable."""
         if not index.isValid():
-            return Qt.NoItemFlags
+            # return Qt.NoItemFlags
+            return super(TreeModel, self).flags(index)
 
-        return super(TreeModel, self).flags(index) | Qt.ItemIsUserCheckable #|Qt.ItemIsEditable
+        return self.getItem(index).flags()
+
+        # return super(TreeModel, self).flags(index) #| Qt.ItemIsUserCheckable | Qt.ItemIsEditable
         #return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable
 
     def getItem(self, index: QModelIndex) -> TreeItem:
@@ -183,7 +180,7 @@ class TreeModel(QAbstractItemModel):
 
         return self.createIndex(parentItem.row(), 0, parentItem)
 
-    def rowCount(self, index: QModelIndex) -> int:
+    def rowCount(self, index: QModelIndex = QModelIndex()) -> int:
         """If an invalid index is passed, returns the childCount of the root item;
         otherwise, returns the index's childCount.
         """
@@ -206,7 +203,7 @@ class TreeModel(QAbstractItemModel):
         Otherwise, the item should be checked. (children handled in separate methods, see below)
         """
 
-        if item.checkState() == Qt.Checked:
+        if item.data(Qt.CheckStateRole) == Qt.Checked:
             return Qt.Unchecked
         else:
             return Qt.Checked
@@ -216,7 +213,7 @@ class TreeModel(QAbstractItemModel):
         for row in range(item.childCount()):
             self._setItemAndChildrenCheckState(item.child(row), state)
 
-        item.setCheckState(state)
+        item.setData(state, Qt.CheckStateRole)
 
     def _setParentItemCheckState(self, item: TreeItem, state: Qt.CheckState):
         """Set the item's ancestors check state to the given state.
@@ -225,13 +222,13 @@ class TreeModel(QAbstractItemModel):
         depending on the childrens' check states.
         """
         parent = item.parent()
-        sibling_check_states = [parent.child(row).checkState() for row in range(parent.childCount())]
+        sibling_check_states = [parent.child(row).data(Qt.CheckStateRole) for row in range(parent.childCount())]
         while parent and parent != self.rootItem:
             if all(check_state == sibling_check_states[0] for check_state in sibling_check_states):
-                parent.setCheckState(state)
+                parent.setData(state, Qt.CheckStateRole)
             else:
-                if parent.checkState() != Qt.PartiallyChecked:
-                    parent.setCheckState(Qt.PartiallyChecked)
+                if parent.data(Qt.CheckStateRole) != Qt.PartiallyChecked:
+                    parent.setData(Qt.PartiallyChecked, Qt.CheckStateRole)
 
             parent = parent.parent()
 
@@ -244,7 +241,7 @@ class TreeModel(QAbstractItemModel):
         """
 
         item = self.getItem(index)
-        item.itemData[role] = value
+        item.setData(value, role)
         self.dataChanged.emit(index, index, [role])
         return True
 
@@ -286,9 +283,6 @@ class TreeModel(QAbstractItemModel):
 
             lowest_index = find_lowest_index(index)
 
-            # self.dataChanged.emit(index, index, [role])
-            print("TreeModel")
-            print(f"\t{highest_parent_index.data()}, {lowest_index.data()}, {role}\n")
             self.dataChanged.emit(highest_parent_index, lowest_index, [role])
             return True
 

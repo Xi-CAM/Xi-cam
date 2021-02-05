@@ -19,7 +19,7 @@ from qtpy.QtWidgets import (
     QGraphicsOpacityEffect,
     QAction,
     QSpinBox,
-    QMessageBox,
+    QMessageBox, QWhatsThis,
 )
 from xicam import _version as version
 
@@ -123,6 +123,9 @@ class XicamMainWindow(QMainWindow):
         about_box.setTextFormat(Qt.RichText)
         about_box.setWindowModality(Qt.NonModal)
         help.addAction("&About Xi-CAM", lambda: about_box.show())
+        help.addSeparator()
+
+        help.addAction(QWhatsThis.createAction(help))
 
         menubar.addMenu(help)
 
