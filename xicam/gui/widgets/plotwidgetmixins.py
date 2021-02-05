@@ -124,7 +124,7 @@ class BetterLayout(pg.PlotWidget):
     def __init__(self, *args, **kwargs):
         super(BetterLayout, self).__init__(*args, **kwargs)
 
-    def create_graphics_item(self, widget: Union[QWidget, QLayout]) -> QGraphicsProxyWidget:
+    def _create_graphics_item(self, widget: Union[QWidget, QLayout]) -> QGraphicsProxyWidget:
         """Create a graphics item from a standard QWidget (or QLayout),
         which can be added to the PlotWidget's layout.
         """
@@ -145,12 +145,12 @@ class BetterLayout(pg.PlotWidget):
 
     def add_widget_to_bottom(self, widget: QWidget):
         """Add a QWidget to the bottom of the PlotWidget."""
-        graphics_widget = self.create_graphics_item(widget)
+        graphics_widget = self._create_graphics_item(widget)
         self.layout().addItem(graphics_widget, self.layout().rowCount(), 1)
 
     def add_widget_to_right(self, widget: QWidget):
         """Add add QWidget to the right of the PlotWidget."""
-        graphics_widget = self.create_graphics_item(widget)
+        graphics_widget = self._create_graphics_item(widget)
         self.layout().addItem(graphics_widget, 0, self.layout().columnCount())
 
 
