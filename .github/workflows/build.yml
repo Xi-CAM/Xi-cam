@@ -27,7 +27,8 @@ jobs:
       #fail-fast: false
     env:
       OS: ubuntu-latest
-      PYTHON: 3.8 
+      PYTHON: 3.8
+      QT_QPA_PLATFORM: offscreen
 
     steps:
     - uses: actions/checkout@v2
