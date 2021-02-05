@@ -72,7 +72,7 @@ class WorkflowEditor(QSplitter):
 
         """
         super(WorkflowEditor, self).__init__()
-        self.workflow = workflow
+        self._workflow = workflow
         self.kwargs = kwargs
         self.kwargs_callable = kwargs_callable
         self.execute_iterative = execute_iterative
@@ -95,7 +95,18 @@ class WorkflowEditor(QSplitter):
 
         self.workflowview.sigShowParameter.connect(self.setParameters)
 
-        workflow.attach(self.sigWorkflowChanged.emit)
+        self._workflow.attach(self.sigWorkflowChanged.emit)
+
+    @property
+    def workflow(self):
+        return self._workflow
+
+    @workflow.setter
+    def workflow(self, new_workflow: Workflow):
+        self._workflow.detach(self.sigWorkflowChanged.emit)
+        self._workflow = new_workflow
+        self._workflow.attach(self.sigWorkflowChanged.emit)
+
 
     def run_workflow(self, **kwargs):
         mixed_kwargs = self.kwargs.copy()
@@ -273,7 +284,7 @@ class LinearWorkflowView(DisablableListView):
         super(LinearWorkflowView, self).__init__(*args, **kwargs)
 
         self.setModel(workflowmodel)
-        workflowmodel.workflow.attach(self.showCurrentParameter)
+        workflowmodel._workflow.attach(self.showCurrentParameter)
         self.selectionModel().currentChanged.connect(self.showCurrentParameter)
 
         self.setDragDropMode(QAbstractItemView.InternalMove)
@@ -295,10 +306,20 @@ class LinearWorkflowView(DisablableListView):
 
 class WorkflowModel(QAbstractListModel):
     def __init__(self, workflow: Workflow):
-        self.workflow = workflow
+        self._workflow = workflow
         super(WorkflowModel, self).__init__()
 
-        self.workflow.attach(self.layoutChanged.emit)
+        self._workflow.attach(self.layoutChanged.emit)
+
+    @property
+    def workflow(self):
+        return self._workflow
+
+    @workflow.setter
+    def workflow(self, new_workflow: Workflow):
+        self._workflow.detach(self.layoutChanged.emit)
+        self._workflow = new_workflow
+        self._workflow.attach(self.layoutChanged.emit)
 
     def mimeTypes(self):
         return ["text/plain"]
