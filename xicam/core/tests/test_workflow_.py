@@ -711,10 +711,22 @@ class TestWorkflow:
         # TODO -- we are only getting one result, should get three (3 pairs of n1/n2).
         workflow.execute_all(callback_slot=cb, n1=n1_values, n2=n2_values).result()
 
-    def test_fill_kwargs(self):
-        assert False
+    def test_fill_kwargs(self, simple_workflow):
+        # simple_workflow has exposed inputs: n, n1, n2
+        simple_workflow.fill_kwargs(n=100, n1=-999)
+        square_op = simple_workflow.operations[0]
+        sum_op = simple_workflow.operations[-1]
+        assert square_op.filled_values["n"] == 100
+        assert sum_op.filled_values["n1"] == -999
 
+        # for non-existent kwargs, do nothing
+        simple_workflow.fill_kwargs(dne_kwarg="DNE")
+        assert square_op.filled_values["n"] == 100
+        assert sum_op.filled_values["n1"] == -999
+
+    @pytest.mark.xfail
     def test_validate(self):
+        # validate needs to be implemented
         assert False
 
     def test_notify_no_observers(self):
