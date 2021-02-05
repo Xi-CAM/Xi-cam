@@ -3,8 +3,7 @@ import pytest
 import os
 
 
-# NOTE: Disabled on travis due to unknown issues
-
+@pytest.mark.skip(reason="thread module testing has issues")
 def test_threads(qtbot):
     from xicam.core import threads
     from qtpy.QtCore import QObject, Signal
@@ -26,6 +25,7 @@ def test_threads(qtbot):
 
     qtbot.waitSignals([t.sigFinished, t2.sigFinished])
 
+@pytest.mark.skip(reason="thread module testing has issues")
 def test_threads_iterator(qtbot):
     from xicam.core import threads
 
@@ -46,6 +46,7 @@ def test_threads_iterator(qtbot):
     qtbot.waitSignal(t.sigFinished)
 
 
+@pytest.mark.skip(reason="thread module testing has issues")
 def test_exit_before_thread(qtbot):
     from xicam.core import threads
     import time
@@ -64,6 +65,7 @@ def test_exit_before_thread(qtbot):
 
     window.deleteLater()
 
+@pytest.mark.skip(reason="thread module testing has issues")
 def test_exit_before_decorated_thread(qtbot):
     from xicam.core import threads
     import time
@@ -82,6 +84,7 @@ def test_exit_before_decorated_thread(qtbot):
 
     window.deleteLater()
 
+@pytest.mark.skip(reason="thread module testing has issues")
 def test_qthreads_and_pythreads(qtbot):
     from xicam.core import threads
     import time
