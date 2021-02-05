@@ -7,7 +7,6 @@ from xicam.plugins import manager
 from xicam.core.tests.workflow_fixtures import square_op, sum_op, custom_parameter_op, custom_parameter_workflow, simple_workflow
 
 
-@pytest.mark.skipif(os.getenv("CI") is not None, reason="Core dumps on github actions")
 def test_simple(simple_workflow: Workflow, square_op, qtbot):
     workflow_editor = WorkflowEditor(simple_workflow)
     simple_workflow.add_operation(square_op.clone())
@@ -15,7 +14,6 @@ def test_simple(simple_workflow: Workflow, square_op, qtbot):
     qtbot.addWidget(workflow_editor)
 
 
-@pytest.mark.skipif(os.getenv("CI") is not None, reason="Core dumps on github actions")
 def test_custom_parameter(custom_parameter_workflow: Workflow, qtbot):
     workflow_editor = WorkflowEditor(custom_parameter_workflow)
     workflow_editor.show()
@@ -23,7 +21,6 @@ def test_custom_parameter(custom_parameter_workflow: Workflow, qtbot):
     workflow_editor.workflowview.setCurrentIndex(workflow_editor.workflowview.model().createIndex(0,0))  # Note: models is empty here because pluginmanger hasn't finished load yet
 
 
-@pytest.mark.skipif(os.getenv("CI") is not None, reason="Core dumps on github actions")
 def test_menu(qtbot):
     workflow_editor = WorkflowEditor(Workflow())
     workflow_editor.show()

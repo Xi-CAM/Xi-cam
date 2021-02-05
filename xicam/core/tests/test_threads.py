@@ -5,9 +5,6 @@ import os
 
 # NOTE: Disabled on travis due to unknown issues
 
-@pytest.mark.skipif(os.environ.get("TRAVIS", 'false').lower() == 'true',
-                    reason="Thread tests don't work on travis for unknown reason; temporarily disabled")
-@pytest.mark.skip(reason="Thread test not working on linux (Ubuntu18.04)")
 def test_threads(qtbot):
     from xicam.core import threads
     from qtpy.QtCore import QObject, Signal
@@ -29,9 +26,6 @@ def test_threads(qtbot):
 
     qtbot.waitSignals([t.sigFinished, t2.sigFinished])
 
-@pytest.mark.skipif(os.environ.get("TRAVIS", 'false').lower() == 'true',
-                    reason="Thread tests don't work on travis for unknown reason; temporarily disabled")
-@pytest.mark.skip(reason="Thread test not working on linux (Ubuntu18.04)")
 def test_threads_iterator(qtbot):
     from xicam.core import threads
 
@@ -52,7 +46,6 @@ def test_threads_iterator(qtbot):
     qtbot.waitSignal(t.sigFinished)
 
 
-@pytest.mark.skip(reason="Thread test not working on linux (Ubuntu18.04)")
 def test_exit_before_thread(qtbot):
     from xicam.core import threads
     import time
@@ -71,7 +64,6 @@ def test_exit_before_thread(qtbot):
 
     window.deleteLater()
 
-@pytest.mark.skip(reason="Thread test not working on linux (Ubuntu18.04)")
 def test_exit_before_decorated_thread(qtbot):
     from xicam.core import threads
     import time
@@ -90,7 +82,6 @@ def test_exit_before_decorated_thread(qtbot):
 
     window.deleteLater()
 
-@pytest.mark.skip(reason="Thread test not working on linux (Ubuntu18.04)")
 def test_qthreads_and_pythreads(qtbot):
     from xicam.core import threads
     import time

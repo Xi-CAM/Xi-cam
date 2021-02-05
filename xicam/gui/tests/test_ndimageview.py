@@ -86,7 +86,6 @@ def project_nxstxm(catalog):
     return raw_data.transpose('Sample Y (μm)', 'Sample X (μm)', 'E (eV)')
 
 @pytest.fixture
-@pytest.mark.skipif(not _spectral_installed, reason="xicam.spectral not installed")
 def cosmic_data():
     plugin_manager.collect_plugins()
     required_task = next(filter(lambda task: task.name == 'application/x-cxi', plugin_manager._tasks))
@@ -112,7 +111,6 @@ def ir_stxm_data():
     return data
 
 
-@pytest.mark.skipif(os.getenv("CI") is not None, reason="Core dumps on github actions")
 def test_NDViewer(simple_small_data, qtbot):
     from xicam.gui.widgets.ndimageview import NDImageView
     from skimage.transform import rescale, resize, downscale_local_mean

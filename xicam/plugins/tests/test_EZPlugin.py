@@ -3,7 +3,6 @@ import pytest
 from pytestqt import qtbot
 
 
-@pytest.mark.skipif(os.getenv("CI") is not None, reason="Core dumps on github actions")
 def test_EZPlugin(qtbot):
     from xicam.plugins import EZPlugin
     from xicam.gui.static import path

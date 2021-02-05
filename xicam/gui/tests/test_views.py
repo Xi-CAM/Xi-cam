@@ -93,7 +93,6 @@ def simple_workflow_with_intents(plot_op, abs_plot_op, blur_image_op, image_op):
     return wf
 
 
-@pytest.mark.skipif(os.getenv("CI") is not None, reason="Core dumps on github actions")
 def test_view(simple_workflow_with_intents, qtbot):
     # Tests ingesting an internally run workflow, projecting it, storing it in a model
     # and using a CanvasView to display it

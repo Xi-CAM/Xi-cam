@@ -73,7 +73,6 @@ def test_catalog(random_data_catalog):
 
 
 # Test the library widget with simple numpy arrays
-@pytest.mark.skipif(os.getenv("CI") is not None, reason="Core dumps on github actions")
 def test_library_widget(qtbot):
     w = QWidget()
     w.setLayout(QHBoxLayout())
@@ -95,7 +94,6 @@ def test_library_widget(qtbot):
 
 
 # Test the LibraryView bound to a catalog of runs
-@pytest.mark.skipif(os.getenv("CI") is not None, reason="Core dumps on github actions")
 @pytest.mark.parametrize("random_data_catalog", ((10, FRAMES),), indirect=True)
 def test_library_view(qtbot, random_data_catalog):
     from xicam.plugins.catalogplugin import CatalogModel

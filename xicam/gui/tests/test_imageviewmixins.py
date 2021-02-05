@@ -3,7 +3,6 @@ import pytest
 from pytestqt import qtbot
 
 
-@pytest.mark.skipif(os.getenv("CI") is not None, reason="Core dumps on github actions")
 def test_logIntensity(qtbot):
     from xicam.gui.widgets.imageviewmixins import LogScaleIntensity
     import numpy as np
@@ -22,7 +21,6 @@ def test_logIntensity(qtbot):
         windows.append(w)
 
 
-@pytest.mark.skipif(os.getenv("CI") is not None, reason="Core dumps on github actions")
 def test_xarrayview(qtbot):
     from xicam.gui.widgets.imageviewmixins import XArrayView
     from xarray import DataArray
@@ -39,7 +37,6 @@ def test_xarrayview(qtbot):
     # qtbot.stopForInteraction()
 
 
-@pytest.mark.skipif(os.getenv("CI") is not None, reason="Core dumps on github actions")
 def test_betterlayout(qtbot):
     from xicam.gui.widgets.imageviewmixins import BetterLayout
     from xarray import DataArray
