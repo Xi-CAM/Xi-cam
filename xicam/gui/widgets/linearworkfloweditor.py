@@ -82,10 +82,10 @@ class WorkflowEditor(QSplitter):
         self.workflowview = LinearWorkflowView(WorkflowModel(workflow))
 
         self.addWidget(self.operationeditor)
-        workflow_widget = WorkflowWidget(self.workflowview, operation_filter=operation_filter)
-        self.addWidget(workflow_widget)
-        workflow_widget.sigRunWorkflow.connect(self.sigRunWorkflow.emit)
-        workflow_widget.sigRunWorkflow.connect(self.run_workflow)
+        self.workflow_widget = WorkflowWidget(self.workflowview, operation_filter=operation_filter)
+        self.addWidget(self.workflow_widget)
+        self.workflow_widget.sigRunWorkflow.connect(self.sigRunWorkflow.emit)
+        self.workflow_widget.sigRunWorkflow.connect(self.run_workflow)
         # Should this work internally? How would the start operations get their inputs?
         # Would the ExamplePlugin need to explicitly set the parameter value (even for hidden image)?
         # It would be nice to just have this work easily... (to ExamplePlugin's perspective)

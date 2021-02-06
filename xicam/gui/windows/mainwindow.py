@@ -281,7 +281,9 @@ class XicamMainWindow(QMainWindow):
 
     def closeEvent(self, event):
         QSettings().setValue("geometry", self.saveGeometry())
-        pluginmanager._observers.clear()
+        pluginmanager._observers.clear()  # Detach all observers
+        msg.progressbar = None  # Remove progressbar from Qt hierarchy
+        msg.statusbar = None  # Remove statusbar from Qt hierarchy
         QMainWindow.closeEvent(self, event)
 
     def readSettings(self):

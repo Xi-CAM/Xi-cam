@@ -1,3 +1,8 @@
+# TODO: after we transition to tox, set an environment variable that defaults qt as safe to True.
+#  This will fix
+#   1. the problem we saw with importing modules in tests that have live_plugins that use GUI
+#   2. potentially future problems where a live_plugin may have been wiped out (via initialze_types).
+#  Maybe consider addressing the use of plugin manager in tests? Particularly initialize_types().
 import sys
 import time
 import itertools
@@ -120,6 +125,13 @@ class XicamPluginManager:
             self._blacklist.extend(["cammart", "venvs"])
 
     def initialize_types(self):
+        for plugins in self.type_mapping.values():
+            for plugin_type in plugins:
+                if getattr(plugin_type, "_live", False):
+                    # IF you get here, it means a live_plugin has been loaded before collection! (not intended)
+                    # If you get here in a test, it means you have re-init'd types when you didn't need to
+                    warnings.warn("Intializing types will lose live_plugins. Something procedurally has gone wrong.")
+
         # Load plugin types
         self.plugin_types = {name: ep.load() for name, ep in entrypoints.get_group_named("xicam.plugins.PluginType").items()}
 
@@ -519,6 +531,10 @@ def live_plugin(type_name: str, replace=False, plugin_name=None):
             message = f"A plugin type must be specified for plugin named: {plugin_name or cls.__name__}."
             msg.notifyMessage(message)
         else:
-            manager.collect_plugin(plugin_name or cls.__name__, cls, type_name, replace=replace)
+            plugin = manager.collect_plugin(plugin_name or cls.__name__, cls, type_name, replace=replace)
+            # If the manager didn't drop the plugin (live_plugins can't always be loaded, e.g. if not qt safe yet)
+            # then indicate that the plugin is a live plugin
+            if plugin:
+                plugin._live = True
         return cls
     return decorator
