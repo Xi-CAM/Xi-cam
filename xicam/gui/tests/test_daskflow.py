@@ -1,3 +1,5 @@
+import os
+import pytest
 from pytestqt import qtbot
 from xicam.core.tests.workflow_fixtures import simple_workflow, square_op, sum_op
 

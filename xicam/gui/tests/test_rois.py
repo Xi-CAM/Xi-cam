@@ -1,3 +1,5 @@
+import os
+import pytest
 from pytestqt import qtbot
 from xicam.gui.widgets.ROI import ArcROI
 

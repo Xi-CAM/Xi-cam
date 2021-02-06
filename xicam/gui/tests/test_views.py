@@ -1,3 +1,4 @@
+import os
 import pytest
 import numpy as np
 from pyqtgraph import PlotWidget, ImageView
@@ -7,6 +8,8 @@ from qtpy.QtWidgets import QWidget, QHBoxLayout
 from databroker.in_memory import BlueskyInMemoryCatalog
 from pytestqt import qtbot
 from xicam.plugins import manager as plugin_manager, live_plugin
+
+# Need to intialize types in plugin manager for live_plugin to work
 plugin_manager.qt_is_safe = True
 plugin_manager.initialize_types()
 
@@ -20,18 +23,6 @@ from xicam.plugins.operationplugin import operation, output_names, intent
 from xicam.gui.widgets.linearworkfloweditor import WorkflowEditor
 from xicam.gui.models import EnsembleModel, IntentsModel
 
-
-@live_plugin('PlotMixinPlugin', replace=True)
-class PlotMixinTest(PlotWidget):
-    def __init__(self, *args, **kwargs):
-        super(PlotMixinTest, self).__init__(*args, background='g', **kwargs)
-
-
-@live_plugin('ImageMixinPlugin', replace=True)
-class ImageMixinTest(ImageView):
-    def __init__(self, *args, **kwargs):
-        super(ImageMixinTest, self).__init__(*args, **kwargs)
-        self.setStyleSheet('* {background-color:green;}')
 
 # TODO: move these fixtures into workflow_fixtures (when others use it)
 @pytest.fixture()
@@ -96,24 +87,16 @@ def test_view(simple_workflow_with_intents, qtbot):
     # Tests ingesting an internally run workflow, projecting it, storing it in a model
     # and using a CanvasView to display it
 
-    plugin_manager.qt_is_safe = True
-    plugin_manager.initialize_types()
-    plugin_manager.collect_plugins()
+    @live_plugin('PlotMixinPlugin')
+    class PlotMixinTest(PlotWidget):
+        def __init__(self, *args, **kwargs):
+            super(PlotMixinTest, self).__init__(*args, background='g', **kwargs)
 
-    pc = next(filter(lambda task: task.name == 'plot_canvas', plugin_manager._tasks))
-    plugin_manager._load_plugin(pc)
-    plugin_manager._instantiate_plugin(pc)
-
-    ic = next(filter(lambda task: task.name == 'image_canvas', plugin_manager._tasks))
-    plugin_manager._load_plugin(ic)
-    plugin_manager._instantiate_plugin(ic)
-
-    plot_intent_task = next(filter(lambda task: task.name == 'PlotIntent', plugin_manager._tasks))
-    plugin_manager._load_plugin(plot_intent_task)
-    plugin_manager._instantiate_plugin(plot_intent_task)
-    image_intent_task = next(filter(lambda task: task.name == 'ImageIntent', plugin_manager._tasks))
-    plugin_manager._load_plugin(image_intent_task)
-    plugin_manager._instantiate_plugin(image_intent_task)
+    @live_plugin('ImageMixinPlugin')
+    class ImageMixinTest(ImageView):
+        def __init__(self, *args, **kwargs):
+            super(ImageMixinTest, self).__init__(*args, **kwargs)
+            self.setStyleSheet('* {background-color:green;}')
 
     execution.executor = LocalExecutor()
     ensemble_model = EnsembleModel()
@@ -154,5 +137,4 @@ def test_view(simple_workflow_with_intents, qtbot):
     workflow_editor = WorkflowEditor(simple_workflow_with_intents, callback_slot=showResult)
     workflow_editor.run_workflow()
 
-    qtbot.wait(7000)
-    qtbot.stopForInteraction()
+    qtbot.wait(3000)

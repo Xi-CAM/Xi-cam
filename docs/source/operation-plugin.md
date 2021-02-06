@@ -196,7 +196,6 @@ More information about `Workflow` can be found in the [Workflow Documentation](w
 .. autodecorator:: xicam.plugins.operationplugin.limits
 .. autodecorator:: xicam.plugins.operationplugin.output_shape
 .. autodecorator:: xicam.plugins.operationplugin.opts
-.. autodecorator:: xicam.plugins.operationplugin.plot_hint
 .. autodecorator:: xicam.plugins.operationplugin.units
 .. autodecorator:: xicam.plugins.operationplugin.visible
 .. autoclass:: xicam.plugins.operationplugin.OperationPlugin

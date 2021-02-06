@@ -1,5 +1,7 @@
+import os
 import pytest
 from pytestqt import qtbot
+
 
 def test_IFittableModelPlugin(qtbot):
     from xicam.plugins.fittablemodelplugin import Fittable1DModelPlugin
