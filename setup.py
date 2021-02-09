@@ -88,7 +88,10 @@ setup(
                       "entrypoints",
                       "pyqtgraph==0.11.0",
                       "qtconsole",
-                      "scipy"],
+                      "scipy",
+                      "matplotlib",
+                      "h5py",
+                      "scikit-image"],
     setup_requires=["cython"],  # cython is a missing required dep of astropy
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
@@ -131,6 +134,8 @@ setup(
             "ingestors = xicam.plugins.ingestorplugin:IngestorPlugin",
             "sniffers = xicam.plugins.snifferplugin:SnifferPlugin",
             "intents = xicam.plugins.intentplugin:IntentPlugin",
+            "ImageMixinPlugin = xicam.plugins.imagemixinplugin:ImageMixinPlugin",
+            "PlotMixinPlugin = xicam.plugins.plotmixinplugin:PlotMixinPlugin",
         ],
         "xicam.plugins.SettingsPlugin": [
             "logging = xicam.gui.settings.logging:LoggingSettingsPlugin",
@@ -150,15 +155,20 @@ setup(
             "fourier_transform = xicam.core.operations:fourier_transform",
             "low_band_pass = xicam.core.operations:low_band_pass",
             "inverse_fourier_transform = xicam.core.operations:inverse_fourier_transform",
-            "absolute_square = xicam.core.operations:absolute_square"
+            "absolute_square = xicam.core.operations:absolute_square",
+            "tuple_test = xicam.core.operations:tuple_test",
         ],
         "xicam.plugins.IntentCanvasPlugin": [
             "plot_canvas = xicam.gui.canvases:PlotIntentCanvas",
-            "image_canvas = xicam.gui.canvases:ImageIntentCanvas"],
+            "image_canvas = xicam.gui.canvases:ImageIntentCanvas",
+            "pairplot_canvas = xicam.gui.canvases:PairPlotIntentCanvas"
+        ],
         "databroker.intents": [
             "PlotIntent = xicam.core.intents:PlotIntent",
             "ImageIntent = xicam.core.intents:ImageIntent",
-            "ErrorBarIntent = xicam.core.intents:ErrorBarIntent"
+            "ErrorBarIntent = xicam.core.intents:ErrorBarIntent",
+            "BarIntent = xicam.core.intents:BarIntent",
+            "PairPlotIntent = xicam.core.intents:PairPlotIntent"
         ],
     },
     ext_modules=[],

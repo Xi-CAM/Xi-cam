@@ -19,7 +19,7 @@ from qtpy.QtWidgets import (
     QGraphicsOpacityEffect,
     QAction,
     QSpinBox,
-    QMessageBox,
+    QMessageBox, QWhatsThis,
 )
 from xicam import _version as version
 
@@ -123,6 +123,9 @@ class XicamMainWindow(QMainWindow):
         about_box.setTextFormat(Qt.RichText)
         about_box.setWindowModality(Qt.NonModal)
         help.addAction("&About Xi-CAM", lambda: about_box.show())
+        help.addSeparator()
+
+        help.addAction(QWhatsThis.createAction(help))
 
         menubar.addMenu(help)
 
@@ -278,6 +281,9 @@ class XicamMainWindow(QMainWindow):
 
     def closeEvent(self, event):
         QSettings().setValue("geometry", self.saveGeometry())
+        pluginmanager._observers.clear()  # Detach all observers
+        msg.progressbar = None  # Remove progressbar from Qt hierarchy
+        msg.statusbar = None  # Remove statusbar from Qt hierarchy
         QMainWindow.closeEvent(self, event)
 
     def readSettings(self):
@@ -321,6 +327,10 @@ class pluginModeWidget(QToolBar):
 
         # Build children
         self.pluginsChanged()
+        
+    def closeEvent(self, event) -> None:
+        pluginmanager.detach(self.pluginsChanged)
+        super(pluginModeWidget, self).closeEvent(event)
 
     def pluginsChanged(self):
         self._build_nodes()

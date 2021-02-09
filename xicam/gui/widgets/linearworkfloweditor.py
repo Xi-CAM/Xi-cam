@@ -72,7 +72,7 @@ class WorkflowEditor(QSplitter):
 
         """
         super(WorkflowEditor, self).__init__()
-        self.workflow = workflow
+        self._workflow = workflow
         self.kwargs = kwargs
         self.kwargs_callable = kwargs_callable
         self.execute_iterative = execute_iterative
@@ -82,10 +82,10 @@ class WorkflowEditor(QSplitter):
         self.workflowview = LinearWorkflowView(WorkflowModel(workflow))
 
         self.addWidget(self.operationeditor)
-        workflow_widget = WorkflowWidget(self.workflowview, operation_filter=operation_filter)
-        self.addWidget(workflow_widget)
-        workflow_widget.sigRunWorkflow.connect(self.sigRunWorkflow.emit)
-        workflow_widget.sigRunWorkflow.connect(self.run_workflow)
+        self.workflow_widget = WorkflowWidget(self.workflowview, operation_filter=operation_filter)
+        self.addWidget(self.workflow_widget)
+        self.workflow_widget.sigRunWorkflow.connect(self.sigRunWorkflow.emit)
+        self.workflow_widget.sigRunWorkflow.connect(self.run_workflow)
         # Should this work internally? How would the start operations get their inputs?
         # Would the ExamplePlugin need to explicitly set the parameter value (even for hidden image)?
         # It would be nice to just have this work easily... (to ExamplePlugin's perspective)
@@ -95,7 +95,18 @@ class WorkflowEditor(QSplitter):
 
         self.workflowview.sigShowParameter.connect(self.setParameters)
 
-        workflow.attach(self.sigWorkflowChanged.emit)
+        self._workflow.attach(self.sigWorkflowChanged.emit)
+
+    @property
+    def workflow(self):
+        return self._workflow
+
+    @workflow.setter
+    def workflow(self, new_workflow: Workflow):
+        self._workflow.detach(self.sigWorkflowChanged.emit)
+        self._workflow = new_workflow
+        self._workflow.attach(self.sigWorkflowChanged.emit)
+
 
     def run_workflow(self, **kwargs):
         mixed_kwargs = self.kwargs.copy()
@@ -273,7 +284,7 @@ class LinearWorkflowView(DisablableListView):
         super(LinearWorkflowView, self).__init__(*args, **kwargs)
 
         self.setModel(workflowmodel)
-        workflowmodel.workflow.attach(self.showCurrentParameter)
+        workflowmodel._workflow.attach(self.showCurrentParameter)
         self.selectionModel().currentChanged.connect(self.showCurrentParameter)
 
         self.setDragDropMode(QAbstractItemView.InternalMove)
@@ -295,10 +306,20 @@ class LinearWorkflowView(DisablableListView):
 
 class WorkflowModel(QAbstractListModel):
     def __init__(self, workflow: Workflow):
-        self.workflow = workflow
+        self._workflow = workflow
         super(WorkflowModel, self).__init__()
 
-        self.workflow.attach(self.layoutChanged.emit)
+        self._workflow.attach(self.layoutChanged.emit)
+
+    @property
+    def workflow(self):
+        return self._workflow
+
+    @workflow.setter
+    def workflow(self, new_workflow: Workflow):
+        self._workflow.detach(self.layoutChanged.emit)
+        self._workflow = new_workflow
+        self._workflow.attach(self.layoutChanged.emit)
 
     def mimeTypes(self):
         return ["text/plain"]

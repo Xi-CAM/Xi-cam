@@ -7,6 +7,7 @@ from collections import OrderedDict
 from qtpy.QtWidgets import QTreeWidgetItem, QWidget, QPushButton, QCheckBox
 from qtpy.QtGui import QIcon, QPainterPath
 from qtpy.QtCore import Signal
+from xicam.core import msg
 from xicam.gui.static import path
 
 from pyqtgraph.parametertree.parameterTypes import WidgetParameterItem, ListParameter
@@ -367,6 +368,59 @@ class BetterGroupParameter(parameterTypes.GroupParameter):
 
 parameterTypes.GroupParameter = BetterGroupParameter
 registerParameterType("group", BetterGroupParameter, override=True)
+
+
+class TupleGroupParameter(BetterGroupParameter):
+    """Parameter for tuples in the ParameterTree.
+
+    A tuple will be represented as a group parameter,
+    where each child will be the tuple's name with an integer subscript appended to it.
+
+    For example, for a tuple named "x" with values (1, 3, 9), we will get a parameter tree that looks like:
+    x
+       x₀    1
+       x₁    3
+       x₂    9
+    """
+    itemClass = BetterGroupParameteritem
+
+    def __init__(self, **opts):
+        super(TupleGroupParameter, self).__init__(**opts)
+
+        name = opts.get('name')
+        # Add spacing for non single-character names
+        if len(name) > 1:
+            name += " "
+        values = opts.get('value')
+        defaults = opts.get('default')
+
+        # Map an integer to its corresponding unicode subscript literal
+        def subscript(n: int):
+            subscripts = "\u2080\u2081\u2082\u2083\u2084\u2085\u2086\u2087\u2088\u2089"
+            return "".join([subscripts[ord(c) - ord('0')] for c in str(n)])
+
+        # Create child param dicts (so Parameter.create is used in addChild)
+        # where each element in the tuple is marked with a subscript of its index position
+        # e.g. gains = (1, 4, 8) -> gains 0, gains 1, gains 2 (note that the numbers are subscript when shown)
+        if values is None:
+            if defaults is None:
+                # FIXME: better exception
+                message = f"TupleGroupParameter named \"{name}\" must have default values provided"
+                msg.notifyMessage(message, level=msg.ERROR)
+                raise Exception(message)
+            else:
+                values = defaults
+
+        for i in range(len(values)):
+            value = values[i]
+            default_value = defaults[i]
+            param_type = type(values[i]).__name__
+            child_name = f"{name}{subscript(i)}"
+            child = {"name": child_name, "type": param_type, "default": default_value, "value": value}
+            self.addChild(child)
+
+
+registerParameterType("tuple", TupleGroupParameter, override=True)
 
 
 class CounterGroupParameterItem(BetterGroupParameteritem):

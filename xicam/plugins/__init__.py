@@ -1,3 +1,8 @@
+# TODO: after we transition to tox, set an environment variable that defaults qt as safe to True.
+#  This will fix
+#   1. the problem we saw with importing modules in tests that have live_plugins that use GUI
+#   2. potentially future problems where a live_plugin may have been wiped out (via initialze_types).
+#  Maybe consider addressing the use of plugin manager in tests? Particularly initialize_types().
 import sys
 import time
 import itertools
@@ -30,7 +35,6 @@ from .intentcanvasplugin import IntentCanvasPlugin
 from .dataresourceplugin import DataResourcePlugin
 from .fittablemodelplugin import Fittable1DModelPlugin
 from .ezplugin import _EZPlugin, EZPlugin
-from .hints import PlotHint, Hint
 
 try:
     # try to find the venvs entrypoint
@@ -121,6 +125,13 @@ class XicamPluginManager:
             self._blacklist.extend(["cammart", "venvs"])
 
     def initialize_types(self):
+        for plugins in self.type_mapping.values():
+            for plugin_type in plugins:
+                if getattr(plugin_type, "_live", False):
+                    # IF you get here, it means a live_plugin has been loaded before collection! (not intended)
+                    # If you get here in a test, it means you have re-init'd types when you didn't need to
+                    warnings.warn("Intializing types will lose live_plugins. Something procedurally has gone wrong.")
+
         # Load plugin types
         self.plugin_types = {name: ep.load() for name, ep in entrypoints.get_group_named("xicam.plugins.PluginType").items()}
 
@@ -154,7 +165,7 @@ class XicamPluginManager:
             self.type_mapping[type_name].pop(plugin_name, None)
         else:
             try:
-                assert plugin_name not in self.type_mapping[type_name]
+                assert plugin_name not in self.type_mapping.get(type_name, {})
             except AssertionError:
                 raise ValueError(f"A plugin named {plugin_name} has already been loaded. Supply `replace=True` to override.")
 
@@ -170,8 +181,10 @@ class XicamPluginManager:
             msg.logMessage(f"A plugin of type {type_name} named {task.name} is already in the queue.",
                            level=msg.WARNING)
 
-        if not self.plugin_loader.is_running:
+        if not self.plugin_loader.isRunning():
             self.plugin_loader.start()
+
+        return self.get_plugin_by_name(plugin_name, type_name)
 
     def _unload_plugins(self):
 
@@ -288,8 +301,8 @@ class XicamPluginManager:
             type_name = instantiate_task.type_name
             plugin_class = instantiate_task.plugin_class
 
-            # if this plugin was already instantiated earlier, skip it; mark done
-            if self.type_mapping[type_name].get(entrypoint.name, None) is None:
+            # if this plugin was already instantiated earlier, skip it; mark done; also skips if the group isn't active
+            if self.type_mapping.get(type_name, {entrypoint.name: True}).get(entrypoint.name, None) is None:
                 instantiate_task.status = Status.Instantiating
 
                 # inject the entrypoint name into the class
@@ -454,6 +467,14 @@ class XicamPluginManager:
         """
         self._observers.append((callback, filter))
 
+    def detach(self, callback, filter=None):
+        """
+        Unsubscribe a callback from receiving notifications. If a filter is used, only the registered callback with the
+        same filter is removed.
+        See `Filters` for options.
+        """
+        self._observers.remove((callback, filter))
+
     def _notify(self, filter=None):
         """ Notify all observers. Observers attached with filters much mach the emitted filter to be notified."""
         for callback, obsfilter in self._observers:
@@ -499,3 +520,21 @@ class LiveEntryPoint(entrypoints.EntryPoint):
 
     def load(self):
         return self.object
+
+
+def live_plugin(type_name: str, replace=False, plugin_name=None):
+    if not isinstance(type_name, str):
+        raise TypeError("A plugin type must be specified.")
+
+    def decorator(cls):
+        if not isinstance(type_name, str):
+            message = f"A plugin type must be specified for plugin named: {plugin_name or cls.__name__}."
+            msg.notifyMessage(message)
+        else:
+            plugin = manager.collect_plugin(plugin_name or cls.__name__, cls, type_name, replace=replace)
+            # If the manager didn't drop the plugin (live_plugins can't always be loaded, e.g. if not qt safe yet)
+            # then indicate that the plugin is a live plugin
+            if plugin:
+                plugin._live = True
+        return cls
+    return decorator

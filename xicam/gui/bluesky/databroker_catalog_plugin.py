@@ -1,6 +1,7 @@
 """
 Catalog Plugin for browsing pre-configured databroker catalogs
 """
+from distutils.version import LooseVersion
 from xicam.plugins.catalogplugin import CatalogPlugin
 from xicam.gui.widgets.dataresourcebrowser import QListView
 from databroker.core import BlueskyRun
@@ -8,9 +9,16 @@ from qtpy.QtCore import Signal
 from qtpy.QtWidgets import QApplication, QPushButton, QVBoxLayout, QWidget
 import logging
 
-from bluesky_widgets.components.search.searches import Search
-from bluesky_widgets.qt.searches import QtSearch
+
+import bluesky_widgets
 from bluesky_widgets.qt.threading import wait_for_workers_to_quit
+# Handle some module reorganization in v0.0.5.
+if LooseVersion(bluesky_widgets.__version__) < LooseVersion("0.0.5"):
+    from bluesky_widgets.components.search.searches import Search
+    from bluesky_widgets.qt.searches import QtSearch
+else:
+    from bluesky_widgets.models.search import Search
+    from bluesky_widgets.qt.search import QtSearch
 
 logger = logging.getLogger("BlueskyPlugin")
 

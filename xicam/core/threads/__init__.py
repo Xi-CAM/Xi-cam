@@ -181,7 +181,8 @@ class QThreadFuture(QThread):
                     QApplication.instance().aboutToQuit.disconnect(self.quit)
                 # Somehow the application never had its aboutToQuit connected to quit...
                 except TypeError as e:
-                    msg.logError(e)
+                    #msg.logError(e)
+                    ...
 
     def _run(self, *args, **kwargs):  # Used to generalize to QThreadFutureIterator
         yield self.method(*self.args, **self.kwargs)

@@ -1,0 +1,89 @@
+# This workflow will install Python dependencies, run tests and lint
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
+
+name: Test with coverage
+
+# Run workflow when there are:
+#   - pushes to master
+#   - PRs into master
+#   - tags (following N.N.N naming)
+on:
+  push:
+    branches: [ master ]
+    tags:
+      - '[0-9]+.[0-9]+.[0-9]'
+
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    #strategy:
+      #matrix:
+        #python-version: [3.7, 3.8]
+        ##os: [ubuntu-latest, macos-latest, windows-latest]
+      #fail-fast: false
+    env:
+      OS: ubuntu-latest
+      PYTHON: 3.8
+      QT_QPA_PLATFORM: offscreen
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up Python 3.8
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.8
+
+    #- name: Set up Python ${{ matrix.python-version }}
+      #uses: actions/setup-python@v2
+      #with:
+        #python-version: ${{ matrix.python-versions }} 
+
+    - name: Install 
+      run: |
+        # Install xicam with tests and docs extra requirements
+        #source ci/scripts/install.sh -td
+        echo $(which python)
+        echo $(python --version)
+        echo $(which python3)
+        echo $(python3 --version)
+        python -m pip install --upgrade pip
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        pip install -e .[tests,docs]
+
+    - name: Build Documentation
+      run: |
+        (cd docs && make html)
+
+    - name: Test with coverage
+      run: |
+        pytest . --cov=./ --cov-report=xml
+        
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v1
+      with:
+        directory: ./coverage/reports/
+        env_vars: OS, PYTHON
+        fail_ci_if_error: true
+        file: ./coverage.xml
+        name: codecov-umbrella
+        path_to_write_report: ./coverage/codecov_report.txt
+        verbose: true
+
+    - name: Setup deploy
+      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
+      run: |
+        #source ci/scripts/release.sh
+        pip install --upgrade setuptools wheel twine
+        python setup.py bdist bdist_wheel bdist_egg
+
+    - name: Publish package
+      if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
+      uses: pypa/gh-action-pypi-publish@master
+      with:
+        user: __token__
+        password: ${{ secrets.PYPI_API_TOKEN }}
