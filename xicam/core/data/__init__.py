@@ -15,6 +15,16 @@ import warnings
 mimetypes.add_type('application/x-hdf5', '.h5')  # This one is already being added to the next version of `mimetypes`
 
 
+class ProjectionException(Exception):
+    """Base class for exceptions that occur when projecting bluesky runs."""
+    pass
+
+
+class ProjectionNotFound(ProjectionException):
+    """Could not find the named projection."""
+    pass
+
+
 def detect_mimetypes(filename: str) -> List[str]:
     """
     Take in a filename; return a mimetype string like 'image/tiff'.
