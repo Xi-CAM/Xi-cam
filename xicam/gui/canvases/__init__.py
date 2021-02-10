@@ -1,4 +1,6 @@
 # from abc import ABC, abstractmethod
+from typing import List
+
 import numpy as np
 from pyqtgraph import ImageView, PlotWidget, ErrorBarItem
 import pyqtgraph as pg
@@ -56,9 +58,15 @@ class ImageIntentCanvas(XicamIntentCanvas, QWidget):
         self.setLayout(QVBoxLayout())
         self.canvas_widget = None
 
-    def render(self, intent):
+    def render(self, intent, mixins: List[str] = None):
+        """Render an intent to the canvas.
+
+        Optionally, provide additional list of mixin names to extend the image canvas functionality.
+        """
         if not self.canvas_widget:
             bases_names = intent.mixins or tuple()
+            if mixins:
+                bases_names += tuple(mixins)
             bases = map(lambda name: plugin_manager.type_mapping['ImageMixinPlugin'][name], bases_names)
             self.canvas_widget = type('ImageViewBlend', (*bases, ImageView), {})()
             self.layout().addWidget(self.canvas_widget)
@@ -70,7 +78,7 @@ class ImageIntentCanvas(XicamIntentCanvas, QWidget):
                 kwargs[key] = np.asanyarray(value).squeeze()
 
         # TODO: add rendering logic for ROI intents
-        return self.canvas_widget.setImage(np.asarray(intent.image).squeeze(), **kwargs)
+        self.canvas_widget.setImage(np.asarray(intent.image).squeeze(), **kwargs)
 
     def unrender(self, intent) -> bool:
         ...
