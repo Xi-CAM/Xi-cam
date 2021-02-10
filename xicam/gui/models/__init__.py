@@ -4,9 +4,10 @@ from databroker.core import BlueskyRun
 from qtpy.QtCore import Qt, QModelIndex, QAbstractItemModel
 from qtpy.QtGui import QFont, QBrush, QPalette
 from qtpy.QtWidgets import QApplication
+from xicam.core.data import ProjectionNotFound
 from xicam.core.data.bluesky_utils import display_name
 from xicam.core.intents import Intent
-from xicam.core.msg import logMessage, WARNING
+from xicam.core.msg import logMessage, WARNING, notifyMessage
 from xicam.core.workspace import WorkspaceDataType, Ensemble
 from xicam.gui.models.treemodel import TreeModel, TreeItem
 
@@ -96,19 +97,27 @@ class EnsembleModel(TreeModel):
 
         return super(EnsembleModel, self).setData(index, value, role)
 
-    def _create_catalog_item(self, ensemble_item, catalog, projector):
+    def _create_catalog_item(self, ensemble_item, catalog, projectors: List[Callable[[BlueskyRun], List[Intent]]]):
         catalog_item = TreeItem(ensemble_item)
         catalog_name = display_name(catalog)
         catalog_item.setData(catalog_name, Qt.DisplayRole)
         catalog_item.setData(catalog, self.object_role)
         catalog_item.setData(WorkspaceDataType.Catalog, self.data_type_role)
-        try:
-            intents = projector(catalog)
-            for intent in intents:
-                self._create_intent_item(catalog_item, intent)
-        except AttributeError as e:
-            logMessage(e, level=WARNING)
-        ensemble_item.appendChild(catalog_item)
+        # We want to notify the user if all projections failed
+        _any_projection_succeeded = False
+        for projector in projectors:
+            try:
+                intents = projector(catalog)
+                for intent in intents:
+                    self._create_intent_item(catalog_item, intent)
+            except (AttributeError, ProjectionNotFound) as e:
+                logMessage(e, level=WARNING)
+            else:
+                _any_projection_succeeded = True
+                ensemble_item.appendChild(catalog_item)
+
+        if not _any_projection_succeeded:
+            notifyMessage("Data file was opened, but could not be interpreted in this GUI plugin.")
 
     def _create_intent_item(self, catalog_item, intent):
             intent_item = TreeItem(catalog_item)
@@ -117,19 +126,19 @@ class EnsembleModel(TreeModel):
             intent_item.setData(WorkspaceDataType.Intent, self.data_type_role)
             catalog_item.appendChild(intent_item)
 
-    def append_to_ensemble(self, catalog, ensemble, projector: Callable[[BlueskyRun], List[Intent]]):
+    def append_to_ensemble(self, catalog, ensemble, projectors: List[Callable[[BlueskyRun], List[Intent]]]):
         # Find the active ensemble (may be none if ensemble model is empty)
         ensemble_item = self.active_ensemble
         if ensemble_item is not None:
             end_row = ensemble_item.childCount()
             # Use begin/end to notify views (e.g. dataselectorview) that it needs to update view after item is inserted
             self.beginInsertRows(self.index(ensemble_item.row(), 0), end_row, end_row+1)
-            self._create_catalog_item(ensemble_item, catalog, projector)
+            self._create_catalog_item(ensemble_item, catalog, projectors)
             self.endInsertRows()
         else:
-            self.add_ensemble(ensemble, projector)
+            self.add_ensemble(ensemble, projectors)
 
-    def add_ensemble(self, ensemble: Ensemble, projector: Callable[[BlueskyRun], List[Intent]]):
+    def add_ensemble(self, ensemble: Ensemble, projectors: List[Callable[[BlueskyRun], List[Intent]]]):
         """Add an ensemble to the model.
 
         Requires a projector, which is a function that accepts a BluesyRun catalog
@@ -143,7 +152,7 @@ class EnsembleModel(TreeModel):
         ensemble_item.setData(WorkspaceDataType.Ensemble, self.data_type_role)
 
         for catalog in ensemble.catalogs:
-            self._create_catalog_item(ensemble_item, catalog, projector)
+            self._create_catalog_item(ensemble_item, catalog, projectors)
 
         self.rootItem.appendChild(ensemble_item)
         # First ensemble should be activated; others not
