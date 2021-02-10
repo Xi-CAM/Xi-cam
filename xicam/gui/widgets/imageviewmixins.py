@@ -689,7 +689,7 @@ class LogScaleImageItem(ImageItem):
 
         if self.logScale:
             image = self.image + 1
-            with np.errstate(invalid="ignore"):
+            with np.errstate(invalid="ignore", divide='ignore'):
                 image = image.astype(np.float)
                 np.log(image, where=image >= 0, out=image)  # map to 0-255
         else:
