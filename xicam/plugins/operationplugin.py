@@ -473,7 +473,7 @@ def operation(func: Callable,
     except ValueError as e:
         msg = f"The provided function '{func.__name__}' could not be inspected." \
                "In the case that your function is a C function, you will need to wrap it. " \
-               "For an example, see the Xi-CAM.SAXS.processing.inpaint module."
+               "For an example, see the Xi-CAM.SAXS.operations.inpaint module."
         raise OperationError(msg) from e
 
     # Allow passing a string
