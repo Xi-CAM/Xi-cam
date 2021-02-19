@@ -72,6 +72,10 @@ class EnsembleModel(TreeModel):
         children = [catalog_item.child(i).data(self.object_role) for i in range(catalog_item.childCount())]
         return children
 
+    def intents_from_ensemble(self, ensemble: TreeItem):
+        return {catalog: self.intents_from_catalog(catalog) for catalog in self.catalogs_from_ensemble(ensemble)}
+
+
     def _set_active_brushes(self, index, is_active):
         brush = text_brush = self.data(index, Qt.BackgroundRole) or QBrush()
         font = self.data(index, Qt.FontRole) or QFont()
