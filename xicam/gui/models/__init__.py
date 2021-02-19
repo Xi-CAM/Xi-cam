@@ -55,6 +55,23 @@ class EnsembleModel(TreeModel):
             self._active_ensemble_name = self.NO_ACTIVE_ENSEMBLE_TEXT
         return self._active_ensemble_name
 
+    def index_from_catalog(self, catalog: BlueskyRun):
+        root_index = self.index(self.active_ensemble.row(), 0)
+        index = self.match(self.index(0, 0, root_index), self.object_role, catalog, hits=1)[0]
+        return index
+
+    def catalogs_from_ensemble(self, ensemble: TreeItem):
+        return ensemble.data(self.object_role).catalogs
+
+    def intents_from_catalog(self, catalog: BlueskyRun):
+        # find the item containing this catalog
+        catalog_index = self.index_from_catalog(catalog)
+        catalog_item = self.getItem(catalog_index)
+
+        # get all children (intents) of this catalog
+        children = [catalog_item.child(i).data(self.object_role) for i in range(catalog_item.childCount())]
+        return children
+
     def _set_active_brushes(self, index, is_active):
         brush = text_brush = self.data(index, Qt.BackgroundRole) or QBrush()
         font = self.data(index, Qt.FontRole) or QFont()
