@@ -67,7 +67,8 @@ class ImageIntentCanvas(XicamIntentCanvas, QWidget):
             bases_names = intent.mixins or tuple()
             if mixins:
                 bases_names += tuple(mixins)
-            bases = map(lambda name: plugin_manager.type_mapping['ImageMixinPlugin'][name], bases_names)
+            # Place in set to remove duplicates
+            bases = set(map(lambda name: plugin_manager.type_mapping['ImageMixinPlugin'][name], bases_names))
             self.canvas_widget = type('ImageViewBlend', (*bases, ImageView), {})()
             self.layout().addWidget(self.canvas_widget)
             self.canvas_widget.imageItem.setOpts(imageAxisOrder='row-major')
