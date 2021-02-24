@@ -23,6 +23,11 @@ class CanvasView(QAbstractItemView):
 
         self._last_seen_intents = set()
 
+    def refresh(self):
+        for i in range(self.model().rowCount()):
+            self.model().setData(self.model().index(i,0), None, role=EnsembleModel.canvas_role)
+        self.dataChanged(self.model().index(0,0), self.model().index(self.model().rowCount(),0), roles=[EnsembleModel.canvas_role])
+
     def render(self, intent, canvas):
         item = canvas.render(intent)
 
@@ -41,7 +46,7 @@ class CanvasView(QAbstractItemView):
         Then, defers showing canvases to any derived views (e.g. StackedCanvasView).
         """
         # We only care about the check state changing here (whether to render or unrender)
-        if Qt.CheckStateRole in roles:
+        if Qt.CheckStateRole in roles or EnsembleModel.canvas_role in roles:
 
             intent_row_start = topLeft.row()
             intent_row_stop = bottomRight.row()

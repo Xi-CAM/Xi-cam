@@ -290,4 +290,16 @@ class IntentsModel(QAbstractItemModel):
         elif role == EnsembleModel.object_role:
             return index.internalPointer()
 
+        elif role == EnsembleModel.canvas_role:
+            return self._source_model.data(index.internalPointer(), role=EnsembleModel.canvas_role)
+
         return None
+
+    def setData(self, index, value, role=Qt.DisplayRole):
+        if not index.isValid():
+            return False
+
+        elif role == EnsembleModel.canvas_role:
+            return self._source_model.setData(index.internalPointer(), value, role=role)
+
+        return False
