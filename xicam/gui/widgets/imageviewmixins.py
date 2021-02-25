@@ -52,6 +52,12 @@ class DisplayMode(enum.Enum):
     remesh = enum.auto()
 
 
+class RowMajor(ImageView):
+    def __init__(self, *args, **kwargs):
+        super(RowMajor, self).__init__(*args, **kwargs)
+        self.imageItem.setOpts(replace=True, axisOrder='row-major')
+
+
 class BetterTicks(ImageView):
     def __init__(self, *args, **kwargs):
         super(BetterTicks, self).__init__(*args, **kwargs)
@@ -254,7 +260,7 @@ class XArrayView(ImageView):
         return [levels]
 
 
-class PixelSpace(XArrayView):
+class PixelSpace(XArrayView, RowMajor):
     def __init__(self, *args, **kwargs):
         # Add axes
         self.axesItem = PlotItem()
@@ -331,7 +337,21 @@ class QSpace(PixelSpace):
         self.setTransform()
 
 
-class EwaldCorrected(QSpace):
+class EwaldCorrected(QSpace, RowMajor, BetterLayout):
+    def __init__(self, *args, **kwargs):
+        super(EwaldCorrected, self).__init__(*args, **kwargs)
+        self.toggle_display_mode = QPushButton("Q Space")
+        self.toggle_display_mode.setCheckable(True)
+        self.toggle_display_mode.clicked.connect(self.toggleMode)
+
+        self.ui.right_layout.addWidget(self.toggle_display_mode)
+
+    def toggleMode(self, state):
+        if state:
+            self.setDisplayMode(DisplayMode.remesh)
+        else:
+            self.setDisplayMode(DisplayMode.raw)
+
     def setDisplayMode(self, mode):
         self.displaymode = mode
         if hasattr(self, "drawCenter"):
