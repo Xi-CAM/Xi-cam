@@ -24,27 +24,13 @@ Next, activate the environment.
 This tells the system to use the libraries and applications inside the environment.
 
 ```bash
-conda create -n xicam python=3.7
+conda create -n xicam python=3.8
 conda activate xicam
-```
-
-## Install Python Qt Bindings
-
-Xi-CAM depends on a GUI application framework called Qt;
-you will need to install
-one of the python bindings for Qt (PyQt5 or PySide2) in order to run Xi-CAM.
-
-*Make sure that you have activated the **xicam** environment.*
-
-In your open Anaconda Prompt window, install the **pyqt** conda package as follows:
-
-```bash
-conda install pyqt
 ```
 
 ## Install the Xi-CAM package
 
-Now that we have activated a new **xicam** environment and installed **pyqt**,
+Now that we have activated a new **xicam** environment,
 we can install Xi-CAM using a python package management tool called **pip**.
 Run the following in your open Anaconda Prompt.
 
@@ -70,10 +56,8 @@ Anaconda Prompt:
 
 ```bash
 cd ~
-conda create -n xicam
+conda create -n xicam python=3.8
 conda activate xicam
-
-conda install -c conda-forge pyqt
 
 pip install xicam
 
