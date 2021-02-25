@@ -4,6 +4,9 @@
 #   2. potentially future problems where a live_plugin may have been wiped out (via initialze_types).
 #  Maybe consider addressing the use of plugin manager in tests? Particularly initialize_types().
 import sys
+import glob
+import os
+import importlib.util
 import time
 import itertools
 import warnings
@@ -19,8 +22,6 @@ import entrypoints
 from xicam.core import msg
 from xicam.core import threads
 from xicam.core.args import parse_args
-from bluesky_widgets.qt.threading import GeneratorWorker
-
 from .datahandlerplugin import DataHandlerPlugin
 from .catalogplugin import CatalogPlugin
 from .guiplugin import GUIPlugin, GUILayout
@@ -151,6 +152,7 @@ class XicamPluginManager:
         Find, load, and instantiate all Xi-cam plugins matching known plugin types
 
         """
+
         self._discover_plugins()
         if not self.plugin_loader.isRunning():
             self.plugin_loader.start()
@@ -185,6 +187,17 @@ class XicamPluginManager:
             self.plugin_loader.start()
 
         return self.get_plugin_by_name(plugin_name, type_name)
+
+    def collect_user_plugins(self):
+        files = glob.glob(os.path.join(user_plugin_dir, '*.py'))
+        for file in files:
+            try:
+                spec = importlib.util.spec_from_file_location("xicam.user", file)
+                foo = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(foo)
+            except Exception as ex:
+                msg.showMessage("An error occured in a user-defined plugin. See log for details.")
+                msg.logError(ex)
 
     def _unload_plugins(self):
 
@@ -508,6 +521,28 @@ class XicamPluginManager:
 
 # Setup plugin manager
 manager = XicamPluginManager()
+
+# Load user code for live plugins
+user_plugin_dir = os.path.expanduser('~/Xi-CAM Plugins/')
+if not os.path.isdir(user_plugin_dir):
+    os.mkdir(user_plugin_dir)
+_init = os.path.join(user_plugin_dir, 'start_here.py')
+
+_init_boilerplate = """# ----------------------
+# Xi-CAM local user code
+# ----------------------
+# Use @live_plugin(...) decorator to mark plugins
+
+from xicam.core.intents import PlotIntent, ImageIntent
+from xicam.plugins import live_plugin
+from xicam.plugins.operationplugin import operation, output_names, categories, display_name, intent
+"""
+
+
+# initialize user code package if empty
+if not os.path.isfile(_init):
+    with open(_init, 'w') as f:
+        f.write(_init_boilerplate)
 
 
 # A light class to mimic EntryPoint for live objects
