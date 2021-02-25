@@ -55,7 +55,7 @@ class CanvasView(QAbstractItemView):
                     try:
                         canvas = self._canvas_manager.canvas_from_index(intent_index.internalPointer())
                     except Exception as ex:
-                        msg.logMessage(f'A error occurred displaying the intent named {intent.item_name}:', level=msg.ERROR)
+                        msg.logMessage(f'A error occurred displaying the intent named {intent.name}:', level=msg.ERROR)
                         msg.logError(ex)
                     else:
                         new_intents.add((canvas, intent))

@@ -55,6 +55,27 @@ class EnsembleModel(TreeModel):
             self._active_ensemble_name = self.NO_ACTIVE_ENSEMBLE_TEXT
         return self._active_ensemble_name
 
+    def index_from_catalog(self, catalog: BlueskyRun):
+        root_index = self.index(self.active_ensemble.row(), 0)
+        index = self.match(self.index(0, 0, root_index), self.object_role, catalog, hits=1)[0]
+        return index
+
+    def catalogs_from_ensemble(self, ensemble: TreeItem):
+        return ensemble.data(self.object_role).catalogs
+
+    def intents_from_catalog(self, catalog: BlueskyRun):
+        # find the item containing this catalog
+        catalog_index = self.index_from_catalog(catalog)
+        catalog_item = self.getItem(catalog_index)
+
+        # get all children (intents) of this catalog
+        children = [catalog_item.child(i).data(self.object_role) for i in range(catalog_item.childCount())]
+        return children
+
+    def intents_from_ensemble(self, ensemble: TreeItem):
+        return {catalog: self.intents_from_catalog(catalog) for catalog in self.catalogs_from_ensemble(ensemble)}
+
+
     def _set_active_brushes(self, index, is_active):
         brush = text_brush = self.data(index, Qt.BackgroundRole) or QBrush()
         font = self.data(index, Qt.FontRole) or QFont()
@@ -121,7 +142,7 @@ class EnsembleModel(TreeModel):
 
     def _create_intent_item(self, catalog_item, intent):
             intent_item = TreeItem(catalog_item)
-            intent_item.setData(intent.item_name, Qt.DisplayRole)
+            intent_item.setData(intent.name, Qt.DisplayRole)
             intent_item.setData(intent, self.object_role)
             intent_item.setData(WorkspaceDataType.Intent, self.data_type_role)
             catalog_item.appendChild(intent_item)
@@ -264,9 +285,21 @@ class IntentsModel(QAbstractItemModel):
 
         elif role == Qt.DisplayRole:
             intent = index.internalPointer()
-            return intent.item_name
+            return intent.name
 
         elif role == EnsembleModel.object_role:
             return index.internalPointer()
 
+        elif role == EnsembleModel.canvas_role:
+            return self._source_model.data(index.internalPointer(), role=EnsembleModel.canvas_role)
+
         return None
+
+    def setData(self, index, value, role=Qt.DisplayRole):
+        if not index.isValid():
+            return False
+
+        elif role == EnsembleModel.canvas_role:
+            return self._source_model.setData(index.internalPointer(), value, role=role)
+
+        return False

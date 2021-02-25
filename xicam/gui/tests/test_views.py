@@ -16,7 +16,7 @@ plugin_manager.initialize_types()
 from xicam.core.execution.workflow import Workflow, ingest_result_set, project_intents
 from xicam.core import execution
 from xicam.core.execution.localexecutor import LocalExecutor
-from xicam.core.intents import PlotIntent, ImageIntent, IntentSeries
+from xicam.core.intents import PlotIntent, ImageIntent
 from xicam.core.workspace import Ensemble
 from xicam.gui.widgets.views import DataSelectorView, StackedCanvasView
 from xicam.plugins.operationplugin import operation, output_names, intent
