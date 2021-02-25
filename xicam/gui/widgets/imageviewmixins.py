@@ -336,7 +336,21 @@ class QSpace(PixelSpace):
         self.setTransform()
 
 
-class EwaldCorrected(QSpace, RowMajor):
+class EwaldCorrected(QSpace, BetterLayout, RowMajor):
+    def __init__(self, *args, **kwargs):
+        super(EwaldCorrected, self).__init__(*args, **kwargs)
+        self.toggle_display_mode = QPushButton("Q Space")
+        self.toggle_display_mode.setCheckable(True)
+        self.toggle_display_mode.clicked.connect(self.toggleMode)
+
+        self.ui.right_layout.addWidget(self.toggle_display_mode)
+
+    def toggleMode(self, state):
+        if state:
+            self.setDisplayMode(DisplayMode.remesh)
+        else:
+            self.setDisplayMode(DisplayMode.raw)
+
     def setDisplayMode(self, mode):
         self.displaymode = mode
         if hasattr(self, "drawCenter"):
