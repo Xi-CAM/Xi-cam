@@ -51,6 +51,11 @@ class DisplayMode(enum.Enum):
     cake = enum.auto()
     remesh = enum.auto()
 
+class RowMajor(ImageView):
+    def __init__(self, *args, **kwargs):
+        super(RowMajor, self).__init__(*args, **kwargs)
+        self.imageItem.setOpts(replace=True, axisOrder='row-major')
+
 
 class BetterTicks(ImageView):
     def __init__(self, *args, **kwargs):
@@ -254,7 +259,7 @@ class XArrayView(ImageView):
         return [levels]
 
 
-class PixelSpace(XArrayView):
+class PixelSpace(XArrayView, RowMajor):
     def __init__(self, *args, **kwargs):
         # Add axes
         self.axesItem = PlotItem()
@@ -331,7 +336,7 @@ class QSpace(PixelSpace):
         self.setTransform()
 
 
-class EwaldCorrected(QSpace):
+class EwaldCorrected(QSpace, RowMajor):
     def setDisplayMode(self, mode):
         self.displaymode = mode
         if hasattr(self, "drawCenter"):
