@@ -142,7 +142,7 @@ class EnsembleModel(TreeModel):
 
     def _create_intent_item(self, catalog_item, intent):
             intent_item = TreeItem(catalog_item)
-            intent_item.setData(intent.item_name, Qt.DisplayRole)
+            intent_item.setData(intent.name, Qt.DisplayRole)
             intent_item.setData(intent, self.object_role)
             intent_item.setData(WorkspaceDataType.Intent, self.data_type_role)
             catalog_item.appendChild(intent_item)
@@ -285,7 +285,7 @@ class IntentsModel(QAbstractItemModel):
 
         elif role == Qt.DisplayRole:
             intent = index.internalPointer()
-            return intent.item_name
+            return intent.name
 
         elif role == EnsembleModel.object_role:
             return index.internalPointer()

@@ -131,7 +131,7 @@ class PlotIntentCanvas(XicamIntentCanvas, QWidget):
                 multicurves = True
 
             for i in range(len(ys)):
-                name = intent.item_name
+                name = intent.name
                 if multicurves:
                     name += f' {i+1}'
 

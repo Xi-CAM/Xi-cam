@@ -1,19 +1,23 @@
-from typing import Union
+from typing import Union, Dict, Iterable
 import numpy as np
 import xarray
 import dask.array
 
 
+# TODO: distinction between item_name and canvas_name and match_key?
+# item_name: (display?) name of intent
+# canvas_name:
+
+
 class Intent:
-    def __init__(self, item_name, canvas_name="", match_key=None, **kwargs):
-        self._item_name = item_name
-        self._canvas_name = canvas_name
+    def __init__(self, name: str, canvas_name: str = None, match_key=None):
+        self._name = name
         self.match_key = match_key
-        self.kwargs = kwargs
+        self._canvas_name = canvas_name
 
     @property
-    def item_name(self):
-        return self._item_name
+    def name(self):
+        return self._name
 
     @property
     def canvas_name(self):
@@ -21,35 +25,39 @@ class Intent:
 
 
 class ImageIntent(Intent):
-    # TODO: register as entrypoint
     canvas = "image_canvas"
 
-    def __init__(self, image, mixins=None, *args, **kwargs):
-        if "canvas_name" not in kwargs:
-            kwargs["canvas_name"] = kwargs.get("item_name")
-        super(ImageIntent, self).__init__(*args, **kwargs)
+    def __init__(self, name: str, image: np.ndarray, mixins: Iterable[str] = None, canvas_name: str = None,
+                 match_key=None, **kwargs):
+        super(ImageIntent, self).__init__(name, canvas_name, match_key)
         self.image = image
         self.mixins = mixins
+        self.kwargs = kwargs
+
+    @property
+    def canvas_name(self):
+        return self._canvas_name or self.name
 
 
 class PlotIntent(Intent):
-    # TODO: better labeling
-    # canvas = {"qt": "plot_canvas"}
     canvas = "plot_canvas"
 
-    def __init__(self, x: Union[np.ndarray, xarray.Dataset, dask.array.array],
+    def __init__(self,
+                 name: str,
+                 x: Union[np.ndarray, xarray.Dataset, dask.array.array],
                  y: Union[np.ndarray, xarray.Dataset, dask.array.array],
-                 labels,
-                 *args,
-                 mixins=None,
+                 labels: Dict[str, str],
+                 mixins: Iterable[str] = None,
+                 canvas_name: str = None,
+                 match_key=None,
                  **kwargs):
-
-        super(PlotIntent, self).__init__(*args, **kwargs)
+        super(PlotIntent, self).__init__(name, canvas_name, match_key)
         self.labels = labels
         self.x = x
         self.y = y
-        self.mixins=mixins
-        self.match_key = kwargs.get("match_key", hash(frozenset(self.labels.items())))
+        self.mixins = mixins
+        self.match_key = match_key or hash(frozenset(self.labels.items()))
+        self.kwargs = kwargs
 
     @property
     def canvas_name(self):
@@ -70,15 +78,22 @@ class ErrorBarIntent(PlotIntent):
 class BarIntent(Intent):
     canvas = "plot_canvas"
 
-    def __init__(self, x: Union[np.ndarray, xarray.Dataset, dask.array.array],
-                 labels,
-                 *args,
+    def __init__(self,
+                 name: str,
+                 x: Union[np.ndarray, xarray.Dataset, dask.array.array],
+                 labels: Dict[str, str],
+                 canvas_name: str = None,
+                 match_key=None,
                  **kwargs):
 
-        super(BarIntent, self).__init__(*args, **kwargs)
+        if match_key is None:
+            match_key = hash(frozenset(self.labels.items()))
+
+        super(BarIntent, self).__init__(name, canvas_name, match_key)
+
         self.labels = labels
         self.x = x
-        self.match_key = kwargs.get("match_key", hash(frozenset(self.labels.items())))
+        self.kwargs = kwargs
 
     @property
     def canvas_name(self):
@@ -92,16 +107,13 @@ class BarIntent(Intent):
 class PairPlotIntent(Intent):
     canvas = 'pairplot_canvas'
 
-    def __init__(self, transform_data: Union[np.ndarray, xarray.Dataset, dask.array.array], *args, **kwargs):
+    def __init__(self,
+                 name: str,
+                 transform_data: Union[np.ndarray, xarray.Dataset, dask.array.array],
+                 canvas_name: str = None,
+                 match_key=None,
+                 **kwargs):
         if "canvas_name" not in kwargs:
             kwargs["canvas_name"] = kwargs.get("item_name")
-        super(PairPlotIntent, self).__init__(*args, **kwargs)
+        super(PairPlotIntent, self).__init__(name, canvas_name, match_key)
         self.transform_data = transform_data
-
-
-class IntentSeries(Intent):
-    def __init__(self, intent_type, intent_args, intent_kwargs, *args, **kwargs):
-        super(IntentSeries, self).__init__(*args, **kwargs)
-        self.intent_type = intent_type
-        self.intent_args = intent_args
-        self.intent_kwargs = intent_kwargs
