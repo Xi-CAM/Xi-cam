@@ -49,6 +49,7 @@ Developer Documentation
    operation-plugin
    workflow
    resources
+   hackathons/index
 
 
 Links
