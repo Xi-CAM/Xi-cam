@@ -22,7 +22,7 @@ Then, run the following:
 
 ```
 cd ~
-conda create -n xicam
+conda create -n xicam python=3.8
 conda activate xicam
 ```
 
