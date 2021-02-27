@@ -1,7 +1,7 @@
-from typing import Callable, List
-
 from databroker.core import BlueskyRun
+
 from xicam.core.workspace import Ensemble
+from xicam.gui.actions import Action
 from xicam.gui.models import EnsembleModel, IntentsModel
 from xicam.gui.widgets.views import DataSelectorView, StackedCanvasView
 from xicam.plugins import GUIPlugin
@@ -29,11 +29,21 @@ class EnsembleGUIPlugin(GUIPlugin):
         self.intents_model = IntentsModel()
         self.intents_model.setSourceModel(self.ensemble_model)
 
-        self.data_selector_view = DataSelectorView()
-        self.data_selector_view.setModel(self.ensemble_model)
+        self.ensemble_view = DataSelectorView()
+        self.ensemble_view.setModel(self.ensemble_model)
 
         self.canvases_view = StackedCanvasView()
         self.canvases_view.setModel(self.intents_model)
+
+        self.canvases_view.sigInteractiveAction.connect(self.process_action)
+        self.canvases_view.sigTest.connect(self._test)
+
+    def _test(self, o):
+        print("EnsembleGUIPlugin._test")
+
+    def process_action(self, action: Action, canvas: "XicamIntentCanvas"):
+        print("EnsembleGUIPlugin.process_action")
+        ...
 
     def appendCatalog(self, catalog: BlueskyRun, **kwargs):
         append = True

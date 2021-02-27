@@ -12,8 +12,9 @@ from databroker.core import BlueskyRun
 from xicam.core import msg
 from xicam.core.data import MetaXArray
 from xicam.core.data.bluesky_utils import fields_from_stream, streams_from_run, is_image_field
+from xicam.gui.actions import ROIAction
 from xicam.gui.widgets.elidedlabel import ElidedLabel
-from xicam.gui.widgets.ROI import BetterPolyLineROI, BetterCrosshairROI
+from xicam.gui.widgets.ROI import BetterPolyLineROI, BetterCrosshairROI, BetterRectROI
 import enum
 from typing import Callable
 from functools import partial
@@ -1056,6 +1057,28 @@ class ToolbarLayout(BetterLayout):
         # Create new layout hierarchy (in this case, a new outer_layout that contains the original layouts within)
         self.toolbar_outer_layout.addLayout(self.ui.outer_layout)
         self._set_layout(self.toolbar_outer_layout)
+
+
+class RectROIAction(BetterLayout):
+    def __init__(self, *args, **kwargs):
+        super(RectROIAction, self).__init__(*args, **kwargs)
+
+        self.button = QPushButton("Rectangle ROI")
+        self.button.clicked.connect(self._add_roi_action)
+        self.ui.right_layout.addWidget(self.button)
+
+    def _add_roi_action(self, _):
+        rect = QRectF(self.imageItem.boundingRect())
+        rect.setSize(rect.size()/2)
+        rect.moveCenter(self.imageItem.boundingRect().center())
+
+        roi_action = ROIAction(BetterRectROI(rect.topLeft(), rect.size()))
+        self.view.addItem(roi_action.roi)
+        # parent is the XicamIntentCanvas
+        self.parent().sigInteractiveAction.emit(roi_action, self.parent())
+        self.parent().sigTest.emit(self.parent())
+        # FIXME: removing ROIs
+        self.button.setEnabled(False)
 
 
 if __name__ == "__main__":

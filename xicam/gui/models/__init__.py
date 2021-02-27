@@ -218,6 +218,9 @@ class EnsembleModel(TreeModel):
 
 
 class IntentsModel(QAbstractItemModel):
+    intent_role = Qt.UserRole + 100 # TODO: better coordinate with EnsembleModel roles
+    index_role = Qt.UserRole + 101
+
     def __init__(self):
         super(IntentsModel, self).__init__()
 
@@ -288,7 +291,13 @@ class IntentsModel(QAbstractItemModel):
             return intent.name
 
         elif role == EnsembleModel.object_role:
+            raise NotImplementedError('Where am I?')
+
+        elif role == self.index_role:
             return index.internalPointer()
+
+        elif role == self.intent_role:
+            return self._source_model.data(index.internalPointer(), role=EnsembleModel.object_role)
 
         elif role == EnsembleModel.canvas_role:
             return self._source_model.data(index.internalPointer(), role=EnsembleModel.canvas_role)

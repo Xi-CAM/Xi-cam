@@ -4,12 +4,14 @@ from typing import List
 import numpy as np
 from pyqtgraph import ImageView, PlotWidget, ErrorBarItem
 import pyqtgraph as pg
+from qtpy.QtCore import Signal
 from qtpy.QtWidgets import QWidget, QComboBox, QVBoxLayout
 
 from matplotlib import pyplot as plt
 from xarray import DataArray
 
 from xicam.core.intents import PlotIntent, ErrorBarIntent, BarIntent, PairPlotIntent
+from xicam.gui.actions import Action
 from xicam.plugins import manager as plugin_manager
 
 # IntentCanvas -> SingleIntentCanvas -> ImageIntentCanvas
@@ -45,14 +47,19 @@ from xicam.gui.widgets.plotwidgetmixins import CurveLabels
 from xicam.plugins.intentcanvasplugin import IntentCanvas
 
 
-class XicamIntentCanvas(IntentCanvas):
+class _XicamIntentCanvas(IntentCanvas, QWidget):
     """Xi-CAM specific canvas."""
     def __init__(self, *args, **kwargs):
-        super(XicamIntentCanvas, self).__init__(*args, **kwargs)
+        super(_XicamIntentCanvas, self).__init__(*args, **kwargs)
         self.intent_to_items = {}
 
 
-class ImageIntentCanvas(XicamIntentCanvas, QWidget):
+class XicamIntentCanvas(_XicamIntentCanvas):
+    sigInteractiveAction = Signal(Action, _XicamIntentCanvas)
+    sigTest = Signal(object)
+
+
+class ImageIntentCanvas(XicamIntentCanvas):
     def __init__(self, *args, **kwargs):
         super(ImageIntentCanvas, self).__init__(*args, **kwargs)
         self.setLayout(QVBoxLayout())
@@ -89,7 +96,7 @@ class PlotIntentCanvasBlend(CurveLabels):
     ...
 
 
-class PlotIntentCanvas(XicamIntentCanvas, QWidget):
+class PlotIntentCanvas(XicamIntentCanvas):
     def __init__(self, *args, **kwargs):
         super(PlotIntentCanvas, self).__init__(*args, **kwargs)
 
@@ -186,7 +193,7 @@ class PlotIntentCanvas(XicamIntentCanvas, QWidget):
         return False
 
 
-class PairPlotIntentCanvas(XicamIntentCanvas, QWidget):
+class PairPlotIntentCanvas(XicamIntentCanvas):
     def __init__(self, *args, **kwargs):
         super(PairPlotIntentCanvas, self).__init__()
         self.transform_data = None
