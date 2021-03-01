@@ -53,10 +53,14 @@ class BetterROI(WorkflowableROI):
     index = None
 
     def __init__(self, *args, removable=True, **kwargs):
-        # BetterROI removable by default
-        super(BetterROI, self).__init__(*args, removable=removable, **kwargs)
+        # FIXME: TEMPORARY -- make ROIs removable again.
+        #  Temporarily not removable since we need to explore interactive canvas, workflow, and operation management
+        super(BetterROI, self).__init__(*args, removable=False, **kwargs)
+        # # BetterROI removable by default
+        # super(BetterROI, self).__init__(*args, removable=removable, **kwargs)
         self.index = next(self.roi_count)
         self._restyle()
+
         # Remove the roi from the view when requested to be removed
         self.sigRemoveRequested.connect(lambda roi: self._viewBox().removeItem(roi))
 
