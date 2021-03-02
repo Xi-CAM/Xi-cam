@@ -829,7 +829,7 @@ def ingest_result_set(workflow: Workflow, result_set):
         frame_data_keys = {}
         for name, value in result.items():
             frame_data_keys[name] = {"source": 'Xi-cam Workflow',
-                                     "dtype": "number",  # TODO: map dtype and shape
+                                     "dtype": "array",  # TODO: map dtype and shape
                                      "shape": getattr(value, 'shape', [])}
         operation_id = f'{end_op.name}:{workflow.operations.index(end_op)}'
         frame_stream_bundle = run_bundle.compose_descriptor(data_keys=frame_data_keys, name=operation_id)
@@ -884,6 +884,6 @@ def project_intents(run_catalog):
 
             for intent_kwarg_name, output_name in output_map.items():
                 kwargs[intent_kwarg_name] = getattr(run_catalog, operation_id).to_dask()[output_name]
-            intent = intent_class(item_name=name, *args, **kwargs)
+            intent = intent_class(name=name, *args, **kwargs)
             intents.append(intent)
     return intents

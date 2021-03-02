@@ -1,12 +1,14 @@
 import itertools
 import sys
 
-from qtpy.QtCore import QModelIndex, QPoint, Qt, QAbstractItemModel
+from qtpy.QtCore import Signal, QModelIndex, QPoint, Qt, QAbstractItemModel
 from qtpy.QtGui import QIcon, QMouseEvent, QPainter, QBrush, QFont
 from qtpy.QtWidgets import QAbstractItemView, QApplication, QButtonGroup, QHBoxLayout, QPushButton, \
     QSplitter, QStackedWidget, QStyleFactory, QTabWidget, QTreeView, QVBoxLayout, QWidget, QStyledItemDelegate, \
     QStyleOptionViewItem, QLineEdit, QStyle, QAction, QMenu
 from xicam.core.workspace import WorkspaceDataType
+from xicam.gui.canvases import XicamIntentCanvas
+from xicam.gui.actions import Action
 
 from xicam.gui.static import path
 from xicam.gui.canvasmanager import XicamCanvasManager
@@ -16,6 +18,10 @@ from xicam.core import msg
 
 class CanvasView(QAbstractItemView):
     """Defines a Qt-view interface for rendering and unrendering canvases."""
+
+    sigInteractiveAction = Signal(Action, XicamIntentCanvas)
+    sigTest = Signal(object)
+
     def __init__(self, parent=None, icon=QIcon()):
         super(CanvasView, self).__init__(parent)
         self._canvas_manager = XicamCanvasManager()
@@ -59,8 +65,10 @@ class CanvasView(QAbstractItemView):
                     intent = intent_index.internalPointer().data(EnsembleModel.object_role)
                     try:
                         canvas = self._canvas_manager.canvas_from_index(intent_index.internalPointer())
+                        canvas.sigInteractiveAction.connect(self.sigInteractiveAction)
+                        canvas.sigTest.connect(self.sigTest)
                     except Exception as ex:
-                        msg.logMessage(f'A error occurred displaying the intent named {intent.item_name}:', level=msg.ERROR)
+                        msg.logMessage(f'A error occurred displaying the intent named {intent.name}:', level=msg.ERROR)
                         msg.logError(ex)
                     else:
                         new_intents.add((canvas, intent))

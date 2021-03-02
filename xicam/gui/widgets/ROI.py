@@ -13,21 +13,21 @@ import pyqtgraph as pg
 from xicam.plugins.operationplugin import operation, output_names
 
 
-class ROIProcessingPlugin(OperationPlugin):
+class ROIOperation(OperationPlugin):
     name = 'ROI'
-    output_names = ('roi', 'data')
-    input_names = ('data', 'image')
+    output_names = ('roi', 'labels')
+    input_names = ('images', 'image_item')
 
     def __init__(self, ROI: ROI):
-        super(ROIProcessingPlugin, self).__init__()
+        super(ROIOperation, self).__init__()
         self.ROI = ROI
         self._param = None  # type: Parameter
         self.name = f"ROI #{self.ROI.index}"
 
-    def _func(self, data, image):
-        data = self.ROI.getLabelArray(data, image)
-        roi = data.astype(np.bool)
-        return roi, data
+    def _func(self, images, image_item=None):
+        images = self.ROI.getLabelArray(images, image_item)
+        roi = images.astype(np.bool)
+        return roi, images
 
     @property
     def parameter(self):
@@ -39,7 +39,7 @@ class ROIProcessingPlugin(OperationPlugin):
 class WorkflowableROI(ROI):
     def __init__(self, *args, **kwargs):
         super(WorkflowableROI, self).__init__(*args, **kwargs)
-        self.process = ROIProcessingPlugin(self)
+        self.operation = ROIOperation(self)
         self._param = None
 
     def parameter(self) -> Parameter:
@@ -53,10 +53,14 @@ class BetterROI(WorkflowableROI):
     index = None
 
     def __init__(self, *args, removable=True, **kwargs):
-        # BetterROI removable by default
-        super(BetterROI, self).__init__(*args, removable=removable, **kwargs)
+        # FIXME: TEMPORARY -- make ROIs removable again.
+        #  Temporarily not removable since we need to explore interactive canvas, workflow, and operation management
+        super(BetterROI, self).__init__(*args, removable=False, **kwargs)
+        # # BetterROI removable by default
+        # super(BetterROI, self).__init__(*args, removable=removable, **kwargs)
         self.index = next(self.roi_count)
         self._restyle()
+
         # Remove the roi from the view when requested to be removed
         self.sigRemoveRequested.connect(lambda roi: self._viewBox().removeItem(roi))
 
@@ -382,13 +386,13 @@ class ArcROI(BetterROI):
         self.parameter().child("thetacenter").setValue(self.thetacenter)
 
 
-class RectROI(BetterROI, RectROI):
+class BetterRectROI(BetterROI, RectROI):
     def __init__(self, *args, pen=pg.mkPen(QColor(0, 255, 255)), **kwargs):
-        super(RectROI, self).__init__(*args, pen=pen, **kwargs)
+        super(BetterRectROI, self).__init__(*args, pen=pen, **kwargs)
         self.handle = self.handles[0]
 
     def movePoint(self, handle, pos, modifiers=Qt.KeyboardModifier(), finish=True, coords="parent"):
-        super(RectROI, self).movePoint(handle, pos, modifiers, finish, coords)
+        super(BetterRectROI, self).movePoint(handle, pos, modifiers, finish, coords)
 
         self.width = self.handle["pos"].x() * self.size().x()
         self.height = self.handle["pos"].y() * self.size().y()
@@ -417,14 +421,14 @@ class RectROI(BetterROI, RectROI):
 
     def getLabelArray(self, arr, img: pg.ImageItem = None):
         # TODO : make more generic for all rectangle ROIs, segmented (multi-labeled) and non-segmented (single-labeled)
-        dim_0, dim_1 = arr.shape
+        dim_0, dim_1 = arr.shape[-2:]
 
         min_x = self.pos().x()
         min_y = self.pos().y()
         max_x = self.size().x() + min_x
         max_y = self.size().y() + min_y
 
-        mask = np.zeros_like(arr)
+        mask = np.zeros(arr.shape[-2:])
 
         label_mask = np.fromfunction(
             lambda y, x: (x + 0.5 > min_x) & (x + 0.5 < max_x) & (y + 0.5 > min_y) & (y + 0.5 < max_y), (dim_0, dim_1)
@@ -497,7 +501,7 @@ class LineROI(BetterROI, LineROI):
         self.parameter().child("length").setValue(self.length)
 
 
-class SegmentedRectROI(RectROI):
+class SegmentedRectROI(BetterRectROI):
     def __init__(self, *args, **kwargs):
         self.segments_h = 2
         self.segments_v = 2

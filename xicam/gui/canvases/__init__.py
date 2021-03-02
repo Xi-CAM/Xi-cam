@@ -4,12 +4,14 @@ from typing import List
 import numpy as np
 from pyqtgraph import ImageView, PlotWidget, ErrorBarItem
 import pyqtgraph as pg
+from qtpy.QtCore import Signal
 from qtpy.QtWidgets import QWidget, QComboBox, QVBoxLayout
 
 from matplotlib import pyplot as plt
 from xarray import DataArray
 
 from xicam.core.intents import PlotIntent, ErrorBarIntent, BarIntent, PairPlotIntent
+from xicam.gui.actions import Action
 from xicam.plugins import manager as plugin_manager
 
 # IntentCanvas -> SingleIntentCanvas -> ImageIntentCanvas
@@ -45,14 +47,19 @@ from xicam.gui.widgets.plotwidgetmixins import CurveLabels
 from xicam.plugins.intentcanvasplugin import IntentCanvas
 
 
-class XicamIntentCanvas(IntentCanvas):
+class _XicamIntentCanvas(IntentCanvas, QWidget):
     """Xi-CAM specific canvas."""
     def __init__(self, *args, **kwargs):
-        super(XicamIntentCanvas, self).__init__(*args, **kwargs)
+        super(_XicamIntentCanvas, self).__init__(*args, **kwargs)
         self.intent_to_items = {}
 
 
-class ImageIntentCanvas(XicamIntentCanvas, QWidget):
+class XicamIntentCanvas(_XicamIntentCanvas):
+    sigInteractiveAction = Signal(Action, _XicamIntentCanvas)
+    sigTest = Signal(object)
+
+
+class ImageIntentCanvas(XicamIntentCanvas):
     def __init__(self, *args, **kwargs):
         super(ImageIntentCanvas, self).__init__(*args, **kwargs)
         self.setLayout(QVBoxLayout())
@@ -63,17 +70,23 @@ class ImageIntentCanvas(XicamIntentCanvas, QWidget):
 
         Optionally, provide additional list of mixin names to extend the image canvas functionality.
         """
+        # Extract and remove labels (if provide) kwarg and pass to the widget __init__
+        # labels kwarg should only be provided by the AxesLabels mixin
+        kwargs = intent.kwargs.copy()
+        constructor_kwargs = dict()
+        labels_kwarg = kwargs.pop("labels", None)
+        if labels_kwarg:
+            constructor_kwargs["labels"] = labels_kwarg
         if not self.canvas_widget:
             bases_names = intent.mixins or tuple()
             if mixins:
                 bases_names += tuple(mixins)
             # Place in set to remove duplicates
             bases = set(map(lambda name: plugin_manager.type_mapping['ImageMixinPlugin'][name], bases_names))
-            self.canvas_widget = type('ImageViewBlend', (*bases, ImageView), {})()
+            self.canvas_widget = type('ImageViewBlend', (*bases, ImageView), {})(**constructor_kwargs)
             self.layout().addWidget(self.canvas_widget)
             self.canvas_widget.imageItem.setOpts(imageAxisOrder='row-major')
 
-        kwargs = intent.kwargs.copy()
         for key, value in kwargs.items():
             if isinstance(value, DataArray):
                 kwargs[key] = np.asanyarray(value).squeeze()
@@ -89,7 +102,7 @@ class PlotIntentCanvasBlend(CurveLabels):
     ...
 
 
-class PlotIntentCanvas(XicamIntentCanvas, QWidget):
+class PlotIntentCanvas(XicamIntentCanvas):
     def __init__(self, *args, **kwargs):
         super(PlotIntentCanvas, self).__init__(*args, **kwargs)
 
@@ -131,7 +144,7 @@ class PlotIntentCanvas(XicamIntentCanvas, QWidget):
                 multicurves = True
 
             for i in range(len(ys)):
-                name = intent.item_name
+                name = intent.name
                 if multicurves:
                     name += f' {i+1}'
 
@@ -186,7 +199,7 @@ class PlotIntentCanvas(XicamIntentCanvas, QWidget):
         return False
 
 
-class PairPlotIntentCanvas(XicamIntentCanvas, QWidget):
+class PairPlotIntentCanvas(XicamIntentCanvas):
     def __init__(self, *args, **kwargs):
         super(PairPlotIntentCanvas, self).__init__()
         self.transform_data = None

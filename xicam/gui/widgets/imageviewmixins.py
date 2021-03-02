@@ -12,8 +12,9 @@ from databroker.core import BlueskyRun
 from xicam.core import msg
 from xicam.core.data import MetaXArray
 from xicam.core.data.bluesky_utils import fields_from_stream, streams_from_run, is_image_field
+from xicam.gui.actions import ROIAction
 from xicam.gui.widgets.elidedlabel import ElidedLabel
-from xicam.gui.widgets.ROI import BetterPolyLineROI, BetterCrosshairROI
+from xicam.gui.widgets.ROI import BetterPolyLineROI, BetterCrosshairROI, BetterRectROI
 import enum
 from typing import Callable
 from functools import partial
@@ -50,6 +51,12 @@ class DisplayMode(enum.Enum):
     raw = enum.auto()
     cake = enum.auto()
     remesh = enum.auto()
+
+class RowMajor(ImageView):
+    def __init__(self, *args, **kwargs):
+        super(RowMajor, self).__init__(*args, **kwargs)
+        self.imageItem.setOpts(replace=True, axisOrder='row-major')
+
 
 class RowMajor(ImageView):
     def __init__(self, *args, **kwargs):
@@ -336,7 +343,7 @@ class QSpace(PixelSpace):
         self.setTransform()
 
 
-class EwaldCorrected(QSpace, BetterLayout, RowMajor):
+class EwaldCorrected(QSpace, RowMajor, BetterLayout):
     def __init__(self, *args, **kwargs):
         super(EwaldCorrected, self).__init__(*args, **kwargs)
         self.toggle_display_mode = QPushButton("Q Space")
@@ -1055,6 +1062,46 @@ class ToolbarLayout(BetterLayout):
         # Create new layout hierarchy (in this case, a new outer_layout that contains the original layouts within)
         self.toolbar_outer_layout.addLayout(self.ui.outer_layout)
         self._set_layout(self.toolbar_outer_layout)
+
+
+class RectROIAction(BetterLayout):
+    def __init__(self, *args, **kwargs):
+        super(RectROIAction, self).__init__(*args, **kwargs)
+
+        self.button = QPushButton("Rectangle ROI")
+        self.button.clicked.connect(self._add_roi_action)
+        self.ui.right_layout.addWidget(self.button)
+
+    def _add_roi_action(self, _):
+        rect = QRectF(self.imageItem.boundingRect())
+        rect.setSize(rect.size()/2)
+        rect.moveCenter(self.imageItem.boundingRect().center())
+
+        roi_action = ROIAction(BetterRectROI(rect.topLeft(), rect.size()))
+        self.view.addItem(roi_action.roi)
+        # parent is the XicamIntentCanvas
+        self.parent().sigInteractiveAction.emit(roi_action, self.parent())
+        self.parent().sigTest.emit(self.parent())
+        # FIXME: removing ROIs
+        self.button.setEnabled(False)
+
+
+@live_plugin("ImageMixinPlugin")
+class AxesLabels(ImageView):
+    """Mixin for custom axes labels on an image view.
+
+    This reserves usage of the kwarg "labels".
+    """
+    def __init__(self, *args, labels=None, **kwargs):
+        if "view" in kwargs:
+            raise ValueError("view cannot be passed as a kwarg")
+        view = None
+        if labels:
+            view = pg.PlotItem()
+            for axis, text in labels.items():
+                view.setLabel(axis=axis, text=text)
+        kwargs["view"] = view
+        super(AxesLabels, self).__init__(*args, **kwargs)
 
 
 if __name__ == "__main__":

@@ -44,7 +44,8 @@ class XicamCanvasManager(CanvasManager):
                 yield canvas
 
     def canvas_from_registry(self, canvas_class_name, registry, canvas_name):
-        return registry.get_plugin_by_name(canvas_class_name, "IntentCanvasPlugin")(canvas_name=canvas_name)
+        canvas = registry.get_plugin_by_name(canvas_class_name, "IntentCanvasPlugin")(canvas_name=canvas_name)
+        return canvas
 
     def drop_canvas(self, key: QModelIndex):
         intent = key.data(EnsembleModel.object_role)

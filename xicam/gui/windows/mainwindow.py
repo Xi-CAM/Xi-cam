@@ -1,5 +1,5 @@
 from functools import partial
-
+import webbrowser
 from intake.catalog import Catalog
 from intake.catalog.entry import CatalogEntry
 from qtpy.QtCore import QPropertyAnimation, QPoint, QEasingCurve, Qt, Slot, Signal, QSettings, QUrl
@@ -22,8 +22,7 @@ from qtpy.QtWidgets import (
     QMessageBox, QWhatsThis,
 )
 from xicam import _version as version
-
-from xicam.plugins import manager as pluginmanager
+from xicam.plugins import manager as pluginmanager, user_plugin_dir
 from xicam.plugins import PluginType
 from xicam.plugins.guiplugin import PanelState
 from xicam.gui.widgets.debugmenubar import DebuggableMenuBar
@@ -74,6 +73,7 @@ class XicamMainWindow(QMainWindow):
         pluginmanager.qt_is_safe = True
         pluginmanager.initialize_types()
         pluginmanager.collect_plugins()
+        pluginmanager.collect_user_plugins()
 
         # Setup center/toolbar/statusbar/progressbar
         self.pluginmodewidget = pluginModeWidget()
@@ -93,9 +93,12 @@ class XicamMainWindow(QMainWindow):
         menubar = DebuggableMenuBar()
         self.setMenuBar(menubar)
         file = QMenu("&File", parent=menubar)
+        plugins = QMenu("&Plugins", parent=menubar)
         menubar.addMenu(file)
         file.addAction("Se&ttings", self.showSettings, shortcut=QKeySequence(Qt.CTRL + Qt.ALT + Qt.Key_S))
         file.addAction("E&xit", self.close)
+        menubar.addMenu(plugins)
+        plugins.addAction("Open User &Plugin Directory", self.openUserPluginDir, shortcut=QKeySequence(Qt.CTRL + Qt.ALT + Qt.Key_P))
 
         # Set up help
         help = QMenu("&Help", parent=menubar)
@@ -173,6 +176,9 @@ class XicamMainWindow(QMainWindow):
             self.currentGUIPlugin.appendHeader(header)
         else:
             raise TypeError(f"Cannot open {header}.")
+
+    def openUserPluginDir(self):
+        webbrowser.open(user_plugin_dir)
 
     def showSettings(self):
         ConfigDialog().show()
