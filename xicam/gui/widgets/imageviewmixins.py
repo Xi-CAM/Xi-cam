@@ -1081,6 +1081,24 @@ class RectROIAction(BetterLayout):
         self.button.setEnabled(False)
 
 
+@live_plugin("ImageMixinPlugin")
+class AxesLabels(ImageView):
+    """Mixin for custom axes labels on an image view.
+
+    This reserves usage of the kwarg "labels".
+    """
+    def __init__(self, *args, labels=None, **kwargs):
+        if "view" in kwargs:
+            raise ValueError("view cannot be passed as a kwarg")
+        view = None
+        if labels:
+            view = pg.PlotItem()
+            for axis, text in labels.items():
+                view.setLabel(axis=axis, text=text)
+        kwargs["view"] = view
+        super(AxesLabels, self).__init__(*args, **kwargs)
+
+
 if __name__ == "__main__":
     from qtpy.QtWidgets import QApplication
 

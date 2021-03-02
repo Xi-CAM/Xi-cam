@@ -428,7 +428,7 @@ class BetterRectROI(BetterROI, RectROI):
         max_x = self.size().x() + min_x
         max_y = self.size().y() + min_y
 
-        mask = np.zeros_like(arr)
+        mask = np.zeros(arr.shape[-2:])
 
         label_mask = np.fromfunction(
             lambda y, x: (x + 0.5 > min_x) & (x + 0.5 < max_x) & (y + 0.5 > min_y) & (y + 0.5 < max_y), (dim_0, dim_1)

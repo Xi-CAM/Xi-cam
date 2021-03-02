@@ -70,17 +70,23 @@ class ImageIntentCanvas(XicamIntentCanvas):
 
         Optionally, provide additional list of mixin names to extend the image canvas functionality.
         """
+        # Extract and remove labels (if provide) kwarg and pass to the widget __init__
+        # labels kwarg should only be provided by the AxesLabels mixin
+        kwargs = intent.kwargs.copy()
+        constructor_kwargs = dict()
+        labels_kwarg = kwargs.pop("labels", None)
+        if labels_kwarg:
+            constructor_kwargs["labels"] = labels_kwarg
         if not self.canvas_widget:
             bases_names = intent.mixins or tuple()
             if mixins:
                 bases_names += tuple(mixins)
             # Place in set to remove duplicates
             bases = set(map(lambda name: plugin_manager.type_mapping['ImageMixinPlugin'][name], bases_names))
-            self.canvas_widget = type('ImageViewBlend', (*bases, ImageView), {})()
+            self.canvas_widget = type('ImageViewBlend', (*bases, ImageView), {})(**constructor_kwargs)
             self.layout().addWidget(self.canvas_widget)
             self.canvas_widget.imageItem.setOpts(imageAxisOrder='row-major')
 
-        kwargs = intent.kwargs.copy()
         for key, value in kwargs.items():
             if isinstance(value, DataArray):
                 kwargs[key] = np.asanyarray(value).squeeze()
