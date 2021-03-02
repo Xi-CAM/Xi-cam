@@ -36,7 +36,6 @@ class EnsembleGUIPlugin(GUIPlugin):
         self.canvases_view.setModel(self.intents_model)
 
         self.canvases_view.sigInteractiveAction.connect(self.process_action)
-        self.canvases_view.sigTest.connect(self._test)
 
     def _test(self, o):
         print("EnsembleGUIPlugin._test")

@@ -56,7 +56,6 @@ class _XicamIntentCanvas(IntentCanvas, QWidget):
 
 class XicamIntentCanvas(_XicamIntentCanvas):
     sigInteractiveAction = Signal(Action, _XicamIntentCanvas)
-    sigTest = Signal(object)
 
 
 class ImageIntentCanvas(XicamIntentCanvas):

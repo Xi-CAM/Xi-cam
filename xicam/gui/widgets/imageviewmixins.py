@@ -1081,7 +1081,6 @@ class RectROIAction(BetterLayout):
         self.view.addItem(roi_action.roi)
         # parent is the XicamIntentCanvas
         self.parent().sigInteractiveAction.emit(roi_action, self.parent())
-        self.parent().sigTest.emit(self.parent())
         # FIXME: removing ROIs
         self.button.setEnabled(False)
 

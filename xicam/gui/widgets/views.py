@@ -65,8 +65,10 @@ class CanvasView(QAbstractItemView):
                     intent = intent_index.internalPointer().data(EnsembleModel.object_role)
                     try:
                         canvas = self._canvas_manager.canvas_from_index(intent_index.internalPointer())
-                        canvas.sigInteractiveAction.connect(self.sigInteractiveAction)
-                        canvas.sigTest.connect(self.sigTest)
+                        try:
+                            canvas.sigInteractiveAction.connect(self.sigInteractiveAction, type=Qt.UniqueConnection)
+                        except TypeError:  # ignore errors from connection already being established
+                            pass
                     except Exception as ex:
                         msg.logMessage(f'A error occurred displaying the intent named {intent.name}:', level=msg.ERROR)
                         msg.logError(ex)
