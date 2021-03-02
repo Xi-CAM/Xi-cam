@@ -136,6 +136,7 @@ class EnsembleModel(TreeModel):
             else:
                 _any_projection_succeeded = True
                 ensemble_item.appendChild(catalog_item)
+                break
 
         if not _any_projection_succeeded:
             notifyMessage("Data file was opened, but could not be interpreted in this GUI plugin.")
