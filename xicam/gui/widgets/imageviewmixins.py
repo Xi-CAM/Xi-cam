@@ -2,8 +2,9 @@
 from functools import WRAPPER_ASSIGNMENTS
 import pyqtgraph as pg
 from pyqtgraph import ImageView, InfiniteLine, mkPen, ScatterPlotItem, ImageItem, PlotItem
-from qtpy.QtGui import QTransform, QPolygonF
-from qtpy.QtWidgets import QLabel, QErrorMessage, QSizePolicy, QPushButton, QHBoxLayout, QVBoxLayout, QComboBox, QWidget, QToolBar
+from qtpy.QtGui import QTransform, QPolygonF, QIcon, QPixmap
+from qtpy.QtWidgets import QLabel, QErrorMessage, QSizePolicy, QPushButton, QHBoxLayout, QVBoxLayout, QComboBox, \
+    QWidget, QToolBar, QActionGroup, QAction
 from qtpy.QtCore import Qt, Signal, Slot, QSize, QPointF, QRectF
 import numpy as np
 from databroker.core import BlueskyRun
@@ -14,6 +15,7 @@ from xicam.core.data import MetaXArray
 from xicam.core.data.bluesky_utils import fields_from_stream, streams_from_run, is_image_field
 from xicam.gui.actions import ROIAction
 from xicam.gui.widgets.elidedlabel import ElidedLabel
+from xicam.gui.static import path
 from xicam.gui.widgets.ROI import BetterPolyLineROI, BetterCrosshairROI, BetterRectROI
 import enum
 from typing import Callable
@@ -51,11 +53,6 @@ class DisplayMode(enum.Enum):
     raw = enum.auto()
     cake = enum.auto()
     remesh = enum.auto()
-
-class RowMajor(ImageView):
-    def __init__(self, *args, **kwargs):
-        super(RowMajor, self).__init__(*args, **kwargs)
-        self.imageItem.setOpts(replace=True, axisOrder='row-major')
 
 
 class RowMajor(ImageView):
@@ -341,79 +338,6 @@ class QSpace(PixelSpace):
             geometry = geometry()
         self._geometry = geometry
         self.setTransform()
-
-
-class EwaldCorrected(QSpace, RowMajor, BetterLayout):
-    def __init__(self, *args, **kwargs):
-        super(EwaldCorrected, self).__init__(*args, **kwargs)
-        self.toggle_display_mode = QPushButton("Q Space")
-        self.toggle_display_mode.setCheckable(True)
-        self.toggle_display_mode.clicked.connect(self.toggleMode)
-
-        self.ui.right_layout.addWidget(self.toggle_display_mode)
-
-    def toggleMode(self, state):
-        if state:
-            self.setDisplayMode(DisplayMode.remesh)
-        else:
-            self.setDisplayMode(DisplayMode.raw)
-
-    def setDisplayMode(self, mode):
-        self.displaymode = mode
-        if hasattr(self, "drawCenter"):
-            self.drawCenter()
-        self.setTransform()
-
-    def transform(self, img=None):
-        if not self._geometry or not self.displaymode == DisplayMode.remesh:
-            return super(EwaldCorrected, self).transform(img)  # Do pixel space transform when not calibrated
-
-        from camsaxs import remesh_bbox
-
-        img, q_x, q_z = remesh_bbox.remesh(np.squeeze(img), self._geometry, reflection=False, alphai=None)
-
-        # Build Quads
-        shape = img.shape
-        a = shape[-2] - 1, 0  # bottom-left
-        b = shape[-2] - 1, shape[-1] - 1  # bottom-right
-        c = 0, shape[-1] - 1  # top-right
-        d = 0, 0  # top-left
-
-        quad1 = QPolygonF()
-        quad2 = QPolygonF()
-        for p, q in zip([a, b, c, d], [a, b, c, d]):  # the zip does the flip :P
-            quad1.append(QPointF(*p[::-1]))
-            quad2.append(QPointF(q_x[q], q_z[q]))
-
-        transform = QTransform()
-        QTransform.quadToQuad(quad1, quad2, transform)
-
-        for item in self.view.items:
-            if isinstance(item, ImageItem):
-                item.setTransform(transform)
-        self._transform = transform
-
-        return img, self._transform
-
-    def setImage(self, img, *args, **kwargs):
-        if img is None:
-            return
-
-        self._raw_image = img
-
-        if self._geometry:
-            transform_img, transform = self.transform(img)
-            super(EwaldCorrected, self).setImage(transform_img, *args, transform=transform, **kwargs)
-
-        else:
-            super(EwaldCorrected, self).setImage(img, *args, **kwargs)
-
-    def updateAxes(self):
-        if self.displaymode == DisplayMode.remesh:
-            self.axesItem.setLabel("bottom", "q<sub>x</sub> (Å⁻¹)")  # , units='s')
-            self.axesItem.setLabel("left", "q<sub>z</sub> (Å⁻¹)")
-        else:
-            super(EwaldCorrected, self).updateAxes()
 
 
 class CenterMarker(QSpace):
@@ -1050,18 +974,104 @@ class ToolbarLayout(BetterLayout):
     """
     def __init__(self, *args, toolbar=None, **kwargs):
         super(ToolbarLayout, self).__init__(*args, **kwargs)
-        self.toolbar = toolbar
+        self.toolbar = toolbar or QToolBar()
 
         # Define new layout
         self.toolbar_outer_layout = QVBoxLayout()
         self.toolbar_outer_layout.addWidget(self.toolbar)
 
         # Reinitialize the better layout
-        self._reset_layout()
+        self._reset_layout()  # FIXME: Find a way to remove this to prevent sensitivity to order of inheritance
 
         # Create new layout hierarchy (in this case, a new outer_layout that contains the original layouts within)
-        self.toolbar_outer_layout.addLayout(self.ui.outer_layout)
+        outer_layout = self.ui.outer_layout
+        self.toolbar_outer_layout.addLayout(outer_layout)
         self._set_layout(self.toolbar_outer_layout)
+
+    def mkAction(self, iconpath: str = None, text=None, receiver=None, group=None, checkable=False, checked=False):
+        actn = QAction(self)
+        if iconpath: actn.setIcon(QIcon(QPixmap(str(path(iconpath)))))
+        if text: actn.setText(text)
+        if receiver: actn.triggered.connect(receiver)
+        actn.setCheckable(checkable)
+        if checked: actn.setChecked(checked)
+        if group: actn.setActionGroup(group)
+        return actn
+
+
+class EwaldCorrected(QSpace, RowMajor, ToolbarLayout):
+    def __init__(self, *args, **kwargs):
+        super(EwaldCorrected, self).__init__(*args, **kwargs)
+
+        self.mode_group = QActionGroup(self)
+        self.raw_action = self.mkAction('icons/raw.png', 'Raw', checkable=True, group=self.mode_group, checked=True)
+        self.toolbar.addAction(self.raw_action)
+        self.raw_action.triggered.connect(partial(self.setDisplayMode, DisplayMode.raw))
+        self.cake_action = self.mkAction('icons/cake.png', 'Cake (q/chi plot)', checkable=True, group=self.mode_group)
+        self.toolbar.addAction(self.cake_action)
+        self.cake_action.triggered.connect(partial(self.setDisplayMode, DisplayMode.cake))
+        self.remesh_action = self.mkAction('icons/remesh.png', 'Wrap Ewald Sphere', checkable=True,
+                                           group=self.mode_group)
+        self.toolbar.addAction(self.remesh_action)
+        self.remesh_action.triggered.connect(partial(self.setDisplayMode, DisplayMode.remesh))
+        self.toolbar.addSeparator()
+
+    def setDisplayMode(self, mode):
+        self.displaymode = mode
+        if hasattr(self, "drawCenter"):
+            self.drawCenter()
+        self.setTransform()
+
+    def transform(self, img=None):
+        if not self._geometry or not self.displaymode == DisplayMode.remesh:
+            return super(EwaldCorrected, self).transform(img)  # Do pixel space transform when not calibrated
+
+        from camsaxs import remesh_bbox
+
+        img, q_x, q_z = remesh_bbox.remesh(np.squeeze(img), self._geometry, reflection=False, alphai=None)
+
+        # Build Quads
+        shape = img.shape
+        a = shape[-2] - 1, 0  # bottom-left
+        b = shape[-2] - 1, shape[-1] - 1  # bottom-right
+        c = 0, shape[-1] - 1  # top-right
+        d = 0, 0  # top-left
+
+        quad1 = QPolygonF()
+        quad2 = QPolygonF()
+        for p, q in zip([a, b, c, d], [a, b, c, d]):  # the zip does the flip :P
+            quad1.append(QPointF(*p[::-1]))
+            quad2.append(QPointF(q_x[q], q_z[q]))
+
+        transform = QTransform()
+        QTransform.quadToQuad(quad1, quad2, transform)
+
+        for item in self.view.items:
+            if isinstance(item, ImageItem):
+                item.setTransform(transform)
+        self._transform = transform
+
+        return img, self._transform
+
+    def setImage(self, img, *args, **kwargs):
+        if img is None:
+            return
+
+        self._raw_image = img
+
+        if self._geometry:
+            transform_img, transform = self.transform(img)
+            super(EwaldCorrected, self).setImage(transform_img, *args, transform=transform, **kwargs)
+
+        else:
+            super(EwaldCorrected, self).setImage(img, *args, **kwargs)
+
+    def updateAxes(self):
+        if self.displaymode == DisplayMode.remesh:
+            self.axesItem.setLabel("bottom", "q<sub>x</sub> (Å⁻¹)")  # , units='s')
+            self.axesItem.setLabel("left", "q<sub>z</sub> (Å⁻¹)")
+        else:
+            super(EwaldCorrected, self).updateAxes()
 
 
 class RectROIAction(BetterLayout):
