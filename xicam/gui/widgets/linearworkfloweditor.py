@@ -1,14 +1,14 @@
-from collections import defaultdict
+from collections import defaultdict, UserDict
 from qtpy.QtCore import QAbstractListModel, QMimeData, Qt, Signal, QModelIndex
 from qtpy.QtGui import QIcon
 from qtpy.QtWidgets import QSplitter, QWidget, QAbstractItemView, QToolBar, QToolButton, QMenu, \
     QVBoxLayout, QListView, QPushButton, QCheckBox, \
-    QHBoxLayout
+    QHBoxLayout, QComboBox
 from xicam.core.execution.workflow import Workflow
 from pyqtgraph.parametertree import ParameterTree
 from pyqtgraph.parametertree.parameterTypes import GroupParameter
 from xicam.gui.static import path
-from typing import Iterable, Any, Callable
+from typing import Iterable, Any, Callable, Dict
 from xicam.plugins import manager as pluginmanager, OperationPlugin
 from xicam.core import threads
 from functools import partial
@@ -19,6 +19,13 @@ from functools import partial
 # WorkflowWidget
 #  LinearWorkflowView
 #   WorkflowModel
+
+class WorkflowDict(dict):
+    def __setitem__(self, workflow, name):
+        if name in set(self.values()):
+            raise ValueError(f'A workflow with the same name already exists: {name}')
+        super(WorkflowDict, self).__setitem__(workflow, name)
+
 
 # TODO: Move Run buttons to subclass of WorkflowWidget
 
@@ -51,6 +58,7 @@ class WorkflowEditor(QSplitter):
                  operation_filter: Callable[[OperationPlugin], bool] = None,
                  kwargs_callable: Callable[[], dict] = None,
                  execute_iterative: bool = False,
+                 workflows: Dict[Workflow, str] = None,
                  **kwargs):
         """
         A Workflow editor that shows each operation in insertion order. This is useful in simplistic workflows, typically
@@ -73,6 +81,10 @@ class WorkflowEditor(QSplitter):
         """
         super(WorkflowEditor, self).__init__()
         self._workflow = workflow
+        if workflows is None:
+            workflows = WorkflowDict()
+        if workflow not in workflows:
+            workflows[workflow] = workflow.name
         self.kwargs = kwargs
         self.kwargs_callable = kwargs_callable
         self.execute_iterative = execute_iterative
@@ -82,7 +94,7 @@ class WorkflowEditor(QSplitter):
         self.workflowview = LinearWorkflowView(WorkflowModel(workflow))
 
         self.addWidget(self.operationeditor)
-        self.workflow_widget = WorkflowWidget(self.workflowview, operation_filter=operation_filter)
+        self.workflow_widget = WorkflowWidget(self.workflowview, operation_filter=operation_filter, workflows=workflows)
         self.addWidget(self.workflow_widget)
         self.workflow_widget.sigRunWorkflow.connect(self.sigRunWorkflow.emit)
         self.workflow_widget.sigRunWorkflow.connect(self.run_workflow)
@@ -96,6 +108,11 @@ class WorkflowEditor(QSplitter):
         self.workflowview.sigShowParameter.connect(self.setParameters)
 
         self._workflow.attach(self.sigWorkflowChanged.emit)
+
+        # rebind widget attrs
+        self.addWorkflow = self.workflow_widget.addWorkflow
+        self.removeWorkflow = self.workflow_widget.removeWorkflow
+        self.workflows = self.workflow_widget.workflows
 
     @property
     def workflow(self):
@@ -153,7 +170,9 @@ class WorkflowWidget(QWidget):
 
     # TODO -- emit Workflow from sigRunWorkflow
 
-    def __init__(self, workflowview: QAbstractItemView, operation_filter: Callable[[OperationPlugin], bool] = None):
+    def __init__(self, workflowview: QAbstractItemView,
+                 operation_filter: Callable[[OperationPlugin], bool] = None,
+                 workflows: Dict[Workflow, str] = None):
         super(WorkflowWidget, self).__init__()
 
         self.operation_filter = operation_filter
@@ -177,10 +196,24 @@ class WorkflowWidget(QWidget):
         self.functionmenu.aboutToShow.connect(self.populateFunctionMenu)
         self.addfunctionmenu.setMenu(self.functionmenu)
         self.addfunctionmenu.setPopupMode(QToolButton.InstantPopup)
+
+        self.workflows = WorkflowDict(workflows or {})
+
+        self.workflow_menu = QMenu()
+        self.workflow_menu.aboutToShow.connect(self.populateWorkflowMenu)
+        self.workflow_selector = QToolButton()
+        self.workflow_selector.setIcon(QIcon(path("icons/bookshelf.png")))
+        self.workflow_selector.setText("Select Workflow")
+        self.workflow_selector.setMenu(self.workflow_menu)
+        self.workflow_selector.setPopupMode(QToolButton.InstantPopup)
+        self.toolbar.addWidget(self.workflow_selector)
+
         self.toolbar.addWidget(self.addfunctionmenu)
         # self.toolbar.addAction(QIcon(path('icons/up.png')), 'Move Up')
         # self.toolbar.addAction(QIcon(path('icons/down.png')), 'Move Down')
-        self.toolbar.addAction(QIcon(path("icons/folder.png")), "Load Workflow")
+        self.toolbar.addAction(QIcon(path("icons/save.png")), "Export Workflow")
+        self.toolbar.addAction(QIcon(path("icons/folder.png")), "Import Workflow")
+
         self.toolbar.addAction(QIcon(path("icons/trash.png")), "Delete Operation", self.deleteOperation)
 
         v = QVBoxLayout()
@@ -228,6 +261,11 @@ class WorkflowWidget(QWidget):
 
         self._mkMenu(sortingDict)
 
+    def populateWorkflowMenu(self):
+        self.workflow_menu.clear()
+        for workflow, workflow_name in self.workflows.items():
+            self.workflow_menu.addAction(workflow_name, partial(self.setWorkflow, workflow))
+
     def _mkMenu(self, sorting_dict, menu=None):
         if menu is None:
             menu = self.functionmenu
@@ -242,6 +280,21 @@ class WorkflowWidget(QWidget):
                 submenu = QMenu(title=key, parent=menu)
                 menu.addMenu(submenu)
                 self._mkMenu(sorting_dict[key], submenu)
+
+    def setWorkflow(self, workflow: Workflow):
+        self.view.model().workflow = workflow
+
+    def addWorkflow(self, workflow: Workflow, name: str = None):
+        if name is None:
+            name = workflow.name
+        if name in self.workflows:
+            raise ValueError(f'A workflow already exists in this editor with the name "{name}"')
+        self.workflows[name] = workflow
+
+    def removeWorkflow(self, workflow):
+        for name, match_workflow in self.workflows.items():
+            if workflow == match_workflow:
+                del self.workflows[name]
 
     def addOperation(self, operation: OperationPlugin, autoconnectall=True):
         self.view.model().workflow.add_operation(operation())
@@ -285,6 +338,7 @@ class LinearWorkflowView(DisablableListView):
 
         self.setModel(workflowmodel)
         workflowmodel._workflow.attach(self.showCurrentParameter)
+        workflowmodel.layoutChanged.connect(partial(self.showCurrentParameter, None))
         self.selectionModel().currentChanged.connect(self.showCurrentParameter)
 
         self.setDragDropMode(QAbstractItemView.InternalMove)
@@ -320,6 +374,7 @@ class WorkflowModel(QAbstractListModel):
         self._workflow.detach(self.layoutChanged.emit)
         self._workflow = new_workflow
         self._workflow.attach(self.layoutChanged.emit)
+        self.layoutChanged.emit()
 
     def mimeTypes(self):
         return ["text/plain"]
