@@ -35,3 +35,11 @@ def test_menu(simple_workflow, qtbot):
     # # qtbot.mouseClick(workflow_editor.workflow_widget.functionmenu.)
     # # assert workflow_editor.workflow_widget.addfunctionmenu.isDown() == True
     # qtbot.wait(1000)
+
+
+def test_workflow_selector(simple_workflow: Workflow, custom_parameter_workflow: Workflow, square_op, qtbot):
+    workflow_editor = WorkflowEditor(simple_workflow,
+                                     workflows={simple_workflow: 'Simple', custom_parameter_workflow: "Custom"})
+    simple_workflow.add_operation(square_op.clone())
+    workflow_editor.show()
+    qtbot.addWidget(workflow_editor)
