@@ -10,7 +10,7 @@ from qtpy.QtWidgets import QWidget, QComboBox, QVBoxLayout
 from matplotlib import pyplot as plt
 from xarray import DataArray
 
-from xicam.core.intents import PlotIntent, ErrorBarIntent, BarIntent, PairPlotIntent
+from xicam.core.intents import PlotIntent, ErrorBarIntent, BarIntent, PairPlotIntent, ROIIntent
 from xicam.gui.actions import Action
 from xicam.plugins import manager as plugin_manager
 
@@ -63,6 +63,8 @@ class ImageIntentCanvas(XicamIntentCanvas):
         super(ImageIntentCanvas, self).__init__(*args, **kwargs)
         self.setLayout(QVBoxLayout())
         self.canvas_widget = None
+        # Store the "image" intent, since we will have roi and overlay intents as well
+        self._primary_intent = None
 
     def render(self, intent, mixins: List[str] = None):
         """Render an intent to the canvas.
@@ -71,13 +73,13 @@ class ImageIntentCanvas(XicamIntentCanvas):
         """
         # Extract and remove labels (if provide) kwarg and pass to the widget __init__
         # labels kwarg should only be provided by the AxesLabels mixin
-        kwargs = intent.kwargs.copy()
+        kwargs = getattr(intent, "kwargs", {}).copy()
         constructor_kwargs = dict()
         labels_kwarg = kwargs.pop("labels", None)
         if labels_kwarg:
             constructor_kwargs["labels"] = labels_kwarg
         if not self.canvas_widget:
-            bases_names = intent.mixins or tuple()
+            bases_names = getattr(intent, "mixins", None) or tuple()
             if mixins:
                 bases_names += tuple(mixins)
             # Place in set to remove duplicates
@@ -90,11 +92,18 @@ class ImageIntentCanvas(XicamIntentCanvas):
             if isinstance(value, DataArray):
                 kwargs[key] = np.asanyarray(value).squeeze()
 
-        # TODO: add rendering logic for ROI intents
-        self.canvas_widget.setImage(np.asarray(intent.image).squeeze(), **kwargs)
+        if isinstance(intent, ROIIntent):
+            self.canvas_widget.view.addItem(intent.roi)
+        else:
+            self.canvas_widget.setImage(np.asarray(intent.image).squeeze(), **kwargs)
+            self._primary_intent = intent
 
     def unrender(self, intent) -> bool:
-        ...
+        if self.canvas_widget:
+            if isinstance(intent, ROIIntent):
+                self.canvas_widget.view.removeItem(intent.roi)
+                return True
+        return False
 
 
 class PlotIntentCanvasBlend(CurveLabels):

@@ -8,7 +8,6 @@ import dask.array
 # item_name: (display?) name of intent
 # canvas_name:
 
-
 class Intent:
     def __init__(self, name: str, canvas_name: str = None, match_key=None):
         self._name = name
@@ -117,3 +116,13 @@ class PairPlotIntent(Intent):
             kwargs["canvas_name"] = kwargs.get("item_name")
         super(PairPlotIntent, self).__init__(name, canvas_name, match_key)
         self.transform_data = transform_data
+
+
+class ROIIntent(Intent):
+    canvas = "image_canvas"
+
+    def __init__(self, name: str, roi: "pyqtgraph.ROI", canvas_name: str = None, match_key=None, **kwargs):
+        super(ROIIntent, self).__init__(name, canvas_name, match_key)
+
+        self.roi = roi
+

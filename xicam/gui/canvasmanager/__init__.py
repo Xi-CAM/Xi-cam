@@ -112,10 +112,18 @@ class XicamCanvasManager(CanvasManager):
         # assert isinstance(intent, Intent)
         # assert isinstance(match_intent, Intent)
 
+        # Ignore self matching
+        if intent is match_intent:
+            return False
+
         match_canvas_type_string = match_intent.canvas
         intent_canvas_type_string = intent.canvas
 
-        if intent_canvas_type_string != match_canvas_type_string:
+        match_intent_canvas_type = pluginmanager.get_plugin_by_name(match_canvas_type_string, "IntentCanvasPlugin")
+        intent_canvas_type = pluginmanager.get_plugin_by_name(intent_canvas_type_string, "IntentCanvasPlugin")
+
+        if not issubclass(intent_canvas_type, match_intent_canvas_type) \
+            and not issubclass(match_intent_canvas_type, intent_canvas_type):
             return False
 
         # By definition, if a match_key is not provided, the intent is un-matchable

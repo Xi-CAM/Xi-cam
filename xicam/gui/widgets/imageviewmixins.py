@@ -1088,7 +1088,6 @@ class RectROIAction(BetterLayout):
         rect.moveCenter(self.imageItem.boundingRect().center())
 
         roi_action = ROIAction(BetterRectROI(rect.topLeft(), rect.size()))
-        self.view.addItem(roi_action.roi)
         # parent is the XicamIntentCanvas
         self.parent().sigInteractiveAction.emit(roi_action, self.parent())
         # FIXME: removing ROIs

@@ -75,6 +75,35 @@ class EnsembleModel(TreeModel):
     def intents_from_ensemble(self, ensemble: TreeItem):
         return {catalog: self.intents_from_catalog(catalog) for catalog in self.catalogs_from_ensemble(ensemble)}
 
+    def catalog_from_intent(self, intent: Intent) -> BlueskyRun:
+        catalog_item = self.catalog_item_from_intent(intent)
+        if catalog_item is not None:
+            return catalog_item.data(self.object_role)
+        return None
+
+    def catalog_item_from_intent(self, intent: Intent) -> TreeItem:
+        for ensemble in range(self.rowCount()):
+            ensemble_index = self.index(ensemble, 0)
+            for catalog in range(self.rowCount(ensemble_index)):
+                catalog_index = self.index(catalog, 0, ensemble_index)
+                for i in range(self.rowCount(catalog_index)):
+                    intent_index = self.index(i, 0, catalog_index)
+                    data = self.data(intent_index, role=self.object_role)
+                    if data == intent:
+                        return catalog_index.internalPointer()
+
+        return None
+
+    def catalog_item_from_catalog(self, catalog: BlueskyRun) -> TreeItem:
+        for ensemble in range(self.rowCount()):
+            ensemble_index = self.index(ensemble, 0)
+            for c in range(self.rowCount(ensemble_index)):
+                catalog_index = self.index(c, 0, ensemble_index)
+                data = self.data(catalog_index, role=self.object_role)
+                if data == catalog:
+                    return catalog_index.internalPointer()
+        return None
+
 
     def _set_active_brushes(self, index, is_active):
         brush = text_brush = self.data(index, Qt.BackgroundRole) or QBrush()
@@ -147,6 +176,16 @@ class EnsembleModel(TreeModel):
             intent_item.setData(intent, self.object_role)
             intent_item.setData(WorkspaceDataType.Intent, self.data_type_role)
             catalog_item.appendChild(intent_item)
+
+    def append_to_catalog(self, catalog: BlueskyRun, intent: Intent):
+        catalog_item = self.catalog_item_from_catalog(catalog)
+        if catalog_item is not None:
+            end_row = catalog_item.childCount()
+            self.beginInsertRows(self.index(catalog_item.row(), 0), end_row, end_row + 1)
+            self._create_intent_item(catalog_item, intent)
+            self.endInsertRows()
+        else:
+            raise ValueError(f"Catalog does not exist in model: {catalog}")
 
     def append_to_ensemble(self, catalog, ensemble, projectors: List[Callable[[BlueskyRun], List[Intent]]]):
         # Find the active ensemble (may be none if ensemble model is empty)
