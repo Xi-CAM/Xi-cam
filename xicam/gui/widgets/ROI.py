@@ -245,23 +245,34 @@ class ArcROI(BetterROI):
     def movePoint(self, handle, pos, modifiers=Qt.KeyboardModifier(), finish=True, coords="parent"):
         super(ArcROI, self).movePoint(handle, pos, modifiers, finish, coords)
 
+        self._update_internal_parameters(handle)
+
+    def _update_internal_parameters(self, handle=None):
         # Set internal parameters
-        if handle in [self.innerhandle, self.outerhandle]:
+        if handle is self.innerhandle:
+            self.innerradius = min(self.innerhandle.pos().length(), self.outerhandle.pos().length())
+
+        elif handle is self.outerhandle:
             self.innerradius = self.innerhandle.pos().length()
             self.outerradius = self.outerhandle.pos().length()
+
+        if handle is self.outerhandle:
             self.thetacenter = self.outerhandle.pos().angle(Point(1, 0))
 
         elif handle is self.widthhandle:
-            self.thetawidth = 2 * self.widthhandle.pos().angle(self.innerhandle.pos())
+            self.thetawidth = max(2 * self.widthhandle.pos().angle(self.innerhandle.pos()), 0)
 
         self.handleChanged()
 
     def paint(self, p, opt, widget):
 
         # Enforce constraints on handles
-        r2 = Point(np.cos(np.radians(self.thetacenter)), np.sin(np.radians(self.thetacenter)))  # chi center direction vector
+        r2 = Point(np.cos(np.radians(self.thetacenter)),
+                   np.sin(np.radians(self.thetacenter)))  # chi center direction vector
         # constrain innerhandle to be parallel to outerhandle, and shorter than outerhandle
         self.innerhandle.setPos(r2 * self.innerradius)
+        if self.innerhandle.pos().length() > self.outerhandle.pos().length():
+            self.innerhandle.setPos(r2 * self.outerradius)
         # constrain widthhandle to be counter-clockwise from innerhandle
         widthangle = np.radians(self.thetawidth / 2 + self.thetacenter)
         widthv = Point(np.cos(widthangle), np.sin(widthangle)) if self.thetawidth > 0 else r2
@@ -424,10 +435,11 @@ class SegmentedArcROI(ArcROI):
             # p.drawRect(r)
             p.drawArc(r, -startangle * 16, -self.thetawidth * 16)
 
-        for segment_angle in segment_angles:
-            segment_vector = QPointF(np.cos(np.radians(segment_angle)), np.sin(np.radians(segment_angle)))
+        if self.innerradius < self.outerradius:
+            for segment_angle in segment_angles:
+                segment_vector = QPointF(np.cos(np.radians(segment_angle)), np.sin(np.radians(segment_angle)))
 
-            p.drawLine(segment_vector * self.innerradius / self.outerradius / 2, segment_vector / 2)
+                p.drawLine(segment_vector * self.innerradius / self.outerradius / 2, segment_vector / 2)
 
     def getLabelArray(self, arr, img: pg.ImageItem = None):
         w = arr.shape[0]
@@ -435,11 +447,11 @@ class SegmentedArcROI(ArcROI):
 
         labels = np.zeros_like(arr)
 
-        orientation_angle = self.innerhandle.pos().angle(Point(1, 0))
+        centerangle = -self.outerhandle.pos().angle(Point(0, 1))
+        startangle = centerangle - self.thetawidth / 2
+        endangle = centerangle + self.thetawidth / 2
         radii = np.linspace(self.innerradius, self.outerradius, self.segments_radial + 1, endpoint=True)
-        angles = np.linspace((self.startangle - orientation_angle),
-                             (self.startangle - orientation_angle + self.thetawidth), self.segments_angular + 1,
-                             endpoint=True)
+        angles = np.linspace(startangle, endangle, self.segments_angular + 1, endpoint=True)
 
         start_radii = radii[:-1]
         end_radii = radii[1:]
@@ -694,12 +706,12 @@ if __name__ == "__main__":
     qapp = QApplication([])
     import pyqtgraph as pg
 
-    imageview = pg.ImageView()
     pg.setConfigOption('imageAxisOrder', 'row-major')
-    data = np.random.random((10, 10))
+    imageview = pg.ImageView()
+    data = np.random.random((100, 100))
     imageview.setImage(data)
 
-    roi = SegmentedArcROI(center=(5, 5), radius=5)
+    roi = SegmentedArcROI(center=(50, 50), radius=50)
     # roi = BetterCrosshairROI((0, 0), parent=imageview.view)
     imageview.view.addItem(roi)
 
