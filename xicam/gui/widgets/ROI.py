@@ -272,6 +272,7 @@ class ArcROI(BetterROI):
 
         pen = self.currentPen
         pen.setColor(QColor(0, 255, 255))
+        pen.setStyle(Qt.SolidLine)
 
         p.setPen(pen)
 
@@ -384,6 +385,112 @@ class ArcROI(BetterROI):
         self.parameter().child("outerradius").setValue(self.outerradius)
         self.parameter().child("thetawidth").setValue(self.thetawidth)
         self.parameter().child("thetacenter").setValue(self.thetacenter)
+
+
+class SegmentedArcROI(ArcROI):
+    """
+    A washer-wedge-shaped ROI for selecting q-ranges
+
+    """
+
+    def __init__(self, center, radius, **kwargs):
+        # QtGui.QGraphicsRectItem.__init__(self, 0, 0, size[0], size[1])
+        self.segments_radial = 3
+        self.segments_angular = 3
+        super(SegmentedArcROI, self).__init__(center, radius, **kwargs)
+
+    def paint(self, p, opt, widget):
+        super(SegmentedArcROI, self).paint(p, opt, widget)
+
+        pen = self.currentPen
+        # pen.setColor(QColor(255, 0, 255))
+        pen.setStyle(Qt.DashLine)
+        p.setPen(pen)
+
+        centerangle = self.innerhandle.pos().angle(Point(1, 0))
+        startangle = centerangle - self.thetawidth / 2
+        endangle = centerangle + self.thetawidth / 2
+        segment_angles = np.linspace(startangle, endangle, self.segments_angular, endpoint=False)[1:]
+        segment_radii = np.linspace(self.innerradius, self.outerradius, self.segments_radial, endpoint=False)[1:]
+
+        r = QCircRectF(radius=0.5)
+        radius = self.innerradius / self.outerradius / 2
+        r = QCircRectF()
+        r.radius = radius
+
+        # draw segments
+        for segment_radius in segment_radii:
+            r.radius = segment_radius / self.outerradius / 2
+            # p.drawRect(r)
+            p.drawArc(r, -startangle * 16, -self.thetawidth * 16)
+
+        for segment_angle in segment_angles:
+            segment_vector = QPointF(np.cos(np.radians(segment_angle)), np.sin(np.radians(segment_angle)))
+
+            p.drawLine(segment_vector * self.innerradius / self.outerradius / 2, segment_vector / 2)
+
+    def getLabelArray(self, arr, img: pg.ImageItem = None):
+        w = arr.shape[0]
+        h = arr.shape[1]
+
+        labels = np.zeros_like(arr)
+
+        orientation_angle = self.innerhandle.pos().angle(Point(1, 0))
+        radii = np.linspace(self.innerradius, self.outerradius, self.segments_radial + 1, endpoint=True)
+        angles = np.linspace((self.startangle - orientation_angle),
+                             (self.startangle - orientation_angle + self.thetawidth), self.segments_angular + 1,
+                             endpoint=True)
+
+        start_radii = radii[:-1]
+        end_radii = radii[1:]
+        start_angles = angles[:-1]
+        end_angles = angles[1:]
+
+        for i, (start_radius, end_radius) in enumerate(zip(start_radii, end_radii)):
+            for j, (start_angle, end_angle) in enumerate(zip(start_angles, end_angles)):
+                # generate an ellipsoidal mask
+                mask = np.fromfunction(
+                    lambda x, y: (start_radius <= ((x - self.center[0]) ** 2.0 + (y - self.center[1]) ** 2.0) ** 0.5)
+                                 & (((x - self.center[0]) ** 2.0 + (y - self.center[1]) ** 2.0) ** 0.5 <= end_radius)
+                                 & ((np.degrees(
+                        np.arctan2(y - self.center[1], x - self.center[0])) - start_angle) % 360 >= 0)
+                                 & ((np.degrees(np.arctan2(y - self.center[1], x - self.center[
+                        0])) - start_angle) % 360 <= end_angle - start_angle),
+                    (w, h), )
+                labels[mask] = i * self.segments_radial + j + 1
+
+        return labels
+
+    def parameter(self):
+        if not self._param:
+            self._param = parameterTypes.GroupParameter(
+                name="Segmented Arc ROI",
+                children=[
+                    parameterTypes.SimpleParameter(
+                        title="χ Segments", name="chisegments", value=self.segments_angular, type="float", siSuffix="°"
+                    ),
+                    parameterTypes.SimpleParameter(
+                        title="Q segments", name="qsegments", value=self.segments_radial, type="float", siSuffix="°"
+                    ),
+                    parameterTypes.SimpleParameter(
+                        title="Q Minimum", name="innerradius", value=self.innerradius, type="float", units="Å⁻¹"
+                    ),
+                    parameterTypes.SimpleParameter(
+                        title="Q Maximum", name="outerradius", value=self.outerradius, type="float", units="Å⁻¹"
+                    ),
+                    parameterTypes.SimpleParameter(
+                        title="χ Width", name="thetawidth", value=self.thetawidth, type="float", units="°"
+                    ),
+                    parameterTypes.SimpleParameter(
+                        title="χ Center", name="thetacenter", value=self.thetacenter, type="float", siSuffix="°"
+                    ),
+
+                ],
+            )
+
+            self._param.sigTreeStateChanged.connect(self.valueChanged)
+
+        return self._param
 
 
 class BetterRectROI(BetterROI, RectROI):
@@ -588,13 +695,23 @@ if __name__ == "__main__":
     import pyqtgraph as pg
 
     imageview = pg.ImageView()
-    imageview.view.invertY(False)
+    pg.setConfigOption('imageAxisOrder', 'row-major')
     data = np.random.random((10, 10))
     imageview.setImage(data)
 
-    # roi = ArcROI(center=(5, 5), radius=5)
-    roi = BetterCrosshairROI((0, 0), parent=imageview.view)
+    roi = SegmentedArcROI(center=(5, 5), radius=5)
+    # roi = BetterCrosshairROI((0, 0), parent=imageview.view)
     imageview.view.addItem(roi)
 
     imageview.show()
+
+    iv2 = pg.ImageView()
+    iv2.show()
+
+
+    def show_labels():
+        iv2.setImage(roi.getLabelArray(data, imageview.imageItem))
+
+
+    roi.sigRegionChanged.connect(show_labels)
     qapp.exec_()
