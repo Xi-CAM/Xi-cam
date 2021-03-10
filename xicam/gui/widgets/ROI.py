@@ -1,3 +1,4 @@
+import weakref
 from pyqtgraph import ROI, PolyLineROI, Point
 from pyqtgraph.graphicsItems.ROI import Handle, RectROI, LineROI
 from qtpy.QtCore import QRectF, QPointF, Qt, Signal
@@ -14,29 +15,65 @@ from xicam.plugins.operationplugin import operation, output_names
 
 
 class ROIOperation(OperationPlugin):
+    """Single point of entry for one or more ROIs, generates a label array."""
     name = 'ROI'
     output_names = ('roi', 'labels')
-    input_names = ('images', 'image_item')
+    input_names = ('images', 'image_item', 'rois')
 
-    def __init__(self, ROI: ROI):
+    def __init__(self, *rois: ROI):
         super(ROIOperation, self).__init__()
-        self.ROI = ROI
         self._param = None  # type: Parameter
-        self.name = f"ROI #{self.ROI.index}"
+        self.name = "ROI" #f"ROI #{self.ROI.index}"
 
-    def _func(self, images, image_item=None):
-        images = self.ROI.getLabelArray(images, image_item)
-        roi = images.astype(np.bool)
-        return roi, images
+    def _func(self, images, image_item=None, rois=None):
+        # Create zeros label array to insert new labels into (if multiple ROIs)
+        label_array = np.zeros(images[0].shape)
+        roi_masks = []
+        for roi in rois:
+            # TODO: Should label array be astype(np.int) (instead of float)?
+            label = roi.getLabelArray(images, image_item)
+            # Store the boolean mask of each label array
+            roi_mask = label.astype(np.bool)
+            roi_masks.append(roi_mask)
+            # Grab the current label array maximum value (so we can increment multiple labels accordingly)
+            label_array_max = label_array.max()
+            label = np.where(label > 0, label + label_array_max, label)
+            # For single roi, our max will be 0 (since label_array is just np.zeros so far, hasn't been modified)
+            if label_array_max == 0:
+                label_array = label
+                print(f"{label_array_max + 1}: {(label_array == 1).sum()}")
+                print()
+            else:
+                # FIXME right now, if labels overlap, label integers are being added together (into a new label value)
+                # Adjust any currently non-masked areas with the new label
+                label_array = np.where(label_array == 0, label, label_array)
+                print(f"{1}: {(label_array == 1).sum()}")
+                print(f"{2}: {(label_array == 2).sum()}")
+                print()
+                #
+                label_array = np.where(label_array > 0,
+                                       np.where(label > 0, label, label_array),
+                                       label_array)
+                # label_array = np.where(label_array > 0,
+                #                        label or label_array,
+                #                        label_array)
+                print(f"1: {(label_array == 1).sum()}")
+                print(f"2: {(label_array == 2).sum()}")
+                print()
 
-    @property
-    def parameter(self):
-        if not self._param:
-            self._param = self.ROI.parameter()
-        return self._param
+
+        return roi_masks, label_array
+
+    # TODO: might need this for adjusting roi's manually
+    # @property
+    # def parameter(self):
+    #     if not self._param:
+    #         self._param = self.roi.parameter()
+    #     return self._param
 
 
 class WorkflowableROI(ROI):
+    # FIXME: do we still want this for our (e.g.) CorrelationStage process_actions???
     def __init__(self, *args, **kwargs):
         super(WorkflowableROI, self).__init__(*args, **kwargs)
         self.operation = ROIOperation(self)
@@ -390,6 +427,10 @@ class BetterRectROI(BetterROI, RectROI):
     def __init__(self, *args, pen=pg.mkPen(QColor(0, 255, 255)), **kwargs):
         super(BetterRectROI, self).__init__(*args, pen=pen, **kwargs)
         self.handle = self.handles[0]
+
+    def __reduce__(self):
+        # FIXME: very simple reduce for allowing copy (to help with weakref management)
+        return self.__class__, (self.pos(), self.size())
 
     def movePoint(self, handle, pos, modifiers=Qt.KeyboardModifier(), finish=True, coords="parent"):
         super(BetterRectROI, self).movePoint(handle, pos, modifiers, finish, coords)

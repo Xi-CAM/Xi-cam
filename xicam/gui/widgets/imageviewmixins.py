@@ -1091,7 +1091,7 @@ class RectROIAction(BetterLayout):
         # parent is the XicamIntentCanvas
         self.parent().sigInteractiveAction.emit(roi_action, self.parent())
         # FIXME: removing ROIs
-        self.button.setEnabled(False)
+        # self.button.setEnabled(False)
 
 
 @live_plugin("ImageMixinPlugin")
