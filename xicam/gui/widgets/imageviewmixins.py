@@ -16,7 +16,7 @@ from xicam.core.data.bluesky_utils import fields_from_stream, streams_from_run, 
 from xicam.gui.actions import ROIAction
 from xicam.gui.widgets.elidedlabel import ElidedLabel
 from xicam.gui.static import path
-from xicam.gui.widgets.ROI import BetterPolyLineROI, BetterCrosshairROI, BetterRectROI, ArcROI
+from xicam.gui.widgets.ROI import BetterPolyLineROI, BetterCrosshairROI, BetterRectROI, ArcROI, SegmentedArcROI
 import enum
 from typing import Callable
 from functools import partial
@@ -1092,6 +1092,10 @@ class ROICreator(ToolbarLayout):
         self.combobox.addItem(get_icon("icons/roi_arc.png"),
                               "Arc ROI",
                               partial(self._create_roi_action, self._create_arc_roi))
+        # FIXME: add segmented arc roi png
+        self.combobox.addItem(get_icon("icons/segmented_arc.png"),
+                              "Segmented Arc ROI",
+                              partial(self._create_roi_action, self._create_segmented_arc_roi))
         self.combobox.addItem(get_icon("icons/roi_rect.png"),
                               "Rectangle ROI",
                               partial(self._create_roi_action, self._create_rect_roi))
@@ -1112,6 +1116,15 @@ class ROICreator(ToolbarLayout):
             fit = self._geometry.getFit2D()
             c = (fit['centerX'], self._geometry.detector.shape[0] - fit['centerY'])
         return ArcROI(center=c, radius=r)
+
+    def _create_segmented_arc_roi(self):
+        # FIXME: code duplication
+        c = (0.0, 0.0)
+        r = min(*self.image.shape) / 3
+        if self._geometry is not None:
+            fit = self._geometry.getFit2D()
+            c = (fit['centerX'], self._geometry.detector.shape[0] - fit['centerY'])
+        return SegmentedArcROI(center=c, radius=r)
 
     def _create_rect_roi(self):
         rect = self._bounding_rect()
