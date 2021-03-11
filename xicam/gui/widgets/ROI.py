@@ -1,13 +1,12 @@
 from pyqtgraph import ROI, PolyLineROI, Point
 from pyqtgraph.graphicsItems.ROI import Handle, RectROI, LineROI
-from qtpy.QtCore import QRectF, QPointF, Qt, Signal
-from qtpy.QtGui import QColor, QPainter, QPainterPath, QBrush, QPainterPathStroker
+from qtpy.QtCore import QRectF, QPointF, Qt, Signal, QSize
+from qtpy.QtGui import QColor, QPainter, QPainterPath, QBrush, QPainterPathStroker, QCursor
 import numpy as np
 from itertools import count
 from xicam.plugins import OperationPlugin
 
-
-from pyqtgraph.parametertree import Parameter, parameterTypes
+from pyqtgraph.parametertree import Parameter, parameterTypes, ParameterTree
 import pyqtgraph as pg
 
 from xicam.plugins.operationplugin import operation, output_names
@@ -44,6 +43,42 @@ class WorkflowableROI(ROI):
 
     def parameter(self) -> Parameter:
         raise NotImplementedError
+
+    def getMenu(self):
+        if self.menu is None:
+            self.menu = super(WorkflowableROI, self).getMenu()
+            editAct = QAction("Edit ROI", self.menu)
+            editAct.triggered.connect(self.edit_parameters)
+            self.menu.addAction(editAct)
+            self.menu.editAct = editAct
+        # ROI menu may be requested when showing the handle context menu, so
+        # return the menu but disable it if the ROI isn't removable
+        self.menu.setEnabled(self.contextMenuEnabled())
+        return self.menu
+
+    def edit_parameters(self):
+        class DefocusParameterTree(QWidget):
+            def __init__(self, *args, **kwargs):
+                super(DefocusParameterTree, self).__init__(*args, **kwargs)
+                self.setLayout(QVBoxLayout())
+                self.parameter_tree = ParameterTree()
+                self.layout().addWidget(self.parameter_tree)
+                self.layout().setContentsMargins(0, 0, 0, 0)
+
+            def setParameters(self, *args, **kwargs):
+                self.parameter_tree.setParameters(*args, **kwargs)
+
+        # self.parameter_tree = DefocusParameterTree()
+        self.parameter_tree = DefocusParameterTree()
+        self.parameter_tree.setParameters(self.parameter())
+        self.parameter_tree.setWindowFlags(Qt.FramelessWindowHint | Qt.Popup)
+        # self.parameter_tree = QLabel('blah')
+        self.parameter_tree.show()
+        self.parameter_tree.activateWindow()
+        self.parameter_tree.raise_()
+        self.parameter_tree.move(QCursor().pos())
+        self.parameter_tree.setFocus(Qt.PopupFocusReason)
+        self.parameter_tree.resize(QSize(300, 400))
 
 
 # MIXIN!~
@@ -479,10 +514,10 @@ class SegmentedArcROI(ArcROI):
                 name="Segmented Arc ROI",
                 children=[
                     parameterTypes.SimpleParameter(
-                        title="χ Segments", name="chisegments", value=self.segments_angular, type="float", siSuffix="°"
+                        title="χ Segments", name="segments_angular", value=self.segments_angular, type="int", min=1
                     ),
                     parameterTypes.SimpleParameter(
-                        title="Q segments", name="qsegments", value=self.segments_radial, type="float", siSuffix="°"
+                        title="Q segments", name="segments_radial", value=self.segments_radial, type="int", min=1
                     ),
                     parameterTypes.SimpleParameter(
                         title="Q Minimum", name="innerradius", value=self.innerradius, type="float", units="Å⁻¹"
@@ -701,7 +736,7 @@ class SegmentedRectROI(BetterRectROI):
 
 
 if __name__ == "__main__":
-    from qtpy.QtWidgets import QApplication
+    from qtpy.QtWidgets import QApplication, QMenu, QAction, QLabel, QVBoxLayout, QWidget, QAbstractScrollArea
 
     qapp = QApplication([])
     import pyqtgraph as pg
