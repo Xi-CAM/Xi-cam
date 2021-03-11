@@ -16,7 +16,7 @@ from xicam.core.data.bluesky_utils import fields_from_stream, streams_from_run, 
 from xicam.gui.actions import ROIAction
 from xicam.gui.widgets.elidedlabel import ElidedLabel
 from xicam.gui.static import path
-from xicam.gui.widgets.ROI import BetterPolyLineROI, BetterCrosshairROI, BetterRectROI
+from xicam.gui.widgets.ROI import BetterPolyLineROI, BetterCrosshairROI, BetterRectROI, ArcROI
 import enum
 from typing import Callable
 from functools import partial
@@ -1074,24 +1074,81 @@ class EwaldCorrected(QSpace, RowMajor, ToolbarLayout):
             super(EwaldCorrected, self).updateAxes()
 
 
-class RectROIAction(BetterLayout):
+class ROICreator(ToolbarLayout):
+    """Implements a combo-box widget in the toolbar to select and create ROIs.
+
+    Clicking on the combo-box will show all available ROIs;
+    clicking on an ROI will generate the ROI intent and reset the combo-box back to its placeholder text.
+    """
     def __init__(self, *args, **kwargs):
-        super(RectROIAction, self).__init__(*args, **kwargs)
+        super(ROICreator, self).__init__(*args, **kwargs)
+        self.combobox = QComboBox()
+        self.combobox.setPlaceholderText("Create ROI...")
 
-        self.button = QPushButton("Rectangle ROI")
-        self.button.clicked.connect(self._add_roi_action)
-        self.ui.right_layout.addWidget(self.button)
+        def get_icon(static_path: str):
+            return QIcon(QPixmap(str((path(static_path))))) or QIcon()
 
-    def _add_roi_action(self, _):
+        # Add roi options
+        self.combobox.addItem(get_icon("icons/roi_arc.png"),
+                              "Arc ROI",
+                              partial(self._create_roi_action, self._create_arc_roi))
+        self.combobox.addItem(get_icon("icons/roi_rect.png"),
+                              "Rectangle ROI",
+                              partial(self._create_roi_action, self._create_rect_roi))
+
+        self.combobox.activated.connect(self._roi_activated)
+        self.toolbar.addWidget(self.combobox)
+
+    def _bounding_rect(self):
         rect = QRectF(self.imageItem.boundingRect())
-        rect.setSize(rect.size()/2)
+        rect.setSize(rect.size() / 2)
         rect.moveCenter(self.imageItem.boundingRect().center())
+        return rect
 
-        roi_action = ROIAction(BetterRectROI(rect.topLeft(), rect.size()))
-        # parent is the XicamIntentCanvas
+    def _create_arc_roi(self):
+        c = (0.0, 0.0)
+        r = min(*self.image.shape) / 3
+        if self._geometry is not None:
+            fit = self._geometry.getFit2D()
+            c = (fit['centerX'], self._geometry.detector.shape[0] - fit['centerY'])
+        return ArcROI(center=c, radius=r)
+
+    def _create_rect_roi(self):
+        rect = self._bounding_rect()
+        return BetterRectROI(rect.topLeft(), rect.size())
+
+    def _create_roi_action(self, roi_creator):
+        roi_action = ROIAction(roi_creator())
+        print(f"ROI: {roi_action.roi}")
         self.parent().sigInteractiveAction.emit(roi_action, self.parent())
-        # FIXME: removing ROIs
-        # self.button.setEnabled(False)
+
+    def _roi_activated(self, index: int):
+        # Ignore invalid index
+        if index == -1:
+            return
+
+        self.combobox.itemData(index, Qt.UserRole)()
+        self.combobox.setCurrentIndex(-1)
+
+
+# class RectROIAction(BetterLayout):
+#     def __init__(self, *args, **kwargs):
+#         super(RectROIAction, self).__init__(*args, **kwargs)
+#
+#         self.button = QPushButton("Rectangle ROI")
+#         self.button.clicked.connect(self._add_roi_action)
+#         self.ui.right_layout.addWidget(self.button)
+#
+#     def _add_roi_action(self, _):
+#         rect = QRectF(self.imageItem.boundingRect())
+#         rect.setSize(rect.size()/2)
+#         rect.moveCenter(self.imageItem.boundingRect().center())
+#
+#         roi_action = ROIAction(BetterRectROI(rect.topLeft(), rect.size()))
+#         # parent is the XicamIntentCanvas
+#         self.parent().sigInteractiveAction.emit(roi_action, self.parent())
+#         # FIXME: removing ROIs
+#         # self.button.setEnabled(False)
 
 
 @live_plugin("ImageMixinPlugin")
