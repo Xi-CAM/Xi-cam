@@ -1,14 +1,13 @@
 import weakref
 from pyqtgraph import ROI, PolyLineROI, Point
 from pyqtgraph.graphicsItems.ROI import Handle, RectROI, LineROI
-from qtpy.QtCore import QRectF, QPointF, Qt, Signal
-from qtpy.QtGui import QColor, QPainter, QPainterPath, QBrush, QPainterPathStroker
+from qtpy.QtCore import QRectF, QPointF, Qt, Signal, QSize
+from qtpy.QtGui import QColor, QPainter, QPainterPath, QBrush, QPainterPathStroker, QCursor
 import numpy as np
 from itertools import count
 from xicam.plugins import OperationPlugin
 
-
-from pyqtgraph.parametertree import Parameter, parameterTypes
+from pyqtgraph.parametertree import Parameter, parameterTypes, ParameterTree
 import pyqtgraph as pg
 
 from xicam.plugins.operationplugin import operation, output_names
@@ -81,6 +80,42 @@ class WorkflowableROI(ROI):
 
     def parameter(self) -> Parameter:
         raise NotImplementedError
+
+    def getMenu(self):
+        if self.menu is None:
+            self.menu = super(WorkflowableROI, self).getMenu()
+            editAct = QAction("Edit ROI", self.menu)
+            editAct.triggered.connect(self.edit_parameters)
+            self.menu.addAction(editAct)
+            self.menu.editAct = editAct
+        # ROI menu may be requested when showing the handle context menu, so
+        # return the menu but disable it if the ROI isn't removable
+        self.menu.setEnabled(self.contextMenuEnabled())
+        return self.menu
+
+    def edit_parameters(self):
+        class DefocusParameterTree(QWidget):
+            def __init__(self, *args, **kwargs):
+                super(DefocusParameterTree, self).__init__(*args, **kwargs)
+                self.setLayout(QVBoxLayout())
+                self.parameter_tree = ParameterTree()
+                self.layout().addWidget(self.parameter_tree)
+                self.layout().setContentsMargins(0, 0, 0, 0)
+
+            def setParameters(self, *args, **kwargs):
+                self.parameter_tree.setParameters(*args, **kwargs)
+
+        # self.parameter_tree = DefocusParameterTree()
+        self.parameter_tree = DefocusParameterTree()
+        self.parameter_tree.setParameters(self.parameter())
+        self.parameter_tree.setWindowFlags(Qt.FramelessWindowHint | Qt.Popup)
+        # self.parameter_tree = QLabel('blah')
+        self.parameter_tree.show()
+        self.parameter_tree.activateWindow()
+        self.parameter_tree.raise_()
+        self.parameter_tree.move(QCursor().pos())
+        self.parameter_tree.setFocus(Qt.PopupFocusReason)
+        self.parameter_tree.resize(QSize(300, 400))
 
 
 # MIXIN!~
@@ -282,23 +317,34 @@ class ArcROI(BetterROI):
     def movePoint(self, handle, pos, modifiers=Qt.KeyboardModifier(), finish=True, coords="parent"):
         super(ArcROI, self).movePoint(handle, pos, modifiers, finish, coords)
 
+        self._update_internal_parameters(handle)
+
+    def _update_internal_parameters(self, handle=None):
         # Set internal parameters
-        if handle in [self.innerhandle, self.outerhandle]:
+        if handle is self.innerhandle:
+            self.innerradius = min(self.innerhandle.pos().length(), self.outerhandle.pos().length())
+
+        elif handle is self.outerhandle:
             self.innerradius = self.innerhandle.pos().length()
             self.outerradius = self.outerhandle.pos().length()
+
+        if handle is self.outerhandle:
             self.thetacenter = self.outerhandle.pos().angle(Point(1, 0))
 
         elif handle is self.widthhandle:
-            self.thetawidth = 2 * self.widthhandle.pos().angle(self.innerhandle.pos())
+            self.thetawidth = max(2 * self.widthhandle.pos().angle(self.innerhandle.pos()), 0)
 
         self.handleChanged()
 
     def paint(self, p, opt, widget):
 
         # Enforce constraints on handles
-        r2 = Point(np.cos(np.radians(self.thetacenter)), np.sin(np.radians(self.thetacenter)))  # chi center direction vector
+        r2 = Point(np.cos(np.radians(self.thetacenter)),
+                   np.sin(np.radians(self.thetacenter)))  # chi center direction vector
         # constrain innerhandle to be parallel to outerhandle, and shorter than outerhandle
         self.innerhandle.setPos(r2 * self.innerradius)
+        if self.innerhandle.pos().length() > self.outerhandle.pos().length():
+            self.innerhandle.setPos(r2 * self.outerradius)
         # constrain widthhandle to be counter-clockwise from innerhandle
         widthangle = np.radians(self.thetawidth / 2 + self.thetacenter)
         widthv = Point(np.cos(widthangle), np.sin(widthangle)) if self.thetawidth > 0 else r2
@@ -309,6 +355,7 @@ class ArcROI(BetterROI):
 
         pen = self.currentPen
         pen.setColor(QColor(0, 255, 255))
+        pen.setStyle(Qt.SolidLine)
 
         p.setPen(pen)
 
@@ -421,6 +468,113 @@ class ArcROI(BetterROI):
         self.parameter().child("outerradius").setValue(self.outerradius)
         self.parameter().child("thetawidth").setValue(self.thetawidth)
         self.parameter().child("thetacenter").setValue(self.thetacenter)
+
+
+class SegmentedArcROI(ArcROI):
+    """
+    A washer-wedge-shaped ROI for selecting q-ranges
+
+    """
+
+    def __init__(self, center, radius, **kwargs):
+        # QtGui.QGraphicsRectItem.__init__(self, 0, 0, size[0], size[1])
+        self.segments_radial = 3
+        self.segments_angular = 3
+        super(SegmentedArcROI, self).__init__(center, radius, **kwargs)
+
+    def paint(self, p, opt, widget):
+        super(SegmentedArcROI, self).paint(p, opt, widget)
+
+        pen = self.currentPen
+        # pen.setColor(QColor(255, 0, 255))
+        pen.setStyle(Qt.DashLine)
+        p.setPen(pen)
+
+        centerangle = self.innerhandle.pos().angle(Point(1, 0))
+        startangle = centerangle - self.thetawidth / 2
+        endangle = centerangle + self.thetawidth / 2
+        segment_angles = np.linspace(startangle, endangle, self.segments_angular, endpoint=False)[1:]
+        segment_radii = np.linspace(self.innerradius, self.outerradius, self.segments_radial, endpoint=False)[1:]
+
+        r = QCircRectF(radius=0.5)
+        radius = self.innerradius / self.outerradius / 2
+        r = QCircRectF()
+        r.radius = radius
+
+        # draw segments
+        for segment_radius in segment_radii:
+            r.radius = segment_radius / self.outerradius / 2
+            # p.drawRect(r)
+            p.drawArc(r, -startangle * 16, -self.thetawidth * 16)
+
+        if self.innerradius < self.outerradius:
+            for segment_angle in segment_angles:
+                segment_vector = QPointF(np.cos(np.radians(segment_angle)), np.sin(np.radians(segment_angle)))
+
+                p.drawLine(segment_vector * self.innerradius / self.outerradius / 2, segment_vector / 2)
+
+    def getLabelArray(self, arr, img: pg.ImageItem = None):
+        w = arr.shape[0]
+        h = arr.shape[1]
+
+        labels = np.zeros_like(arr)
+
+        centerangle = -self.outerhandle.pos().angle(Point(0, 1))
+        startangle = centerangle - self.thetawidth / 2
+        endangle = centerangle + self.thetawidth / 2
+        radii = np.linspace(self.innerradius, self.outerradius, self.segments_radial + 1, endpoint=True)
+        angles = np.linspace(startangle, endangle, self.segments_angular + 1, endpoint=True)
+
+        start_radii = radii[:-1]
+        end_radii = radii[1:]
+        start_angles = angles[:-1]
+        end_angles = angles[1:]
+
+        for i, (start_radius, end_radius) in enumerate(zip(start_radii, end_radii)):
+            for j, (start_angle, end_angle) in enumerate(zip(start_angles, end_angles)):
+                # generate an ellipsoidal mask
+                mask = np.fromfunction(
+                    lambda x, y: (start_radius <= ((x - self.center[0]) ** 2.0 + (y - self.center[1]) ** 2.0) ** 0.5)
+                                 & (((x - self.center[0]) ** 2.0 + (y - self.center[1]) ** 2.0) ** 0.5 <= end_radius)
+                                 & ((np.degrees(
+                        np.arctan2(y - self.center[1], x - self.center[0])) - start_angle) % 360 >= 0)
+                                 & ((np.degrees(np.arctan2(y - self.center[1], x - self.center[
+                        0])) - start_angle) % 360 <= end_angle - start_angle),
+                    (w, h), )
+                labels[mask] = i * self.segments_radial + j + 1
+
+        return labels
+
+    def parameter(self):
+        if not self._param:
+            self._param = parameterTypes.GroupParameter(
+                name="Segmented Arc ROI",
+                children=[
+                    parameterTypes.SimpleParameter(
+                        title="χ Segments", name="segments_angular", value=self.segments_angular, type="int", min=1
+                    ),
+                    parameterTypes.SimpleParameter(
+                        title="Q segments", name="segments_radial", value=self.segments_radial, type="int", min=1
+                    ),
+                    parameterTypes.SimpleParameter(
+                        title="Q Minimum", name="innerradius", value=self.innerradius, type="float", units="Å⁻¹"
+                    ),
+                    parameterTypes.SimpleParameter(
+                        title="Q Maximum", name="outerradius", value=self.outerradius, type="float", units="Å⁻¹"
+                    ),
+                    parameterTypes.SimpleParameter(
+                        title="χ Width", name="thetawidth", value=self.thetawidth, type="float", units="°"
+                    ),
+                    parameterTypes.SimpleParameter(
+                        title="χ Center", name="thetacenter", value=self.thetacenter, type="float", siSuffix="°"
+                    ),
+
+                ],
+            )
+
+            self._param.sigTreeStateChanged.connect(self.valueChanged)
+
+        return self._param
 
 
 class BetterRectROI(BetterROI, RectROI):
@@ -623,19 +777,29 @@ class SegmentedRectROI(BetterRectROI):
 
 
 if __name__ == "__main__":
-    from qtpy.QtWidgets import QApplication
+    from qtpy.QtWidgets import QApplication, QMenu, QAction, QLabel, QVBoxLayout, QWidget, QAbstractScrollArea
 
     qapp = QApplication([])
     import pyqtgraph as pg
 
+    pg.setConfigOption('imageAxisOrder', 'row-major')
     imageview = pg.ImageView()
-    imageview.view.invertY(False)
-    data = np.random.random((10, 10))
+    data = np.random.random((100, 100))
     imageview.setImage(data)
 
-    # roi = ArcROI(center=(5, 5), radius=5)
-    roi = BetterCrosshairROI((0, 0), parent=imageview.view)
+    roi = SegmentedArcROI(center=(50, 50), radius=50)
+    # roi = BetterCrosshairROI((0, 0), parent=imageview.view)
     imageview.view.addItem(roi)
 
     imageview.show()
+
+    iv2 = pg.ImageView()
+    iv2.show()
+
+
+    def show_labels():
+        iv2.setImage(roi.getLabelArray(data, imageview.imageItem))
+
+
+    roi.sigRegionChanged.connect(show_labels)
     qapp.exec_()
