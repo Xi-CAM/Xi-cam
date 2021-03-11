@@ -180,10 +180,15 @@ class EnsembleModel(TreeModel):
     def append_to_catalog(self, catalog: BlueskyRun, intent: Intent):
         catalog_item = self.catalog_item_from_catalog(catalog)
         if catalog_item is not None:
+            ensemble_item = catalog_item.parent()
+            ensemble_index = self.index(ensemble_item.row(), 0)
+            catalog_index = self.index(catalog_item.row(), 0, ensemble_index)
             end_row = catalog_item.childCount()
-            self.beginInsertRows(self.index(catalog_item.row(), 0), end_row, end_row + 1)
+            self.beginInsertRows(catalog_index, end_row, end_row + 1)
             self._create_intent_item(catalog_item, intent)
             self.endInsertRows()
+
+            self.setData(catalog_index.child(end_row, 0), Qt.Checked, Qt.CheckStateRole)
         else:
             raise ValueError(f"Catalog does not exist in model: {catalog}")
 
