@@ -3,6 +3,7 @@ from pyqtgraph import ROI, PolyLineROI, Point
 from pyqtgraph.graphicsItems.ROI import Handle, RectROI, LineROI
 from qtpy.QtCore import QRectF, QPointF, Qt, Signal, QSize
 from qtpy.QtGui import QColor, QPainter, QPainterPath, QBrush, QPainterPathStroker, QCursor
+from qtpy.QtWidgets import QAction, QVBoxLayout, QWidget
 import numpy as np
 from itertools import count
 from xicam.plugins import OperationPlugin
@@ -777,7 +778,7 @@ class SegmentedRectROI(BetterRectROI):
 
 
 if __name__ == "__main__":
-    from qtpy.QtWidgets import QApplication, QMenu, QAction, QLabel, QVBoxLayout, QWidget, QAbstractScrollArea
+    from qtpy.QtWidgets import QApplication, QMenu, QLabel, QVBoxLayout, QAbstractScrollArea
 
     qapp = QApplication([])
     import pyqtgraph as pg
