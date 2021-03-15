@@ -48,6 +48,7 @@ Developer Documentation
    entry-points
    operation-plugin
    workflow
+   ingestors
    resources
 
 

@@ -96,7 +96,7 @@ class ImageIntentCanvas(XicamIntentCanvas):
         if isinstance(intent, ROIIntent):
             self.canvas_widget.view.addItem(intent.roi)
         else:
-            self.canvas_widget.setImage(np.asarray(intent.image).squeeze(), **kwargs)
+            self.canvas_widget.setImage(intent.image.squeeze(), **kwargs)
             self._primary_intent = intent
 
     def unrender(self, intent) -> bool:
