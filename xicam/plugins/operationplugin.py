@@ -690,7 +690,7 @@ def intent(intent_type: Type[Intent], name="", output_map={}, *args, **kwargs):
     return decorator
 
 
-def input_names(*names):
+def input_names(*names: str):
     """Decorator to define input names for the operation.
 
     The number of names provided must match the number of arguments for the operation/function.
@@ -716,7 +716,7 @@ def input_names(*names):
     return decorator
 
 
-def output_names(*names):
+def output_names(*names: str):
     """Decorator to define the names of the outputs for an operation.
 
     Defines N-number of output names. These names will be used (in-order)
