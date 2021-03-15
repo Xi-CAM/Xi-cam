@@ -78,7 +78,7 @@ class ImageIntentCanvas(XicamIntentCanvas, QWidget):
                 kwargs[key] = np.asanyarray(value).squeeze()
 
         # TODO: add rendering logic for ROI intents
-        self.canvas_widget.setImage(np.asarray(intent.image).squeeze(), **kwargs)
+        self.canvas_widget.setImage(intent.image.squeeze(), **kwargs)
 
     def unrender(self, intent) -> bool:
         ...
