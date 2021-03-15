@@ -893,7 +893,7 @@ def describe_output(arg_name: str, description: str):
     return _describe_arg('output', arg_name, description)
 
 
-def categories(*categories: Tuple[Union[tuple, str]]):
+def categories(*categories: Union[tuple, str]):
     """Decorator to assign categories to a operation.
 
     These categories will be used to populate the structure of Xi-cam's menus of `OperationPlugins`.
