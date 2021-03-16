@@ -3,7 +3,7 @@ from pyqtgraph import ROI, PolyLineROI, Point
 from pyqtgraph.graphicsItems.ROI import Handle, RectROI, LineROI
 from qtpy.QtCore import QRectF, QPointF, Qt, Signal, QSize
 from qtpy.QtGui import QColor, QPainter, QPainterPath, QBrush, QPainterPathStroker, QCursor
-from qtpy.QtWidgets import QAction, QVBoxLayout, QWidget
+from qtpy.QtWidgets import QAction, QVBoxLayout, QWidget, QMenu
 import numpy as np
 from itertools import count
 from xicam.plugins import OperationPlugin
@@ -84,15 +84,22 @@ class WorkflowableROI(ROI):
 
     def getMenu(self):
         if self.menu is None:
-            self.menu = super(WorkflowableROI, self).getMenu()
+            self.menu = QMenu()
+            self.menu.setTitle("ROI")
+            if self.removable:  # FIXME: if the removable attr is changed, the menu will not react and remAct won't show
+                remAct = QAction("Remove ROI", self.menu)
+                remAct.triggered.connect(self.removeClicked)
+                self.menu.addAction(remAct)
+                self.menu.remAct = remAct
             editAct = QAction("Edit ROI", self.menu)
             editAct.triggered.connect(self.edit_parameters)
             self.menu.addAction(editAct)
             self.menu.editAct = editAct
-        # ROI menu may be requested when showing the handle context menu, so
-        # return the menu but disable it if the ROI isn't removable
-        self.menu.setEnabled(self.contextMenuEnabled())
+        self.menu.setEnabled(True)
         return self.menu
+
+    def contextMenuEnabled(self):
+        return True
 
     def edit_parameters(self):
         class DefocusParameterTree(QWidget):
@@ -125,10 +132,8 @@ class BetterROI(WorkflowableROI):
     roi_count = count(0)
     index = None
 
-    def __init__(self, *args, removable=True, **kwargs):
-        # FIXME: TEMPORARY -- make ROIs removable again.
-        #  Temporarily not removable since we need to explore interactive canvas, workflow, and operation management
-        super(BetterROI, self).__init__(*args, removable=False, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super(BetterROI, self).__init__(*args, **kwargs)
         # # BetterROI removable by default
         # super(BetterROI, self).__init__(*args, removable=removable, **kwargs)
         self.index = next(self.roi_count)
@@ -289,12 +294,10 @@ class ArcROI(BetterROI):
 
         self.startangle = 30
         self.arclength = 120
+        self.radius_name = 'Radius'
+        self.radius_units = 'px'
 
         self.aspectLocked = True
-        self.translatable = False
-        self.translateSnap = False
-        self.removable = True
-
         self.center = center
 
         # only these values are in external space, others are internal (-.5,.5)
@@ -446,10 +449,13 @@ class ArcROI(BetterROI):
                 name="Arc ROI",
                 children=[
                     parameterTypes.SimpleParameter(
-                        title="Q Minimum", name="innerradius", value=self.innerradius, type="float", units="Å⁻¹"
+                        title=f"{self.radius_name} Minimum", name="innerradius", value=self.innerradius, type="float",
+                        units=self.radius_units, min=0
+                        # "Å⁻¹"
                     ),
                     parameterTypes.SimpleParameter(
-                        title="Q Maximum", name="outerradius", value=self.outerradius, type="float", units="Å⁻¹"
+                        title=f"{self.radius_name} Maximum", name="outerradius", value=self.outerradius, type="float",
+                        units=self.radius_units, min=0
                     ),
                     parameterTypes.SimpleParameter(
                         title="χ Width", name="thetawidth", value=self.thetawidth, type="float", units="°"
@@ -469,6 +475,10 @@ class ArcROI(BetterROI):
         self.parameter().child("outerradius").setValue(self.outerradius)
         self.parameter().child("thetawidth").setValue(self.thetawidth)
         self.parameter().child("thetacenter").setValue(self.thetacenter)
+
+
+class ArcQRoi(ArcROI):
+    ...
 
 
 class SegmentedArcROI(ArcROI):
@@ -555,13 +565,16 @@ class SegmentedArcROI(ArcROI):
                         title="χ Segments", name="segments_angular", value=self.segments_angular, type="int", min=1
                     ),
                     parameterTypes.SimpleParameter(
-                        title="Q segments", name="segments_radial", value=self.segments_radial, type="int", min=1
+                        title=f"{self.radius_name} segments", name="segments_radial", value=self.segments_radial,
+                        type="int", min=1
                     ),
                     parameterTypes.SimpleParameter(
-                        title="Q Minimum", name="innerradius", value=self.innerradius, type="float", units="Å⁻¹"
+                        title=f"{self.radius_name} Minimum", name="innerradius", value=self.innerradius, type="float",
+                        units=self.radius_units, min=0
                     ),
                     parameterTypes.SimpleParameter(
-                        title="Q Maximum", name="outerradius", value=self.outerradius, type="float", units="Å⁻¹"
+                        title=f"{self.radius_name} Maximum", name="outerradius", value=self.outerradius, type="float",
+                        units=self.radius_units, min=0
                     ),
                     parameterTypes.SimpleParameter(
                         title="χ Width", name="thetawidth", value=self.thetawidth, type="float", units="°"
@@ -778,7 +791,7 @@ class SegmentedRectROI(BetterRectROI):
 
 
 if __name__ == "__main__":
-    from qtpy.QtWidgets import QApplication, QMenu, QLabel, QVBoxLayout, QAbstractScrollArea
+    from qtpy.QtWidgets import QApplication, QLabel, QVBoxLayout, QAbstractScrollArea
 
     qapp = QApplication([])
     import pyqtgraph as pg
