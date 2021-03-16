@@ -16,7 +16,8 @@ from xicam.core.data.bluesky_utils import fields_from_stream, streams_from_run, 
 from xicam.gui.actions import ROIAction
 from xicam.gui.widgets.elidedlabel import ElidedLabel
 from xicam.gui.static import path
-from xicam.gui.widgets.ROI import BetterPolyLineROI, BetterCrosshairROI, BetterRectROI, ArcROI, SegmentedArcROI
+from xicam.gui.widgets.ROI import BetterPolyLineROI, BetterCrosshairROI, BetterRectROI, ArcROI, SegmentedArcROI, \
+    SegmentedRectROI
 import enum
 from typing import Callable
 from functools import partial
@@ -1092,13 +1093,15 @@ class ROICreator(ToolbarLayout):
         self.combobox.addItem(get_icon("icons/roi_arc.png"),
                               "Arc ROI",
                               partial(self._create_roi_action, self._create_arc_roi))
-        # FIXME: add segmented arc roi png
-        self.combobox.addItem(get_icon("icons/segmented_arc.png"),
+        self.combobox.addItem(get_icon("icons/roi_segmented_arc.png"),
                               "Segmented Arc ROI",
                               partial(self._create_roi_action, self._create_segmented_arc_roi))
         self.combobox.addItem(get_icon("icons/roi_rect.png"),
                               "Rectangle ROI",
                               partial(self._create_roi_action, self._create_rect_roi))
+        self.combobox.addItem(get_icon("icons/roi_rect_segmented.png"),
+                              "Segmented Rectangle ROI",
+                              partial(self._create_roi_action, self._create_segmented_rect_roi))
 
         self.combobox.activated.connect(self._roi_activated)
         self.toolbar.addWidget(self.combobox)
@@ -1115,7 +1118,7 @@ class ROICreator(ToolbarLayout):
         if self._geometry is not None:
             fit = self._geometry.getFit2D()
             c = (fit['centerX'], self._geometry.detector.shape[0] - fit['centerY'])
-        return ArcROI(center=c, radius=r)
+        return ArcROI(center=c, radius=r, removable=False, movable=(self._geometry is not None))
 
     def _create_segmented_arc_roi(self):
         # FIXME: code duplication
@@ -1124,11 +1127,15 @@ class ROICreator(ToolbarLayout):
         if self._geometry is not None:
             fit = self._geometry.getFit2D()
             c = (fit['centerX'], self._geometry.detector.shape[0] - fit['centerY'])
-        return SegmentedArcROI(center=c, radius=r)
+        return SegmentedArcROI(center=c, radius=r, removable=False, movable=(self._geometry is not None))
 
     def _create_rect_roi(self):
         rect = self._bounding_rect()
-        return BetterRectROI(rect.topLeft(), rect.size())
+        return BetterRectROI(rect.topLeft(), rect.size(), removable=False)
+
+    def _create_segmented_rect_roi(self):
+        rect = self._bounding_rect()
+        return SegmentedRectROI(rect.topLeft(), rect.size(), removable=False)
 
     def _create_roi_action(self, roi_creator):
         roi_action = ROIAction(roi_creator())
