@@ -1118,7 +1118,7 @@ class ROICreator(ToolbarLayout):
         if self._geometry is not None:
             fit = self._geometry.getFit2D()
             c = (fit['centerX'], self._geometry.detector.shape[0] - fit['centerY'])
-        return ArcROI(center=c, radius=r, removable=False, movable=(self._geometry is not None))
+        return ArcROI(center=c, radius=r, removable=False, movable=(self._geometry is None))
 
     def _create_segmented_arc_roi(self):
         # FIXME: code duplication
@@ -1127,7 +1127,7 @@ class ROICreator(ToolbarLayout):
         if self._geometry is not None:
             fit = self._geometry.getFit2D()
             c = (fit['centerX'], self._geometry.detector.shape[0] - fit['centerY'])
-        return SegmentedArcROI(center=c, radius=r, removable=False, movable=(self._geometry is not None))
+        return SegmentedArcROI(center=c, radius=r, removable=False, movable=(self._geometry is None))
 
     def _create_rect_roi(self):
         rect = self._bounding_rect()
