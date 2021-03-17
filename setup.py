@@ -119,6 +119,7 @@ setup(
     entry_points={
         "gui_scripts": ["xicam=xicam.run_xicam:main"],
         "xicam.plugins.DataHandlerPlugin": ["npy = xicam.core.formats.NPYPlugin:NPYPlugin"],
+        "databroker.ingestors": ["application/x-npy = xicam.core.formats.NPYPlugin:ingest_npy"],
         "xicam.plugins.PluginType": [
             "CatalogPlugin = xicam.plugins.catalogplugin:CatalogPlugin",
             "ControllerPlugin = xicam.plugins.controllerplugin:ControllerPlugin",
