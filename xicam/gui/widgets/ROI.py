@@ -525,10 +525,7 @@ class SegmentedArcROI(ArcROI):
                 p.drawLine(segment_vector * self.innerradius / self.outerradius / 2, segment_vector / 2)
 
     def getLabelArray(self, arr, img: pg.ImageItem = None):
-        w = arr.shape[0]
-        h = arr.shape[1]
-
-        labels = np.zeros_like(arr)
+        labels = np.zeros(arr.shape[-2:])
 
         centerangle = -self.outerhandle.pos().angle(Point(0, 1))
         startangle = centerangle - self.thetawidth / 2
@@ -551,7 +548,7 @@ class SegmentedArcROI(ArcROI):
                         np.arctan2(y - self.center[1], x - self.center[0])) - start_angle) % 360 >= 0)
                                  & ((np.degrees(np.arctan2(y - self.center[1], x - self.center[
                         0])) - start_angle) % 360 <= end_angle - start_angle),
-                    (w, h), )
+                    arr.shape[-2:], )
                 labels[mask] = i * self.segments_radial + j + 1
 
         return labels
