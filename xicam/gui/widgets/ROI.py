@@ -285,9 +285,9 @@ class ArcROI(BetterROI):
 
     """
 
-    def __init__(self, center, radius, **kwargs):
+    def __init__(self, pos, radius, **kwargs):
         # QtGui.QGraphicsRectItem.__init__(self, 0, 0, size[0], size[1])
-        r = QCircRectF(center, radius)
+        r = QCircRectF(pos, radius)
         super(ArcROI, self).__init__(r.center, radius, **kwargs)
         # self.addRotateHandle([1.0, 0.5], [0.5, 0.5])
         # self.addScaleHandle([0.5*2.**-0.5 + 0.5, 0.5*2.**-0.5 + 0.5], [0.5, 0.5])
@@ -298,7 +298,6 @@ class ArcROI(BetterROI):
         self.radius_units = 'px'
 
         self.aspectLocked = True
-        self.center = center
 
         # only these values are in external space, others are internal (-.5,.5)
         self.innerradius = 0.5 * radius
@@ -416,11 +415,14 @@ class ArcROI(BetterROI):
         # generate an ellipsoidal mask
         mask = np.fromfunction(
             lambda x, y: (
-                self.innerhandle.pos().length() < ((x - self.center[0]) ** 2.0 + (y - self.center[1]) ** 2.0) ** 0.5
-            )
-            & (((x - self.center[0]) ** 2.0 + (y - self.center[1]) ** 2.0) ** 0.5 < self.outerhandle.pos().length())
-            & ((np.degrees(np.arctan2(y - self.center[1], x - self.center[0])) - startangle) % 360 > 0)
-            & ((np.degrees(np.arctan2(y - self.center[1], x - self.center[0])) - startangle) % 360 < self.thetawidth),
+                                 self.innerhandle.pos().length() < (
+                                     (x - self.pos().y()) ** 2.0 + (y - self.pos().x()) ** 2.0) ** 0.5
+                         )
+                         & (((x - self.pos().y()) ** 2.0 + (
+                        y - self.pos().x()) ** 2.0) ** 0.5 < self.outerhandle.pos().length())
+                         & ((np.degrees(np.arctan2(y - self.pos().x(), x - self.pos().y())) - startangle) % 360 > 0)
+                         & ((np.degrees(
+                np.arctan2(y - self.pos().x(), x - self.pos().y())) - startangle) % 360 < self.thetawidth),
             (w, h),
         )
 
@@ -487,11 +489,11 @@ class SegmentedArcROI(ArcROI):
 
     """
 
-    def __init__(self, center, radius, **kwargs):
+    def __init__(self, pos, radius, **kwargs):
         # QtGui.QGraphicsRectItem.__init__(self, 0, 0, size[0], size[1])
         self.segments_radial = 3
         self.segments_angular = 3
-        super(SegmentedArcROI, self).__init__(center, radius, **kwargs)
+        super(SegmentedArcROI, self).__init__(pos, radius, **kwargs)
 
     def paint(self, p, opt, widget):
         super(SegmentedArcROI, self).paint(p, opt, widget)
@@ -542,12 +544,12 @@ class SegmentedArcROI(ArcROI):
             for j, (start_angle, end_angle) in enumerate(zip(start_angles, end_angles)):
                 # generate an ellipsoidal mask
                 mask = np.fromfunction(
-                    lambda x, y: (start_radius <= ((x - self.center[0]) ** 2.0 + (y - self.center[1]) ** 2.0) ** 0.5)
-                                 & (((x - self.center[0]) ** 2.0 + (y - self.center[1]) ** 2.0) ** 0.5 <= end_radius)
+                    lambda x, y: (start_radius <= ((x - self.pos().y()) ** 2.0 + (y - self.pos().x()) ** 2.0) ** 0.5)
+                                 & (((x - self.pos().y()) ** 2.0 + (y - self.pos().x()) ** 2.0) ** 0.5 <= end_radius)
                                  & ((np.degrees(
-                        np.arctan2(y - self.center[1], x - self.center[0])) - start_angle) % 360 >= 0)
-                                 & ((np.degrees(np.arctan2(y - self.center[1], x - self.center[
-                        0])) - start_angle) % 360 <= end_angle - start_angle),
+                        np.arctan2(y - self.pos().x(), x - self.pos().y())) - start_angle) % 360 >= 0)
+                                 & ((np.degrees(np.arctan2(y - self.pos().x(),
+                                                           x - self.pos().y())) - start_angle) % 360 <= end_angle - start_angle),
                     arr.shape[-2:], )
                 labels[mask] = i * self.segments_radial + j + 1
 
@@ -798,7 +800,7 @@ if __name__ == "__main__":
     data = np.random.random((100, 100))
     imageview.setImage(data)
 
-    roi = SegmentedArcROI(center=(50, 50), radius=50)
+    roi = ArcROI(pos=(50, 50), radius=50)
     # roi = BetterCrosshairROI((0, 0), parent=imageview.view)
     imageview.view.addItem(roi)
 

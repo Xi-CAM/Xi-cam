@@ -56,6 +56,7 @@ class DisplayMode(enum.Enum):
     remesh = enum.auto()
 
 
+@live_plugin('ImageMixinPlugin')
 class RowMajor(ImageView):
     def __init__(self, *args, **kwargs):
         super(RowMajor, self).__init__(*args, **kwargs)
@@ -159,6 +160,7 @@ class ExportButton(BetterLayout):
         self.exportBtn.clicked.connect(self.export)
 
 
+@live_plugin('ImageMixinPlugin')
 class XArrayView(ImageView):
     def __init__(self, *args, **kwargs):
         # Add axes
@@ -1118,7 +1120,7 @@ class ROICreator(ToolbarLayout):
         if self._geometry is not None:
             fit = self._geometry.getFit2D()
             c = (fit['centerX'], self._geometry.detector.shape[0] - fit['centerY'])
-        return ArcROI(center=c, radius=r, removable=False, movable=(self._geometry is None))
+        return ArcROI(pos=c, radius=r, removable=False, movable=(self._geometry is None))
 
     def _create_segmented_arc_roi(self):
         # FIXME: code duplication
@@ -1127,7 +1129,7 @@ class ROICreator(ToolbarLayout):
         if self._geometry is not None:
             fit = self._geometry.getFit2D()
             c = (fit['centerX'], self._geometry.detector.shape[0] - fit['centerY'])
-        return SegmentedArcROI(center=c, radius=r, removable=False, movable=(self._geometry is None))
+        return SegmentedArcROI(pos=c, radius=r, removable=False, movable=(self._geometry is None))
 
     def _create_rect_roi(self):
         rect = self._bounding_rect()
