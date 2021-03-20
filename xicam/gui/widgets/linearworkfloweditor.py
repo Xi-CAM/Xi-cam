@@ -80,7 +80,6 @@ class WorkflowEditor(QSplitter):
 
         """
         super(WorkflowEditor, self).__init__()
-        self._workflow = workflow
         if workflows is None:
             workflows = WorkflowDict()
         if workflow not in workflows:
@@ -107,7 +106,7 @@ class WorkflowEditor(QSplitter):
 
         self.workflowview.sigShowParameter.connect(self.setParameters)
 
-        self._workflow.attach(self.sigWorkflowChanged.emit)
+        self.workflow.attach(self.sigWorkflowChanged.emit)
 
         # rebind widget attrs
         self.addWorkflow = self.workflow_widget.addWorkflow
@@ -116,14 +115,13 @@ class WorkflowEditor(QSplitter):
 
     @property
     def workflow(self):
-        return self._workflow
+        return self.workflowview.model().workflow
 
     @workflow.setter
     def workflow(self, new_workflow: Workflow):
-        self._workflow.detach(self.sigWorkflowChanged.emit)
-        self._workflow = new_workflow
-        self._workflow.attach(self.sigWorkflowChanged.emit)
-
+        self.workflow.detach(self.sigWorkflowChanged.emit)
+        self.workflowview.model().workflow = new_workflow
+        self.workflow.attach(self.sigWorkflowChanged.emit)
 
     def run_workflow(self, **kwargs):
         mixed_kwargs = self.kwargs.copy()
