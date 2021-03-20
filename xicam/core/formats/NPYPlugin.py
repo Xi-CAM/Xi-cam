@@ -11,14 +11,13 @@ def ingest_npy(paths):
     d = np.load(paths[0], allow_pickle=True)
     data_keys = {'image': {'source': paths[0],
                            'dtype': 'array',
-                           'shape': d.shape,
-                           'dims': ('dim_0', 'dim_1')}}
+                           'shape': d.shape}}
 
     with RunBuilder() as builder:
         builder.add_stream("primary",
                            # NOTE: Put data in list, since Runbuilder.add_stream expects
                            # a sequence number to add event_page
-                           data={'image': d},
+                           data={'image': [d]},
                            data_keys=data_keys
                            )
 
