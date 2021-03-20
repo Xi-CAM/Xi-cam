@@ -67,6 +67,13 @@ class PlotIntent(Intent):
         return self._canvas_name
 
 
+class ScatterIntent(PlotIntent):
+    """
+    For reference on kwargs, see
+    https://pyqtgraph.readthedocs.io/en/latest/graphicsItems/scatterplotitem.html
+    """
+
+
 class ErrorBarIntent(PlotIntent):
     """
     For reference on kwargs, see

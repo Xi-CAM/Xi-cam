@@ -169,7 +169,8 @@ setup(
             "ImageIntent = xicam.core.intents:ImageIntent",
             "ErrorBarIntent = xicam.core.intents:ErrorBarIntent",
             "BarIntent = xicam.core.intents:BarIntent",
-            "PairPlotIntent = xicam.core.intents:PairPlotIntent"
+            "PairPlotIntent = xicam.core.intents:PairPlotIntent",
+            "ScatterIntent = xicam.core.intents:ScatterIntent",
         ],
     },
     ext_modules=[],

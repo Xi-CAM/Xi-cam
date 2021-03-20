@@ -3,7 +3,7 @@ from copy import copy
 from typing import List
 
 import numpy as np
-from pyqtgraph import ImageView, PlotWidget, ErrorBarItem
+from pyqtgraph import ImageView, PlotWidget, ErrorBarItem, ScatterPlotItem
 import pyqtgraph as pg
 from qtpy.QtCore import Signal
 from qtpy.QtWidgets import QWidget, QComboBox, QVBoxLayout
@@ -11,7 +11,7 @@ from qtpy.QtWidgets import QWidget, QComboBox, QVBoxLayout
 from matplotlib import pyplot as plt
 from xarray import DataArray
 
-from xicam.core.intents import PlotIntent, ErrorBarIntent, BarIntent, PairPlotIntent, ROIIntent
+from xicam.core.intents import PlotIntent, ErrorBarIntent, BarIntent, PairPlotIntent, ROIIntent, ScatterIntent
 from xicam.gui.actions import Action
 from xicam.plugins import manager as plugin_manager
 
@@ -83,9 +83,9 @@ class ImageIntentCanvas(XicamIntentCanvas):
             bases_names = getattr(intent, "mixins", None) or tuple()
             if mixins:
                 bases_names += tuple(mixins)
-            # Place in set to remove duplicates
-            bases = set(map(lambda name: plugin_manager.type_mapping['ImageMixinPlugin'][name], bases_names))
-            self.canvas_widget = type('ImageViewBlend', (*bases, ImageView), {})(**constructor_kwargs)
+            # Place in dict to remove duplicates
+            bases = dict(map(lambda name: (plugin_manager.type_mapping['ImageMixinPlugin'][name], 0), bases_names))
+            self.canvas_widget = type('ImageViewBlend', (*bases.keys(), ImageView), {})(**constructor_kwargs)
             self.layout().addWidget(self.canvas_widget)
             self.canvas_widget.imageItem.setOpts(imageAxisOrder='row-major')
 
@@ -140,13 +140,13 @@ class PlotIntentCanvas(XicamIntentCanvas):
 
         items = []
 
-        if isinstance(intent, (PlotIntent, ErrorBarIntent)):
+        if isinstance(intent, (PlotIntent, ErrorBarIntent, ScatterIntent)):
             x = intent.x
             if intent.x is not None:
                 x = np.asarray(intent.x).squeeze()
 
             ys = np.asarray(intent.y).squeeze()
-            if ys.ndim==1:
+            if ys.ndim == 1:
                 ys = [ys]
                 multicurves = False
             else:
@@ -155,10 +155,14 @@ class PlotIntentCanvas(XicamIntentCanvas):
             for i in range(len(ys)):
                 name = intent.name
                 if multicurves:
-                    name += f' {i+1}'
+                    name += f' {i + 1}'
 
-                plotitem = self.canvas_widget.plot(x=x, y=ys[i], name=name)
-                items.append(plotitem)
+                if isinstance(intent, ScatterIntent):
+                    item = ScatterPlotItem(x=x, y=ys[i], name=name)
+                    self.canvas_widget.plotItem.addItem(item)
+                elif isinstance(intent, (PlotIntent, ErrorBarIntent)):
+                    item = self.canvas_widget.plot(x=x, y=ys[i], name=name)
+                items.append(item)
 
             # Use most recent intent's log mode for the canvas's log mode
             x_log_mode = intent.kwargs.get("xLogMode", self.canvas_widget.plotItem.getAxis("bottom").logMode)
