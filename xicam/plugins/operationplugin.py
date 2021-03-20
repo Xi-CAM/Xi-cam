@@ -83,6 +83,8 @@ class _OperationDict(MutableMapping):
                         group_parameter.child(key).setOpts(**{self._opts_key: value})
                         # group_parameter.child(key).setValue(value,
                         #                                     blockSignal=self._operation._set_value)
+                    except KeyError as e:
+                        pass
                     except Exception as e:
                         msg.logError(e)
 
