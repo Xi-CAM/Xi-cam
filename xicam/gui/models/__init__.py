@@ -104,9 +104,7 @@ class EnsembleModel(TreeModel):
                     return catalog_index.internalPointer()
         return None
 
-
-    def _set_active_brushes(self, index, is_active):
-        brush = text_brush = self.data(index, Qt.BackgroundRole) or QBrush()
+    def _set_active_data(self, index, is_active):
         font = self.data(index, Qt.FontRole) or QFont()
         if is_active is True:
             if self.active_ensemble is not None:
@@ -121,6 +119,7 @@ class EnsembleModel(TreeModel):
             font.setBold(True)
         else:
             self.active_ensemble = None
+            self._update_title(self.NO_ACTIVE_ENSEMBLE_TEXT)
             brush = QBrush()
             text_brush = QBrush()
             font.setBold(False)
@@ -133,7 +132,7 @@ class EnsembleModel(TreeModel):
             return False
 
         if role == self.active_role:
-            self._set_active_brushes(index, value)
+            self._set_active_data(index, value)
 
         elif role == Qt.DisplayRole:
             # Intercept display text changes for ensembles (i.e. renaming) so we can update the title
@@ -281,6 +280,14 @@ class EnsembleModel(TreeModel):
 
         else:
             return super(EnsembleModel, self).data(index, role)
+
+    def removeRows(self, row: int, count: int, parent: QModelIndex = QModelIndex()):
+        # Unset the active ensemble when removing the active ensemble
+        index = self.index(row, 0, parent)
+        if self.getItem(index) is self.active_ensemble:
+            self.setData(index, False, self.active_role)
+
+        return super(EnsembleModel, self).removeRows(row, count, parent)
 
 
 class IntentsModel(QAbstractItemModel):

@@ -56,7 +56,8 @@ class TreeItem:
             return False
 
         for child in range(row, row + count):
-            self.childItems.pop(child)
+            c = self.childItems.pop(child)
+            c.removeChildren(0, c.childCount())
 
         return True
 
