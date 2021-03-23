@@ -269,6 +269,9 @@ class TreeModel(QAbstractItemModel):
                 highest_parent_index = highest_parent_index.parent()
 
             def find_lowest_index(idx):
+                if not idx.isValid():
+                    return idx
+
                 itm = self.getItem(idx)
                 if itm.hasChildren():
                     lowest_child_index = self.index(item.childCount() - 1, 0, idx)

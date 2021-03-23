@@ -192,17 +192,34 @@ class EnsembleModel(TreeModel):
         else:
             raise ValueError(f"Catalog does not exist in model: {catalog}")
 
-    def append_to_ensemble(self, catalog, ensemble, projectors: List[Callable[[BlueskyRun], List[Intent]]]):
+    def append_to_ensemble(self, catalog, ensemble_item, projectors: List[Callable[[BlueskyRun], List[Intent]]]):
         # Find the active ensemble (may be none if ensemble model is empty)
-        ensemble_item = self.active_ensemble
+        if ensemble_item is None:
+            ensemble_item = self.active_ensemble
+
+        # Create new ensemble if now active ensemble
+        if ensemble_item is None:
+            ensemble = Ensemble()
+            ensemble_item = self.add_ensemble(ensemble, projectors)
+
+        # Add catalogs / intents
         if ensemble_item is not None:
             end_row = ensemble_item.childCount()
             # Use begin/end to notify views (e.g. dataselectorview) that it needs to update view after item is inserted
             self.beginInsertRows(self.index(ensemble_item.row(), 0), end_row, end_row+1)
             self._create_catalog_item(ensemble_item, catalog, projectors)
             self.endInsertRows()
-        else:
-            self.add_ensemble(ensemble, projectors)
+
+            # Set check state on for first intent in the newly created catalog item
+            #  (this will automatically check appropriate items and refresh canvas view)
+            ensemble_index = self.index(ensemble_item.row(), 0)
+            if ensemble_index.isValid():
+                catalog_index = self.index(ensemble_index.internalPointer().childCount() - 1, 0, ensemble_index)
+                if catalog_index.isValid():
+                    i = self.index(0, 0, catalog_index)
+                    self.setData(i, Qt.Checked, Qt.CheckStateRole)
+
+            self.layoutChanged.emit()
 
     def add_ensemble(self, ensemble: Ensemble, projectors: List[Callable[[BlueskyRun], List[Intent]]]):
         """Add an ensemble to the model.
@@ -220,11 +237,15 @@ class EnsembleModel(TreeModel):
         for catalog in ensemble.catalogs:
             self._create_catalog_item(ensemble_item, catalog, projectors)
 
+        self.beginInsertRows(QModelIndex(), self.rootItem.childCount(), self.rootItem.childCount() + 1)
         self.rootItem.appendChild(ensemble_item)
+        self.endInsertRows()
         # First ensemble should be activated; others not
         if self.rowCount() == 1:
             self.setData(self.index(ensemble_item.row(), 0), True, self.active_role)
         self.layoutChanged.emit()  # inform any attached views that they need to update
+
+        return ensemble_item
 
     def remove_ensemble(self, ensemble):
         # TODO

@@ -480,6 +480,17 @@ class DataSelectorView(QTreeView):
 
         self.setAnimated(True)
 
+    def setModel(self, model):
+        try:
+            self.model().rowsInserted.disconnect(self._expand_rows)
+        except Exception:
+            ...
+        super(DataSelectorView, self).setModel(model)
+        self.model().rowsInserted.connect(self._expand_rows)
+
+    def _expand_rows(self, parent: QModelIndex, first: int, last: int):
+        self.expandRecursively(parent)
+
     def _rename_action(self, _):
         # Request editor (see the delegate created in the constructor) to change the ensemble's name
         self.edit(self.currentIndex())
