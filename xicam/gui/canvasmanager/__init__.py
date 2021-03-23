@@ -48,10 +48,15 @@ class XicamCanvasManager(CanvasManager):
         return canvas
 
     def drop_canvas(self, key: QModelIndex):
-        intent = key.data(EnsembleModel.object_role)
+        # TODO: do we use this anywhere?
+        return
+        intent = key.data(IntentsModel.intent_role)
         canvas = key.data(EnsembleModel.canvas_role)
         if canvas:
-            drop_completely = canvas.unrender(intent)
+            canvas_can_be_removed = canvas.unrender(intent)
+            if canvas_can_be_removed:
+                key.model().removeRow(key.row(), key.parent())
+                key.model().layoutChanged.emit()
 
     def canvas_from_row(self, row: int, model, parent_index=QModelIndex()):
         # TODO: model.index v. model.sourceModel().index (i.e. should this only be Proxy Model, or EnsembleModel, or both)?

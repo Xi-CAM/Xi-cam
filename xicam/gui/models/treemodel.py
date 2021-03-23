@@ -51,6 +51,15 @@ class TreeItem:
     def parent(self):  # -> TreeItem
         return self.parentItem
 
+    def removeChildren(self, row: int, count: int) -> bool:
+        if row < 0 or row + count > self.childCount():
+            return False
+
+        for child in range(row, row + count):
+            self.childItems.pop(child)
+
+        return True
+
     def row(self) -> int:
         if self.parentItem:
             return self.parentItem.childItems.index(self)
@@ -291,3 +300,20 @@ class TreeModel(QAbstractItemModel):
 
         else:
             return self._setData(index, value, role)
+
+    def removeRows(self, row: int, count: int, parent: QModelIndex = QModelIndex()) -> bool:
+
+        parent_item = self.getItem(parent)
+        if parent_item is None:
+            return False
+        # beginRemoveRows important for communicating with views (via rowsAboutToBeRemoved sig it emits)
+        #  note: rowsAboutToBeRemoved not being used;
+        #        we are using this dataChanged -> IntentsModel.dataChanged -> CanvasView.dataChanged
+        self.beginRemoveRows(parent, row, row + count - 1)
+        removed = parent_item.removeChildren(row, count)
+        self.endRemoveRows()
+
+        # TODO: right now, intents are cleared then re-added via IntentsModel and CanvasView,
+        #  so, indexes emitted here aren't important (for now)
+        self.dataChanged.emit(QModelIndex(), QModelIndex(), [Qt.CheckStateRole])
+        return removed

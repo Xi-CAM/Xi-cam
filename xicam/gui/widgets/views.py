@@ -108,8 +108,9 @@ class CanvasView(QAbstractItemView):
     def rowsInserted(self, index: QModelIndex, start, end):
         return
 
-    def rowsAboutToBeRemoved(self, index: QModelIndex, start, end):
-        return
+    def rowsAboutToBeRemoved(self, parent_index: QModelIndex, start, end):
+        """Refresh/close any canvases whose items are being removed."""
+        ... # NOT BEING USED CURRENTLY
 
     def scrollTo(self, QModelIndex, hint=None):
         return
@@ -156,7 +157,6 @@ class StackedCanvasView(CanvasView):
 
     Can be adapted as long as its internal widgets are CanvasDisplayWidgets.
     """
-
     def __init__(self, parent=None, model=None):
         super(StackedCanvasView, self).__init__(parent)
         if model is not None:
@@ -495,6 +495,15 @@ class DataSelectorView(QTreeView):
         # Request editor (see the delegate created in the constructor) to change the ensemble's name
         self.edit(self.currentIndex())
 
+    def _remove_action(self, _):
+        index = self.currentIndex()  # QModelIndex
+        print(f'DataSelectorView remove row: '
+              f'\n\t{index.data(Qt.DisplayRole)}'
+              f'\n\t{index.parent().data(Qt.DisplayRole)}')
+        removed = self.model().removeRow(index.row(), index.parent())
+        # self.model().dataChanged.emit(QModelIndex(), QModelIndex())
+        ...
+
     def _set_active_action(self, checked: bool):
         # Update the model data with the currentIndex corresponding to where the user right-clicked
         # Update the active role based on the value of checked
@@ -505,15 +514,14 @@ class DataSelectorView(QTreeView):
         # TODO: should this be available anywhere in the ensemble ?
         # e.g. if you right-click an intent in this Ensemble, should it still let you edit the Ensemble?
         index = self.indexAt(position)  # type: QModelIndex
+        menu = QMenu(self)
+
         if index.data(EnsembleModel.data_type_role) == WorkspaceDataType.Ensemble:
-            menu = QMenu(self)
 
             # Allow renaming the ensemble via the context menu
             rename_action = QAction("Rename Collection", menu)
             rename_action.triggered.connect(self._rename_action)
             menu.addAction(rename_action)
-
-            menu.addSeparator()
 
             # Allow toggling the active ensemble via the context menu
             # * there can only be at most 1 active ensemble
@@ -536,8 +544,22 @@ class DataSelectorView(QTreeView):
                 toggle_active_action.setEnabled(False)
             menu.addAction(toggle_active_action)
 
-            # Display menu wherever the user right-clicked
-            menu.popup(self.viewport().mapToGlobal(position))
+            menu.addSeparator()
+
+        remove_text = "Remove "
+        data_type_role = index.data(EnsembleModel.data_type_role)
+        if data_type_role == WorkspaceDataType.Ensemble:
+            remove_text += "Ensemble"
+        elif data_type_role == WorkspaceDataType.Catalog:
+            remove_text += "Catalog"
+        elif data_type_role == WorkspaceDataType.Intent:
+            remove_text += "Item"
+        remove_action = QAction(remove_text, menu)
+        remove_action.triggered.connect(self._remove_action)
+        menu.addAction(remove_action)
+
+        # Display menu wherever the user right-clicked
+        menu.popup(self.viewport().mapToGlobal(position))
 
 
 def main():
