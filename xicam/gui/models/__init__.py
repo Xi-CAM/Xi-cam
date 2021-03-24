@@ -27,7 +27,7 @@ class EnsembleModel(TreeModel):
     active_role = Qt.UserRole + 4  # only tied to Ensemble tree items
 
     # Unnamed items (i.e. no display role text) will get this text set
-    _defaultDisplayText = "Untitled"
+    _defaultDisplayText = "Untitled Collection"
     NO_ACTIVE_ENSEMBLE_TEXT = "(None)"
 
     def __init__(self, parent=None):
@@ -119,7 +119,7 @@ class EnsembleModel(TreeModel):
             font.setBold(True)
         else:
             self.active_ensemble = None
-            self._update_title(self.NO_ACTIVE_ENSEMBLE_TEXT)
+            self._update_title(self.active_ensemble_name)
             brush = QBrush()
             text_brush = QBrush()
             font.setBold(False)
@@ -220,11 +220,20 @@ class EnsembleModel(TreeModel):
 
             self.layoutChanged.emit()
 
-    def add_ensemble(self, ensemble: Ensemble, projectors: List[Callable[[BlueskyRun], List[Intent]]]):
+    def add_ensemble(self, ensemble: Ensemble, projectors: List[Callable[[BlueskyRun], List[Intent]]], active=False):
         """Add an ensemble to the model.
 
         Requires a projector, which is a function that accepts a BluesyRun catalog
         and returns a list of Intents.
+
+        Parameters
+        ----------
+        ensemble
+            Ensemble to add. May or may not contain catalogs.
+        projectors
+            List of projection functions to be used for catalogs in the ensemble.
+        active
+            If True, indicates the ensemble being added should be the new active ensemble. (default is False)
         """
         # self.layoutAboutToBeChanged.emit()
         ensemble_item = TreeItem(self.rootItem)
@@ -239,8 +248,8 @@ class EnsembleModel(TreeModel):
         self.beginInsertRows(QModelIndex(), self.rootItem.childCount(), self.rootItem.childCount() + 1)
         self.rootItem.appendChild(ensemble_item)
         self.endInsertRows()
-        # First ensemble should be activated; others not
-        if self.rowCount() == 1:
+        # First ensemble should be activated; others not unless we pass active=True
+        if self.rowCount() == 1 or active:
             self.setData(self.index(ensemble_item.row(), 0), True, self.active_role)
         self.layoutChanged.emit()  # inform any attached views that they need to update
 
