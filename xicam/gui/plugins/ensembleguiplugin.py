@@ -45,16 +45,4 @@ class EnsembleGUIPlugin(GUIPlugin):
         ...
 
     def appendCatalog(self, catalog: BlueskyRun, **kwargs):
-        append = True
-        active_ensemble = self.ensemble_model.active_ensemble
-        if active_ensemble is not None:
-            ensemble = active_ensemble.data(EnsembleModel.object_role)
-        else:
-            # FIXME who controls creating a new vs appending to existing ensemble?
-            ensemble = Ensemble()
-        ensemble.append_catalog(catalog)
-
-        if not append:
-            self.ensemble_model.add_ensemble(ensemble, self._projectors)
-        else:
-            self.ensemble_model.append_to_ensemble(catalog, ensemble, self._projectors)
+        self.ensemble_model.append_to_ensemble(catalog, None, self._projectors)

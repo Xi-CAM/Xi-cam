@@ -100,11 +100,12 @@ class ImageIntentCanvas(XicamIntentCanvas):
             self._primary_intent = intent
 
     def unrender(self, intent) -> bool:
+        """Return True if the canvas can be removed."""
         if self.canvas_widget:
             if isinstance(intent, ROIIntent):
                 self.canvas_widget.view.removeItem(intent.roi)
-                return True
-        return False
+                return False
+        return True
 
 
 class PlotIntentCanvasBlend(CurveLabels):
