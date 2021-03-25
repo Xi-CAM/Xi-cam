@@ -757,10 +757,10 @@ class SegmentedRectROI(BetterRectROI):
             for j in range(self.segments_v):
                 # generate an square max
                 label_mask = np.fromfunction(
-                    lambda x, y: (x + 0.5 > min_x + i * segment_bin_x)
-                    & (x + 0.5 < min_x + (i + 1) * segment_bin_x)
-                    & (y + 0.5 > min_y + j * segment_bin_y)
-                    & (y + 0.5 < min_y + (j + 1) * segment_bin_y),
+                    lambda y, x: (x + 0.5 > min_x + i * segment_bin_x)
+                                 & (x + 0.5 < min_x + (i + 1) * segment_bin_x)
+                                 & (y + 0.5 > min_y + j * segment_bin_y)
+                                 & (y + 0.5 < min_y + (j + 1) * segment_bin_y),
                     (w, h),
                 )
                 mask[label_mask] = 1 + i + j * self.segments_h
@@ -800,7 +800,8 @@ if __name__ == "__main__":
     data = np.random.random((100, 100))
     imageview.setImage(data)
 
-    roi = ArcROI(pos=(50, 50), radius=50)
+    # roi = ArcROI(pos=(50, 50), radius=50)
+    roi = SegmentedRectROI(pos=(0, 0), size=(10, 10))
     # roi = BetterCrosshairROI((0, 0), parent=imageview.view)
     imageview.view.addItem(roi)
 
