@@ -428,6 +428,11 @@ class ArcROI(BetterROI):
 
         return arr * mask
 
+    def getLabelArray(self, arr, img: pg.ImageItem = None):
+        """Return a label array (ones and zeros) for the masked array region defined by the ROI."""
+        masked_arr = self.getArrayRegion(arr, image)
+        return (masked_arr != 0).astype(np.uint8)
+
     def shape(self):
         # (used for hitbox for menu)
 
