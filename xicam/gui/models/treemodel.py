@@ -52,12 +52,12 @@ class TreeItem:
         return self.parentItem
 
     def removeChildren(self, row: int, count: int) -> bool:
+        # Bad remove (out of bounds), return False
         if row < 0 or row + count > self.childCount():
             return False
 
         for child in range(row, row + count):
-            c = self.childItems.pop(child)
-            c.removeChildren(0, c.childCount())
+            del self.childItems[child]
 
         return True
 

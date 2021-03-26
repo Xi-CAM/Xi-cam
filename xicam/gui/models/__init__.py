@@ -183,7 +183,7 @@ class EnsembleModel(TreeModel):
             ensemble_index = self.index(ensemble_item.row(), 0)
             catalog_index = self.index(catalog_item.row(), 0, ensemble_index)
             end_row = catalog_item.childCount()
-            self.beginInsertRows(catalog_index, end_row, end_row + 1)
+            self.beginInsertRows(catalog_index, end_row, end_row)
             self._create_intent_item(catalog_item, intent)
             self.endInsertRows()
 
@@ -209,14 +209,23 @@ class EnsembleModel(TreeModel):
             self._create_catalog_item(ensemble_item, catalog, projectors)
             self.endInsertRows()
 
-            # Set check state on for first intent in the newly created catalog item
-            #  (this will automatically check appropriate items and refresh canvas view)
+            # Set check state Checked for newly created catalog item
+            #  (this will automatically check all intents in the catalog and refresh the canvas views)
             ensemble_index = self.index(ensemble_item.row(), 0)
             if ensemble_index.isValid():
                 catalog_index = self.index(ensemble_index.internalPointer().childCount() - 1, 0, ensemble_index)
                 if catalog_index.isValid():
-                    i = self.index(0, 0, catalog_index)
-                    self.setData(i, Qt.Checked, Qt.CheckStateRole)
+                    self.setData(catalog_index, Qt.Checked, Qt.CheckStateRole)
+
+            # TODO: how do we want to display newly created catalogs (all intents, first intent only...)?
+            # # Set check state on for first intent in the newly created catalog item
+            # #  (this will automatically check appropriate items and refresh canvas view)
+            # ensemble_index = self.index(ensemble_item.row(), 0)
+            # if ensemble_index.isValid():
+            #     catalog_index = self.index(ensemble_index.internalPointer().childCount() - 1, 0, ensemble_index)
+            #     if catalog_index.isValid():
+            #         i = self.index(0, 0, catalog_index)
+            #         self.setData(i, Qt.Checked, Qt.CheckStateRole)
 
             self.layoutChanged.emit()
 
