@@ -406,15 +406,15 @@ class ArcROI(BetterROI):
         Return the result of ROI.getArrayRegion() masked by the arc shape
         of the ROI. Regions outside the arc are set to 0.
         """
-        w = arr.shape[0]
-        h = arr.shape[1]
+        w = arr.shape[-2]
+        h = arr.shape[-1]
 
         centerangle = self.outerhandle.pos().angle(Point(1, 0))
         startangle = centerangle - self.thetawidth / 2
 
         # generate an ellipsoidal mask
         mask = np.fromfunction(
-            lambda x, y: (
+            lambda y, x: (
                                  self.innerhandle.pos().length() < (
                                      (x - self.pos().y()) ** 2.0 + (y - self.pos().x()) ** 2.0) ** 0.5
                          )
@@ -430,7 +430,7 @@ class ArcROI(BetterROI):
 
     def getLabelArray(self, arr, img: pg.ImageItem = None):
         """Return a label array (ones and zeros) for the masked array region defined by the ROI."""
-        masked_arr = self.getArrayRegion(arr, image)
+        masked_arr = self.getArrayRegion(arr, img)
         return (masked_arr != 0).astype(np.uint8)
 
     def shape(self):
@@ -805,8 +805,9 @@ if __name__ == "__main__":
     data = np.random.random((100, 100))
     imageview.setImage(data)
 
-    # roi = ArcROI(pos=(50, 50), radius=50)
-    roi = SegmentedRectROI(pos=(0, 0), size=(10, 10))
+    roi = ArcROI(pos=(50, 50), radius=50)
+    # roi = SegmentedRectROI(pos=(0, 0), size=(10, 10))
+    # roi = SegmentedArcROI(pos=(50,50), radius=50)
     # roi = BetterCrosshairROI((0, 0), parent=imageview.view)
     imageview.view.addItem(roi)
 
