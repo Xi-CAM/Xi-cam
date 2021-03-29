@@ -406,8 +406,10 @@ class PixelCoordinates(PixelSpace, BetterLayout):
     def __init__(self, *args, **kwargs):
         super(PixelCoordinates, self).__init__(*args, **kwargs)
 
+
         self._coordslabel = QLabel(
-            "<div style='font-size:12pt; " "text-overflow: ellipsis; width:100%;'>&nbsp;</div>"
+            "<div style='font-size:12pt; " "text-overflow: ellipsis; width:100%;'>&nbsp;</div>",
+            parent=self
         )
 
         # def sizeHint():
@@ -445,7 +447,7 @@ class PixelCoordinates(PixelSpace, BetterLayout):
             I = 0
 
         self._coordslabel.setText(
-            f"<div style='font-size: 12pt; color:#FFFFFF;"
+            f"<div style='font-size: 12pt;"
             f"text-overflow: ellipsis; width:100%;'>"
             f"x={pxpos.x():0.1f}, "
             f"<span style=''>y={pxpos.y():0.1f}</span>, "
@@ -464,7 +466,7 @@ class QCoordinates(QSpace, PixelCoordinates):
         except IndexError:
             I = 0
         self._coordslabel.setText(
-            f"<div style='font-size: 12pt; color:#FFFFFF; "
+            f"<div style='font-size: 12pt; "
             f"text-overflow: ellipsis; width:100%;'>"
             f"x={pxpos.x():0.1f}, "
             f"<span style=''>y={self.imageItem.image.shape[-2] - pxpos.y():0.1f}</span>, "
