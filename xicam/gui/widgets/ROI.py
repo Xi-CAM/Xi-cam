@@ -129,7 +129,7 @@ class WorkflowableROI(ROI):
 # MIXIN!~
 # Now with 100% more ROI!
 class BetterROI(WorkflowableROI):
-    roi_count = count(0)
+    roi_count = count(1)
     index = None
 
     def __init__(self, *args, **kwargs):
@@ -141,6 +141,11 @@ class BetterROI(WorkflowableROI):
 
         # Remove the roi from the view when requested to be removed
         self.sigRemoveRequested.connect(lambda roi: self._viewBox().removeItem(roi))
+
+        self._name = "ROI"
+
+    def __str__(self):
+        return f"ROI #{self.index} ({self._name})"
 
     def _restyle(self):
         self.currentPen.setWidth(2)
@@ -246,6 +251,8 @@ class BetterCrosshairROI(BetterROI):
         parent.addItem(self._vline)
         parent.getViewBox().addItem(self._hline)
 
+        self._name = "Crosshair ROI"
+
     def translate(self, *args, **kwargs):
         super(BetterCrosshairROI, self).translate(*args, **kwargs)
         self.sigMoved.emit(self.pos())
@@ -312,6 +319,8 @@ class ArcROI(BetterROI):
         self.path = None
         self._param = None  # type: Parameter
         self._restyle()
+
+        self._name = "Arc ROI"
 
     def boundingRect(self):
         size = self.outerradius
@@ -500,6 +509,8 @@ class SegmentedArcROI(ArcROI):
         self.segments_angular = 3
         super(SegmentedArcROI, self).__init__(pos, radius, **kwargs)
 
+        self._name = "Segmented Arc ROI"
+
     def paint(self, p, opt, widget):
         super(SegmentedArcROI, self).paint(p, opt, widget)
 
@@ -600,6 +611,8 @@ class BetterRectROI(BetterROI, RectROI):
         super(BetterRectROI, self).__init__(*args, pen=pen, **kwargs)
         self.handle = self.handles[0]
 
+        self._name = "Rectangle ROI"
+
     def __reduce__(self):
         # FIXME: very simple reduce for allowing copy (to help with weakref management)
         return self.__class__, (self.pos(), self.size())
@@ -657,6 +670,8 @@ class LineROI(BetterROI, LineROI):
     def __init__(self, *args, pen=pg.mkPen(QColor(0, 255, 255)), **kwargs):
         super(LineROI, self).__init__(*args, pen=pen, **kwargs)
         self._update_state()
+
+        self._name = "Line ROI"
 
     def _update_state(self):
         self.width = self.size().y()
@@ -719,6 +734,8 @@ class SegmentedRectROI(BetterRectROI):
         self.segments_h = 2
         self.segments_v = 2
         super(SegmentedRectROI, self).__init__(*args, **kwargs)
+
+        self._name = "Segmented Rectangle ROI"
 
     def parameter(self) -> Parameter:
         if not self._param:
