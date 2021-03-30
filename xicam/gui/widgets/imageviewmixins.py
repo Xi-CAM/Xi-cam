@@ -4,7 +4,7 @@ import pyqtgraph as pg
 from pyqtgraph import ImageView, InfiniteLine, mkPen, ScatterPlotItem, ImageItem, PlotItem
 from qtpy.QtGui import QTransform, QPolygonF, QIcon, QPixmap
 from qtpy.QtWidgets import QLabel, QErrorMessage, QSizePolicy, QPushButton, QHBoxLayout, QVBoxLayout, QComboBox, \
-    QWidget, QToolBar, QActionGroup, QAction
+    QWidget, QToolBar, QActionGroup, QAction, QLayout
 from qtpy.QtCore import Qt, Signal, Slot, QSize, QPointF, QRectF
 import numpy as np
 from databroker.core import BlueskyRun
@@ -406,20 +406,18 @@ class PixelCoordinates(PixelSpace, BetterLayout):
     def __init__(self, *args, **kwargs):
         super(PixelCoordinates, self).__init__(*args, **kwargs)
 
+        self._coordslabel = QLabel(parent=self)
 
-        self._coordslabel = QLabel(
-            "<div style='font-size:12pt; " "text-overflow: ellipsis; width:100%;'>&nbsp;</div>",
-            parent=self
-        )
+        font = self._coordslabel.font()
+        font.setPixelSize(14)
+        self._coordslabel.setFont(font)
 
-        # def sizeHint():
-        #     sizehint = QSize(self.ui.graphicsView.width()-10, self._coordslabel.height())
-        #     return sizehint
-        # self._coordslabel.sizeHint = sizeHint
-        self._coordslabel.setSizePolicy(
-            QSizePolicy.MinimumExpanding, QSizePolicy.Minimum
-        )  # TODO: set sizehint to take from parent, not text
         self.ui.left_layout.addWidget(self._coordslabel, alignment=Qt.AlignHCenter)
+        self.ui.right_layout.setSizeConstraint(QLayout.SetMinAndMaxSize)
+
+        # Accommodate vertical height
+        self._coordslabel.setMinimumSize(self._coordslabel.minimumSize().width(),
+                                         self._coordslabel.minimumHeight() + self._coordslabel.height())
 
         self.scene.sigMouseMoved.connect(self.displayCoordinates)
 
@@ -434,7 +432,7 @@ class PixelCoordinates(PixelSpace, BetterLayout):
 
                 self.formatCoordinates(pxpos, pos)
             else:
-                self._coordslabel.setText("<div style='font-size:12pt;'>&nbsp;</div>")
+                self._coordslabel.setText("")
 
     def formatCoordinates(self, pxpos, pos):
         """
@@ -446,13 +444,7 @@ class PixelCoordinates(PixelSpace, BetterLayout):
         except IndexError:
             I = 0
 
-        self._coordslabel.setText(
-            f"<div style='font-size: 12pt;"
-            f"text-overflow: ellipsis; width:100%;'>"
-            f"x={pxpos.x():0.1f}, "
-            f"<span style=''>y={pxpos.y():0.1f}</span>, "
-            f"<span style=''>I={I:0.0f}</span></div>"
-        )
+        self._coordslabel.setText(f"x={pxpos.x():0.1f} y={pxpos.y():0.1f} I={I:0.0f}")
 
 
 class QCoordinates(QSpace, PixelCoordinates):
@@ -466,16 +458,14 @@ class QCoordinates(QSpace, PixelCoordinates):
         except IndexError:
             I = 0
         self._coordslabel.setText(
-            f"<div style='font-size: 12pt; "
-            f"text-overflow: ellipsis; width:100%;'>"
             f"x={pxpos.x():0.1f}, "
-            f"<span style=''>y={self.imageItem.image.shape[-2] - pxpos.y():0.1f}</span>, "
-            f"<span style=''>I={I:0.0f}</span>, "
+            f"y={self.imageItem.image.shape[-2] - pxpos.y():0.1f}, "
+            f"I={I:0.0f}, "
             f"q={np.sqrt(pos.x() ** 2 + pos.y() ** 2):0.3f} \u212B\u207B\u00B9, "
             f"q<sub>z</sub>={pos.y():0.3f} \u212B\u207B\u00B9, "
             f"q<sub>\u2225</sub>={pos.x():0.3f} \u212B\u207B\u00B9, "
             f"d={2 * np.pi / np.sqrt(pos.x() ** 2 + pos.y() ** 2) * 10:0.3f} nm, "
-            f"\u03B8={np.rad2deg(np.arctan2(pos.y(), pos.x())):.2f}&#176;</div>"
+            f"\u03B8={np.rad2deg(np.arctan2(pos.y(), pos.x())):.2f}&#176;"
         )
 
 
@@ -1203,6 +1193,10 @@ if __name__ == "__main__":
     tb = QToolBar()
     tb.addAction("BLAH")
     w = cls(toolbar=tb)
+
+    cls = type('Blend', (PixelCoordinates,), {})
+    w = cls()
+    w.setImage(np.random.rand(10, 10))
     w.show()
 
     qapp.exec_()
