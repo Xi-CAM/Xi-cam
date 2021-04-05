@@ -93,6 +93,13 @@ class ImageIntentCanvas(XicamIntentCanvas):
             if isinstance(value, DataArray):
                 kwargs[key] = np.asanyarray(value).squeeze()
 
+        if hasattr(intent, 'geometry'):
+            kwargs['geometry'] = intent.geometry
+
+        if hasattr(intent, 'incidence_angle'):
+            kwargs['incidence_angle'] = intent.incidence_angle
+            kwargs['geometry_mode'] = 'reflection'
+
         if isinstance(intent, ROIIntent):
             self.canvas_widget.view.addItem(intent.roi)
         else:

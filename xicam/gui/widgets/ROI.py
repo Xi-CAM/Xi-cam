@@ -663,7 +663,7 @@ class BetterRectROI(BetterROI, RectROI):
 
         # Invert y
         # FIXME -- use image transform above with passed image item
-        return mask[::-1, ::]
+        return mask
 
 
 class LineROI(BetterROI, LineROI):
@@ -822,8 +822,8 @@ if __name__ == "__main__":
     data = np.random.random((100, 100))
     imageview.setImage(data)
 
-    roi = ArcROI(pos=(50, 50), radius=50)
-    # roi = SegmentedRectROI(pos=(0, 0), size=(10, 10))
+    # roi = ArcROI(pos=(50, 50), radius=50)
+    roi = BetterRectROI(pos=(0, 0), size=(10, 10))
     # roi = SegmentedArcROI(pos=(50,50), radius=50)
     # roi = BetterCrosshairROI((0, 0), parent=imageview.view)
     imageview.view.addItem(roi)

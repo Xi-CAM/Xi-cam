@@ -10,6 +10,7 @@ import numpy as np
 from databroker.core import BlueskyRun
 
 # from pyFAI.geometry import Geometry
+from camsaxs.remesh_bbox import remesh, q_from_geometry
 from xicam.core import msg
 from xicam.core.data import MetaXArray
 from xicam.core.data.bluesky_utils import fields_from_stream, streams_from_run, is_image_field
@@ -237,9 +238,11 @@ class XArrayView(ImageView):
                 axorder = ['t', 'x', 'y', 'c']
             else:
                 axorder = ['t', 'y', 'x', 'c']
-            axorder = [self.axes[ax] for ax in axorder if self.axes[ax] is not None]
-            ax_swap = [image.dims[ax_index] for ax_index in axorder]
-            image = image.transpose(*ax_swap)
+
+            if not isinstance(image, ProxyArray):
+                axorder = [self.axes[ax] for ax in axorder if self.axes[ax] is not None]
+                ax_swap = [image.dims[ax_index] for ax_index in axorder]
+                image = image.transpose(*ax_swap)
 
             # Select time index
             if self.axes['t'] is not None:
@@ -276,7 +279,6 @@ class PixelSpace(XArrayView, RowMajor):
             kwargs["view"] = self.axesItem
 
         self._transform = QTransform()
-        self._raw_image = None
 
         super(PixelSpace, self).__init__(*args, **kwargs)
 
@@ -302,17 +304,14 @@ class PixelSpace(XArrayView, RowMajor):
             if isinstance(item, ImageItem):
                 item.setTransform(transform)
         self._transform = transform
-        return img, transform
+        return transform
 
     def setImage(self, img, *args, **kwargs):
         if img is None:
             return
 
-        if getattr(self, "displaymode", DisplayMode.raw) == DisplayMode.raw:
-            self._raw_image = img
-
         if not kwargs.get("transform", None):
-            img, transform = self.transform(img)
+            transform = self.transform(img)
             self.updateAxes()
             super(PixelSpace, self).setImage(img, *args, transform=transform, **kwargs)
 
@@ -320,7 +319,7 @@ class PixelSpace(XArrayView, RowMajor):
             super(PixelSpace, self).setImage(img, *args, **kwargs)
 
     def setTransform(self):
-        self.setImage(self._raw_image)  # this should loop back around to the respective transforms
+        self.setImage(self.image)  # this should loop back around to the respective transforms
 
     def updateAxes(self):
         self.axesItem.setLabel("bottom", "x (px)")  # , units='s')
@@ -342,6 +341,43 @@ class QSpace(PixelSpace):
         self._geometry = geometry
         self.setTransform()
 
+    def setImage(self, img, *args, geometry=None, **kwargs):
+        if geometry:
+            self.setGeometry(geometry)
+        super(QSpace, self).setImage(img, *args, **kwargs)
+
+
+class ProxyArray(object):
+    def __init__(self, data):
+        self.data = data
+        self.dims = []
+
+    def transpose(self, *args, **kwargs):
+        return self
+
+    def __getitem__(self, item):
+        return self.data
+
+
+class ProcessingView(pg.ImageView):
+    def getProcessedImage(self):
+        self._imageLevels = self.quickMinMax(self.image)
+
+        image = ProxyArray(self.process(np.array(self.image[self.currentIndex])))
+
+        self.levelMin, self.levelMax = self.process_levels(self._imageLevels)
+
+        return image
+
+    def process(self, image):
+        raise NotImplementedError
+
+    def process_levels(self, levels):
+        level_min = min([level[0] for level in self._imageLevels])
+        level_max = max([level[1] for level in self._imageLevels])
+
+        return level_min, level_max
+
 
 class CenterMarker(QSpace):
     def __init__(self, *args, **kwargs):
@@ -362,7 +398,7 @@ class CenterMarker(QSpace):
             if self.imageItem.image is not None:
                 if self.displaymode == DisplayMode.raw:
                     x = fit2d["centerX"]
-                    y = self._raw_image.shape[-2] - fit2d["centerY"]
+                    y = fit2d["centerY"]
                     self.centerplot.setData(x=[x], y=[y])
                 elif self.displaymode == DisplayMode.remesh:
                     self.centerplot.setData(x=[0], y=[0])
@@ -448,25 +484,52 @@ class PixelCoordinates(PixelSpace, BetterLayout):
 
 
 class QCoordinates(QSpace, PixelCoordinates):
+
     def formatCoordinates(self, pxpos, pos):
+
         """
         when the mouse is moved in the viewer, recalculate coordinates
         """
 
-        try:
-            I = self.imageItem.image[int(pxpos.y()), int(pxpos.x())]
-        except IndexError:
-            I = 0
-        self._coordslabel.setText(
-            f"x={pxpos.x():0.1f}, "
-            f"y={self.imageItem.image.shape[-2] - pxpos.y():0.1f}, "
-            f"I={I:0.0f}, "
-            f"q={np.sqrt(pos.x() ** 2 + pos.y() ** 2):0.3f} \u212B\u207B\u00B9, "
-            f"q<sub>z</sub>={pos.y():0.3f} \u212B\u207B\u00B9, "
-            f"q<sub>\u2225</sub>={pos.x():0.3f} \u212B\u207B\u00B9, "
-            f"d={2 * np.pi / np.sqrt(pos.x() ** 2 + pos.y() ** 2) * 10:0.3f} nm, "
-            f"\u03B8={np.rad2deg(np.arctan2(pos.y(), pos.x())):.2f}&#176;"
-        )
+        if self._geometry:
+            if self.displaymode == DisplayMode.remesh:
+                try:
+                    I = self.imageItem.image[int(pxpos.y()), int(pxpos.x())]
+                except IndexError:
+                    I = 0
+                self._coordslabel.setText(
+                    f"x={pxpos.x():0.1f}, "
+                    f"y={self.imageItem.image.shape[-2] - pxpos.y():0.1f}, "
+                    f"I={I:0.0f}, "
+                    f"q={np.sqrt(pos.x() ** 2 + pos.y() ** 2):0.3f} \u212B\u207B\u00B9, "
+                    f"q<sub>z</sub>={pos.y():0.3f} \u212B\u207B\u00B9, "
+                    f"q<sub>\u2225</sub>={pos.x():0.3f} \u212B\u207B\u00B9, "
+                    f"d={2 * np.pi / np.sqrt(pos.x() ** 2 + pos.y() ** 2) * 10:0.3f} nm, "
+                    f"\u03B8={np.rad2deg(np.arctan2(pos.y(), pos.x())):.2f}&#176;"
+                )
+            elif self.displaymode == DisplayMode.raw:
+                try:
+                    I = self.imageItem.image[int(pxpos.y()), int(pxpos.x())]
+                except IndexError:
+                    I = 0
+
+                q = q_from_geometry(self.imageItem.image.shape,
+                                    self._geometry,
+                                    reflection=False,
+                                    alphai=0)[int(pxpos.y()), int(pxpos.x())]
+
+                self._coordslabel.setText(
+                    f"x={pxpos.x():0.1f}, "
+                    f"y={self.imageItem.image.shape[-2] - pxpos.y():0.1f}, "
+                    f"I={I:0.0f}, "
+                    f"q={np.sqrt(np.sum(np.square(q))):0.3f} \u212B\u207B\u00B9, "
+                    f"q<sub>z</sub>={q[1]:0.3f} \u212B\u207B\u00B9, "
+                    f"q<sub>\u2225</sub>={q[0]:0.3f} \u212B\u207B\u00B9, "
+                    f"d={2 * np.pi / np.sqrt(q[0] ** 2 + q[1] ** 2) * 10:0.3f} nm, "
+                    f"\u03B8={np.rad2deg(np.arctan2(q[1], q[0])):.2f}&#176;"
+                )
+        else:
+            super(QCoordinates, self).formatCoordinates(pxpos, pos)
 
 
 class PolygonROI(ImageView):
@@ -1034,8 +1097,11 @@ class ToolbarLayout(BetterLayout):
         return actn
 
 
-class EwaldCorrected(QSpace, RowMajor, ToolbarLayout):
+class EwaldCorrected(QSpace, RowMajor, ToolbarLayout, ProcessingView):
     def __init__(self, *args, **kwargs):
+        self.geometry_mode = 'transmission'
+        self.incidence_angle = 0
+
         super(EwaldCorrected, self).__init__(*args, **kwargs)
 
         self.mode_group = QActionGroup(self)
@@ -1057,13 +1123,21 @@ class EwaldCorrected(QSpace, RowMajor, ToolbarLayout):
             self.drawCenter()
         self.setTransform()
 
+    def process(self, image):
+        if self.displaymode == DisplayMode.remesh:
+            image, q_x, q_z = remesh(image, self._geometry, reflection=False, alphai=1)
+        return image
+
     def transform(self, img=None):
         if not self._geometry or not self.displaymode == DisplayMode.remesh:
             return super(EwaldCorrected, self).transform(img)  # Do pixel space transform when not calibrated
 
-        from camsaxs import remesh_bbox
+        while len(img.shape) > 2:
+            img = img[0]
 
-        img, q_x, q_z = remesh_bbox.remesh(np.squeeze(img), self._geometry, reflection=False, alphai=None)
+        img, q_x, q_z = remesh(np.asarray(img), self._geometry,
+                               reflection=(self.geometry_mode or 'transission' != 'transmission'),
+                               alphai=self.incidence_angle)
 
         # Build Quads
         shape = img.shape
@@ -1074,7 +1148,7 @@ class EwaldCorrected(QSpace, RowMajor, ToolbarLayout):
 
         quad1 = QPolygonF()
         quad2 = QPolygonF()
-        for p, q in zip([a, b, c, d], [a, b, c, d]):  # the zip does the flip :P
+        for p, q in zip([a, b, c, d], [d, c, b, a]):  # the zip does the flip :P
             quad1.append(QPointF(*p[::-1]))
             quad2.append(QPointF(q_x[q], q_z[q]))
 
@@ -1086,17 +1160,24 @@ class EwaldCorrected(QSpace, RowMajor, ToolbarLayout):
                 item.setTransform(transform)
         self._transform = transform
 
-        return img, self._transform
+        return self._transform
 
-    def setImage(self, img, *args, **kwargs):
+    def setImage(self, img, *args, geometry=None, geometry_mode=None, incidence_angle=None, **kwargs):
+        if geometry_mode:
+            self.geometry_mode = geometry_mode
+
+        if incidence_angle is not None:
+            self.incidence_angle = incidence_angle
+
+        if geometry:
+            self.setGeometry(geometry)
+
         if img is None:
             return
 
-        self._raw_image = img
-
         if self._geometry:
-            transform_img, transform = self.transform(img)
-            super(EwaldCorrected, self).setImage(transform_img, *args, transform=transform, **kwargs)
+            transform = self.transform(img)
+            super(EwaldCorrected, self).setImage(img, *args, transform=transform, **kwargs)
 
         else:
             super(EwaldCorrected, self).setImage(img, *args, **kwargs)
