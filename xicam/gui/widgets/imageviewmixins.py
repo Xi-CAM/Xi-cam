@@ -734,9 +734,6 @@ class LogScaleIntensity(BetterLayout, ComposableItemImageView):
         self.logIntensityButton.setChecked(value)
 
 
-
-
-
 class CatalogView(XArrayView):
     sigCatalogChanged = Signal(BlueskyRun)
     sigStreamChanged = Signal(str)
@@ -792,6 +789,49 @@ class CatalogView(XArrayView):
             self.setGeometry(pluginmanager.get_plugin_by_name("xicam.SAXS.calibration", "SettingsPlugin").AI(field))
         self.sigFieldChanged.emit(field)
 
+
+class CatalogImagePlotView(CatalogView):
+    def __init__(self, catalog=None, stream=None, field=None, *args, **kwargs):
+        # Turn off image field filtering for this mixin
+        super(CatalogImagePlotView, self).__init__(catalog, stream, field, *args, **kwargs)
+
+    def setData(self, data, *args, **kwargs):
+        self.axesItem.clearPlots()
+        if len(data.shape) == 1:
+            self.ui.roiPlot.hide()
+            self.ui.histogram.hide()
+            self.view.removeItem(self.imageItem)
+            self.axesItem.plot(data, *args, **kwargs)
+            self.view.enableAutoRange(x=True, y=True)
+            self.view.setAspectLocked(False)
+        else:
+            self.view.addItem(self.imageItem)
+            self.setImage(data)
+            self.ui.roiPlot.show()
+            self.ui.histogram.show()
+            self.view.setAspectLocked(True)
+
+    def _updateCatalog(self, *args, **kwargs):
+        if all([self.catalog, self.stream, self.field]):
+            try:
+                stream = getattr(self.catalog, self.stream)
+            except AttributeError as ex:
+                msg.logError(ex)
+                return
+
+            eventStream = stream.to_dask()[self.field]
+
+            # Trim off event dimension (so transpose works)
+            if eventStream.ndim > 3:
+                if eventStream.shape[0] == 1:  # if only one event, drop the event axis
+                    eventStream = eventStream[0]
+                if eventStream.shape[1] == 1:  # if z axis is unitary, drop that axis
+                    eventStream = eventStream[:, 0]
+            self.xarray = eventStream
+            self.setData(data=self.xarray, *args, **kwargs)
+        else:
+            # TODO -- clear the current image
+            pass
 
 class CrosshairROI(ImageView):
 
