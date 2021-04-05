@@ -385,7 +385,6 @@ class OperationPlugin(PluginType):
             # wireup signals to update the workflow
             if param.get('fixable'):
                 child.sigFixToggled.connect(self._set_fixed)
-            msg.logMessage(child.name())
             # child.sigValueChanged.connect(lambda *args: print(args))
             child.sigValueChanged.connect(self._set_value)
             # We want to propagate changes to the operation's fixed/values state to the Parameter

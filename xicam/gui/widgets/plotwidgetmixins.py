@@ -4,7 +4,7 @@ from types import FunctionType
 from typing import Union
 
 from qtpy.QtWidgets import QApplication, QLabel, QPushButton, QSizePolicy, QVBoxLayout, QWidget, QHBoxLayout, QCheckBox, \
-    QSpinBox, QDoubleSpinBox, QGraphicsProxyWidget, QLayout
+    QSpinBox, QDoubleSpinBox, QGraphicsProxyWidget, QLayout, QComboBox
 import pyqtgraph as pg
 import numpy as np
 from xicam.plugins import live_plugin
@@ -236,6 +236,29 @@ class LogButtons(BetterLayout):
         # Grab existing y log state from pyqtgraph
         x_log_mode = self.getPlotItem().ctrl.logXCheck.isChecked()
         self.setLogMode(x=x_log_mode, y=state)
+
+
+@live_plugin('PlotMixinPlugin')
+class ToggleSymbols(BetterLayout):
+    """Simple mixin that adds a button to toggle 'o' symbols on plot data curves in the plot widget."""
+    def __init__(self, *args, **kwargs):
+        super(ToggleSymbols, self).__init__(*args, **kwargs)
+
+        self.toggle_symbols_button = QPushButton("Toggle Symbols")
+        self.toggle_symbols_button.setCheckable(True)
+        self.add_widget_to_right(self.toggle_symbols_button)
+
+        self.toggle_symbols_button.toggled.connect(self._toggle_symbol)
+
+        self._symbol_cache = []
+
+    def _toggle_symbol(self, checked: bool):
+        for item in self.scene().items():
+            if isinstance(item, pg.PlotDataItem):
+                if checked:
+                    item.setData(symbol=None)
+                else:
+                    item.setData(symbol='o')
 
 
 if __name__ == "__main__":

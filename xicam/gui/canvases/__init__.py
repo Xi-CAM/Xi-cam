@@ -136,7 +136,7 @@ class PlotIntentCanvas(XicamIntentCanvas):
 
             for item in items:
                 if isinstance(item, pg.PlotDataItem):
-                    item.setData(pen=color)
+                    item.setData(pen=color, symbolBrush=color, symbolPen='w')
 
     def render(self, intent):
         if not self.canvas_widget:
@@ -160,22 +160,23 @@ class PlotIntentCanvas(XicamIntentCanvas):
             else:
                 multicurves = True
 
+            symbol = intent.kwargs.get("symbol", None)
+
             for i in range(len(ys)):
                 name = intent.name
                 if multicurves:
                     name += f' {i + 1}'
 
                 if isinstance(intent, ScatterIntent):
-                    item = ScatterPlotItem(x=x, y=ys[i], name=name)
+                    item = ScatterPlotItem(x=x, y=ys[i], name=name, symbol=symbol)
                     self.canvas_widget.plotItem.addItem(item)
                 elif isinstance(intent, (PlotIntent, ErrorBarIntent)):
-                    item = self.canvas_widget.plot(x=x, y=ys[i], name=name)
+                    item = self.canvas_widget.plot(x=x, y=ys[i], name=name, symbol=symbol)
                 items.append(item)
 
             # Use most recent intent's log mode for the canvas's log mode
             x_log_mode = intent.kwargs.get("xLogMode", self.canvas_widget.plotItem.getAxis("bottom").logMode)
             y_log_mode = intent.kwargs.get("yLogMode", self.canvas_widget.plotItem.getAxis("left").logMode)
-
             self.canvas_widget.plotItem.setLogMode(x=x_log_mode, y=y_log_mode)
             self.canvas_widget.setLabels(**intent.labels)
 
