@@ -335,8 +335,12 @@ class LinearWorkflowView(DisablableListView):
         super(LinearWorkflowView, self).__init__(*args, **kwargs)
 
         self.setModel(workflowmodel)
-        workflowmodel._workflow.attach(self.showCurrentParameter)
-        workflowmodel.layoutChanged.connect(partial(self.showCurrentParameter, None))
+        # Lines commented below were causing long slow-downs when enable/disabling a tree
+        # and when clicking a op (to show param tree)
+        # Did we need all notifies to call showCurrentParameter? Probably not?
+        # Did we need to call showCurrentParameter when the layoutChanges? Probably not?
+        # workflowmodel._workflow.attach(self.showCurrentParameter)
+        # workflowmodel.layoutChanged.connect(partial(self.showCurrentParameter, None))
         self.selectionModel().currentChanged.connect(self.showCurrentParameter)
 
         self.setDragDropMode(QAbstractItemView.InternalMove)
