@@ -1016,7 +1016,7 @@ class ImageItemHistogramOverflowFix(ImageItem):
                 mx = stepData.max()
                 # print(f"\n*** mx, mn: {mx}, {mn} ({type(mx)}, {type(mn)})***\n")
                 # PATCH -- explicit subtract with np.int to avoid overflow
-                step = np.ceil(np.subtract(mx, mn, dtype=np.int) / 500.0)
+                step = max(1, np.ceil(np.subtract(mx, mn, dtype=np.int) / 500.0))
                 bins = np.arange(mn, mx + 1.01 * step, step, dtype=np.int)
                 if len(bins) == 0:
                     bins = [mn, mx]
