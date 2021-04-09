@@ -172,6 +172,9 @@ setup(
             "PairPlotIntent = xicam.core.intents:PairPlotIntent",
             "ScatterIntent = xicam.core.intents:ScatterIntent",
         ],
+        'xicam.plugins.ImageMixinPlugin': [
+            "RowMajor = xicam.gui.widgets.imageviewmixins:RowMajor"
+        ]
     },
     ext_modules=[],
     include_package_data=True,

@@ -31,7 +31,10 @@ def fields_from_stream(run: BlueskyRun, stream: str):
 def descriptors_from_stream(run: BlueskyRun, stream: str):
     if stream not in run:
         raise InvalidStreamError(f"The stream named {stream} is not present in {BlueskyRun}")
-    return run[stream].metadata["descriptors"]
+    try:
+        return run[stream].metadata["descriptors"]
+    except AttributeError:
+        return list(run._document_cache.descriptors.values())
 
 
 def fields_from_descriptor(descriptor):
