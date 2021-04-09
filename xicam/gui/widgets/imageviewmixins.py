@@ -811,6 +811,11 @@ class CatalogView(XArrayView):
     def setCatalog(self, catalog, stream=None, field=None, *args, **kwargs):
         self.catalog = catalog
         self.stream = stream
+        if not field:
+            try:
+                field = catalog.metadata['start']['detectors'][0]
+            except Exception as ex:
+                msg.logError(ex)
         self.field = field
         self._updateCatalog(*args, **kwargs)
 
@@ -950,7 +955,9 @@ class CatalogImagePlotView(StreamSelector, FieldSelector):
             self.ui.roiPlot.hide()
             self.ui.histogram.hide()
             self.view.removeItem(self.imageItem)
-            self.axesItem.plot(data, *args, **kwargs)
+            self.axesItem.plot(y=data, *args, **kwargs)
+            if "labels" in kwargs:
+                self.axesItem.setLabels(**kwargs['labels'])
             self.view.enableAutoRange(x=True, y=True)
             self.view.setAspectLocked(False)
         else:
@@ -970,13 +977,21 @@ class CatalogImagePlotView(StreamSelector, FieldSelector):
 
             eventStream = stream.to_dask()[self.field]
 
-            # Trim off event dimension (so transpose works)
-            if eventStream.ndim > 3:
-                if eventStream.shape[0] == 1:  # if only one event, drop the event axis
-                    eventStream = eventStream[0]
-                if eventStream.shape[1] == 1:  # if z axis is unitary, drop that axis
-                    eventStream = eventStream[:, 0]
-            self.xarray = eventStream
+            self.xarray = np.squeeze(eventStream)
+
+            kwargs['antialias'] = True
+            kwargs['pen'] = pg.mkPen(width=2)
+            kwargs['symbol'] = 'o'
+            kwargs['labels'] = {'left': self.field}
+
+            try:
+                scan_axis_field_name = self.catalog.metadata['start']['hints']['dimensions'][0][0][0]
+            except Exception as ex:
+                msg.logError(ex)
+            else:
+                kwargs['x'] = stream.to_dask()[scan_axis_field_name]
+                kwargs['labels']['bottom'] = scan_axis_field_name
+
             self.setData(data=self.xarray, *args, **kwargs)
         else:
             # TODO -- clear the current image
