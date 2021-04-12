@@ -57,7 +57,6 @@ class DisplayMode(enum.Enum):
     remesh = enum.auto()
 
 
-@live_plugin('ImageMixinPlugin')
 class RowMajor(ImageView):
     def __init__(self, *args, **kwargs):
         super(RowMajor, self).__init__(*args, **kwargs)
@@ -812,6 +811,11 @@ class CatalogView(XArrayView):
     def setCatalog(self, catalog, stream=None, field=None, *args, **kwargs):
         self.catalog = catalog
         self.stream = stream
+        if not field:
+            try:
+                field = catalog.metadata['start']['detectors'][0]
+            except Exception as ex:
+                msg.logError(ex)
         self.field = field
         self._updateCatalog(*args, **kwargs)
 
@@ -852,49 +856,6 @@ class CatalogView(XArrayView):
             self.setGeometry(pluginmanager.get_plugin_by_name("xicam.SAXS.calibration", "SettingsPlugin").AI(field))
         self.sigFieldChanged.emit(field)
 
-
-class CatalogImagePlotView(CatalogView):
-    def __init__(self, catalog=None, stream=None, field=None, *args, **kwargs):
-        # Turn off image field filtering for this mixin
-        super(CatalogImagePlotView, self).__init__(catalog, stream, field, *args, **kwargs)
-
-    def setData(self, data, *args, **kwargs):
-        self.axesItem.clearPlots()
-        if len(data.shape) == 1:
-            self.ui.roiPlot.hide()
-            self.ui.histogram.hide()
-            self.view.removeItem(self.imageItem)
-            self.axesItem.plot(data, *args, **kwargs)
-            self.view.enableAutoRange(x=True, y=True)
-            self.view.setAspectLocked(False)
-        else:
-            self.view.addItem(self.imageItem)
-            self.setImage(data)
-            self.ui.roiPlot.show()
-            self.ui.histogram.show()
-            self.view.setAspectLocked(True)
-
-    def _updateCatalog(self, *args, **kwargs):
-        if all([self.catalog, self.stream, self.field]):
-            try:
-                stream = getattr(self.catalog, self.stream)
-            except AttributeError as ex:
-                msg.logError(ex)
-                return
-
-            eventStream = stream.to_dask()[self.field]
-
-            # Trim off event dimension (so transpose works)
-            if eventStream.ndim > 3:
-                if eventStream.shape[0] == 1:  # if only one event, drop the event axis
-                    eventStream = eventStream[0]
-                if eventStream.shape[1] == 1:  # if z axis is unitary, drop that axis
-                    eventStream = eventStream[:, 0]
-            self.xarray = eventStream
-            self.setData(data=self.xarray, *args, **kwargs)
-        else:
-            # TODO -- clear the current image
-            pass
 
 class CrosshairROI(ImageView):
 
@@ -983,6 +944,60 @@ class FieldSelector(CatalogView, BetterLayout):
         return self.fieldComboBox.currentText()
 
 
+class CatalogImagePlotView(StreamSelector, FieldSelector):
+    def __init__(self, catalog=None, stream=None, field=None, *args, **kwargs):
+        # Turn off image field filtering for this mixin
+        super(CatalogImagePlotView, self).__init__(catalog, stream, field, *args, **kwargs)
+
+    def setData(self, data, *args, **kwargs):
+        self.axesItem.clearPlots()
+        if len(data.shape) == 1:
+            self.ui.roiPlot.hide()
+            self.ui.histogram.hide()
+            self.view.removeItem(self.imageItem)
+            self.axesItem.plot(y=data, *args, **kwargs)
+            if "labels" in kwargs:
+                self.axesItem.setLabels(**kwargs['labels'])
+            self.view.enableAutoRange(x=True, y=True)
+            self.view.setAspectLocked(False)
+        else:
+            self.view.addItem(self.imageItem)
+            self.setImage(data)
+            self.ui.roiPlot.show()
+            self.ui.histogram.show()
+            self.view.setAspectLocked(True)
+
+    def _updateCatalog(self, *args, **kwargs):
+        if all([self.catalog, self.stream, self.field]):
+            try:
+                stream = getattr(self.catalog, self.stream)
+            except AttributeError as ex:
+                msg.logError(ex)
+                return
+
+            eventStream = stream.to_dask()[self.field]
+
+            self.xarray = np.squeeze(eventStream)
+
+            kwargs['antialias'] = True
+            kwargs['pen'] = pg.mkPen(width=2)
+            kwargs['symbol'] = 'o'
+            kwargs['labels'] = {'left': self.field}
+
+            try:
+                scan_axis_field_name = self.catalog.metadata['start']['hints']['dimensions'][0][0][0]
+            except Exception as ex:
+                msg.logError(ex)
+            else:
+                kwargs['x'] = stream.to_dask()[scan_axis_field_name]
+                kwargs['labels']['bottom'] = scan_axis_field_name
+
+            self.setData(data=self.xarray, *args, **kwargs)
+        else:
+            # TODO -- clear the current image
+            pass
+
+
 class ImageItemHistogramOverflowFix(ImageItem):
     def getHistogram(self, bins="auto", step="auto", targetImageSize=200, targetHistogramSize=500, **kwds):
         """Returns x and y arrays containing the histogram values for the current image.
@@ -1016,7 +1031,7 @@ class ImageItemHistogramOverflowFix(ImageItem):
                 mx = stepData.max()
                 # print(f"\n*** mx, mn: {mx}, {mn} ({type(mx)}, {type(mn)})***\n")
                 # PATCH -- explicit subtract with np.int to avoid overflow
-                step = np.ceil(np.subtract(mx, mn, dtype=np.int) / 500.0)
+                step = max(1, np.ceil(np.subtract(mx, mn, dtype=np.int) / 500.0))
                 bins = np.arange(mn, mx + 1.01 * step, step, dtype=np.int)
                 if len(bins) == 0:
                     bins = [mn, mx]
