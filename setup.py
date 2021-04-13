@@ -173,8 +173,11 @@ setup(
             "ScatterIntent = xicam.core.intents:ScatterIntent",
         ],
         'xicam.plugins.ImageMixinPlugin': [
-            "RowMajor = xicam.gui.widgets.imageviewmixins:RowMajor"
-        ]
+            "RowMajor = xicam.gui.widgets.imageviewmixins:RowMajor",
+        ],
+        'xicam.plugins.PlotMixinPlugin': [
+            "ToggleSymbols = xicam.gui.widgets.plotwidgetmixins:ToggleSymbols",
+        ],
     },
     ext_modules=[],
     include_package_data=True,
