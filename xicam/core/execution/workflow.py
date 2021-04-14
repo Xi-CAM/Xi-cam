@@ -871,7 +871,7 @@ def ingest_result_set(workflow: Workflow, result_set):
 def project_intents(run_catalog):
     intents = []
 
-    for projection in run_catalog.metadata['start']['projections']:
+    for projection in run_catalog.metadata['start'].get('projections', []):
         if projection['name'] == 'intent':
             intent_class_name = projection['projection']['intent_type']['value']
             args = projection['projection']['args']['value']

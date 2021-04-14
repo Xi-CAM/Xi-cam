@@ -238,7 +238,7 @@ class LogButtons(BetterLayout):
         self.setLogMode(x=x_log_mode, y=state)
 
 
-@live_plugin('PlotMixinPlugin')
+# @live_plugin('PlotMixinPlugin')
 class ToggleSymbols(BetterLayout):
     """Simple mixin that adds a button to toggle 'o' symbols on plot data curves in the plot widget."""
     def __init__(self, *args, **kwargs):
