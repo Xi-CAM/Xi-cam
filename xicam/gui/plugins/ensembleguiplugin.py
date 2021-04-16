@@ -79,9 +79,7 @@ class HelpTextDisplay(QTextEdit):
 
         self.setContextMenuPolicy(Qt.NoContextMenu)
         self.setReadOnly(True)
-        self.setPlaceholderText("(No help available)\n\n"
-                                "For more detailed help, click on \"Help\", "
-                                "then \"Xi-CAM Help\" at the top.")
+        self.setPlaceholderText("(No help available for the widget at your current mouse location.)")
 
 class HelpWidget(QGroupBox):
     """Widget that displays interactive help text.
