@@ -73,6 +73,16 @@ class EnsembleGUIPlugin(GUIPlugin):
         self.ensemble_model.append_to_ensemble(catalog, None, self._projectors)
 
 
+class HelpTextDisplay(QTextEdit):
+    def __init__(self, text: str = "", parent=None):
+        super(HelpTextDisplay, self).__init__(text, parent)
+
+        self.setContextMenuPolicy(Qt.NoContextMenu)
+        self.setReadOnly(True)
+        self.setPlaceholderText("(No help available)\n\n"
+                                "For more detailed help, click on \"Help\", "
+                                "then \"Xi-CAM Help\" at the top.")
+
 class HelpWidget(QGroupBox):
     """Widget that displays interactive help text.
 
@@ -87,11 +97,7 @@ class HelpWidget(QGroupBox):
 
         self._install_event_filter()
 
-        self._help_display = QTextEdit()
-        self._help_display.setContextMenuPolicy(Qt.NoContextMenu)
-        self._help_display.setReadOnly(True)
-        self._help_display.setPlaceholderText("(No help available)")
-
+        self._help_display = HelpTextDisplay()
         layout = QVBoxLayout()
         layout.addWidget(self._help_display)
         self.setLayout(layout)
