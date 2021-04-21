@@ -72,7 +72,7 @@ class WorkflowEditor(QSplitter):
         operation_filter: Callable[[OperationPlugin], bool]
             A callable that can be used to filter which operations to show in the "Add Operation" menu
         kwargs_callable: Callable[[], dict]
-            A callable that gets called when auto-run is triggered. This callable is expected to generate a dict of
+            A callable that gets called when run is triggered. This callable is expected to generate a dict of
             kwargs that will be passed into the workflow as inputs.
         execute_iterative: bool
             Determines if the attached workflow will be executed with `.execute` or `.execute_all`. When `.execute_all`
@@ -112,6 +112,12 @@ class WorkflowEditor(QSplitter):
         self.addWorkflow = self.workflow_widget.addWorkflow
         self.removeWorkflow = self.workflow_widget.removeWorkflow
         self.workflows = self.workflow_widget.workflows
+
+        self.setToolTip("Workflow Editor")
+        self.setWhatsThis("This widget is the Workflow Editor. "
+                          "It is used to create linear workflows from installed operations. "
+                          "Enable or disable an operation by clicking on its check or X. "
+                          "Modify parameters of an operation by clicking on its text. ")
 
     @property
     def workflow(self):
@@ -188,6 +194,10 @@ class WorkflowWidget(QWidget):
         self.addfunctionmenu = QToolButton()
         self.addfunctionmenu.setIcon(QIcon(path("icons/addfunction.png")))
         self.addfunctionmenu.setText("Add Function")
+        self.addfunctionmenu.setToolTip("Add Operation")
+        self.addfunctionmenu.setWhatsThis("This button can be used to add a new operation to the end of a workflow. "
+                                          "A menu to select operations will be populated based on the installed "
+                                          "operations' categories.")
         # Defer menu population to once the plugins have been loaded; otherwise, the menu may not contain anything
         # if this widget is init'd before all plugins have been loaded.
         self.functionmenu = QMenu()
@@ -202,6 +212,10 @@ class WorkflowWidget(QWidget):
         self.workflow_selector = QToolButton()
         self.workflow_selector.setIcon(QIcon(path("icons/bookshelf.png")))
         self.workflow_selector.setText("Select Workflow")
+        self.workflow_selector.setToolTip("Workflow Library")
+        self.workflow_selector.setWhatsThis("This button allows switching between any stored workflows. "
+                                            "(Stored workflows are typically defined programmatically "
+                                            "in a GUI Plugin's modules.)")
         self.workflow_selector.setMenu(self.workflow_menu)
         self.workflow_selector.setPopupMode(QToolButton.InstantPopup)
         self.toolbar.addWidget(self.workflow_selector)
@@ -209,10 +223,15 @@ class WorkflowWidget(QWidget):
         self.toolbar.addWidget(self.addfunctionmenu)
         # self.toolbar.addAction(QIcon(path('icons/up.png')), 'Move Up')
         # self.toolbar.addAction(QIcon(path('icons/down.png')), 'Move Down')
-        self.toolbar.addAction(QIcon(path("icons/save.png")), "Export Workflow")
-        self.toolbar.addAction(QIcon(path("icons/folder.png")), "Import Workflow")
+        action = self.toolbar.addAction(QIcon(path("icons/save.png")), "Export Workflow")
+        action.setEnabled(False)  # FIXME: implement export workflow feature
+        action = self.toolbar.addAction(QIcon(path("icons/folder.png")), "Import Workflow")
+        action.setEnabled(False)  # FIXME: implement import workflow feature
 
-        self.toolbar.addAction(QIcon(path("icons/trash.png")), "Delete Operation", self.deleteOperation)
+        action = self.toolbar.addAction(QIcon(path("icons/trash.png")), "Delete Operation", self.deleteOperation)
+        action.setWhatsThis("This button removes the currently selected operation from the workflow. "\
+                            "(The currently selected operation is highlighted. "\
+                            "An operation is selected when its text is clicked in the workflow editor.")
 
         v = QVBoxLayout()
         v.addWidget(self.view)

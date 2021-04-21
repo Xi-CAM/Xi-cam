@@ -29,6 +29,10 @@ class CanvasView(QAbstractItemView):
 
         self._last_seen_intents = set()
 
+        self.setWhatsThis(
+            "This area will display any items that are checked in the data selector view (the widget on the right)."
+        )
+
     def refresh(self):
         for i in range(self.model().rowCount()):
             self.model().setData(self.model().index(i,0), None, role=EnsembleModel.canvas_role)
@@ -133,6 +137,10 @@ class CanvasDisplayWidget(QWidget):
     def __init__(self, parent=None):
         super(CanvasDisplayWidget, self).__init__(parent)
 
+        self.setWhatsThis(
+            "This area will display any items that are checked in the data selector view (the widget on the right)."
+        )
+
     def clear_canvases(self):
         """Clear all canvases from the widget."""
         ...
@@ -188,6 +196,8 @@ class StackedCanvasView(CanvasView):
                 button = QPushButton(self)
                 button.setCheckable(True)
                 button.setIcon(self.canvas_display_widgets[i].icon)
+                button.setToolTip(getattr(self.canvas_display_widgets[i], "tool_tip", None))
+                button.setWhatsThis(getattr(self.canvas_display_widgets[i], "whats_this", None))
                 # Add the button to the logical button group
                 self.buttongroup.addButton(button, i)
                 # Add the button to the visual layout section
@@ -249,7 +259,13 @@ class CanvasDisplayTabWidget(CanvasDisplayWidget):
         self.layout().setContentsMargins(0, 0, 0, 0)
         self.layout().addWidget(self._tabWidget)
 
+        # Set attrs for when the buttons are created
         self.icon = QIcon(path('icons/tabs.png'))
+        # TODO: right now, we are not attaching help text directly to this widget
+        #   (it can be confusing when trying to hover over the StackedCanvasView,
+        #   the StackedCanvasView's help text is hard to display)
+        self.tool_tip = "Tab View"
+        self.whats_this = "Reorganizes displayed data into separate tabs."
 
     def getView(self):
         return self._tabWidget.currentWidget()
@@ -299,7 +315,10 @@ class SplitHorizontal(SplitView):
 
         self.max_canvases = 2
 
+        # Set attrs for when the buttons are created
         self.icon = QIcon(path('icons/1x1hor.png'))
+        self.tool_tip = "Horizontal Split View"
+        self.whats_this = "Displays up to two visualized data items in a horizontal layout."
 
     def clear_canvases(self):
         for i in reversed(range(self.splitter.count())):
@@ -319,7 +338,11 @@ class SplitVertical(SplitHorizontal):
         super(SplitVertical, self).__init__(*args, **kwargs)
 
         self.splitter.setOrientation(Qt.Horizontal)
+
+        # Set attrs for when the buttons are created
         self.icon = QIcon(path('icons/1x1vert.png'))
+        self.tool_tip = "Vertical Split View"
+        self.whats_this = "Displays up to two visualized data items in a vertical layout."
 
 
 class SplitThreeView(SplitView):
@@ -342,7 +365,10 @@ class SplitThreeView(SplitView):
 
         self.max_canvases = 3
 
+        # Set attrs for when the buttons are created
         self.icon = QIcon(path('icons/2x1grid.png'))
+        self.tool_tip = "3-Way Split View"
+        self.whats_this = "Displays up to three visualized data items."
 
     def clear_canvases(self):
         for splitter in [self.top_splitter, self.outer_splitter]:
@@ -391,7 +417,10 @@ class SplitGridView(SplitView):
 
         self.max_canvases = 4
 
+        # Set attrs for when the buttons are created
         self.icon = QIcon(path('icons/2x2grid.png'))
+        self.tool_tip = "2x2 Grid View"
+        self.whats_this = "Displays up to four visualized data items in a grid layout."
 
     def moveSplitter( self, index, pos):
         splt = self._spltA if self.sender() == self._spltB else self._spltB
@@ -478,6 +507,15 @@ class DataSelectorView(QTreeView):
         self.setDragEnabled(True)
 
         self.setAnimated(True)
+
+        self.setWhatsThis("This widget helps organize and display any loaded data or data created within Xi-CAM. "
+                          "Data is displayed in a tree-like manner:\n"
+                          "  Collection\n"
+                          "    Catalog\n"
+                          "      Visualizable Data\n"
+                          "Click on the items' checkboxes to visualize them.\n"
+                          "Right-click a Collection to rename it.\n"
+                          "Right-click in empty space to create a new Collection.\n")
 
     def setModel(self, model):
         try:
