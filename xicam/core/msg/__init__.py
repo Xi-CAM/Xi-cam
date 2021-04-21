@@ -105,15 +105,22 @@ stream_handler.setFormatter(formatter)
 logger.addHandler(stream_handler)
 
 trayicon = None
-if "qtpy" in sys.modules:
-    from qtpy.QtWidgets import QApplication
 
-    if QApplication.instance():
-        from qtpy.QtWidgets import QSystemTrayIcon
-        from qtpy.QtGui import QIcon, QPixmap
-        from xicam.gui.static import path
 
-        trayicon = QSystemTrayIcon(QIcon(QPixmap(str(path("icons/cpu.png")))))  # TODO: better icon
+# FIXME: why isn't the application instance found during xi-cam startup?
+#   - this function is added to allow notifyMessage to reattempt creation of the system tray icon
+def _create_system_tray_icon():
+    if "qtpy" in sys.modules:
+        from qtpy.QtWidgets import QApplication
+
+        if QApplication.instance():
+            from qtpy.QtWidgets import QSystemTrayIcon
+            from qtpy.QtGui import QIcon, QPixmap
+            from xicam.gui.static import path
+
+            global trayicon
+            trayicon = QSystemTrayIcon(QIcon(QPixmap(str(path("icons/cpu.png")))))  # TODO: better icon
+
 
 _thread_count = 0
 
@@ -195,6 +202,10 @@ def notifyMessage(*args, timeout=8000, title="", level: int = INFO):
 
     """
     global trayicon
+    # FIXME: why do we need to recreate the trayicon when it was working before?
+    #     (see _create_system_tray_icon for notes)
+    if trayicon is None:
+        _create_system_tray_icon()
     if trayicon:
         icon = None
         if level in [INFO, DEBUG]:
