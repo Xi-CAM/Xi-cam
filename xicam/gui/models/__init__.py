@@ -202,12 +202,23 @@ class EnsembleModel(TreeModel):
             ensemble_item = self.add_ensemble(ensemble, projectors)
 
         # Add catalogs / intents
+        # FIXME: do we need to do this if block if we instead append catalog to the ensemble directly,
+        #    then call self.add_ensemble?
         if ensemble_item is not None:
             end_row = ensemble_item.childCount()
             # Use begin/end to notify views (e.g. dataselectorview) that it needs to update view after item is inserted
             self.beginInsertRows(self.index(ensemble_item.row(), 0), end_row, end_row+1)
             self._create_catalog_item(ensemble_item, catalog, projectors)
             self.endInsertRows()
+
+            # NOTE: this is required to establish the Ensemble to Catalog object relationship
+            #     (CalibrateGUIPlugin.begin_calibrate calls:
+            #         self.ensemble_model.catalogs_from_ensemble(active_ensemble),
+            #         which internally does:
+            #             return ensemble.data(self.object_role).catalogs
+            #      So, if the Ensemble object hasn't had catalogs added to it, we get None back,
+            #      even though there could be a catalog item under an ensemble item.
+            ensemble_item.data(self.object_role).append_catalog(catalog)
 
             # Set check state Checked for newly created catalog item
             #  (this will automatically check all intents in the catalog and refresh the canvas views)
