@@ -238,7 +238,7 @@ class XArrayView(ImageView):
             else:
                 axorder = ['t', 'y', 'x', 'c']
 
-            if not isinstance(image, ProxyArray):
+            if not isinstance(image, Pseudo3DFrameArray):
                 axorder = [self.axes[ax] for ax in axorder if self.axes[ax] is not None]
                 ax_swap = [image.dims[ax_index] for ax_index in axorder]
                 image = image.transpose(*ax_swap)
@@ -346,7 +346,11 @@ class QSpace(PixelSpace):
         super(QSpace, self).setImage(img, *args, **kwargs)
 
 
-class ProxyArray(object):
+class Pseudo3DFrameArray(object):
+    """Array that pretends it is a 3D array, but really only has one frame.
+
+    Data passed into it should be the already sliced (single-frame) array.
+    """
     def __init__(self, data):
         self.data = data
         self.dims = []
@@ -355,6 +359,9 @@ class ProxyArray(object):
         return self
 
     def __getitem__(self, item):
+        """Override getitem to pretend it is a 3D array.
+
+        Ignores the item slice and return the contained frame data."""
         return self.data
 
 
@@ -362,7 +369,7 @@ class ProcessingView(pg.ImageView):
     def getProcessedImage(self):
         self._imageLevels = self.quickMinMax(self.image)
 
-        image = ProxyArray(self.process(np.array(self.image[self.currentIndex])))
+        image = Pseudo3DFrameArray(self.process(np.array(self.image[self.currentIndex])))
 
         self.levelMin, self.levelMax = self.process_levels(self._imageLevels)
 
