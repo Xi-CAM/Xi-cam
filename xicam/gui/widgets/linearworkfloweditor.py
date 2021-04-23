@@ -11,6 +11,7 @@ from xicam.gui.static import path
 from typing import Iterable, Any, Callable, Dict
 from xicam.plugins import manager as pluginmanager, OperationPlugin
 from xicam.core import threads
+from xicam.core import msg
 from functools import partial
 
 
@@ -84,7 +85,7 @@ class WorkflowEditor(QSplitter):
             workflows = WorkflowDict()
         if workflow not in workflows:
             workflows[workflow] = workflow.name
-        self.kwargs = kwargs
+        self.kwargs = kwargs or dict()
         self.kwargs_callable = kwargs_callable
         self.execute_iterative = execute_iterative
         self.setOrientation(Qt.Vertical)
@@ -132,13 +133,21 @@ class WorkflowEditor(QSplitter):
     def run_workflow(self, **kwargs):
         mixed_kwargs = self.kwargs.copy()
         if self.kwargs_callable is not None:
-            mixed_kwargs.update(self.kwargs_callable(self))
-        mixed_kwargs.update(kwargs)
+            try:
+                called_kwargs = self.kwargs_callable(self)
+            except RuntimeError as e:
+                # NOTE: we do not want to raise an exception here (we are in a connected Qt slot)
+                # Grab the user-oriented message from the kwargs callable exception
+                msg.notifyMessage(str(e), title="Run Workflow Error", level=msg.ERROR)
+                msg.logError(e)
+            else:
+                mixed_kwargs.update(called_kwargs)
+                mixed_kwargs.update(kwargs)
 
-        if self.execute_iterative:
-            self.workflow.execute_all(**mixed_kwargs)
-        else:
-            self.workflow.execute(**mixed_kwargs)
+                if self.execute_iterative:
+                    self.workflow.execute_all(**mixed_kwargs)
+                else:
+                    self.workflow.execute(**mixed_kwargs)
 
     def setParameters(self, operation: OperationPlugin):
         if operation:
