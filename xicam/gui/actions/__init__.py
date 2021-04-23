@@ -1,4 +1,4 @@
-from PyQt5.QtCore import QEvent
+from qtpy.QtCore import QEvent
 from pyqtgraph import ROI
 
 
