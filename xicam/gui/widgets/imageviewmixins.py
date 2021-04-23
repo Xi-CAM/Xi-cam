@@ -818,12 +818,15 @@ class CatalogView(XArrayView):
     def setCatalog(self, catalog, stream=None, field=None, *args, **kwargs):
         self.catalog = catalog
         self.stream = stream
+        self.field = field
+        if not catalog:
+            return
         if not field:
             try:
                 field = catalog.metadata['start']['detectors'][0]
             except Exception as ex:
                 msg.logError(ex)
-        self.field = field
+            self.field = field
         self._updateCatalog(*args, **kwargs)
 
     def _updateCatalog(self, *args, **kwargs):
