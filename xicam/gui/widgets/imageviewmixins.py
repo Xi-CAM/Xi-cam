@@ -1254,19 +1254,19 @@ class ROICreator(ToolbarLayout):
 
     def _create_arc_roi(self):
         c = (0.0, 0.0)
-        r = min(*self.image.shape) / 3
+        r = min(*self.image.shape[-2:]) / 3
         if self._geometry is not None:
             fit = self._geometry.getFit2D()
-            c = (fit['centerX'], self._geometry.detector.shape[0] - fit['centerY'])
+            c = (fit['centerX'], fit['centerY'])
         return ArcROI(pos=c, radius=r, removable=False, movable=(self._geometry is None))
 
     def _create_segmented_arc_roi(self):
         # FIXME: code duplication
         c = (0.0, 0.0)
-        r = min(*self.image.shape) / 3
+        r = min(*self.image.shape[-2:]) / 3
         if self._geometry is not None:
             fit = self._geometry.getFit2D()
-            c = (fit['centerX'], self._geometry.detector.shape[0] - fit['centerY'])
+            c = (fit['centerX'], fit['centerY'])
         return SegmentedArcROI(pos=c, radius=r, removable=False, movable=(self._geometry is None))
 
     def _create_rect_roi(self):
