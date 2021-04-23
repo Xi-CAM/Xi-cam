@@ -1130,7 +1130,17 @@ class EwaldCorrected(QSpace, RowMajor, ToolbarLayout, ProcessingView):
                                            group=self.mode_group)
         self.toolbar.addAction(self.remesh_action)
         self.remesh_action.triggered.connect(partial(self.setDisplayMode, DisplayMode.remesh))
+
+        # Disable these views initially, if geometry gets set, they will be enabled
+        self.cake_action.setEnabled(False)
+        self.remesh_action.setEnabled(False)
         self.toolbar.addSeparator()
+
+    def setGeometry(self, geometry):
+        super(EwaldCorrected, self).setGeometry(geometry)
+        if geometry:
+            self.cake_action.setEnabled(True)
+            self.remesh_action.setEnabled(True)
 
     def setDisplayMode(self, mode):
         self.displaymode = mode
