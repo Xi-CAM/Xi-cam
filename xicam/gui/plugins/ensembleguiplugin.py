@@ -89,7 +89,7 @@ class HelpWidget(QGroupBox):
                           "when you hover your mouse over a widget in Xi-CAM."
                           "Try it out!")
 
-        self._install_event_filter()
+        QApplication.instance().installEventFilter(self)
 
         self._help_display = HelpTextDisplay()
         layout = QVBoxLayout()
@@ -98,16 +98,6 @@ class HelpWidget(QGroupBox):
 
         # Stores a weakref to a previously entered widget
         self._cached_entered_widget = lambda: None  # type: weakref.ref
-
-    def _install_event_filter(self):
-        """Install self.eventFilter to the application.
-
-        This lets this widget listen to all events,
-        and capture relevant events for updating its internal helper text.
-        """
-        app = QApplication.instance()
-        if app is not None:
-            app.installEventFilter(self)
 
     # FIXME: better (shorter) name; want to convey this information so it isn't confusing when revisiting.
     def _is_child_of_previously_entered_widget_with_help_text(self, widget: QWidget) -> bool:
