@@ -62,11 +62,7 @@ class EnsembleGUIPlugin(GUIPlugin):
                                     "rightbottom": self.workflow_editor,
                                     "leftbottom": self.xi_help}
 
-    def _test(self, o):
-        print("EnsembleGUIPlugin._test")
-
     def process_action(self, action: Action, canvas: "XicamIntentCanvas"):
-        print("EnsembleGUIPlugin.process_action")
         ...
 
     def appendCatalog(self, catalog: BlueskyRun, **kwargs):
@@ -86,7 +82,7 @@ class HelpWidget(QGroupBox):
 
     Installs an event filter on the application that can be used to get and display a widget's `whatsThis` text.
     """
-    def __init__(self, title="Xi-Help", parent=None):
+    def __init__(self, title="Xi-Help Beta", parent=None):
         super(HelpWidget, self).__init__(title, parent)
         self.setObjectName(self.__class__.__name__)
         self.setWhatsThis("This widget displays any available help text "
