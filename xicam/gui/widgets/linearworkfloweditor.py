@@ -139,16 +139,7 @@ class WorkflowEditor(QSplitter):
                 # NOTE: we do not want to raise an exception here (we are in a connected Qt slot)
                 # Grab the user-oriented message from the kwargs callable exception
                 msg.notifyMessage(str(e), title="Run Workflow Error", level=msg.ERROR)
-
-                # Log a more detailed error message that includes the kwargs callable name
-                # and the workflow name
-                kwargs_callable_name = self.kwargs_callable.__name__
-                workflow_name = self.workflow.name
-                detail_text = f'Error occurred when trying to run the kwargs_callable function ' \
-                              f'"{kwargs_callable_name}" ' \
-                              f'in the "{workflow_name}" workflow.'
-                message = f"{detail_text}"
-                msg.logMessage(message, level=msg.ERROR, caller_name=kwargs_callable_name)
+                msg.logError(e)
             else:
                 mixed_kwargs.update(called_kwargs)
                 mixed_kwargs.update(kwargs)
