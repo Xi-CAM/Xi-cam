@@ -1,3 +1,6 @@
+import pytest
+camsaxs = pytest.importorskip("camsaxs")
+
 from qtpy.QtWidgets import QLabel
 from xicam.plugins import GUIPlugin, GUILayout
 from xicam.gui.widgets.dynimageview import DynImageView
