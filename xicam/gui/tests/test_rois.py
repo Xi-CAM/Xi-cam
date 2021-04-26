@@ -12,7 +12,7 @@ def test_arcroi(qtbot):
     data = np.random.random((10, 10))
     imageview.setImage(data)
 
-    roi = ArcROI(center=(5, 5), radius=5)
+    roi = ArcROI(pos=(5, 5), radius=5)
     imageview.view.addItem(roi)
     imageview.show()
 
