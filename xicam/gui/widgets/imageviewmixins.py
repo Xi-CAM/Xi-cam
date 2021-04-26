@@ -2,18 +2,23 @@
 from functools import WRAPPER_ASSIGNMENTS
 import pyqtgraph as pg
 from pyqtgraph import ImageView, InfiniteLine, mkPen, ScatterPlotItem, ImageItem, PlotItem
-from qtpy.QtGui import QTransform, QPolygonF
-from qtpy.QtWidgets import QLabel, QErrorMessage, QSizePolicy, QPushButton, QHBoxLayout, QVBoxLayout, QComboBox, QWidget, QToolBar
+from qtpy.QtGui import QTransform, QPolygonF, QIcon, QPixmap
+from qtpy.QtWidgets import QLabel, QErrorMessage, QSizePolicy, QPushButton, QHBoxLayout, QVBoxLayout, QComboBox, \
+    QWidget, QToolBar, QActionGroup, QAction, QLayout
 from qtpy.QtCore import Qt, Signal, Slot, QSize, QPointF, QRectF
 import numpy as np
 from databroker.core import BlueskyRun
 
 # from pyFAI.geometry import Geometry
+from camsaxs.remesh_bbox import remesh, q_from_geometry
 from xicam.core import msg
 from xicam.core.data import MetaXArray
 from xicam.core.data.bluesky_utils import fields_from_stream, streams_from_run, is_image_field
+from xicam.gui.actions import ROIAction
 from xicam.gui.widgets.elidedlabel import ElidedLabel
-from xicam.gui.widgets.ROI import BetterPolyLineROI, BetterCrosshairROI
+from xicam.gui.static import path
+from xicam.gui.widgets.ROI import BetterPolyLineROI, BetterCrosshairROI, BetterRectROI, ArcROI, SegmentedArcROI, \
+    SegmentedRectROI
 import enum
 from typing import Callable
 from functools import partial
@@ -155,6 +160,7 @@ class ExportButton(BetterLayout):
         self.exportBtn.clicked.connect(self.export)
 
 
+@live_plugin('ImageMixinPlugin')
 class XArrayView(ImageView):
     def __init__(self, *args, **kwargs):
         # Add axes
@@ -231,9 +237,11 @@ class XArrayView(ImageView):
                 axorder = ['t', 'x', 'y', 'c']
             else:
                 axorder = ['t', 'y', 'x', 'c']
-            axorder = [self.axes[ax] for ax in axorder if self.axes[ax] is not None]
-            ax_swap = [image.dims[ax_index] for ax_index in axorder]
-            image = image.transpose(*ax_swap)
+
+            if not isinstance(image, Pseudo3DFrameArray):
+                axorder = [self.axes[ax] for ax in axorder if self.axes[ax] is not None]
+                ax_swap = [image.dims[ax_index] for ax_index in axorder]
+                image = image.transpose(*ax_swap)
 
             # Select time index
             if self.axes['t'] is not None:
@@ -270,7 +278,6 @@ class PixelSpace(XArrayView, RowMajor):
             kwargs["view"] = self.axesItem
 
         self._transform = QTransform()
-        self._raw_image = None
 
         super(PixelSpace, self).__init__(*args, **kwargs)
 
@@ -296,17 +303,14 @@ class PixelSpace(XArrayView, RowMajor):
             if isinstance(item, ImageItem):
                 item.setTransform(transform)
         self._transform = transform
-        return img, transform
+        return transform
 
     def setImage(self, img, *args, **kwargs):
         if img is None:
             return
 
-        if getattr(self, "displaymode", DisplayMode.raw) == DisplayMode.raw:
-            self._raw_image = img
-
         if not kwargs.get("transform", None):
-            img, transform = self.transform(img)
+            transform = self.transform(img)
             self.updateAxes()
             super(PixelSpace, self).setImage(img, *args, transform=transform, **kwargs)
 
@@ -314,7 +318,7 @@ class PixelSpace(XArrayView, RowMajor):
             super(PixelSpace, self).setImage(img, *args, **kwargs)
 
     def setTransform(self):
-        self.setImage(self._raw_image)  # this should loop back around to the respective transforms
+        self.setImage(self.image)  # this should loop back around to the respective transforms
 
     def updateAxes(self):
         self.axesItem.setLabel("bottom", "x (px)")  # , units='s')
@@ -336,78 +340,49 @@ class QSpace(PixelSpace):
         self._geometry = geometry
         self.setTransform()
 
+    def setImage(self, img, *args, geometry=None, **kwargs):
+        if geometry:
+            self.setGeometry(geometry)
+        super(QSpace, self).setImage(img, *args, **kwargs)
 
-class EwaldCorrected(QSpace, RowMajor, BetterLayout):
-    def __init__(self, *args, **kwargs):
-        super(EwaldCorrected, self).__init__(*args, **kwargs)
-        self.toggle_display_mode = QPushButton("Q Space")
-        self.toggle_display_mode.setCheckable(True)
-        self.toggle_display_mode.clicked.connect(self.toggleMode)
 
-        self.ui.right_layout.addWidget(self.toggle_display_mode)
+class Pseudo3DFrameArray(object):
+    """Array that pretends it is a 3D array, but really only has one frame.
 
-    def toggleMode(self, state):
-        if state:
-            self.setDisplayMode(DisplayMode.remesh)
-        else:
-            self.setDisplayMode(DisplayMode.raw)
+    Data passed into it should be the already sliced (single-frame) array.
+    """
+    def __init__(self, data):
+        self.data = data
+        self.dims = []
 
-    def setDisplayMode(self, mode):
-        self.displaymode = mode
-        if hasattr(self, "drawCenter"):
-            self.drawCenter()
-        self.setTransform()
+    def transpose(self, *args, **kwargs):
+        return self
 
-    def transform(self, img=None):
-        if not self._geometry or not self.displaymode == DisplayMode.remesh:
-            return super(EwaldCorrected, self).transform(img)  # Do pixel space transform when not calibrated
+    def __getitem__(self, item):
+        """Override getitem to pretend it is a 3D array.
 
-        from camsaxs import remesh_bbox
+        Ignores the item slice and return the contained frame data."""
+        return self.data
 
-        img, q_x, q_z = remesh_bbox.remesh(np.squeeze(img), self._geometry, reflection=False, alphai=None)
 
-        # Build Quads
-        shape = img.shape
-        a = shape[-2] - 1, 0  # bottom-left
-        b = shape[-2] - 1, shape[-1] - 1  # bottom-right
-        c = 0, shape[-1] - 1  # top-right
-        d = 0, 0  # top-left
+class ProcessingView(pg.ImageView):
+    def getProcessedImage(self):
+        self._imageLevels = self.quickMinMax(self.image)
 
-        quad1 = QPolygonF()
-        quad2 = QPolygonF()
-        for p, q in zip([a, b, c, d], [a, b, c, d]):  # the zip does the flip :P
-            quad1.append(QPointF(*p[::-1]))
-            quad2.append(QPointF(q_x[q], q_z[q]))
+        image = Pseudo3DFrameArray(self.process(np.array(self.image[self.currentIndex])))
 
-        transform = QTransform()
-        QTransform.quadToQuad(quad1, quad2, transform)
+        self.levelMin, self.levelMax = self.process_levels(self._imageLevels)
 
-        for item in self.view.items:
-            if isinstance(item, ImageItem):
-                item.setTransform(transform)
-        self._transform = transform
+        return image
 
-        return img, self._transform
+    def process(self, image):
+        raise NotImplementedError
 
-    def setImage(self, img, *args, **kwargs):
-        if img is None:
-            return
+    def process_levels(self, levels):
+        level_min = min([level[0] for level in self._imageLevels])
+        level_max = max([level[1] for level in self._imageLevels])
 
-        self._raw_image = img
-
-        if self._geometry:
-            transform_img, transform = self.transform(img)
-            super(EwaldCorrected, self).setImage(transform_img, *args, transform=transform, **kwargs)
-
-        else:
-            super(EwaldCorrected, self).setImage(img, *args, **kwargs)
-
-    def updateAxes(self):
-        if self.displaymode == DisplayMode.remesh:
-            self.axesItem.setLabel("bottom", "q<sub>x</sub> (Å⁻¹)")  # , units='s')
-            self.axesItem.setLabel("left", "q<sub>z</sub> (Å⁻¹)")
-        else:
-            super(EwaldCorrected, self).updateAxes()
+        return level_min, level_max
 
 
 class CenterMarker(QSpace):
@@ -429,7 +404,7 @@ class CenterMarker(QSpace):
             if self.imageItem.image is not None:
                 if self.displaymode == DisplayMode.raw:
                     x = fit2d["centerX"]
-                    y = self._raw_image.shape[-2] - fit2d["centerY"]
+                    y = fit2d["centerY"]
                     self.centerplot.setData(x=[x], y=[y])
                 elif self.displaymode == DisplayMode.remesh:
                     self.centerplot.setData(x=[0], y=[0])
@@ -473,18 +448,18 @@ class PixelCoordinates(PixelSpace, BetterLayout):
     def __init__(self, *args, **kwargs):
         super(PixelCoordinates, self).__init__(*args, **kwargs)
 
-        self._coordslabel = QLabel(
-            "<div style='font-size:12pt; " "text-overflow: ellipsis; width:100%;'>&nbsp;</div>"
-        )
+        self._coordslabel = QLabel(parent=self)
 
-        # def sizeHint():
-        #     sizehint = QSize(self.ui.graphicsView.width()-10, self._coordslabel.height())
-        #     return sizehint
-        # self._coordslabel.sizeHint = sizeHint
-        self._coordslabel.setSizePolicy(
-            QSizePolicy.MinimumExpanding, QSizePolicy.Minimum
-        )  # TODO: set sizehint to take from parent, not text
+        font = self._coordslabel.font()
+        font.setPixelSize(14)
+        self._coordslabel.setFont(font)
+
         self.ui.left_layout.addWidget(self._coordslabel, alignment=Qt.AlignHCenter)
+        self.ui.right_layout.setSizeConstraint(QLayout.SetMinAndMaxSize)
+
+        # Accommodate vertical height
+        self._coordslabel.setMinimumSize(self._coordslabel.minimumSize().width(),
+                                         self._coordslabel.minimumHeight() + self._coordslabel.height())
 
         self.scene.sigMouseMoved.connect(self.displayCoordinates)
 
@@ -499,7 +474,7 @@ class PixelCoordinates(PixelSpace, BetterLayout):
 
                 self.formatCoordinates(pxpos, pos)
             else:
-                self._coordslabel.setText("<div style='font-size:12pt;'>&nbsp;</div>")
+                self._coordslabel.setText("")
 
     def formatCoordinates(self, pxpos, pos):
         """
@@ -511,37 +486,56 @@ class PixelCoordinates(PixelSpace, BetterLayout):
         except IndexError:
             I = 0
 
-        self._coordslabel.setText(
-            f"<div style='font-size: 12pt; color:#FFFFFF;"
-            f"text-overflow: ellipsis; width:100%;'>"
-            f"x={pxpos.x():0.1f}, "
-            f"<span style=''>y={pxpos.y():0.1f}</span>, "
-            f"<span style=''>I={I:0.0f}</span></div>"
-        )
+        self._coordslabel.setText(f"x={pxpos.x():0.1f} y={pxpos.y():0.1f} I={I:0.0f}")
 
 
 class QCoordinates(QSpace, PixelCoordinates):
+
     def formatCoordinates(self, pxpos, pos):
+
         """
         when the mouse is moved in the viewer, recalculate coordinates
         """
 
-        try:
-            I = self.imageItem.image[int(pxpos.y()), int(pxpos.x())]
-        except IndexError:
-            I = 0
-        self._coordslabel.setText(
-            f"<div style='font-size: 12pt; color:#FFFFFF; "
-            f"text-overflow: ellipsis; width:100%;'>"
-            f"x={pxpos.x():0.1f}, "
-            f"<span style=''>y={self.imageItem.image.shape[-2] - pxpos.y():0.1f}</span>, "
-            f"<span style=''>I={I:0.0f}</span>, "
-            f"q={np.sqrt(pos.x() ** 2 + pos.y() ** 2):0.3f} \u212B\u207B\u00B9, "
-            f"q<sub>z</sub>={pos.y():0.3f} \u212B\u207B\u00B9, "
-            f"q<sub>\u2225</sub>={pos.x():0.3f} \u212B\u207B\u00B9, "
-            f"d={2 * np.pi / np.sqrt(pos.x() ** 2 + pos.y() ** 2) * 10:0.3f} nm, "
-            f"\u03B8={np.rad2deg(np.arctan2(pos.y(), pos.x())):.2f}&#176;</div>"
-        )
+        if self._geometry:
+            if self.displaymode == DisplayMode.remesh:
+                try:
+                    I = self.imageItem.image[int(pxpos.y()), int(pxpos.x())]
+                except IndexError:
+                    I = 0
+                self._coordslabel.setText(
+                    f"x={pxpos.x():0.1f}, "
+                    f"y={self.imageItem.image.shape[-2] - pxpos.y():0.1f}, "
+                    f"I={I:0.0f}, "
+                    f"q={np.sqrt(pos.x() ** 2 + pos.y() ** 2):0.3f} \u212B\u207B\u00B9, "
+                    f"q<sub>z</sub>={pos.y():0.3f} \u212B\u207B\u00B9, "
+                    f"q<sub>\u2225</sub>={pos.x():0.3f} \u212B\u207B\u00B9, "
+                    f"d={2 * np.pi / np.sqrt(pos.x() ** 2 + pos.y() ** 2) * 10:0.3f} nm, "
+                    f"\u03B8={np.rad2deg(np.arctan2(pos.y(), pos.x())):.2f}&#176;"
+                )
+            elif self.displaymode == DisplayMode.raw:
+                try:
+                    I = self.imageItem.image[int(pxpos.y()), int(pxpos.x())]
+                except IndexError:
+                    I = 0
+
+                q = q_from_geometry(self.imageItem.image.shape,
+                                    self._geometry,
+                                    reflection=False,
+                                    alphai=0)[int(pxpos.y()), int(pxpos.x())]
+
+                self._coordslabel.setText(
+                    f"x={pxpos.x():0.1f}, "
+                    f"y={self.imageItem.image.shape[-2] - pxpos.y():0.1f}, "
+                    f"I={I:0.0f}, "
+                    f"q={np.sqrt(np.sum(np.square(q))):0.3f} \u212B\u207B\u00B9, "
+                    f"q<sub>z</sub>={q[1]:0.3f} \u212B\u207B\u00B9, "
+                    f"q<sub>\u2225</sub>={q[0]:0.3f} \u212B\u207B\u00B9, "
+                    f"d={2 * np.pi / np.sqrt(q[0] ** 2 + q[1] ** 2) * 10:0.3f} nm, "
+                    f"\u03B8={np.rad2deg(np.arctan2(q[1], q[0])):.2f}&#176;"
+                )
+        else:
+            super(QCoordinates, self).formatCoordinates(pxpos, pos)
 
 
 class PolygonROI(ImageView):
@@ -809,9 +803,6 @@ class LogScaleIntensity(BetterLayout, ComposableItemImageView):
         self.logIntensityButton.setChecked(value)
 
 
-
-
-
 class CatalogView(XArrayView):
     sigCatalogChanged = Signal(BlueskyRun)
     sigStreamChanged = Signal(str)
@@ -828,6 +819,14 @@ class CatalogView(XArrayView):
         self.catalog = catalog
         self.stream = stream
         self.field = field
+        if not catalog:
+            return
+        if not field:
+            try:
+                field = catalog.metadata['start']['detectors'][0]
+            except Exception as ex:
+                msg.logError(ex)
+            self.field = field
         self._updateCatalog(*args, **kwargs)
 
     def _updateCatalog(self, *args, **kwargs):
@@ -955,6 +954,60 @@ class FieldSelector(CatalogView, BetterLayout):
         return self.fieldComboBox.currentText()
 
 
+class CatalogImagePlotView(StreamSelector, FieldSelector):
+    def __init__(self, catalog=None, stream=None, field=None, *args, **kwargs):
+        # Turn off image field filtering for this mixin
+        super(CatalogImagePlotView, self).__init__(catalog, stream, field, *args, **kwargs)
+
+    def setData(self, data, *args, **kwargs):
+        self.axesItem.clearPlots()
+        if len(data.shape) == 1:
+            self.ui.roiPlot.hide()
+            self.ui.histogram.hide()
+            self.view.removeItem(self.imageItem)
+            self.axesItem.plot(y=data, *args, **kwargs)
+            if "labels" in kwargs:
+                self.axesItem.setLabels(**kwargs['labels'])
+            self.view.enableAutoRange(x=True, y=True)
+            self.view.setAspectLocked(False)
+        else:
+            self.view.addItem(self.imageItem)
+            self.setImage(data)
+            self.ui.roiPlot.show()
+            self.ui.histogram.show()
+            self.view.setAspectLocked(True)
+
+    def _updateCatalog(self, *args, **kwargs):
+        if all([self.catalog, self.stream, self.field]):
+            try:
+                stream = getattr(self.catalog, self.stream)
+            except AttributeError as ex:
+                msg.logError(ex)
+                return
+
+            eventStream = stream.to_dask()[self.field]
+
+            self.xarray = np.squeeze(eventStream)
+
+            kwargs['antialias'] = True
+            kwargs['pen'] = pg.mkPen(width=2)
+            kwargs['symbol'] = 'o'
+            kwargs['labels'] = {'left': self.field}
+
+            try:
+                scan_axis_field_name = self.catalog.metadata['start']['hints']['dimensions'][0][0][0]
+            except Exception as ex:
+                msg.logError(ex)
+            else:
+                kwargs['x'] = stream.to_dask()[scan_axis_field_name]
+                kwargs['labels']['bottom'] = scan_axis_field_name
+
+            self.setData(data=self.xarray, *args, **kwargs)
+        else:
+            # TODO -- clear the current image
+            pass
+
+
 class ImageItemHistogramOverflowFix(ImageItem):
     def getHistogram(self, bins="auto", step="auto", targetImageSize=200, targetHistogramSize=500, **kwds):
         """Returns x and y arrays containing the histogram values for the current image.
@@ -988,7 +1041,7 @@ class ImageItemHistogramOverflowFix(ImageItem):
                 mx = stepData.max()
                 # print(f"\n*** mx, mn: {mx}, {mn} ({type(mx)}, {type(mn)})***\n")
                 # PATCH -- explicit subtract with np.int to avoid overflow
-                step = np.ceil(np.subtract(mx, mn, dtype=np.int) / 500.0)
+                step = max(1, np.ceil(np.subtract(mx, mn, dtype=np.int) / 500.0))
                 bins = np.arange(mn, mx + 1.01 * step, step, dtype=np.int)
                 if len(bins) == 0:
                     bins = [mn, mx]
@@ -1044,18 +1097,246 @@ class ToolbarLayout(BetterLayout):
     """
     def __init__(self, *args, toolbar=None, **kwargs):
         super(ToolbarLayout, self).__init__(*args, **kwargs)
-        self.toolbar = toolbar
+        self.toolbar = toolbar or QToolBar()
 
         # Define new layout
         self.toolbar_outer_layout = QVBoxLayout()
         self.toolbar_outer_layout.addWidget(self.toolbar)
 
         # Reinitialize the better layout
-        self._reset_layout()
+        self._reset_layout()  # FIXME: Find a way to remove this to prevent sensitivity to order of inheritance
 
         # Create new layout hierarchy (in this case, a new outer_layout that contains the original layouts within)
-        self.toolbar_outer_layout.addLayout(self.ui.outer_layout)
+        outer_layout = self.ui.outer_layout
+        self.toolbar_outer_layout.addLayout(outer_layout)
         self._set_layout(self.toolbar_outer_layout)
+
+    def mkAction(self, iconpath: str = None, text=None, receiver=None, group=None, checkable=False, checked=False):
+        actn = QAction(self)
+        if iconpath: actn.setIcon(QIcon(QPixmap(str(path(iconpath)))))
+        if text: actn.setText(text)
+        if receiver: actn.triggered.connect(receiver)
+        actn.setCheckable(checkable)
+        if checked: actn.setChecked(checked)
+        if group: actn.setActionGroup(group)
+        return actn
+
+
+class EwaldCorrected(QSpace, RowMajor, ToolbarLayout, ProcessingView):
+    def __init__(self, *args, **kwargs):
+        self.geometry_mode = 'transmission'
+        self.incidence_angle = 0
+
+        super(EwaldCorrected, self).__init__(*args, **kwargs)
+
+        self.mode_group = QActionGroup(self)
+        self.raw_action = self.mkAction('icons/raw.png', 'Raw', checkable=True, group=self.mode_group, checked=True)
+        self.toolbar.addAction(self.raw_action)
+        self.raw_action.triggered.connect(partial(self.setDisplayMode, DisplayMode.raw))
+        self.cake_action = self.mkAction('icons/cake.png', 'Cake (q/chi plot)', checkable=True, group=self.mode_group)
+        self.toolbar.addAction(self.cake_action)
+        self.cake_action.triggered.connect(partial(self.setDisplayMode, DisplayMode.cake))
+        self.remesh_action = self.mkAction('icons/remesh.png', 'Wrap Ewald Sphere', checkable=True,
+                                           group=self.mode_group)
+        self.toolbar.addAction(self.remesh_action)
+        self.remesh_action.triggered.connect(partial(self.setDisplayMode, DisplayMode.remesh))
+
+        # Disable these views initially, if geometry gets set, they will be enabled
+        self.cake_action.setEnabled(False)
+        self.remesh_action.setEnabled(False)
+        self.toolbar.addSeparator()
+
+    def setGeometry(self, geometry):
+        super(EwaldCorrected, self).setGeometry(geometry)
+        if geometry:
+            self.cake_action.setEnabled(True)
+            self.remesh_action.setEnabled(True)
+
+    def setDisplayMode(self, mode):
+        self.displaymode = mode
+        if hasattr(self, "drawCenter"):
+            self.drawCenter()
+        self.setTransform()
+
+    def process(self, image):
+        if self.displaymode == DisplayMode.remesh:
+            image, q_x, q_z = remesh(image, self._geometry, reflection=False, alphai=1)
+        return image
+
+    def transform(self, img=None):
+        if not self._geometry or not self.displaymode == DisplayMode.remesh:
+            return super(EwaldCorrected, self).transform(img)  # Do pixel space transform when not calibrated
+
+        while len(img.shape) > 2:
+            img = img[0]
+
+        img, q_x, q_z = remesh(np.asarray(img), self._geometry,
+                               reflection=(self.geometry_mode or 'transission' != 'transmission'),
+                               alphai=self.incidence_angle)
+
+        # Build Quads
+        shape = img.shape
+        a = shape[-2] - 1, 0  # bottom-left
+        b = shape[-2] - 1, shape[-1] - 1  # bottom-right
+        c = 0, shape[-1] - 1  # top-right
+        d = 0, 0  # top-left
+
+        quad1 = QPolygonF()
+        quad2 = QPolygonF()
+        for p, q in zip([a, b, c, d], [d, c, b, a]):  # the zip does the flip :P
+            quad1.append(QPointF(*p[::-1]))
+            quad2.append(QPointF(q_x[q], q_z[q]))
+
+        transform = QTransform()
+        QTransform.quadToQuad(quad1, quad2, transform)
+
+        for item in self.view.items:
+            if isinstance(item, ImageItem):
+                item.setTransform(transform)
+        self._transform = transform
+
+        return self._transform
+
+    def setImage(self, img, *args, geometry=None, geometry_mode=None, incidence_angle=None, **kwargs):
+        if geometry_mode:
+            self.geometry_mode = geometry_mode
+
+        if incidence_angle is not None:
+            self.incidence_angle = incidence_angle
+
+        if geometry:
+            self.setGeometry(geometry)
+
+        if img is None:
+            return
+
+        if self._geometry:
+            transform = self.transform(img)
+            super(EwaldCorrected, self).setImage(img, *args, transform=transform, **kwargs)
+
+        else:
+            super(EwaldCorrected, self).setImage(img, *args, **kwargs)
+
+    def updateAxes(self):
+        if self.displaymode == DisplayMode.remesh:
+            self.axesItem.setLabel("bottom", "q<sub>x</sub> (Å⁻¹)")  # , units='s')
+            self.axesItem.setLabel("left", "q<sub>z</sub> (Å⁻¹)")
+        else:
+            super(EwaldCorrected, self).updateAxes()
+
+
+class ROICreator(ToolbarLayout):
+    """Implements a combo-box widget in the toolbar to select and create ROIs.
+
+    Clicking on the combo-box will show all available ROIs;
+    clicking on an ROI will generate the ROI intent and reset the combo-box back to its placeholder text.
+    """
+    def __init__(self, *args, **kwargs):
+        super(ROICreator, self).__init__(*args, **kwargs)
+        self.combobox = QComboBox()
+        self.combobox.setPlaceholderText("Create ROI...")
+
+        def get_icon(static_path: str):
+            return QIcon(QPixmap(str((path(static_path))))) or QIcon()
+
+        # Add roi options
+        self.combobox.addItem(get_icon("icons/roi_arc.png"),
+                              "Arc ROI",
+                              partial(self._create_roi_action, self._create_arc_roi))
+        self.combobox.addItem(get_icon("icons/roi_segmented_arc.png"),
+                              "Segmented Arc ROI",
+                              partial(self._create_roi_action, self._create_segmented_arc_roi))
+        self.combobox.addItem(get_icon("icons/roi_rect.png"),
+                              "Rectangle ROI",
+                              partial(self._create_roi_action, self._create_rect_roi))
+        self.combobox.addItem(get_icon("icons/roi_rect_segmented.png"),
+                              "Segmented Rectangle ROI",
+                              partial(self._create_roi_action, self._create_segmented_rect_roi))
+
+        self.combobox.activated.connect(self._roi_activated)
+        self.toolbar.addWidget(self.combobox)
+
+    def _bounding_rect(self):
+        rect = QRectF(self.imageItem.boundingRect())
+        rect.setSize(rect.size() / 2)
+        rect.moveCenter(self.imageItem.boundingRect().center())
+        return rect
+
+    def _create_arc_roi(self):
+        c = (0.0, 0.0)
+        r = min(*self.image.shape[-2:]) / 3
+        if self._geometry is not None:
+            fit = self._geometry.getFit2D()
+            c = (fit['centerX'], fit['centerY'])
+        return ArcROI(pos=c, radius=r, removable=False, movable=(self._geometry is None))
+
+    def _create_segmented_arc_roi(self):
+        # FIXME: code duplication
+        c = (0.0, 0.0)
+        r = min(*self.image.shape[-2:]) / 3
+        if self._geometry is not None:
+            fit = self._geometry.getFit2D()
+            c = (fit['centerX'], fit['centerY'])
+        return SegmentedArcROI(pos=c, radius=r, removable=False, movable=(self._geometry is None))
+
+    def _create_rect_roi(self):
+        rect = self._bounding_rect()
+        return BetterRectROI(rect.topLeft(), rect.size(), removable=False)
+
+    def _create_segmented_rect_roi(self):
+        rect = self._bounding_rect()
+        return SegmentedRectROI(rect.topLeft(), rect.size(), removable=False)
+
+    def _create_roi_action(self, roi_creator):
+        roi_action = ROIAction(roi_creator())
+        print(f"ROI: {roi_action.roi}")
+        self.parent().sigInteractiveAction.emit(roi_action, self.parent())
+
+    def _roi_activated(self, index: int):
+        # Ignore invalid index
+        if index == -1:
+            return
+
+        self.combobox.itemData(index, Qt.UserRole)()
+        self.combobox.setCurrentIndex(-1)
+
+
+# class RectROIAction(BetterLayout):
+#     def __init__(self, *args, **kwargs):
+#         super(RectROIAction, self).__init__(*args, **kwargs)
+#
+#         self.button = QPushButton("Rectangle ROI")
+#         self.button.clicked.connect(self._add_roi_action)
+#         self.ui.right_layout.addWidget(self.button)
+#
+#     def _add_roi_action(self, _):
+#         rect = QRectF(self.imageItem.boundingRect())
+#         rect.setSize(rect.size()/2)
+#         rect.moveCenter(self.imageItem.boundingRect().center())
+#
+#         roi_action = ROIAction(BetterRectROI(rect.topLeft(), rect.size()))
+#         # parent is the XicamIntentCanvas
+#         self.parent().sigInteractiveAction.emit(roi_action, self.parent())
+#         # FIXME: removing ROIs
+#         # self.button.setEnabled(False)
+
+
+@live_plugin("ImageMixinPlugin")
+class AxesLabels(ImageView):
+    """Mixin for custom axes labels on an image view.
+
+    This reserves usage of the kwarg "labels".
+    """
+    def __init__(self, *args, labels=None, **kwargs):
+        if "view" in kwargs:
+            raise ValueError("view cannot be passed as a kwarg")
+        view = None
+        if labels:
+            view = pg.PlotItem()
+            for axis, text in labels.items():
+                view.setLabel(axis=axis, text=text)
+        kwargs["view"] = view
+        super(AxesLabels, self).__init__(*args, **kwargs)
 
 
 if __name__ == "__main__":
@@ -1068,6 +1349,10 @@ if __name__ == "__main__":
     tb = QToolBar()
     tb.addAction("BLAH")
     w = cls(toolbar=tb)
+
+    cls = type('Blend', (PixelCoordinates,), {})
+    w = cls()
+    w.setImage(np.random.rand(10, 10))
     w.show()
 
     qapp.exec_()

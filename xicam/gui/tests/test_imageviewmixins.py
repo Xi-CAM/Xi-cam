@@ -1,6 +1,7 @@
 import os
 import pytest
 from pytestqt import qtbot
+camsaxs = pytest.importorskip("camsaxs")
 
 
 def test_logIntensity(qtbot):

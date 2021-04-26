@@ -27,7 +27,7 @@ class EnsembleModel(TreeModel):
     active_role = Qt.UserRole + 4  # only tied to Ensemble tree items
 
     # Unnamed items (i.e. no display role text) will get this text set
-    _defaultDisplayText = "Untitled"
+    _defaultDisplayText = "Untitled Collection"
     NO_ACTIVE_ENSEMBLE_TEXT = "(None)"
 
     def __init__(self, parent=None):
@@ -75,9 +75,36 @@ class EnsembleModel(TreeModel):
     def intents_from_ensemble(self, ensemble: TreeItem):
         return {catalog: self.intents_from_catalog(catalog) for catalog in self.catalogs_from_ensemble(ensemble)}
 
+    def catalog_from_intent(self, intent: Intent) -> BlueskyRun:
+        catalog_item = self.catalog_item_from_intent(intent)
+        if catalog_item is not None:
+            return catalog_item.data(self.object_role)
+        return None
 
-    def _set_active_brushes(self, index, is_active):
-        brush = text_brush = self.data(index, Qt.BackgroundRole) or QBrush()
+    def catalog_item_from_intent(self, intent: Intent) -> TreeItem:
+        for ensemble in range(self.rowCount()):
+            ensemble_index = self.index(ensemble, 0)
+            for catalog in range(self.rowCount(ensemble_index)):
+                catalog_index = self.index(catalog, 0, ensemble_index)
+                for i in range(self.rowCount(catalog_index)):
+                    intent_index = self.index(i, 0, catalog_index)
+                    data = self.data(intent_index, role=self.object_role)
+                    if data == intent:
+                        return catalog_index.internalPointer()
+
+        return None
+
+    def catalog_item_from_catalog(self, catalog: BlueskyRun) -> TreeItem:
+        for ensemble in range(self.rowCount()):
+            ensemble_index = self.index(ensemble, 0)
+            for c in range(self.rowCount(ensemble_index)):
+                catalog_index = self.index(c, 0, ensemble_index)
+                data = self.data(catalog_index, role=self.object_role)
+                if data == catalog:
+                    return catalog_index.internalPointer()
+        return None
+
+    def _set_active_data(self, index, is_active):
         font = self.data(index, Qt.FontRole) or QFont()
         if is_active is True:
             if self.active_ensemble is not None:
@@ -92,6 +119,7 @@ class EnsembleModel(TreeModel):
             font.setBold(True)
         else:
             self.active_ensemble = None
+            self._update_title(self.active_ensemble_name)
             brush = QBrush()
             text_brush = QBrush()
             font.setBold(False)
@@ -104,7 +132,7 @@ class EnsembleModel(TreeModel):
             return False
 
         if role == self.active_role:
-            self._set_active_brushes(index, value)
+            self._set_active_data(index, value)
 
         elif role == Qt.DisplayRole:
             # Intercept display text changes for ensembles (i.e. renaming) so we can update the title
@@ -148,23 +176,84 @@ class EnsembleModel(TreeModel):
             intent_item.setData(WorkspaceDataType.Intent, self.data_type_role)
             catalog_item.appendChild(intent_item)
 
-    def append_to_ensemble(self, catalog, ensemble, projectors: List[Callable[[BlueskyRun], List[Intent]]]):
+    def append_to_catalog(self, catalog: BlueskyRun, intent: Intent):
+        catalog_item = self.catalog_item_from_catalog(catalog)
+        if catalog_item is not None:
+            ensemble_item = catalog_item.parent()
+            ensemble_index = self.index(ensemble_item.row(), 0)
+            catalog_index = self.index(catalog_item.row(), 0, ensemble_index)
+            end_row = catalog_item.childCount()
+            self.beginInsertRows(catalog_index, end_row, end_row)
+            self._create_intent_item(catalog_item, intent)
+            self.endInsertRows()
+
+            self.setData(catalog_index.child(end_row, 0), Qt.Checked, Qt.CheckStateRole)
+        else:
+            raise ValueError(f"Catalog does not exist in model: {catalog}")
+
+    def append_to_ensemble(self, catalog, ensemble_item, projectors: List[Callable[[BlueskyRun], List[Intent]]]):
         # Find the active ensemble (may be none if ensemble model is empty)
-        ensemble_item = self.active_ensemble
+        if ensemble_item is None:
+            ensemble_item = self.active_ensemble
+
+        # Create new ensemble if now active ensemble
+        if ensemble_item is None:
+            ensemble = Ensemble()
+            ensemble_item = self.add_ensemble(ensemble, projectors)
+
+        # Add catalogs / intents
+        # FIXME: do we need to do this if block if we instead append catalog to the ensemble directly,
+        #    then call self.add_ensemble?
         if ensemble_item is not None:
             end_row = ensemble_item.childCount()
             # Use begin/end to notify views (e.g. dataselectorview) that it needs to update view after item is inserted
             self.beginInsertRows(self.index(ensemble_item.row(), 0), end_row, end_row+1)
             self._create_catalog_item(ensemble_item, catalog, projectors)
             self.endInsertRows()
-        else:
-            self.add_ensemble(ensemble, projectors)
 
-    def add_ensemble(self, ensemble: Ensemble, projectors: List[Callable[[BlueskyRun], List[Intent]]]):
+            # NOTE: this is required to establish the Ensemble to Catalog object relationship
+            #     (CalibrateGUIPlugin.begin_calibrate calls:
+            #         self.ensemble_model.catalogs_from_ensemble(active_ensemble),
+            #         which internally does:
+            #             return ensemble.data(self.object_role).catalogs
+            #      So, if the Ensemble object hasn't had catalogs added to it, we get None back,
+            #      even though there could be a catalog item under an ensemble item.
+            ensemble_item.data(self.object_role).append_catalog(catalog)
+
+            # Set check state Checked for newly created catalog item
+            #  (this will automatically check all intents in the catalog and refresh the canvas views)
+            ensemble_index = self.index(ensemble_item.row(), 0)
+            if ensemble_index.isValid():
+                catalog_index = self.index(ensemble_index.internalPointer().childCount() - 1, 0, ensemble_index)
+                if catalog_index.isValid():
+                    self.setData(catalog_index, Qt.Checked, Qt.CheckStateRole)
+
+            # TODO: how do we want to display newly created catalogs (all intents, first intent only...)?
+            # # Set check state on for first intent in the newly created catalog item
+            # #  (this will automatically check appropriate items and refresh canvas view)
+            # ensemble_index = self.index(ensemble_item.row(), 0)
+            # if ensemble_index.isValid():
+            #     catalog_index = self.index(ensemble_index.internalPointer().childCount() - 1, 0, ensemble_index)
+            #     if catalog_index.isValid():
+            #         i = self.index(0, 0, catalog_index)
+            #         self.setData(i, Qt.Checked, Qt.CheckStateRole)
+
+            self.layoutChanged.emit()
+
+    def add_ensemble(self, ensemble: Ensemble, projectors: List[Callable[[BlueskyRun], List[Intent]]], active=False):
         """Add an ensemble to the model.
 
         Requires a projector, which is a function that accepts a BluesyRun catalog
         and returns a list of Intents.
+
+        Parameters
+        ----------
+        ensemble
+            Ensemble to add. May or may not contain catalogs.
+        projectors
+            List of projection functions to be used for catalogs in the ensemble.
+        active
+            If True, indicates the ensemble being added should be the new active ensemble. (default is False)
         """
         # self.layoutAboutToBeChanged.emit()
         ensemble_item = TreeItem(self.rootItem)
@@ -176,11 +265,15 @@ class EnsembleModel(TreeModel):
         for catalog in ensemble.catalogs:
             self._create_catalog_item(ensemble_item, catalog, projectors)
 
+        self.beginInsertRows(QModelIndex(), self.rootItem.childCount(), self.rootItem.childCount() + 1)
         self.rootItem.appendChild(ensemble_item)
-        # First ensemble should be activated; others not
-        if self.rowCount() == 1:
+        self.endInsertRows()
+        # First ensemble should be activated; others not unless we pass active=True
+        if self.rowCount() == 1 or active:
             self.setData(self.index(ensemble_item.row(), 0), True, self.active_role)
         self.layoutChanged.emit()  # inform any attached views that they need to update
+
+        return ensemble_item
 
     def remove_ensemble(self, ensemble):
         # TODO
@@ -217,8 +310,19 @@ class EnsembleModel(TreeModel):
         else:
             return super(EnsembleModel, self).data(index, role)
 
+    def removeRows(self, row: int, count: int, parent: QModelIndex = QModelIndex()):
+        # Unset the active ensemble when removing the active ensemble
+        index = self.index(row, 0, parent)
+        if self.getItem(index) is self.active_ensemble:
+            self.setData(index, False, self.active_role)
+
+        return super(EnsembleModel, self).removeRows(row, count, parent)
+
 
 class IntentsModel(QAbstractItemModel):
+    intent_role = Qt.UserRole + 100 # TODO: better coordinate with EnsembleModel roles
+    index_role = Qt.UserRole + 101
+
     def __init__(self):
         super(IntentsModel, self).__init__()
 
@@ -289,7 +393,13 @@ class IntentsModel(QAbstractItemModel):
             return intent.name
 
         elif role == EnsembleModel.object_role:
+            raise NotImplementedError('Where am I?')
+
+        elif role == self.index_role:
             return index.internalPointer()
+
+        elif role == self.intent_role:
+            return self._source_model.data(index.internalPointer(), role=EnsembleModel.object_role)
 
         elif role == EnsembleModel.canvas_role:
             return self._source_model.data(index.internalPointer(), role=EnsembleModel.canvas_role)

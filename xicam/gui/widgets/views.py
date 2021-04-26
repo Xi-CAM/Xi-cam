@@ -1,12 +1,14 @@
 import itertools
 import sys
 
-from qtpy.QtCore import QModelIndex, QPoint, Qt, QAbstractItemModel
+from qtpy.QtCore import Signal, QModelIndex, QPoint, Qt, QAbstractItemModel
 from qtpy.QtGui import QIcon, QMouseEvent, QPainter, QBrush, QFont
 from qtpy.QtWidgets import QAbstractItemView, QApplication, QButtonGroup, QHBoxLayout, QPushButton, \
     QSplitter, QStackedWidget, QStyleFactory, QTabWidget, QTreeView, QVBoxLayout, QWidget, QStyledItemDelegate, \
     QStyleOptionViewItem, QLineEdit, QStyle, QAction, QMenu
-from xicam.core.workspace import WorkspaceDataType
+from xicam.core.workspace import WorkspaceDataType, Ensemble
+from xicam.gui.canvases import XicamIntentCanvas
+from xicam.gui.actions import Action
 
 from xicam.gui.static import path
 from xicam.gui.canvasmanager import XicamCanvasManager
@@ -16,12 +18,25 @@ from xicam.core import msg
 
 class CanvasView(QAbstractItemView):
     """Defines a Qt-view interface for rendering and unrendering canvases."""
+
+    sigInteractiveAction = Signal(Action, XicamIntentCanvas)
+    sigTest = Signal(object)
+
     def __init__(self, parent=None, icon=QIcon()):
         super(CanvasView, self).__init__(parent)
         self._canvas_manager = XicamCanvasManager()
         self.icon = icon
 
         self._last_seen_intents = set()
+
+        self.setWhatsThis(
+            "This area will display any items that are checked in the data selector view (the widget on the right)."
+        )
+
+    def refresh(self):
+        for i in range(self.model().rowCount()):
+            self.model().setData(self.model().index(i,0), None, role=EnsembleModel.canvas_role)
+        self.dataChanged(self.model().index(0,0), self.model().index(self.model().rowCount(),0), roles=[EnsembleModel.canvas_role])
 
     def render(self, intent, canvas):
         item = canvas.render(intent)
@@ -41,7 +56,7 @@ class CanvasView(QAbstractItemView):
         Then, defers showing canvases to any derived views (e.g. StackedCanvasView).
         """
         # We only care about the check state changing here (whether to render or unrender)
-        if Qt.CheckStateRole in roles:
+        if Qt.CheckStateRole in roles or EnsembleModel.canvas_role in roles:
 
             intent_row_start = topLeft.row()
             intent_row_stop = bottomRight.row()
@@ -54,6 +69,10 @@ class CanvasView(QAbstractItemView):
                     intent = intent_index.internalPointer().data(EnsembleModel.object_role)
                     try:
                         canvas = self._canvas_manager.canvas_from_index(intent_index.internalPointer())
+                        try:
+                            canvas.sigInteractiveAction.connect(self.sigInteractiveAction, type=Qt.UniqueConnection)
+                        except TypeError:  # ignore errors from connection already being established
+                            pass
                     except Exception as ex:
                         msg.logMessage(f'A error occurred displaying the intent named {intent.name}:', level=msg.ERROR)
                         msg.logError(ex)
@@ -93,8 +112,9 @@ class CanvasView(QAbstractItemView):
     def rowsInserted(self, index: QModelIndex, start, end):
         return
 
-    def rowsAboutToBeRemoved(self, index: QModelIndex, start, end):
-        return
+    def rowsAboutToBeRemoved(self, parent_index: QModelIndex, start, end):
+        """Refresh/close any canvases whose items are being removed."""
+        ... # NOT BEING USED CURRENTLY
 
     def scrollTo(self, QModelIndex, hint=None):
         return
@@ -116,6 +136,10 @@ class CanvasDisplayWidget(QWidget):
     """Defines a simple interface for widgets that can display canvases."""
     def __init__(self, parent=None):
         super(CanvasDisplayWidget, self).__init__(parent)
+
+        self.setWhatsThis(
+            "This area will display any items that are checked in the data selector view (the widget on the right)."
+        )
 
     def clear_canvases(self):
         """Clear all canvases from the widget."""
@@ -141,7 +165,6 @@ class StackedCanvasView(CanvasView):
 
     Can be adapted as long as its internal widgets are CanvasDisplayWidgets.
     """
-
     def __init__(self, parent=None, model=None):
         super(StackedCanvasView, self).__init__(parent)
         if model is not None:
@@ -173,6 +196,8 @@ class StackedCanvasView(CanvasView):
                 button = QPushButton(self)
                 button.setCheckable(True)
                 button.setIcon(self.canvas_display_widgets[i].icon)
+                button.setToolTip(getattr(self.canvas_display_widgets[i], "tool_tip", None))
+                button.setWhatsThis(getattr(self.canvas_display_widgets[i], "whats_this", None))
                 # Add the button to the logical button group
                 self.buttongroup.addButton(button, i)
                 # Add the button to the visual layout section
@@ -234,7 +259,13 @@ class CanvasDisplayTabWidget(CanvasDisplayWidget):
         self.layout().setContentsMargins(0, 0, 0, 0)
         self.layout().addWidget(self._tabWidget)
 
+        # Set attrs for when the buttons are created
         self.icon = QIcon(path('icons/tabs.png'))
+        # TODO: right now, we are not attaching help text directly to this widget
+        #   (it can be confusing when trying to hover over the StackedCanvasView,
+        #   the StackedCanvasView's help text is hard to display)
+        self.tool_tip = "Tab View"
+        self.whats_this = "Reorganizes displayed data into separate tabs."
 
     def getView(self):
         return self._tabWidget.currentWidget()
@@ -284,7 +315,10 @@ class SplitHorizontal(SplitView):
 
         self.max_canvases = 2
 
+        # Set attrs for when the buttons are created
         self.icon = QIcon(path('icons/1x1hor.png'))
+        self.tool_tip = "Horizontal Split View"
+        self.whats_this = "Displays up to two visualized data items in a horizontal layout."
 
     def clear_canvases(self):
         for i in reversed(range(self.splitter.count())):
@@ -304,7 +338,11 @@ class SplitVertical(SplitHorizontal):
         super(SplitVertical, self).__init__(*args, **kwargs)
 
         self.splitter.setOrientation(Qt.Horizontal)
+
+        # Set attrs for when the buttons are created
         self.icon = QIcon(path('icons/1x1vert.png'))
+        self.tool_tip = "Vertical Split View"
+        self.whats_this = "Displays up to two visualized data items in a vertical layout."
 
 
 class SplitThreeView(SplitView):
@@ -327,7 +365,10 @@ class SplitThreeView(SplitView):
 
         self.max_canvases = 3
 
+        # Set attrs for when the buttons are created
         self.icon = QIcon(path('icons/2x1grid.png'))
+        self.tool_tip = "3-Way Split View"
+        self.whats_this = "Displays up to three visualized data items."
 
     def clear_canvases(self):
         for splitter in [self.top_splitter, self.outer_splitter]:
@@ -376,7 +417,10 @@ class SplitGridView(SplitView):
 
         self.max_canvases = 4
 
+        # Set attrs for when the buttons are created
         self.icon = QIcon(path('icons/2x2grid.png'))
+        self.tool_tip = "2x2 Grid View"
+        self.whats_this = "Displays up to four visualized data items in a grid layout."
 
     def moveSplitter( self, index, pos):
         splt = self._spltA if self.sender() == self._spltB else self._spltB
@@ -429,7 +473,6 @@ class LineEditDelegate(QStyledItemDelegate):
             text = editor.placeholderText()
         # Update the "default" text to the previous value edited in
         self._default_text = text
-        print(f"\nstyled item delegate: updating item to {text}")
         model.setData(index, text, Qt.DisplayRole)
 
     def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
@@ -465,9 +508,40 @@ class DataSelectorView(QTreeView):
 
         self.setAnimated(True)
 
+        self.setWhatsThis("This widget helps organize and display any loaded data or data created within Xi-CAM. "
+                          "Data is displayed in a tree-like manner:\n"
+                          "  Collection\n"
+                          "    Catalog\n"
+                          "      Visualizable Data\n"
+                          "Click on the items' checkboxes to visualize them.\n"
+                          "Right-click a Collection to rename it.\n"
+                          "Right-click in empty space to create a new Collection.\n")
+
+    def setModel(self, model):
+        try:
+            self.model().rowsInserted.disconnect(self._expand_rows)
+        except Exception:
+            ...
+        super(DataSelectorView, self).setModel(model)
+        self.model().rowsInserted.connect(self._expand_rows)
+
+    def _expand_rows(self, parent: QModelIndex, first: int, last: int):
+        self.expandRecursively(parent)
+
     def _rename_action(self, _):
         # Request editor (see the delegate created in the constructor) to change the ensemble's name
         self.edit(self.currentIndex())
+
+    def _remove_action(self, _):
+        index = self.currentIndex()  # QModelIndex
+        removed = self.model().removeRow(index.row(), index.parent())
+        # self.model().dataChanged.emit(QModelIndex(), QModelIndex())
+        ...
+
+    def _create_ensemble_action(self, _):
+        ensemble = Ensemble()
+        # Note this ensemble has no catalogs; so we don't need projectors passed (just [])
+        self.model().add_ensemble(ensemble, [], active=True)
 
     def _set_active_action(self, checked: bool):
         # Update the model data with the currentIndex corresponding to where the user right-clicked
@@ -475,43 +549,61 @@ class DataSelectorView(QTreeView):
         self.model().setData(self.currentIndex(), checked, EnsembleModel.active_role)
 
     def customMenuRequested(self, position):
-        """Builds a custom menu for Ensemble type items"""
-        # TODO: should this be available anywhere in the ensemble ?
-        # e.g. if you right-click an intent in this Ensemble, should it still let you edit the Ensemble?
+        """Builds a custom menu for items items"""
         index = self.indexAt(position)  # type: QModelIndex
-        if index.data(EnsembleModel.data_type_role) == WorkspaceDataType.Ensemble:
-            menu = QMenu(self)
+        menu = QMenu(self)
 
-            # Allow renaming the ensemble via the context menu
-            rename_action = QAction("Rename Collection", menu)
-            rename_action.triggered.connect(self._rename_action)
-            menu.addAction(rename_action)
+        if index.isValid():
 
-            menu.addSeparator()
+            if index.data(EnsembleModel.data_type_role) == WorkspaceDataType.Ensemble:
 
-            # Allow toggling the active ensemble via the context menu
-            # * there can only be at most 1 active ensemble
-            # * there are only 0 active ensembles when data has not yet been loaded ???
-            # * opening data updates the active ensemble to that data
-            is_active = index.data(EnsembleModel.active_role)
-            active_text = "Active"
-            toggle_active_action = QAction(active_text, menu)
-            toggle_active_action.setCheckable(True)
-            if is_active is True:
-                toggle_active_action.setChecked(True)
-            else:
-                toggle_active_action.setChecked(False)
-                toggle_active_action.setText(f"Not {active_text}")
+                # Allow renaming the ensemble via the context menu
+                rename_action = QAction("Rename Collection", menu)
+                rename_action.triggered.connect(self._rename_action)
+                menu.addAction(rename_action)
 
-            # Make sure to update the model with the active / deactivated ensemble
-            toggle_active_action.toggled.connect(self._set_active_action)
-            # Don't allow deactivating the active ensemble if there is only one loaded
-            if self.model().rowCount() == 1:
-                toggle_active_action.setEnabled(False)
-            menu.addAction(toggle_active_action)
+                # Allow toggling the active ensemble via the context menu
+                # * there can only be at most 1 active ensemble
+                # * there are only 0 active ensembles when data has not yet been loaded ???
+                # * opening data updates the active ensemble to that data
+                is_active = index.data(EnsembleModel.active_role)
+                active_text = "Active"
+                toggle_active_action = QAction(active_text, menu)
+                toggle_active_action.setCheckable(True)
+                if is_active is True:
+                    toggle_active_action.setChecked(True)
+                else:
+                    toggle_active_action.setChecked(False)
+                    toggle_active_action.setText(f"Not {active_text}")
 
-            # Display menu wherever the user right-clicked
-            menu.popup(self.viewport().mapToGlobal(position))
+                # Make sure to update the model with the active / deactivated ensemble
+                toggle_active_action.toggled.connect(self._set_active_action)
+                # Don't allow deactivating the active ensemble if there is only one loaded
+                if self.model().rowCount() == 1:
+                    toggle_active_action.setEnabled(False)
+                menu.addAction(toggle_active_action)
+
+                menu.addSeparator()
+
+            remove_text = "Remove "
+            data_type_role = index.data(EnsembleModel.data_type_role)
+            if data_type_role == WorkspaceDataType.Ensemble:
+                remove_text += "Ensemble"
+            elif data_type_role == WorkspaceDataType.Catalog:
+                remove_text += "Catalog"
+            elif data_type_role == WorkspaceDataType.Intent:
+                remove_text += "Item"
+            remove_action = QAction(remove_text, menu)
+            remove_action.triggered.connect(self._remove_action)
+            menu.addAction(remove_action)
+
+        else:
+            create_ensemble_action = QAction("Create New Collection", menu)
+            create_ensemble_action.triggered.connect(self._create_ensemble_action)
+            menu.addAction(create_ensemble_action)
+
+        # Display menu wherever the user right-clicked
+        menu.popup(self.viewport().mapToGlobal(position))
 
 
 def main():

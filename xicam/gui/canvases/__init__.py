@@ -1,15 +1,18 @@
 # from abc import ABC, abstractmethod
+from copy import copy
 from typing import List
 
 import numpy as np
-from pyqtgraph import ImageView, PlotWidget, ErrorBarItem
+from pyqtgraph import ImageView, PlotWidget, ErrorBarItem, ScatterPlotItem
 import pyqtgraph as pg
+from qtpy.QtCore import Signal
 from qtpy.QtWidgets import QWidget, QComboBox, QVBoxLayout
 
 from matplotlib import pyplot as plt
 from xarray import DataArray
 
-from xicam.core.intents import PlotIntent, ErrorBarIntent, BarIntent, PairPlotIntent
+from xicam.core.intents import PlotIntent, ErrorBarIntent, BarIntent, PairPlotIntent, ROIIntent, ScatterIntent
+from xicam.gui.actions import Action
 from xicam.plugins import manager as plugin_manager
 
 # IntentCanvas -> SingleIntentCanvas -> ImageIntentCanvas
@@ -45,50 +48,78 @@ from xicam.gui.widgets.plotwidgetmixins import CurveLabels
 from xicam.plugins.intentcanvasplugin import IntentCanvas
 
 
-class XicamIntentCanvas(IntentCanvas):
+class _XicamIntentCanvas(IntentCanvas, QWidget):
     """Xi-CAM specific canvas."""
     def __init__(self, *args, **kwargs):
-        super(XicamIntentCanvas, self).__init__(*args, **kwargs)
+        super(_XicamIntentCanvas, self).__init__(*args, **kwargs)
         self.intent_to_items = {}
 
 
-class ImageIntentCanvas(XicamIntentCanvas, QWidget):
+class XicamIntentCanvas(_XicamIntentCanvas):
+    sigInteractiveAction = Signal(Action, _XicamIntentCanvas)
+
+
+class ImageIntentCanvas(XicamIntentCanvas):
     def __init__(self, *args, **kwargs):
         super(ImageIntentCanvas, self).__init__(*args, **kwargs)
         self.setLayout(QVBoxLayout())
         self.canvas_widget = None
+        # Store the "image" intent, since we will have roi and overlay intents as well
+        self._primary_intent = None
 
     def render(self, intent, mixins: List[str] = None):
         """Render an intent to the canvas.
 
         Optionally, provide additional list of mixin names to extend the image canvas functionality.
         """
+        # Extract and remove labels (if provide) kwarg and pass to the widget __init__
+        # labels kwarg should only be provided by the AxesLabels mixin
+        kwargs = getattr(intent, "kwargs", {}).copy()
+        constructor_kwargs = dict()
+        labels_kwarg = kwargs.pop("labels", None)
+        if labels_kwarg:
+            constructor_kwargs["labels"] = labels_kwarg
         if not self.canvas_widget:
-            bases_names = intent.mixins or tuple()
+            bases_names = getattr(intent, "mixins", None) or tuple()
             if mixins:
                 bases_names += tuple(mixins)
-            bases = map(lambda name: plugin_manager.type_mapping['ImageMixinPlugin'][name], bases_names)
-            self.canvas_widget = type('ImageViewBlend', (*bases, ImageView), {})()
+            # Place in dict to remove duplicates
+            bases = dict(map(lambda name: (plugin_manager.type_mapping['ImageMixinPlugin'][name], 0), bases_names))
+            self.canvas_widget = type('ImageViewBlend', (*bases.keys(), ImageView), {})(**constructor_kwargs)
             self.layout().addWidget(self.canvas_widget)
             self.canvas_widget.imageItem.setOpts(imageAxisOrder='row-major')
 
-        kwargs = intent.kwargs.copy()
         for key, value in kwargs.items():
             if isinstance(value, DataArray):
                 kwargs[key] = np.asanyarray(value).squeeze()
 
-        # TODO: add rendering logic for ROI intents
-        self.canvas_widget.setImage(intent.image.squeeze(), **kwargs)
+        if hasattr(intent, 'geometry'):
+            kwargs['geometry'] = intent.geometry
+
+        if hasattr(intent, 'incidence_angle'):
+            kwargs['incidence_angle'] = intent.incidence_angle
+            kwargs['geometry_mode'] = 'reflection'
+
+        if isinstance(intent, ROIIntent):
+            self.canvas_widget.view.addItem(intent.roi)
+        else:
+            self.canvas_widget.setImage(intent.image.squeeze(), **kwargs)
+            self._primary_intent = intent
 
     def unrender(self, intent) -> bool:
-        ...
+        """Return True if the canvas can be removed."""
+        if self.canvas_widget:
+            if isinstance(intent, ROIIntent):
+                self.canvas_widget.view.removeItem(intent.roi)
+                return False
+        return True
 
 
 class PlotIntentCanvasBlend(CurveLabels):
     ...
 
 
-class PlotIntentCanvas(XicamIntentCanvas, QWidget):
+class PlotIntentCanvas(XicamIntentCanvas):
     def __init__(self, *args, **kwargs):
         super(PlotIntentCanvas, self).__init__(*args, **kwargs)
 
@@ -105,7 +136,7 @@ class PlotIntentCanvas(XicamIntentCanvas, QWidget):
 
             for item in items:
                 if isinstance(item, pg.PlotDataItem):
-                    item.setData(pen=color)
+                    item.setData(pen=color, symbolBrush=color, symbolPen='w')
 
     def render(self, intent):
         if not self.canvas_widget:
@@ -117,30 +148,35 @@ class PlotIntentCanvas(XicamIntentCanvas, QWidget):
 
         items = []
 
-        if isinstance(intent, (PlotIntent, ErrorBarIntent)):
+        if isinstance(intent, (PlotIntent, ErrorBarIntent, ScatterIntent)):
             x = intent.x
             if intent.x is not None:
                 x = np.asarray(intent.x).squeeze()
 
             ys = np.asarray(intent.y).squeeze()
-            if ys.ndim==1:
+            if ys.ndim == 1:
                 ys = [ys]
                 multicurves = False
             else:
                 multicurves = True
 
+            symbol = intent.kwargs.get("symbol", None)
+
             for i in range(len(ys)):
                 name = intent.name
                 if multicurves:
-                    name += f' {i+1}'
+                    name += f' {i + 1}'
 
-                plotitem = self.canvas_widget.plot(x=x, y=ys[i], name=name)
-                items.append(plotitem)
+                if isinstance(intent, ScatterIntent):
+                    item = ScatterPlotItem(x=x, y=ys[i], name=name, symbol=symbol)
+                    self.canvas_widget.plotItem.addItem(item)
+                elif isinstance(intent, (PlotIntent, ErrorBarIntent)):
+                    item = self.canvas_widget.plot(x=x, y=ys[i], name=name, symbol=symbol)
+                items.append(item)
 
             # Use most recent intent's log mode for the canvas's log mode
             x_log_mode = intent.kwargs.get("xLogMode", self.canvas_widget.plotItem.getAxis("bottom").logMode)
             y_log_mode = intent.kwargs.get("yLogMode", self.canvas_widget.plotItem.getAxis("left").logMode)
-
             self.canvas_widget.plotItem.setLogMode(x=x_log_mode, y=y_log_mode)
             self.canvas_widget.setLabels(**intent.labels)
 
@@ -185,7 +221,7 @@ class PlotIntentCanvas(XicamIntentCanvas, QWidget):
         return False
 
 
-class PairPlotIntentCanvas(XicamIntentCanvas, QWidget):
+class PairPlotIntentCanvas(XicamIntentCanvas):
     def __init__(self, *args, **kwargs):
         super(PairPlotIntentCanvas, self).__init__()
         self.transform_data = None

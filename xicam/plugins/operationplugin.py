@@ -83,6 +83,8 @@ class _OperationDict(MutableMapping):
                         group_parameter.child(key).setOpts(**{self._opts_key: value})
                         # group_parameter.child(key).setValue(value,
                         #                                     blockSignal=self._operation._set_value)
+                    except KeyError as e:
+                        pass
                     except Exception as e:
                         msg.logError(e)
 
@@ -383,7 +385,6 @@ class OperationPlugin(PluginType):
             # wireup signals to update the workflow
             if param.get('fixable'):
                 child.sigFixToggled.connect(self._set_fixed)
-            msg.logMessage(child.name())
             # child.sigValueChanged.connect(lambda *args: print(args))
             child.sigValueChanged.connect(self._set_value)
             # We want to propagate changes to the operation's fixed/values state to the Parameter
@@ -473,7 +474,7 @@ def operation(func: Callable,
     except ValueError as e:
         msg = f"The provided function '{func.__name__}' could not be inspected." \
                "In the case that your function is a C function, you will need to wrap it. " \
-               "For an example, see the Xi-CAM.SAXS.processing.inpaint module."
+               "For an example, see the Xi-CAM.SAXS.operations.inpaint module."
         raise OperationError(msg) from e
 
     # Allow passing a string
