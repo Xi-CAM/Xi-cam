@@ -369,7 +369,11 @@ class ProcessingView(pg.ImageView):
     def getProcessedImage(self):
         self._imageLevels = self.quickMinMax(self.image)
 
-        image = Pseudo3DFrameArray(self.process(np.array(self.image[self.currentIndex])))
+        # FIXME: do all incoming images need to be treated as Pseudo3DFrameArrays?
+        #   - (1, X, Y) vs (X, Y) images
+        image = self.image
+        if image.ndim == 3:
+            image = Pseudo3DFrameArray(self.process(np.array(image[self.currentIndex])))
 
         self.levelMin, self.levelMax = self.process_levels(self._imageLevels)
 
