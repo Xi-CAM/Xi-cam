@@ -81,6 +81,15 @@ jobs:
         #source ci/scripts/release.sh
         pip install --upgrade setuptools wheel twine
         python setup.py bdist bdist_wheel bdist_egg
+        
+    - name: DEBUG TOKEN
+      run: |
+        echo len pypi api token: ${#TEST_PYPI_TOKEN}
+        echo len code api token: ${#TEST_CODECOV_TOKEN}
+      shell: bash
+      env:
+        TEST_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        TEST_CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
     - name: Publish package
       if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
