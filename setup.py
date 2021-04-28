@@ -91,7 +91,9 @@ setup(
                       "scipy",
                       "matplotlib",
                       "h5py",
-                      "scikit-image"],
+                      "scikit-image",
+                      # FIXME: Temporary (until tag pushed to repo and build pushed to pypi)
+                      "git+https://github.com/lbl-camera/camsaxs.git",],
     setup_requires=["cython"],  # cython is a missing required dep of astropy
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,
