@@ -6,11 +6,11 @@ you will be ready to start developing Xi-CAM plugins!
 
 ## Install python3
 
-First, ensure that you have **python3.7** installed on your system.
+First, ensure that you have **python3.8** installed on your system.
 
 The quickest way to do this is by downloading and running the python.org installer for python3.
-The [python3.7.7 macOS 64-bit installer](https://www.python.org/downloads/release/python-377/)
-works great here.
+The [python3.8 macOS 64-bit installer](https://www.python.org/downloads/release/)
+can be found here.
 
 Alternatively, you can [install XCode and homebrew](https://docs.python-guide.org/starting/install3/osx/)
 to manage multiple versions of python on your system.
@@ -47,7 +47,7 @@ If you would like to create an environment through conda, run the following:
 
 ```
 cd ~
-conda create -n xicam python=3.7
+conda create -n xicam python=3.8
 conda activate xicam
 ```
 
