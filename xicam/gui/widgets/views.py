@@ -149,12 +149,6 @@ class CanvasDisplayWidget(QWidget):
         """Display the passed canvases."""
         ...
 
-#TODO:
-    # [ ] commit changes
-    # [x] fix show canvases
-    # [ ] check with nxs file
-    # [ ] add setModel to StackedCanvasView class
-
 
 class StackedCanvasView(CanvasView):
     """
@@ -254,6 +248,9 @@ class CanvasDisplayTabWidget(CanvasDisplayWidget):
 
         self._tabWidget = QTabWidget()
         self._tabWidget.setParent(self)
+        # Store the last tab index the user has clicked on
+        self._cached_user_tab_index = -1
+        self._tabWidget.tabBarClicked.connect(self._cache_user_tab_index)
 
         self.setLayout(QVBoxLayout())
         self.layout().setContentsMargins(0, 0, 0, 0)
@@ -267,6 +264,9 @@ class CanvasDisplayTabWidget(CanvasDisplayWidget):
         self.tool_tip = "Tab View"
         self.whats_this = "Reorganizes displayed data into separate tabs."
 
+    def _cache_user_tab_index(self, index):
+        self._cached_user_tab_index = index
+
     def getView(self):
         return self._tabWidget.currentWidget()
 
@@ -278,6 +278,9 @@ class CanvasDisplayTabWidget(CanvasDisplayWidget):
         for canvas in canvases:
             if canvas is not None:
                 self._tabWidget.addTab(canvas, canvas.canvas_name)
+        # Restore the current tab index the user has selected (if in bounds)
+        if -1 < self._cached_user_tab_index < self._tabWidget.count():
+            self._tabWidget.setCurrentIndex(self._cached_user_tab_index)
 
 
 class SplitView(CanvasDisplayWidget):
