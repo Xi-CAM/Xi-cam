@@ -30,6 +30,7 @@ logger = logging.getLogger("BlueskyPlugin")
 # extract_results_row_from_run.
 
 headings = (
+    "Sample Name",
     "Unique ID",
     "Transient Scan ID",
     "Plan Name",
@@ -56,6 +57,7 @@ def extract_results_row_from_run(run):
         str_duration = str(duration)
         str_duration = str_duration[: str_duration.index(".")]
     return (
+        start.get("sample_name", "-"),
         start["uid"][:8],
         start.get("scan_id", "-"),
         start.get("plan_name", "-"),
