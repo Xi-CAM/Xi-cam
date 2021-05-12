@@ -24,7 +24,7 @@ Next, activate the environment.
 This tells the system to use the libraries and applications inside the environment.
 
 ```bash
-conda create -n xicam python=3.7
+conda create -n xicam python=3.8
 conda activate xicam
 ```
 
