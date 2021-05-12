@@ -269,9 +269,14 @@ class Graph(object):
         check inputs and remove dependency nodes, what is left is unique ones
         """
 
-        end_tasks = list(filter(lambda op: not self.disabled(op), set(self.operations) - self._outbound_links.keys()))
+        # get all operations with no outbound links to enabled ops
 
-        # msg.logMessage("End tasks:", *[task.name for task in end_tasks], level=msg.DEBUG)
+        end_tasks = set(filter(lambda op: (op not in self._outbound_links or
+                                           all(map(lambda dest: self.disabled(dest), self._outbound_links[op]))) and
+                                          not self.disabled(op),
+                               self.operations))
+
+        msg.logMessage("End tasks:", *[task.name for task in end_tasks], level=msg.DEBUG)
         return end_tasks
 
     def _dask_graph(self):
@@ -381,6 +386,21 @@ class Graph(object):
             Returns True if the operation is disabled in the Workflow; otherwise False.
         """
         return operation in self._disabled_operations
+
+    def enabled(self, operation):
+        """Indicate if the operation is enabled in the workflow.
+
+        Parameters
+        ----------
+        operation : OperationPlugin
+            Operation to check if it is enabled or not.
+
+        Returns
+        -------
+        bool
+            Returns True if the operation is enabled in the Workflow; otherwise False.
+        """
+        return not self.disabled(operation)
 
     def set_disabled(self,
                      operation: OperationPlugin,
