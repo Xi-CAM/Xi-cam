@@ -33,6 +33,7 @@ class BrokerModel(QStandardItemModel):
         catalog_names = list(catalog)
 
         def find_catalog(catalog_name):
+            # (adapted from databroker.utils.lookup_config)
             # Find catalog configuration file with the passed catalog name
             # returns the absolute file name for the configuration file
             if not catalog_name.endswith('.yml'):
