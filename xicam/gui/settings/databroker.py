@@ -12,6 +12,18 @@ from xicam.plugins.settingsplugin import SettingsPlugin
 from xicam.gui import static
 
 
+def find_catalog(catalog_name):
+    # (adapted from databroker.utils.lookup_config)
+    # Find catalog configuration file with the passed catalog name
+    # returns the absolute file name for the configuration file
+    if not catalog_name.endswith('.yml'):
+        catalog_name += '.yml'
+    for path in CONFIG_SEARCH_PATH:
+        filename = os.path.join(path, catalog_name)
+        if os.path.isfile(filename):
+            return filename
+    raise ValueError(f'Databroker found a config file named "{catalog_name}", but Xi-cam couldn\'t discover that same file.')
+
 # TODO:
 # - pick a better icon
 # - add first column as representing checked/unchecked as a radio button
@@ -31,21 +43,6 @@ class BrokerModel(QStandardItemModel):
     def add_catalogs(self):
         config_file_to_broker = defaultdict(list)
         catalog_names = list(catalog)
-
-        def find_catalog(catalog_name):
-            # (adapted from databroker.utils.lookup_config)
-            # Find catalog configuration file with the passed catalog name
-            # returns the absolute file name for the configuration file
-            if not catalog_name.endswith('.yml'):
-                catalog_name += '.yml'
-            tried = []
-            for path in CONFIG_SEARCH_PATH:
-                filename = os.path.join(path, catalog_name)
-                tried.append(filename)
-                if os.path.isfile(filename):
-                    with open(filename) as f:
-                        return filename
-            return ""
 
         for name in catalog_names:
             broker = Broker.named(name)
