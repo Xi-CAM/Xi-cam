@@ -1,6 +1,8 @@
 from collections import defaultdict
+import os
 
 from databroker import catalog, Broker
+from databroker.utils import CONFIG_SEARCH_PATH
 from qtpy.QtCore import Signal, Qt, QItemSelection
 from qtpy.QtGui import QIcon, QStandardItem, QStandardItemModel
 from qtpy.QtWidgets import QAbstractItemView, QHBoxLayout, QLabel, QTreeView, QVBoxLayout, QWidget, QFrame
@@ -30,12 +32,31 @@ class BrokerModel(QStandardItemModel):
         config_file_to_broker = defaultdict(list)
         catalog_names = list(catalog)
 
+        def find_catalog(catalog_name):
+            # Find catalog configuration file with the passed catalog name
+            # returns the absolute file name for the configuration file
+            if not catalog_name.endswith('.yml'):
+                catalog_name += '.yml'
+            tried = []
+            for path in CONFIG_SEARCH_PATH:
+                filename = os.path.join(path, catalog_name)
+                tried.append(filename)
+                if os.path.isfile(filename):
+                    with open(filename) as f:
+                        return filename
+            return ""
+
         for name in catalog_names:
             broker = Broker.named(name)
             if getattr(broker, 'v2', None) is None:
                 msg.logMessage(f'The broker named {name} cannot be cast to a v2 Broker.', msg.WARNING)
                 continue
-            config_file = broker.v2.metadata["catalog_dir"]
+            # catalog_dir might be in the metadata; if not, let's try to find it
+            if 'catalog_dir' in broker.v2.metadata:
+                config_file = broker.v2.metadata["catalog_dir"]
+            else:
+                config_file = find_catalog(name)
+
             config_file_to_broker[config_file].append(broker)
 
         for config_file, brokers in config_file_to_broker.items():
