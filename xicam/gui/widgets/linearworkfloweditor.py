@@ -134,6 +134,7 @@ class WorkflowEditor(QSplitter):
         mixed_kwargs = self.kwargs.copy()
         if self.kwargs_callable is not None:
             try:
+                msg.showBusy()
                 called_kwargs = self.kwargs_callable(self)
             except RuntimeError as e:
                 # NOTE: we do not want to raise an exception here (we are in a connected Qt slot)
