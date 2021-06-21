@@ -610,8 +610,31 @@ class BetterRectROI(BetterROI, RectROI):
     def __init__(self, *args, pen=pg.mkPen(QColor(0, 255, 255)), **kwargs):
         super(BetterRectROI, self).__init__(*args, pen=pen, **kwargs)
         self.handle = self.handles[0]
-
         self._name = "Rectangle ROI"
+
+    @property
+    def width(self):
+        return self.handle["pos"].x() * self.size().x()
+
+    @width.setter
+    def width(self, value):
+        width = self.handle["pos"].x() * value
+        size = self.size()
+        size.setX(width)
+        self.state['size'] = size
+        self.stateChanged()
+
+    @property
+    def height(self):
+        return self.handle["pos"].y() * self.size().y()
+
+    @height.setter
+    def height(self, value):
+        height = self.handle["pos"].y() * value
+        size = self.size()
+        size.setY(height)
+        self.state['size'] = size
+        self.stateChanged()
 
     def __reduce__(self):
         # FIXME: very simple reduce for allowing copy (to help with weakref management)
