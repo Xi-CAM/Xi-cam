@@ -351,9 +351,11 @@ class Pseudo3DFrameArray(object):
 
     Data passed into it should be the already sliced (single-frame) array.
     """
-    def __init__(self, data):
+    def __init__(self, data, shape):
         self.data = data
         self.dims = []
+        self.ndim = 3
+        self.shape = shape
 
     def transpose(self, *args, **kwargs):
         return self
@@ -364,6 +366,9 @@ class Pseudo3DFrameArray(object):
         Ignores the item slice and return the contained frame data."""
         return self.data
 
+    def __array__(self, dtype=None):
+        return np.asarray(self.data, dtype=dtype)
+
 
 class ProcessingView(pg.ImageView):
     def getProcessedImage(self):
@@ -373,7 +378,9 @@ class ProcessingView(pg.ImageView):
         #   - (1, X, Y) vs (X, Y) images
         image = self.image
         if image.ndim == 3:
-            image = Pseudo3DFrameArray(self.process(np.array(image[self.currentIndex])))
+            image = Pseudo3DFrameArray(self.process(np.array(image[self.currentIndex])), image.shape)
+        elif image.ndim == 2:  # Handle potentially already squeezed images (1 frame)
+            image = Pseudo3DFrameArray(self.process(np.asarray(image)), (1, *image.shape))
 
         self.levelMin, self.levelMax = self.process_levels(self._imageLevels)
 
