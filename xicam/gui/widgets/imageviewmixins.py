@@ -8,6 +8,7 @@ from qtpy.QtWidgets import QLabel, QErrorMessage, QSizePolicy, QPushButton, QHBo
 from qtpy.QtCore import Qt, Signal, Slot, QSize, QPointF, QRectF
 import numpy as np
 from databroker.core import BlueskyRun
+from xarray import DataArray
 
 # from pyFAI.geometry import Geometry
 from camsaxs.remesh_bbox import remesh, q_from_geometry
@@ -238,7 +239,7 @@ class XArrayView(ImageView):
             else:
                 axorder = ['t', 'y', 'x', 'c']
 
-            if not isinstance(image, Pseudo3DFrameArray):
+            if isinstance(image, DataArray):
                 axorder = [self.axes[ax] for ax in axorder if self.axes[ax] is not None]
                 ax_swap = [image.dims[ax_index] for ax_index in axorder]
                 image = image.transpose(*ax_swap)
@@ -374,6 +375,8 @@ class ProcessingView(pg.ImageView):
         image = self.image
         if image.ndim == 3:
             image = Pseudo3DFrameArray(self.process(np.array(image[self.currentIndex])))
+        else:
+            image = self.process(image)
 
         self.levelMin, self.levelMax = self.process_levels(self._imageLevels)
 
