@@ -163,6 +163,8 @@ def signature_to_param(signature: inspect.Signature,
     parameter_dicts = []
 
     for display_name, (name, parameter) in zip(display_names, signature.parameters.items()):
+        if not visible.get(name, True):
+            continue
         param_type = param_type_from_annotation(parameter.annotation)
 
         if not param_type: continue
