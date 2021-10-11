@@ -77,7 +77,7 @@ setup(
                       "appdirs",
                       "qdarkstyle",
                       "qtmodern",
-                      "databroker>=1.0.0b8",
+                      "databroker<2",
                       "bluesky-widgets>=0.0.3",
                       "distributed",
                       "dask[array,bag]",
