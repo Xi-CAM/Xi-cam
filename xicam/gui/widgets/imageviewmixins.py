@@ -379,7 +379,7 @@ class ProcessingView(pg.ImageView):
         #   - (1, X, Y) vs (X, Y) images
         image = self.image
         if image.ndim == 3:
-            image = Pseudo3DFrameArray(self.process(np.array(image[self.currentIndex])))
+            image = Pseudo3DFrameArray(self.process(np.array(image[self.currentIndex])), shape=image.shape)
         else:
             image = self.process(image)
 
