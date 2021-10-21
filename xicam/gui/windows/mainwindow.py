@@ -43,7 +43,9 @@ class XicamMainWindow(QMainWindow):
         super(XicamMainWindow, self).__init__()
 
         # Set icon
-        self.setWindowIcon(QIcon(QPixmap(str(path("icons/xicam.gif")))))
+        xicam_icon = QIcon(QPixmap(str(path("icons/xicam.ico"))))
+        self.setWindowIcon(xicam_icon)
+        QApplication.instance().setWindowIcon(xicam_icon)
 
         # Set size and position
         self.setGeometry(0, 0, 1000, 600)

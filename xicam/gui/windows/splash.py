@@ -1,7 +1,11 @@
 import sys
+
 from qtpy.QtCore import QTimer, Qt
-from qtpy.QtGui import QMovie, QPixmap
-from qtpy.QtWidgets import QSplashScreen, QApplication
+from qtpy.QtWidgets import QWidget, QLabel, QSizePolicy
+from qtpy.QtMultimedia import QMediaPlayer, QMediaPlaylist, QMediaContent
+from qtpy.QtMultimediaWidgets import QVideoWidget
+from qtpy.QtCore import QUrl
+from qtpy.QtWidgets import QApplication, QVBoxLayout, QMainWindow
 
 from xicam.gui import static
 
@@ -12,10 +16,10 @@ def elide(s: str, max_len: int = 60):
     return s
 
 
-class XicamSplashScreen(QSplashScreen):
+class XicamSplashScreen(QMainWindow):
     minsplashtime = 5000
 
-    def __init__(self, log_path: str, initial_length: int, f: int = Qt.WindowStaysOnTopHint | Qt.SplashScreen):
+    def __init__(self, log_path: str, initial_length: int):
         """
         A QSplashScreen customized to display an animated gif. The splash triggers launch when clicked.
 
@@ -27,25 +31,42 @@ class XicamSplashScreen(QSplashScreen):
             Path to the Xi-CAM log file to reflect
         initial_length: int
             Length in bytes to seek forward before reading
-        f           :   int
-            Extra flags (see base class)
         """
 
-        # Get logo movie from relative path
-        self.movie = QMovie(str(static.path("images/animated_logo.gif")))
+        super(XicamSplashScreen, self).__init__(flags=Qt.WindowStaysOnTopHint | Qt.SplashScreen)
+
+        self.videoWidget = QVideoWidget()
+        self.videoWidget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.mediaPlayer = QMediaPlayer(None, QMediaPlayer.VideoSurface)
+        playlist = QMediaPlaylist(self.mediaPlayer)
+        playlist.setPlaybackMode(QMediaPlaylist.Loop)
+        playlist.addMedia(QMediaContent(QUrl.fromLocalFile(str(static.path("images/animated-logo.mp4")))))
+        playlist.setCurrentIndex(1)
+        self.mediaPlayer.setPlaylist(playlist)
+        self.mediaPlayer.setVideoOutput(self.videoWidget)
+        self.mediaPlayer.play()
+        self.mediaPlayer.mediaChanged.connect(self.execlaunch)
+
+
+        w = QWidget()
+        self.setCentralWidget(w)
+        self._layout = QVBoxLayout()
+        w.setLayout(self._layout)
+        w.layout().addWidget(self.videoWidget)
+        self.messageWidget = QLabel()
+        self.setStyleSheet('background-color:black; color:grey;')
+        w.layout().addWidget(self.messageWidget)
+        w.layout().setContentsMargins(10,30,10,10)
+        # w.layout().setSpacing(0)
+        self.setFixedSize(550, 400)
+
+        self.setWindowFlags(Qt.FramelessWindowHint)
 
         # Setup drawing
-        self.movie.frameChanged.connect(self.paintFrame)
-        self.movie.jumpToFrame(1)
-        self.pixmap = QPixmap(self.movie.frameRect().size())
-        super(XicamSplashScreen, self).__init__(self.pixmap, f)
-        self.setMask(self.pixmap.mask())
-        self.movie.finished.connect(self.restartmovie)
-        self.showMessage("Starting Xi-CAM...")
+        self.messageWidget.setText("Starting Xi-CAM...")
 
         self._launching = False
         self._launchready = False
-        self.timer = QTimer(self)
 
         self.log_file = open(log_path, "r")
         self.log_file.seek(initial_length)
@@ -58,20 +79,29 @@ class XicamSplashScreen(QSplashScreen):
         QApplication.instance().setActiveWindow(self)
 
         # Setup timed triggers for launching the QMainWindow
-        self.timer.singleShot(self.minsplashtime, self.launchwindow)
+        self.finish_timer = QTimer(self)
+        self.finish_timer.singleShot(self.minsplashtime, self.execlaunch)
 
-    def showMessage(self, message: str, color=Qt.darkGray):
+        self.message_timer = QTimer(self)
+        self.message_timer.timeout.connect(self.showMessageFromLog)
+        self.message_timer.start(1./60)
+
+    def showMessageFromLog(self):
+        line = self.log_file.readline().strip()
+        if line:
+            self.showMessage(elide(line.split(">")[-1]))
+
+    def showMessage(self, message: str):
         # attempt to parse out everyting besides the message
         try:
             message=message.split(" - ")[-1]
         except Exception:
             pass
         else:
-            super(XicamSplashScreen, self).showMessage(elide(message), color=color, alignment=Qt.AlignBottom)
+            self.messageWidget.setText(elide(message))
 
     def mousePressEvent(self, *args, **kwargs):
-        # TODO: Apparently this doesn't work?
-        self.timer.stop()
+        self.finish_timer.stop()
         self.execlaunch()
 
     def show(self):
@@ -79,38 +109,6 @@ class XicamSplashScreen(QSplashScreen):
         Start the animation when shown
         """
         super(XicamSplashScreen, self).show()
-        self.movie.start()
-
-    def paintFrame(self):
-        """
-        Paint the current frame
-        """
-        self.pixmap = self.movie.currentPixmap()
-        self.setMask(self.pixmap.mask())
-        self.setPixmap(self.pixmap)
-        self.movie.setSpeed(self.movie.speed() + 20)
-
-        line = self.log_file.readline().strip()
-        if line:
-            self.showMessage(elide(line.split(">")[-1]))
-
-    def sizeHint(self):
-        return self.movie.scaledSize()
-
-    def restartmovie(self):
-        """
-        Once the animation reaches the end, check if its time to launch, otherwise restart animation
-        """
-        if self._launchready:
-            self.execlaunch()
-            return
-        self.movie.start()
-
-    def launchwindow(self):
-        """
-        Save state, defer launch until animation finishes
-        """
-        self._launchready = True
 
     def execlaunch(self):
         """
@@ -119,16 +117,21 @@ class XicamSplashScreen(QSplashScreen):
         if not self._launching:
             self._launching = True
 
-            self.timer.stop()
+            self.finish_timer.stop()
 
             # Stop splashing
             self.hide()
-            self.movie.stop()
             self.close()
             QApplication.instance().quit()
 
 
-if __name__ == "__main__":
+def main():
     qapp = QApplication([])
     splash = XicamSplashScreen(sys.argv[-2], int(sys.argv[-1]))
+    # splash = XicamSplashScreen('C:\\Users\LBL\\AppData\\Local\\CAMERA\\xicam\\Cache\\logs\\out.log', 1)
+    splash.show()
     qapp.exec_()
+
+
+if __name__ == "__main__":
+    main()
