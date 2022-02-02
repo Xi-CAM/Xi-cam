@@ -133,22 +133,22 @@ class WorkflowEditor(QSplitter):
     def run_workflow(self, **kwargs):
         mixed_kwargs = self.kwargs.copy()
         if self.kwargs_callable is not None:
-            try:
-                msg.showBusy()
-                called_kwargs = self.kwargs_callable(self)
-            except RuntimeError as e:
-                # NOTE: we do not want to raise an exception here (we are in a connected Qt slot)
-                # Grab the user-oriented message from the kwargs callable exception
-                msg.notifyMessage(str(e), title="Run Workflow Error", level=msg.ERROR)
-                msg.logError(e)
-            else:
-                mixed_kwargs.update(called_kwargs)
-                mixed_kwargs.update(kwargs)
-
-                if self.execute_iterative:
-                    self.workflow.execute_all(**mixed_kwargs)
+            with msg.busyContext():
+                try:
+                    called_kwargs = self.kwargs_callable(self)
+                except RuntimeError as e:
+                    # NOTE: we do not want to raise an exception here (we are in a connected Qt slot)
+                    # Grab the user-oriented message from the kwargs callable exception
+                    msg.notifyMessage(str(e), title="Workflow Error", level=msg.ERROR)
+                    msg.logError(e)
                 else:
-                    self.workflow.execute(**mixed_kwargs)
+                    mixed_kwargs.update(called_kwargs)
+                    mixed_kwargs.update(kwargs)
+
+                    if self.execute_iterative:
+                        self.workflow.execute_all(**mixed_kwargs)
+                    else:
+                        self.workflow.execute(**mixed_kwargs)
 
     def setParameters(self, operation: OperationPlugin):
         if operation:
