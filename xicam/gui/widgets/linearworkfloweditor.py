@@ -136,7 +136,7 @@ class WorkflowEditor(QSplitter):
             with msg.busyContext():
                 try:
                     called_kwargs = self.kwargs_callable(self)
-                except RuntimeError as e:
+                except Exception as e:
                     # NOTE: we do not want to raise an exception here (we are in a connected Qt slot)
                     # Grab the user-oriented message from the kwargs callable exception
                     msg.notifyMessage(str(e), title="Workflow Error", level=msg.ERROR)
