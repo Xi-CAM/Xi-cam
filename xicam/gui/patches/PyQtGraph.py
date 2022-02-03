@@ -554,7 +554,7 @@ class LazyGroupParameterItem(BetterGroupParameteritem):
         if not self.param.children():
             self.param.addChildren(from_dict(self.param.lazy_children))
         while len(self._queuedchildren):
-            super(LazyGroupParameterItem, self).childAdded(*self._queuedchildren.pop())
+            super(LazyGroupParameterItem, self).childAdded(*self._queuedchildren.pop(0))
 
 
 class LazyGroupParameter(BetterGroupParameter):
