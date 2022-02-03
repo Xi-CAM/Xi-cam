@@ -18,6 +18,7 @@ from xicam.core.data.bluesky_utils import fields_from_stream, streams_from_run, 
 from xicam.gui.actions import ROIAction
 from xicam.gui.widgets.elidedlabel import ElidedLabel
 from xicam.gui.static import path
+from xicam.gui.widgets.metadataview import MetadataWidget
 from xicam.gui.widgets.ROI import BetterPolyLineROI, BetterCrosshairROI, BetterRectROI, ArcROI, SegmentedArcROI, \
     SegmentedRectROI
 import enum
@@ -840,6 +841,7 @@ class CatalogView(XArrayView):
                 msg.logError(ex)
             self.field = field
         self._updateCatalog(*args, **kwargs)
+        self.sigCatalogChanged.emit(self.catalog)
 
     def _updateCatalog(self, *args, **kwargs):
         if all([self.catalog, self.stream, self.field]):
@@ -966,7 +968,24 @@ class FieldSelector(CatalogView, BetterLayout):
         return self.fieldComboBox.currentText()
 
 
-class CatalogImagePlotView(StreamSelector, FieldSelector):
+class MetaDataView(CatalogView, BetterLayout):
+    def __init__(self, *args, **kwargs):
+        self.metadataView = MetadataWidget()
+        super(MetaDataView, self).__init__(*args, **kwargs)
+
+        self.ui.splitter.addWidget(self.metadataView)
+        self.ui.splitter.setCollapsible(self.ui.splitter.indexOf(self.metadataView), False)
+
+        self.sigCatalogChanged.connect(self._updateView)
+
+    def _updateView(self, catalog):
+        self.metadataView.reset()
+        # with self.metadataView.header.treeChangeBlocker():
+        for doctype, document in catalog.documents(fill='no'):
+            self.metadataView.doc_consumer(doctype, document)
+
+
+class CatalogImagePlotView(StreamSelector, FieldSelector, MetaDataView):
     def __init__(self, catalog=None, stream=None, field=None, *args, **kwargs):
         # Turn off image field filtering for this mixin
         super(CatalogImagePlotView, self).__init__(catalog, stream, field, *args, **kwargs)

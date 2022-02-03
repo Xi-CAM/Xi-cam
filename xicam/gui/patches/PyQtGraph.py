@@ -9,6 +9,8 @@ from qtpy.QtGui import QIcon, QPainterPath
 from qtpy.QtCore import Signal
 from xicam.core import msg
 from xicam.gui.static import path
+import datetime
+from typing import Iterable, Sequence
 
 from pyqtgraph.parametertree.parameterTypes import WidgetParameterItem, ListParameter
 import pyqtgraph as pg
@@ -430,7 +432,9 @@ class CounterGroupParameterItem(BetterGroupParameteritem):
         self.param.sigChildRemoved.connect(self.updateText)
 
     def updateText(self, *_):
-        self.setText(0, f"{self.param.name()} ({self.childCount()})")
+        # Use title in place of name if provided in the Parameter
+        text = self.param.opts.get('title', self.param.name())
+        self.setText(0, f"{text} ({self.childCount()})")
 
 
 class CounterGroupParameter(BetterGroupParameter):
@@ -438,6 +442,90 @@ class CounterGroupParameter(BetterGroupParameter):
 
 
 registerParameterType("countergroup", CounterGroupParameter, override=True)
+
+typemap = {
+    bool: "bool",
+    int: "int",
+    float: "float",
+    np.floating: "float",
+    np.integer: "int",
+    str: "str",
+    dict: "lazygroup",
+    OrderedDict: "lazygroup",
+    list: "lazygroup",
+    type(None): None,
+    tuple: "lazygroup",
+    datetime.datetime: "str",
+    np.ndarray: "ndarray",
+}
+
+
+def strip_reserved(metadata: dict, excludedkeys=None):
+    if not excludedkeys:
+        excludedkeys = []
+    metadata = metadata.copy()
+    for key in excludedkeys:
+        if key in metadata:
+            del metadata[key]
+    return metadata
+
+
+def from_dict(metadata: Iterable, excludedkeys=None):
+    if isinstance(metadata, Sequence):
+        metadata = OrderedDict(enumerate(metadata))
+
+    metadata = strip_reserved(metadata, excludedkeys)
+    children = []
+    for key, value in metadata.items():
+        subchildren = []
+        param_type = None
+
+        if typemap.get(type(value), None) in ["group", "lazygroup"]:
+            # subchildren = MetadataView._from_dict(value)
+            subchildren = value
+            key = f"{str(key)} {type(value)}"
+            value = None
+            param_type = list
+
+        elif type(value) in typemap:
+            param_type = type(value)
+
+        if param_type is None:
+            for map_type in typemap:
+                if isinstance(value, map_type):
+                    param_type = map_type
+                    break
+
+        if param_type is None and value:
+            msg.logError(
+                TypeError(f'An embedded value of type {type(value)} could not be mapped to a Parameter: {value}'))
+            return children
+
+        try:
+            children.append(
+                Parameter.create(
+                    name=str(key),
+                    value=value,
+                    type=typemap[param_type],
+                    children=subchildren,
+                    expanded=False,
+                    readonly=True,
+                )
+            )
+        except Exception as ex:
+            msg.logMessage("Error during parameterizing metadata:")
+            msg.logError(ex)
+            children.append(
+                Parameter.create(
+                    name=str(key),
+                    value=repr(value),
+                    type=typemap[str],
+                    children=subchildren,
+                    expanded=False,
+                    readonly=True,
+                )
+            )
+    return children
 
 
 class LazyGroupParameterItem(BetterGroupParameteritem):
@@ -463,12 +551,18 @@ class LazyGroupParameterItem(BetterGroupParameteritem):
             self.flushChildren()
 
     def flushChildren(self):
+        if not self.param.children():
+            self.param.addChildren(from_dict(self.param.lazy_children))
         while len(self._queuedchildren):
-            super(LazyGroupParameterItem, self).childAdded(*self._queuedchildren.pop())
+            super(LazyGroupParameterItem, self).childAdded(*self._queuedchildren.pop(0))
 
 
 class LazyGroupParameter(BetterGroupParameter):
     itemClass = LazyGroupParameterItem
+
+    def __init__(self, *args, children=[], **kwargs):
+        self.lazy_children = children
+        super(LazyGroupParameter, self).__init__(*args, children=[], **kwargs)
 
 
 registerParameterType("lazygroup", LazyGroupParameter, override=True)
