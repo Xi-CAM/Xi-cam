@@ -11,26 +11,12 @@ import warnings
 from typing import Iterable, Sequence
 from databroker.core import BlueskyRun
 from xicam.core import msg
-from xicam.gui.patches.PyQtGraph import CounterGroupParameter, LazyGroupParameter
+from xicam.gui.patches.PyQtGraph import CounterGroupParameter, LazyGroupParameter, from_dict
+
 
 # TODO: map list to groupparameter
 
 # TODO: suggest integration of type mapping into pyqtgraph
-typemap = {
-    bool: "bool",
-    int: "int",
-    float: "float",
-    np.floating: "float",
-    np.integer: "int",
-    str: "str",
-    dict: "lazygroup",
-    OrderedDict: "lazygroup",
-    list: "lazygroup",
-    type(None): None,
-    tuple: "lazygroup",
-    datetime.datetime: "str",
-    np.ndarray: "ndarray",
-}
 
 
 class MetadataWidgetBase(ParameterTree):
@@ -54,7 +40,7 @@ class MetadataWidgetBase(ParameterTree):
             return
 
         try:
-            new_children = MetadataView._from_dict(document, self.excludedkeys)
+            new_children = from_dict(document, self.excludedkeys)
         except Exception as ex:
             msg.logError(ex)
             print(f"failed to make children for {doctype}")
@@ -94,70 +80,6 @@ class MetadataWidgetBase(ParameterTree):
             raise KeyError(f"Cannot find document type '{doctype}' in supported header parameters")
 
 
-    @staticmethod
-    def _from_dict(metadata: Iterable, excludedkeys=None):
-        if isinstance(metadata, Sequence):
-            metadata = OrderedDict(enumerate(metadata))
-
-        metadata = MetadataView._strip_reserved(metadata, excludedkeys)
-        children = []
-        for key, value in metadata.items():
-            subchildren = []
-            if typemap.get(type(value), None) in ["group", "lazygroup"]:
-                subchildren = MetadataView._from_dict(value)
-                key = f"{str(key)} {type(value)}"
-                value = None
-
-            param_type = None
-
-            if type(value) in typemap:
-                param_type = type(value)
-
-            if param_type is None:
-                for map_type in typemap:
-                    if isinstance(value, map_type):
-                        param_type = map_type
-                        break
-
-            if param_type is None and value:
-                msg.logError(TypeError(f'An embedded value of type {type(value)} could not be mapped to a Parameter: {value}'))
-                return children
-
-            try:
-                children.append(
-                    Parameter.create(
-                        name=str(key),
-                        value=value,
-                        type=typemap[param_type],
-                        children=subchildren,
-                        expanded=False,
-                        readonly=True,
-                    )
-                )
-            except Exception as ex:
-                msg.logMessage("Error during parameterizing metadata:")
-                msg.logError(ex)
-                children.append(
-                    Parameter.create(
-                        name=str(key),
-                        value=repr(value),
-                        type=typemap[str],
-                        children=subchildren,
-                        expanded=False,
-                        readonly=True,
-                    )
-                )
-        return children
-
-    @staticmethod
-    def _strip_reserved(metadata: dict, excludedkeys=None):
-        if not excludedkeys:
-            excludedkeys = []
-        metadata = metadata.copy()
-        for key in excludedkeys:
-            if key in metadata:
-                del metadata[key]
-        return metadata
 
 
 class MetadataWidget(MetadataWidgetBase):
