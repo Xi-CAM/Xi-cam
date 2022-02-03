@@ -66,4 +66,3 @@ def test_IDataSourcePlugin(qtbot):
 
     spot = SpotDataResourcePlugin()
     assert spot.rowCount()
-    qtbot.addWidget(spot)
