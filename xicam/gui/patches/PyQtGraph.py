@@ -430,7 +430,9 @@ class CounterGroupParameterItem(BetterGroupParameteritem):
         self.param.sigChildRemoved.connect(self.updateText)
 
     def updateText(self, *_):
-        self.setText(0, f"{self.param.name()} ({self.childCount()})")
+        # Use title in place of name if provided in the Parameter
+        text = self.param.opts.get('title', self.param.name())
+        self.setText(0, f"{text} ({self.childCount()})")
 
 
 class CounterGroupParameter(BetterGroupParameter):

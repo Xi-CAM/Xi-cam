@@ -43,10 +43,15 @@ class MetadataWidgetBase(ParameterTree):
         LazyGroupParameter.itemClass.initialize_treewidget(self)
         self.kwargs = kwargs
 
-    def insert(self, doctype: str, document, uid: str, groups: dict):
+    def insert(self, doctype: str, document, groups: dict):
         if doctype == "start":
             for group in groups.values():
                 group.clearChildren()
+
+        if doctype not in groups:
+            text = f"doctype '{doctype}' is not supported by MetadataWidget (not in header parameters); skipping"
+            msg.logError(KeyError(text))
+            return
 
         try:
             new_children = MetadataView._from_dict(document, self.excludedkeys)
@@ -55,14 +60,39 @@ class MetadataWidgetBase(ParameterTree):
             print(f"failed to make children for {doctype}")
         else:
             # TODO: add responsive design to uid display
-            group = groups[doctype]
-            group.addChildren(
-                [
-                    GroupParameter(
-                        name=uid[:6], value=None, type=None, children=new_children, expanded=False, readonly=True
-                    )
-                ]
-            )
+            # Attach meaningful names to group name if document has a name (e.g. descriptors)
+            try:
+                name = MetadataView._lookup_name_for_group(doctype, document)
+            except KeyError as ex:
+                msg.logError(ex)
+                msg.logMessage(f"Insert failed for {doctype} document")
+                return
+            else:
+                group = groups[doctype]
+                group.addChildren(
+                    [
+                        GroupParameter(
+                            name=name, value=None, type=None, children=new_children, expanded=False, readonly=True
+                        )
+                    ]
+                )
+
+    @staticmethod
+    def _lookup_name_for_group(doctype, document):
+        """Gets the "ID" (name) to be used for creating a GroupParameter for the given doctype."""
+        if doctype in ['start', 'event', 'resource', 'stop']:
+            return document['uid'][:6]
+        elif doctype in ['datum']:
+            return f"{document['datum_id'][:6]}...{document['datum_id'][-2:]}"
+        elif doctype in ['datum_page']:
+            return f"{document['datum_id'][0][:6]}...{document['datum_id'][0][-2:]}"
+        elif doctype in ['descriptor']:
+            return f"{document['name']} {document['uid'][:6]}"
+        elif doctype in ['event_page']:
+            return f"{document['uid'][0][:6]}"
+        else:
+            raise KeyError(f"Cannot find document type '{doctype}' in supported header parameters")
+
 
     @staticmethod
     def _from_dict(metadata: Iterable, excludedkeys=None):
@@ -140,7 +170,7 @@ class MetadataWidget(MetadataWidgetBase):
     def doc_consumer(self, name, doc):
         if name == "start":
             self.header.setName(doc["uid"])
-        super(MetadataWidget, self).insert(name, doc, doc["uid"], self.groups)
+        super(MetadataWidget, self).insert(name, doc, self.groups)
 
     def reset(self):
         self.header = HeaderParameter(name=" ")
@@ -189,7 +219,7 @@ class MetadataView(MetadataWidgetBase):
                 continue
 
             self._seen.add(uid)
-            self.insert(doctype, document, uid, groups)
+            self.insert(doctype, document, groups)
 
         if catalog.name != self._last_uid:
             self._last_uid = catalog.name
@@ -206,8 +236,12 @@ class HeaderParameter(GroupParameter):
             "descriptor": CounterGroupParameter(name="descriptor", title="Descriptors", expanded=False),
             "event": CounterGroupParameter(name="event", title="Events", expanded=False),
             "event_page": CounterGroupParameter(name="event_page", title="Event Pages", expanded=False),
+            "resource": CounterGroupParameter(name="resource", title="Resources", expanded=False),
+            "datum": CounterGroupParameter(name="datum", title="Data", expanded=False),
+            "datum_page": CounterGroupParameter(name="datum_page", title="Datum Pages", expanded=False),
             "stop": CounterGroupParameter(name="stop", title="Stop", expanded=False),
         }
+
         self.addChildren(self.groups.values())
 
 
