@@ -1,86 +1,107 @@
-from typing import Any
-from qtpy.QtCore import Qt, QAbstractItemModel, QModelIndex
+from collections import defaultdict
+from typing import Any, List, Tuple, Union
+
+from databroker.core import BlueskyRun
+from qtpy.QtCore import Qt, QAbstractItemModel, QModelIndex, QItemSelectionModel
+from xicam.core.intents import Intent
+from xicam.core.workspace import Ensemble
 
 
-class TreeItem:
-    """Qt-agnostic tree item. Mocks the general API of QStandardItem for compatibility.
+class Tree:
+    def __init__(self):
+        super(Tree, self).__init__()
+        self._parent_mapping = dict()
+        self._child_mapping = defaultdict(list)
 
-    Stores check state integer (can be interfaced with the Qt.CheckState enum).
-    Single column support only (right now).
+    def add_node(self, node: object, parent=None):
+        self.insert_node(node, row=len(self._child_mapping[node]) + 1, parent=parent)
 
-    Parameters
-    ----------
-    parent: TreeItem
-        Parent TreeItem for the item you are creating.
-        All TreeItems should have a parent except for the root/header item.
-        Default is None.
-    """
-    def __init__(self, parent=None):
-        self.parentItem = parent
-        self._itemData = {}
-        self.childItems = []
-        self._flags = Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable
-        # All TreeItems will have a parent unless it is the root (header) item.
-        # Header item will not get a check state role applied to it.
-        if parent:
-            self.setData(Qt.Unchecked, Qt.CheckStateRole)
+    def insert_node(self, node: object, row: int, parent=None):
+        self._parent_mapping[node] = parent
+        self._child_mapping[parent].insert(row, node)
 
-    def appendChild(self, item):
-        self.childItems.append(item)
+    def children(self, node: object) -> List[object]:
+        return self._child_mapping[node]
 
-    def child(self, row: int):  # -> TreeItem
-        if row < 0 or row >= len(self.childItems):
-            return None
-        return self.childItems[row]
+    def parent(self, node: object) -> object:
+        return self._parent_mapping[node]
 
-    def childCount(self) -> int:
-        return len(self.childItems)
+    def remove_node(self, node: object, drop_children=True):
+        children = self.children(node)
+        if children and not drop_children:
+            raise RuntimeError('Cannot remove node; it has children!')
+        for child in children:
+            self.remove_node(child)
+        del self._parent_mapping[node]
+        del self._child_mapping[node]
 
-    def columnCount(self) -> int:
-        return 1
-        # TODO support multiple columns
-        # assert len(self.itemData) == 1
-        # return len(self.itemData)
+    def index(self, node: object) -> Tuple[int, object]:
+        parent = self._parent_mapping[node]
+        row = self._child_mapping[parent].index(node)
+        return row, parent
 
-    def data(self, role):
-        return self._itemData.get(role)
+    def node(self, row, parent=None) -> object:
+        return self._child_mapping[parent][row]
 
-    def hasChildren(self) -> int:
-        return self.childCount() > 0
+    def __contains__(self, item):
+        return item in self._parent_mapping
 
-    def parent(self):  # -> TreeItem
-        return self.parentItem
+    # Non-critical convenience methods
+    def child_count(self, node: object) -> int:
+        return len(self._child_mapping[node])
 
-    def removeChildren(self, row: int, count: int) -> bool:
-        # Bad remove (out of bounds), return False
-        if row < 0 or row + count > self.childCount():
-            return False
+    def has_children(self, node: object) -> bool:
+        return bool(self._child_mapping[node])
 
-        for child in range(row, row + count):
-            del self.childItems[child]
+    def remove_children(self, node: object, drop_grandchildren=True):
+        for node in self.children(node):
+            self.remove_node(node, drop_children=drop_grandchildren)
 
-        return True
 
-    def row(self) -> int:
-        if self.parentItem:
-            return self.parentItem.childItems.index(self)
+class CheckableTree(Tree):
+    def __init__(self):
+        self._checked = defaultdict(lambda: Qt.Unchecked)
+        super(CheckableTree, self).__init__()
 
-        return 0
+    def checked(self, node: object):
+        return self._checked[node]
 
-    def setData(self, value: Any, key: int):
-        """Mimics QStandardItem.setData(value, role).
+    def set_checked(self, node: object, value: Union[Qt.Checked, Qt.Unchecked, Qt.PartiallyChecked]) -> Tuple[Tuple[int, object], Tuple[int, object]]:
+        lowest_node = self._check_recurse_down(node, value)
+        highest_node = self._check_recurse_up(node)
+        return self.index(lowest_node), self.index(highest_node)
 
-        Pass in a value and key, maps as key -> role
-        Internally sets the itemData's key (role) to the passed value.
-        """
-        self._itemData[key] = value
-        return True
+    def _check_recurse_down(self, node: object, value: Union[Qt.Checked, Qt.Unchecked, Qt.PartiallyChecked]) -> object:
+        lowest_node = None
+        if self._checked[node] != value:
+            self._checked[node] = value
+            lowest_node = node
+            for child in self.children(node):
+                lowest_node = self._check_recurse_down(child, value) or lowest_node
+        return lowest_node
 
-    def flags(self):
-        return Qt.ItemFlag(self._flags)
+    def _check_recurse_up(self, node: object) -> object:
+        highest_node = None
+        parent = self.parent(node)
+        if parent is None: return
+        siblings_checked = list(map(self.checked, self.children(node)))
+        if all(siblings_checked):
+            new_value = Qt.Checked
+        elif any(siblings_checked):
+            new_value = Qt.PartiallyChecked
+        else:
+            new_value = Qt.Unchecked
+        if self._checked[parent] != new_value:
+            self._checked[parent] = new_value
+            highest_node = parent
 
-    def setFlags(self, flags):
-        self._flags = flags
+        return self._check_recurse_up(parent) or highest_node
+
+    def remove_node(self, node: object, drop_children=True) -> Tuple[int, object]:
+        del self._checked[node]
+        highest_node = self._check_recurse_up(node)
+        super(CheckableTree, self).remove_node(node, drop_children)
+        return self.index(highest_node)
 
 
 class TreeModel(QAbstractItemModel):
@@ -93,27 +114,15 @@ class TreeModel(QAbstractItemModel):
     1. We cannot defer to super(...).setData(...) in setData, since the parent implementation always returns False
     2. We must update the generic items' data via a private _setData call, which then emits a dataChanged signal
     """
+
     def __init__(self, parent=None):
         super(TreeModel, self).__init__(parent)
-
-        # Create a private invisible root item at the top of the tree, with an accessible child rootItem
-        # TODO: i don't think we need the invisibleRootItem or its accessor method
-        self._invisibleRootItem = TreeItem()
-        self.rootItem = TreeItem(self._invisibleRootItem)
-        self.rootItem.setData("Tree Model", Qt.DisplayRole)
-        self._invisibleRootItem.appendChild(self.rootItem)
-
-    def invisibleRootItem(self):
-        # TODO: this is unused, remove
-        return self._invisibleRootItem
+        self.tree = CheckableTree()
+        self.intent_selection_model = QItemSelectionModel()
 
     def columnCount(self, index: QModelIndex) -> int:
         """Returns the number of columns in the given index."""
-        if index.isValid():
-            return index.internalPointer().columnCount()
-        # For an invalid index, return the number of columns defined at the root item of the tree
-        else:
-            return self.rootItem.columnCount()
+        return 1
 
     def data(self, index: QModelIndex, role=Qt.DisplayRole) -> Any:
         # TODO: this is probably not necessary; since the checkstate can be set/accessed via the item.itemData dict
@@ -122,8 +131,21 @@ class TreeModel(QAbstractItemModel):
         if not index.isValid():
             return None
 
-        item = self.getItem(index)
-        return item.data(role)
+        node = index.internalPointer()  # self.tree.node(index.row(), index.parent())
+
+        if isinstance(node, Ensemble):
+            if role == Qt.DisplayRole:
+                return node.name
+        elif isinstance(node, BlueskyRun):
+            if role == Qt.DisplayRole:
+                return node.name  # TODO: probably needs to be something else here
+        elif isinstance(node, Intent):
+            if role == Qt.DisplayRole:
+                return node.name
+            if role == Qt.CheckStateRole:
+                return self.intent_selection_model.isSelected(index)
+
+        return None
 
     def flags(self, index: QModelIndex) -> Qt.ItemFlag:
         """Re-implement to additionally ensure that this model is checkable."""
@@ -131,26 +153,15 @@ class TreeModel(QAbstractItemModel):
             # return Qt.NoItemFlags
             return super(TreeModel, self).flags(index)
 
-        return self.getItem(index).flags()
+        return Qt.ItemIsEditable
 
         # return super(TreeModel, self).flags(index) #| Qt.ItemIsUserCheckable | Qt.ItemIsEditable
-        #return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable
-
-    def getItem(self, index: QModelIndex) -> TreeItem:
-        """Convenience method to get a TreeItem from a given index.
-
-        Returns the root item if the index passed is not valid."""
-        if index.isValid():
-            item = index.internalPointer()
-            if item:
-                return item
-
-        return self.rootItem
+        # return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable
 
     def headerData(self, section: int, orientation: Qt.Orientation, role: Qt.ItemDataRole) -> Any:
         """Define a horizontal header that uses the root item's DisplayRole to populate its data."""
-        if orientation == Qt.Horizontal and role == Qt.DisplayRole:
-            return self.rootItem.data(section)
+        # if orientation == Qt.Horizontal and role == Qt.DisplayRole:
+        #     return self.rootItem.data(section)
 
         return None
 
@@ -164,13 +175,17 @@ class TreeModel(QAbstractItemModel):
             return QModelIndex()
 
         if not parent.isValid():
-            parentItem = self.rootItem
+            parent_node = None
         else:
-            parentItem = parent.internalPointer()
+            parent_node = parent.internalPointer()
 
-        childItem = parentItem.child(row)
-        if childItem:
-            return self.createIndex(row, column, childItem)
+        try:
+            node = self.tree.node(row, parent_node)
+        except (IndexError, KeyError):
+            node = None
+
+        if node:
+            return self.createIndex(row, column, node)
         else:
             return QModelIndex()
 
@@ -182,13 +197,18 @@ class TreeModel(QAbstractItemModel):
         if not index.isValid():
             return QModelIndex()
 
-        childItem = index.internalPointer()
-        parentItem = childItem.parent()
+        child_node = index.internalPointer()
+        try:
+            parent_node = self.tree.parent(child_node)
+        except KeyError:
+            parent_node = None
 
-        if parentItem == self.rootItem:
+        if parent_node is None:
             return QModelIndex()
 
-        return self.createIndex(parentItem.row(), 0, parentItem)
+        parent_row, parents_parent = self.tree.index(parent_node)
+
+        return self.createIndex(parent_row, 0, parents_parent)
 
     def rowCount(self, index: QModelIndex = QModelIndex()) -> int:
         """If an invalid index is passed, returns the childCount of the root item;
@@ -200,47 +220,11 @@ class TreeModel(QAbstractItemModel):
             return 0
 
         if not index.isValid():
-            parentItem = self.rootItem
+            parent_node = None
         else:
-            parentItem = index.internalPointer()
+            parent_node = index.internalPointer()
 
-        return parentItem.childCount()
-
-    def _determineCheckState(self, item: TreeItem) -> Qt.CheckState:
-        """Return if item should or shouldn't be checked.
-
-        When an item is currently checked, it should become unchecked when interacted with by a user/view.
-        Otherwise, the item should be checked. (children handled in separate methods, see below)
-        """
-
-        if item.data(Qt.CheckStateRole) == Qt.Checked:
-            return Qt.Unchecked
-        else:
-            return Qt.Checked
-
-    def _setItemAndChildrenCheckState(self, item: TreeItem, state: Qt.CheckState):
-        """Set the item's check state and its children (recursively) to the given state."""
-        for row in range(item.childCount()):
-            self._setItemAndChildrenCheckState(item.child(row), state)
-
-        item.setData(state, Qt.CheckStateRole)
-
-    def _setParentItemCheckState(self, item: TreeItem, state: Qt.CheckState):
-        """Set the item's ancestors check state to the given state.
-
-        This will handle either setting the ancestors to Checked or PartiallyChecked,
-        depending on the childrens' check states.
-        """
-        parent = item.parent()
-        sibling_check_states = [parent.child(row).data(Qt.CheckStateRole) for row in range(parent.childCount())]
-        while parent and parent != self.rootItem:
-            if all(check_state == sibling_check_states[0] for check_state in sibling_check_states):
-                parent.setData(state, Qt.CheckStateRole)
-            else:
-                if parent.data(Qt.CheckStateRole) != Qt.PartiallyChecked:
-                    parent.setData(Qt.PartiallyChecked, Qt.CheckStateRole)
-
-            parent = parent.parent()
+        return self.tree.child_count(parent_node)
 
     def _setData(self, index, value, role) -> bool:
         """Internal setData that sets the generic TreeItem's itemData attribute
@@ -266,55 +250,30 @@ class TreeModel(QAbstractItemModel):
         if not index.isValid():
             return False
 
-        item = self.getItem(index)
+        node = index.internalPointer()
 
         if role == Qt.CheckStateRole:
-            item_checked = self._determineCheckState(item)
-            # Subsequently set all childrens' check states
-            self._setItemAndChildrenCheckState(item, item_checked)
-            self._setParentItemCheckState(item, item_checked)
+            (lowest_row, lowest_parent), (highest_row, highest_parent) = self.tree.set_checked(node, value)
+            highest_index = self.createIndex(highest_row, 0, highest_parent)
+            lowest_index = self.createIndex(lowest_row, 0, lowest_parent)
 
-            highest_parent_index = index.parent()
-            while highest_parent_index.parent().isValid():
-                highest_parent_index = highest_parent_index.parent()
-
-            def find_lowest_index(idx):
-                if not idx.isValid():
-                    return idx
-
-                itm = self.getItem(idx)
-                if itm.hasChildren():
-                    lowest_child_index = self.index(item.childCount() - 1, 0, idx)
-                    find_lowest_index(lowest_child_index)
-                return idx
-
-                lowest_sibling_index = idx.siblingAtRow(itm.parent().childCount() - 1)
-                if self.getItem(lowest_sibling_index).hasChildren():
-                    find_lowest_index(lowest_sibling_index)
-                else:
-                    return lowest_sibling_index
-
-            lowest_index = find_lowest_index(index)
-
-            self.dataChanged.emit(highest_parent_index, lowest_index, [role])
+            self.dataChanged.emit(highest_index, lowest_index, [role])
             return True
 
         else:
             return self._setData(index, value, role)
 
     def removeRows(self, row: int, count: int, parent: QModelIndex = QModelIndex()) -> bool:
-
-        parent_item = self.getItem(parent)
-        if parent_item is None:
+        if not parent.isValid():
             return False
-        # beginRemoveRows important for communicating with views (via rowsAboutToBeRemoved sig it emits)
-        #  note: rowsAboutToBeRemoved not being used;
-        #        we are using this dataChanged -> IntentsModel.dataChanged -> CanvasView.dataChanged
+
         self.beginRemoveRows(parent, row, row + count - 1)
-        removed = parent_item.removeChildren(row, count)
+        for i in reversed(range(row, count + 1)):
+            node = self.tree.node(i, parent.internalPointer())
+            self.tree.remove_node(node)
         self.endRemoveRows()
 
         # TODO: right now, intents are cleared then re-added via IntentsModel and CanvasView,
         #  so, indexes emitted here aren't important (for now)
         self.dataChanged.emit(QModelIndex(), QModelIndex(), [Qt.CheckStateRole])
-        return removed
+        return True
