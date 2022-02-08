@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Any, List, Tuple, Union
+from typing import Any, List, Tuple, Union, Iterable
 
 from databroker.core import BlueskyRun
 from qtpy.QtCore import Qt, QAbstractItemModel, QModelIndex, QItemSelectionModel
@@ -103,6 +103,77 @@ class CheckableTree(Tree):
         super(CheckableTree, self).remove_node(node, drop_children)
         return self.index(highest_node)
 
+    def checked_by_type(self, type_: type):
+        return [node for node, checked in self._checked.items() if isinstance(node, type_) and checked == Qt.Checked]
+
+
+#  index() , parent() , rowCount() , columnCount() , and data()
+
+# Given datachanged range from source model; includes ensembles/runs
+# Need minimal range of local intent indexes
+
+
+class IntentsModel(QAbstractItemModel):
+    canvas_role = Qt.UserRole + 1
+
+    def __init__(self, source_model):
+        self.tree = source_model.tree
+        self.source_model = source_model
+        self.canvases = dict()
+        self._last_checked_items = []
+        super(IntentsModel, self).__init__()
+
+        self.source_model.sigDataChanged.connect(self.source_model_changed)
+
+    def index(self, row: int, column: int, parent: QModelIndex = ...) -> QModelIndex:
+        if not self.hasIndex(row, column, parent):
+            return QModelIndex()
+
+        self.createIndex(row, column, self.tree.checked_by_type(Intent)[row])
+
+    def parent(self, child: QModelIndex) -> QModelIndex:
+        return QModelIndex()
+
+    def rowCount(self, parent: QModelIndex = ...) -> int:
+        return len(self.tree.checked_by_type(Intent))
+
+    def columnCount(self, parent: QModelIndex = ...) -> int:
+        return 1
+
+    def data(self, index: QModelIndex, role: int = ...) -> Any:
+        if not index.isValid():
+            return None
+
+        node = index.internalPointer()  # self.tree.node(index.row(), index.parent())
+
+        if role == Qt.DisplayRole:
+            return node.name
+        elif role == self.canvas_role:
+            ...
+
+        return None
+
+    def canvas(self, node):
+        if node in self.canvases:
+            return self.canvases[node]
+        else:
+            canvas =
+
+    def source_model_changed(self, topLeft: QModelIndex, bottomRight: QModelIndex, roles: Iterable[int] = ...) -> None:
+        if Qt.CheckStateRole in roles:
+            new_checked_items = self.tree.checked_by_type(Intent)
+
+            if len(new_checked_items) > len(self._last_checked_items):  # insertion
+                diff = set(new_checked_items) - set(self._last_checked_items)
+                rows = list(map(new_checked_items.index, diff))
+                self.beginInsertRows(QModelIndex(), min(rows), max(rows) - 1)
+                self.endInsertRows()
+            elif len(new_checked_items) < len(self._last_checked_items):  # deletion
+                diff = set(self._last_checked_items) - set(new_checked_items)
+                rows = list(map(self._last_checked_items.index, diff))
+                self.beginRemoveRows(QModelIndex(), min(rows), max(rows) - 1)
+                self.endRemoveRows()
+
 
 class TreeModel(QAbstractItemModel):
     """Qt-based tree model.
@@ -136,14 +207,18 @@ class TreeModel(QAbstractItemModel):
         if isinstance(node, Ensemble):
             if role == Qt.DisplayRole:
                 return node.name
+            if role == Qt.CheckStateRole:
+                return self.tree.checked(node)
         elif isinstance(node, BlueskyRun):
             if role == Qt.DisplayRole:
                 return node.name  # TODO: probably needs to be something else here
+            if role == Qt.CheckStateRole:
+                return self.tree.checked(node)
         elif isinstance(node, Intent):
             if role == Qt.DisplayRole:
                 return node.name
             if role == Qt.CheckStateRole:
-                return self.intent_selection_model.isSelected(index)
+                return self.tree.checked(node)
 
         return None
 
@@ -226,19 +301,6 @@ class TreeModel(QAbstractItemModel):
 
         return self.tree.child_count(parent_node)
 
-    def _setData(self, index, value, role) -> bool:
-        """Internal setData that sets the generic TreeItem's itemData attribute
-        and emits a dataChanged.
-
-        This is used because QAbstractItemModel.setData() always returns False,
-        and we are using generic items (not QStandardItems).
-        """
-
-        item = self.getItem(index)
-        item.setData(value, role)
-        self.dataChanged.emit(index, index, [role])
-        return True
-
     def setData(self, index: QModelIndex, value: Any, role: Qt.ItemDataRole = Qt.EditRole) -> bool:
         """Re-implemented to set the associated item's itemData property and emit dataChanged.
 
@@ -259,9 +321,6 @@ class TreeModel(QAbstractItemModel):
 
             self.dataChanged.emit(highest_index, lowest_index, [role])
             return True
-
-        else:
-            return self._setData(index, value, role)
 
     def removeRows(self, row: int, count: int, parent: QModelIndex = QModelIndex()) -> bool:
         if not parent.isValid():
