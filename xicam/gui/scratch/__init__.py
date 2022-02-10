@@ -93,7 +93,18 @@ if __name__ == "__main__":
         view.clicked.connect(check_index)
         view.setHeaderHidden(True)
         view.expandAll()
-        # tab_view.setModel(intents_model)
+
+        selected_view = QListView()
+        selected_view_model = QStandardItemModel()
+        selected_view.setModel(selected_view_model)
+
+        def selection_changed(selection, command):
+            selected_view_model.clear()
+            for index in selection.indexes():
+                item = QStandardItem(index.internalPointer().name)
+                selected_view_model.appendRow(item)
+
+        ensemble_model.intent_selection_model.selectionChanged.connect(selection_changed)
 
     else:
         w = AddRemoveItemsDemoWidget()
@@ -106,6 +117,7 @@ if __name__ == "__main__":
     layout = QHBoxLayout()
     layout.addWidget(tab_view)
     layout.addWidget(view)
+    layout.addWidget(selected_view)
     # layout.addWidget(w)
 
     widget = QWidget()

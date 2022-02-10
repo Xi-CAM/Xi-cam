@@ -6,7 +6,7 @@ from databroker.core import BlueskyRun
 from xicam.core.execution import Workflow
 
 from xicam.gui.actions import Action
-from xicam.gui.models import EnsembleModel, IntentsModel
+from xicam.gui.models.treemodel import EnsembleModel, IntentsModel
 from xicam.gui.widgets.linearworkfloweditor import WorkflowEditor
 from xicam.gui.widgets.views import DataSelectorView, StackedCanvasView
 from xicam.plugins import GUIPlugin, GUILayout
