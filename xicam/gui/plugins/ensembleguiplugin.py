@@ -66,7 +66,9 @@ class EnsembleGUIPlugin(GUIPlugin):
         ...
 
     def appendCatalog(self, catalog: BlueskyRun, **kwargs):
-        self.ensemble_model.append_to_ensemble(catalog, None, self._projectors)
+        self.ensemble_model.appendCatalog(catalog, ensemble, self._projectors)
+
+        # self.ensemble_model.append_to_ensemble(catalog, None, self._projectors)
 
 
 class HelpTextDisplay(QTextEdit):

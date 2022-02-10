@@ -4,7 +4,9 @@ from weakref import WeakValueDictionary
 
 from databroker.core import BlueskyRun
 from qtpy.QtCore import Qt, QAbstractItemModel, QModelIndex, QItemSelectionModel
+from xicam.core.data import ProjectionNotFound
 from xicam.core.intents import Intent
+from xicam.core.msg import logMessage, WARNING, notifyMessage
 from xicam.core.workspace import Ensemble
 from xicam.plugins import manager as plugin_manager
 
@@ -179,7 +181,7 @@ class IntentsModel(QAbstractItemModel):
             if len(new_checked_items) > len(self._last_checked_items):  # insertion
                 diff = set(new_checked_items) - set(self._last_checked_items)
                 rows = list(map(new_checked_items.index, diff))
-                self.beginInsertRows(QModelIndex(), min(rows), max(rows))# - 1)
+                self.beginInsertRows(QModelIndex(), min(rows), max(rows))
                 self.endInsertRows()
             elif len(new_checked_items) < len(self._last_checked_items):  # deletion
                 diff = set(self._last_checked_items) - set(new_checked_items)
@@ -352,3 +354,48 @@ class TreeModel(QAbstractItemModel):
         self.dataChanged.emit(QModelIndex(), QModelIndex(), [Qt.CheckStateRole])
         return True
 
+
+class EnsembleModel(TreeModel):
+
+    def appendIntent(self, intent: Intent, catalog):
+        # return True  # should show "Ensemble 1" with child <uid> in view
+
+        intent_parent = catalog
+        intent_count = self.tree.child_count(catalog)
+        intent_parent_index = self.createIndex(intent_count, 0, intent_parent)
+        self.beginInsertRows(intent_parent_index, intent_count, intent_count + 1)
+        self.tree.add_node(intent, catalog)
+        self.endInsertRows()
+
+    def appendCatalog(self, ensemble: Ensemble, catalog: BlueskyRun, projectors):
+        catalog_parent = ensemble
+        catalog_count = self.tree.child_count(ensemble)
+        catalog_parent_index = self.createIndex(catalog_count, 0, catalog_parent)
+        self.beginInsertRows(catalog_parent_index, catalog_count, catalog_count + 1)
+        self.tree.add_node(catalog, parent=ensemble)
+        self.endInsertRows()
+
+        _any_projection_succeeded = False
+        for projector in projectors:
+            try:
+                intents = projector(catalog)
+            except (AttributeError, ProjectionNotFound) as e:
+                logMessage(e, level=WARNING)
+            else:
+                _any_projection_succeeded = True
+                for intent in intents:
+                    self.appendIntent(intent, catalog)
+
+        if not _any_projection_succeeded:
+            notifyMessage("Data file was opened, but could not be interpreted in this GUI plugin.")
+
+    def appendEnsemble(self, ensemble: Ensemble, projectors):
+        parent_node = None
+        parent_index = QModelIndex()
+        ensemble_count = self.rowCount(parent_index)
+        self.beginInsertRows(parent_index, ensemble_count, ensemble_count + 1)
+        self.tree.add_node(ensemble, parent_node)
+        self.endInsertRows()
+
+        for catalog in ensemble.catalogs:
+            self.appendCatalog(ensemble, catalog, projectors)

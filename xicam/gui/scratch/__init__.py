@@ -6,17 +6,9 @@ from qtpy.QtWidgets import QApplication, QHBoxLayout, QLabel, QListView, QWidget
 from xicam.core.data import ProjectionNotFound
 from xicam.core.intents import Intent
 from xicam.core.msg import notifyMessage, logMessage, WARNING
-from xicam.gui.models.treemodel import IntentsModel, TreeModel
+from xicam.gui.models.treemodel import IntentsModel, TreeModel, EnsembleModel
 from xicam.core.workspace import Ensemble
 from xicam.gui.views.tabview import TabView, IntentsTabView
-
-
-# import databroker.tutorial_utils
-#
-# # Catalog of many small Runs
-# databroker.tutorial_utils.fetch_BMM_example()
-# catalog = databroker.catalog['bluesky-tutorial-BMM']
-# run = catalog[-1]
 
 
 
@@ -56,87 +48,6 @@ class AddRemoveItemsDemoWidget(QWidget):
     def remove_item(self, i):
         self.model.removeRow(i)
         self.index_box.setMaximum(self.model.rowCount())
-
-
-class EnsembleModel(TreeModel):
-
-    def appendIntent(self, intent: Intent, catalog):
-        # return True  # should show "Ensemble 1" with child <uid> in view
-
-        intent_parent = catalog
-        intent_count = self.tree.child_count(catalog)
-        intent_parent_index = self.createIndex(intent_count, 0, intent_parent)
-        self.beginInsertRows(intent_parent_index, intent_count, intent_count + 1)
-        self.tree.add_node(intent, catalog)
-        self.endInsertRows()
-
-        # self.tree.add_node(intent, catalog)
-        #
-        # intent_row, intent_parent = self.tree.index(intent)
-        # parent_index = self.createIndex(intent_row, 0, intent_parent)
-        # self.beginInsertRows(parent_index, intent_row, intent_row + 1)
-        # self.endInsertRows()
-
-    def appendCatalog(self, ensemble: Ensemble, catalog: BlueskyRun, projectors):
-        catalog_parent = ensemble
-        catalog_count = self.tree.child_count(ensemble)
-        catalog_parent_index = self.createIndex(catalog_count, 0, catalog_parent)
-        self.beginInsertRows(catalog_parent_index, catalog_count, catalog_count + 1)
-        self.tree.add_node(catalog, parent=ensemble)
-        self.endInsertRows()
-
-        # # return True  # should show only "Ensemble 1" in view
-        # self.tree.add_node(catalog, parent=ensemble)
-        # catalog_row, catalog_parent = self.tree.index(catalog)
-        # parent_index = self.createIndex(catalog_row, 0, catalog_parent)  # type: QModelIndex
-        # parent_obj = parent_index.internalPointer()
-        #
-        # self.beginInsertRows(parent_index, catalog_row, catalog_row + 1)
-        # self.endInsertRows()
-
-        _any_projection_succeeded = False
-        for projector in projectors:
-            try:
-                intents = projector(catalog)
-            except (AttributeError, ProjectionNotFound) as e:
-                logMessage(e, level=WARNING)
-            else:
-                _any_projection_succeeded = True
-                for intent in intents:
-                    self.appendIntent(intent, catalog)
-
-        if not _any_projection_succeeded:
-            notifyMessage("Data file was opened, but could not be interpreted in this GUI plugin.")
-
-    def appendEnsemble(self, ensemble: Ensemble, projectors):
-        parent_node = None
-        parent_index = QModelIndex()
-        ensemble_count = self.rowCount(parent_index)
-        self.beginInsertRows(parent_index, ensemble_count, ensemble_count + 1)
-        self.tree.add_node(ensemble, parent_node)
-        self.endInsertRows()
-        # return
-
-        for catalog in ensemble.catalogs:
-            self.appendCatalog(ensemble, catalog, projectors)
-
-
-        # self.tree.add_node(ensemble)
-        # ensemble_row, ensemble_parent = self.tree.index(ensemble)
-        # parent_index = self.createIndex(ensemble_row, 0, ensemble_parent)
-        # self.beginInsertRows(parent_index, ensemble_row, ensemble_row + 1)
-        #
-        # for catalog in ensemble.catalogs:
-        #     self.appendCatalog(ensemble, catalog, projectors)
-        # self.endInsertRows()
-        #
-        # ensemble_index = self.index(self.rowCount(parent_index) - 1, 0, parent_index)
-        # catalog_index = self.index(self.rowCount(ensemble_index) - 1, 0, ensemble_index)
-        # ensemble_obj = ensemble_index.internalPointer()
-        # catalog_obj = catalog_index.internalPointer()
-        # ensemble_text = self.data(ensemble_index)
-        # catalog_text = self.data(catalog_index)
-        # print()
 
 
 if __name__ == "__main__":
