@@ -130,25 +130,30 @@ class WorkflowEditor(QSplitter):
         self.workflowview.model().workflow = new_workflow
         self.workflow.attach(self.sigWorkflowChanged.emit)
 
-    def run_workflow(self, **kwargs):
-        mixed_kwargs = self.kwargs.copy()
-        if self.kwargs_callable is not None:
-            with msg.busyContext():
-                try:
-                    called_kwargs = self.kwargs_callable(self)
-                except Exception as e:
-                    # NOTE: we do not want to raise an exception here (we are in a connected Qt slot)
-                    # Grab the user-oriented message from the kwargs callable exception
-                    msg.notifyMessage(str(e), title="Workflow Error", level=msg.ERROR)
-                    msg.logError(e)
-                else:
-                    mixed_kwargs.update(called_kwargs)
-                    mixed_kwargs.update(kwargs)
-
-                    if self.execute_iterative:
-                        self.workflow.execute_all(**mixed_kwargs)
+    def run_workflow(self, checked=False, **kwargs):
+        if not checked:  # user cancelling workflow
+            msg.notifyMessage("Workflow cancelled by user", level=msg.ERROR)
+            self.workflow.cancel()
+            msg.showReady()
+        else:  # user starting workflow
+            mixed_kwargs = self.kwargs.copy()
+            if self.kwargs_callable is not None:
+                with msg.busyContext():
+                    try:
+                        called_kwargs = self.kwargs_callable(self)
+                    except Exception as e:
+                        # NOTE: we do not want to raise an exception here (we are in a connected Qt slot)
+                        # Grab the user-oriented message from the kwargs callable exception
+                        msg.notifyMessage(str(e), title="Workflow Error", level=msg.ERROR)
+                        msg.logError(e)
                     else:
-                        self.workflow.execute(**mixed_kwargs)
+                        mixed_kwargs.update(called_kwargs)
+                        mixed_kwargs.update(kwargs)
+
+                        if self.execute_iterative:
+                            self.workflow.execute_all(**mixed_kwargs)
+                        else:
+                            self.workflow.execute(**mixed_kwargs)
 
     def setParameters(self, operation: OperationPlugin):
         if operation:
@@ -180,7 +185,7 @@ class WorkflowOperationEditor(ParameterTree):
 
 class WorkflowWidget(QWidget):
     sigAddFunction = Signal(object)
-    sigRunWorkflow = Signal()
+    sigRunWorkflow = Signal(bool)
 
     # TODO -- emit Workflow from sigRunWorkflow
 
@@ -196,6 +201,8 @@ class WorkflowWidget(QWidget):
         self.autorun_checkbox.setCheckState(Qt.Unchecked)
         self.autorun_checkbox.stateChanged.connect(self._autorun_state_changed)
         self.run_button = QPushButton("Run Workflow")
+        self.run_button.setCheckable(True)
+        self.run_button.clicked.connect(self._updateButtonText)
         self.run_button.clicked.connect(self.sigRunWorkflow.emit)
         self.view.model().workflow.attach(self._autorun)
         # TODO -- actually hook up the auto run OR dependent class needs to connect (see SAXSGUIPlugin)
@@ -336,6 +343,12 @@ class WorkflowWidget(QWidget):
         self.view.model().workflow.remove_operation(operation)
         self.view.setCurrentIndex(QModelIndex())
 
+    def _updateButtonText(self, checked=False):
+        if checked:
+            self.run_button.setText("Cancel Workflow")
+        else:
+            self.run_button.setText("Run Workflow")
+
 
 class DisablableListView(QListView):
     """
@@ -453,3 +466,22 @@ class WorkflowModel(QAbstractListModel):
         if role == Qt.CheckStateRole:
             self.workflow.set_disabled(self.workflow.operations[index.row()], not value)
             return True
+
+
+if __name__ == "__main__":
+    from qtpy.QtWidgets import QApplication
+    app = QApplication([])
+
+    def updateText(checked=False):
+        if checked:
+            btn.setText("Cancel Workflow")
+        else:
+            btn.setText("Run Workflow")
+
+    btn = QPushButton("Run Workflow")
+    btn.setCheckable(True)
+    btn.clicked.connect(updateText)
+
+    btn.show()
+
+    app.exec_()

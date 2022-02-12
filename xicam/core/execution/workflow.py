@@ -3,6 +3,8 @@ from typing import Callable, List, Union, Tuple
 from weakref import ref
 from collections import defaultdict, OrderedDict
 import time
+
+import dask.threaded
 import event_model
 from xicam.core import msg, execution
 from xicam.core.threads import QThreadFuture, QThreadFutureIterator
@@ -618,6 +620,7 @@ class Workflow(Graph):
             List of operations to add to the Workflow being created (default is None).
         """
         super(Workflow, self).__init__()
+        self.current_thread = None
         # self._operations = []  # type: List[OperationPlugin]
         self._observers = set()
         # self._links = []  # type: List[Tuple[ref, str, ref, str]]
@@ -660,6 +663,13 @@ class Workflow(Graph):
         # TODO: check if data is accessible from compute resource; if not -> copy data to compute resource
         # TODO: use cam-link to mirror installation of plugin packages
 
+    def cancel(self):
+        thread_pool_executor = dask.threaded.pools[self.current_thread][None]
+        thread_pool_executor.shutdown(cancel_futures=True)
+
+    def stash_current_thread(self, thread):
+        self.current_thread = thread
+
     def execute(
             self,
             executor=None,
@@ -692,16 +702,20 @@ class Workflow(Graph):
         if executor is None:
             executor = execution.executor
 
-        future = QThreadFuture(
+
+
+        future = QThreadFutureIterator(
             executor.execute,
             self,
             callback_slot=callback_slot,
             finished_slot=finished_slot,
             except_slot=except_slot,
+            yield_slot=self.stash_current_thread,
             default_exhandle=default_exhandle,
             lock=lock,
             threadkey=threadkey,
         )
+
         future.start()
         return future
 
@@ -723,6 +737,7 @@ class Workflow(Graph):
             executor=None,
             callback_slot=None,
             finished_slot=None,
+            yield_slot=None,
             except_slot=None,
             default_exhandle=True,
             lock=None,
@@ -762,6 +777,7 @@ class Workflow(Graph):
             callback_slot=callback_slot,
             finished_slot=finished_slot,
             except_slot=except_slot,
+            yield_slot=yield_slot,
             default_exhandle=default_exhandle,
             lock=lock,
             threadkey=threadkey,
