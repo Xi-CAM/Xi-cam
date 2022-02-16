@@ -130,12 +130,16 @@ class WorkflowEditor(QSplitter):
         self.workflowview.model().workflow = new_workflow
         self.workflow.attach(self.sigWorkflowChanged.emit)
 
+    def _reset_run_button(self, *args):
+        # Resets run button if an exception occurs or the workflow is cancelled / finished
+        self.workflow_widget.run_button.setChecked(False)
+
     def run_workflow(self, checked=False, **kwargs):
-        if not checked:  # user cancelling workflow
+        if not checked:  # button is being unchecked -- user cancelling workflow
             msg.notifyMessage("Workflow cancelled by user", level=msg.ERROR)
             self.workflow.cancel()
             msg.showReady()
-        else:  # user starting workflow
+        else:  # button is being checked -- user starting workflow
             mixed_kwargs = self.kwargs.copy()
             if self.kwargs_callable is not None:
                 with msg.busyContext():
@@ -149,11 +153,13 @@ class WorkflowEditor(QSplitter):
                     else:
                         mixed_kwargs.update(called_kwargs)
                         mixed_kwargs.update(kwargs)
-
                         if self.execute_iterative:
                             self.workflow.execute_all(**mixed_kwargs)
                         else:
-                            self.workflow.execute(**mixed_kwargs)
+                            self.workflow.execute(except_slot=self._reset_run_button,
+                                                  finished_slot=self._reset_run_button,
+                                                  **mixed_kwargs)
+
 
     def setParameters(self, operation: OperationPlugin):
         if operation:
@@ -202,7 +208,8 @@ class WorkflowWidget(QWidget):
         self.autorun_checkbox.stateChanged.connect(self._autorun_state_changed)
         self.run_button = QPushButton("Run Workflow")
         self.run_button.setCheckable(True)
-        self.run_button.clicked.connect(self._updateButtonText)
+        # Any time button is clicked/toggled/setChecked, update button text to "Run" or "Cancel"
+        self.run_button.toggled.connect(self._updateRunButtonText)
         self.run_button.clicked.connect(self.sigRunWorkflow.emit)
         self.view.model().workflow.attach(self._autorun)
         # TODO -- actually hook up the auto run OR dependent class needs to connect (see SAXSGUIPlugin)
@@ -343,9 +350,11 @@ class WorkflowWidget(QWidget):
         self.view.model().workflow.remove_operation(operation)
         self.view.setCurrentIndex(QModelIndex())
 
-    def _updateButtonText(self, checked=False):
-        if checked:
+    def _updateRunButtonText(self, running=False):
+        # Button is being checked (i.e. workflow is being started)
+        if running:
             self.run_button.setText("Cancel Workflow")
+        # Button is being unchecked (e.g. workflow exception or cancelled / terminated)
         else:
             self.run_button.setText("Run Workflow")
 
