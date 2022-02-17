@@ -2,8 +2,10 @@ from collections import defaultdict
 from typing import Any, List, Tuple, Union, Iterable
 from weakref import WeakValueDictionary
 
+from qtpy.QtGui import QPalette, QBrush
 from databroker.core import BlueskyRun
 from qtpy.QtCore import Qt, QAbstractItemModel, QModelIndex, QItemSelectionModel
+from qtpy.QtWidgets import QApplication
 from xicam.core.data import ProjectionNotFound
 from xicam.core.intents import Intent
 from xicam.core.msg import logMessage, WARNING, notifyMessage
@@ -18,14 +20,18 @@ class Tree:
         self._child_mapping = defaultdict(list)
 
     def add_node(self, node: object, parent=None):
-        self.insert_node(node, row=len(self._child_mapping[node]) + 1, parent=parent)
+        self.insert_node(node, row=len(self._child_mapping[parent]), parent=parent)
 
     def insert_node(self, node: object, row: int, parent=None):
+        if node in self:
+            raise ValueError(f"{node} already exists in tree; cannot add")
         self._parent_mapping[node] = parent
         self._child_mapping[parent].insert(row, node)
 
     def children(self, node: object) -> List[object]:
-        return self._child_mapping[node]
+        if node in self._parent_mapping:
+            return self._child_mapping[node]
+        return []
 
     def parent(self, node: object) -> object:
         return self._parent_mapping[node]
@@ -36,8 +42,8 @@ class Tree:
             raise RuntimeError('Cannot remove node; it has children!')
         for child in children:
             self.remove_node(child)
+        self._child_mapping[self.parent(node)].remove(node)
         del self._parent_mapping[node]
-        del self._child_mapping[node]
 
     def index(self, node: object) -> Tuple[int, object]:
         parent = self._parent_mapping[node]
@@ -104,10 +110,11 @@ class CheckableTree(Tree):
             return node
 
     def remove_node(self, node: object, drop_children=True) -> Tuple[int, object]:
-        del self._checked[node]
         highest_node = self._check_recurse_up(node)
+        index = self.index(highest_node)
+        del self._checked[node]
         super(CheckableTree, self).remove_node(node, drop_children)
-        return self.index(highest_node)
+        return index
 
     def checked_by_type(self, type_: type, parent=None):
         checked_nodes = []
@@ -331,7 +338,11 @@ class TreeModel(QAbstractItemModel):
 
         node = index.internalPointer()
 
-        if role == Qt.CheckStateRole:
+        if role == Qt.DisplayRole:
+            node.name = value
+            return True
+
+        elif role == Qt.CheckStateRole:
             (lowest_row, lowest_parent), (highest_row, highest_parent) = self.tree.set_checked(node, value)
             highest_index = self.createIndex(highest_row, 0, highest_parent)
             lowest_index = self.createIndex(lowest_row, 0, lowest_parent)
@@ -339,23 +350,51 @@ class TreeModel(QAbstractItemModel):
             self.dataChanged.emit(highest_index, lowest_index, [role])
             return True
 
-    def removeRows(self, row: int, count: int, parent: QModelIndex = QModelIndex()) -> bool:
-        if not parent.isValid():
-            return False
+        return False
 
+    def removeRows(self, row: int, count: int, parent: QModelIndex = QModelIndex()) -> bool:
         self.beginRemoveRows(parent, row, row + count - 1)
-        for i in reversed(range(row, count + 1)):
+        for i in reversed(range(row, row + count)):
             node = self.tree.node(i, parent.internalPointer())
             self.tree.remove_node(node)
         self.endRemoveRows()
 
         # TODO: right now, intents are cleared then re-added via IntentsModel and CanvasView,
         #  so, indexes emitted here aren't important (for now)
-        self.dataChanged.emit(QModelIndex(), QModelIndex(), [Qt.CheckStateRole])
+        self.dataChanged.emit(parent, QModelIndex(), [Qt.CheckStateRole])
         return True
 
 
 class EnsembleModel(TreeModel):
+
+    def __init__(self, parent=None):
+        super(EnsembleModel, self).__init__(parent)
+
+        self._active_ensemble = None  # type: Ensemble
+
+    def _ensembleBackground(self, index):
+        # Updates the ensemble background (highlight) style based on its active status
+        palette = QApplication.palette()
+        brush = QBrush()
+        if self._active_ensemble == index.internalPointer():
+            brush = palette.color(QPalette.Normal, QPalette.Highlight)
+        return brush
+
+    def _ensembleForeground(self, index):
+        # Updates the ensemble foreground (text color) style based on its active status
+        palette = QApplication.palette()
+        brush = QBrush()
+        if self._active_ensemble == index.internalPointer():
+            brush = palette.color(QPalette.Normal, QPalette.BrightText)
+        return brush
+
+    def data(self, index: QModelIndex, role=Qt.DisplayRole) -> Any:
+        if isinstance(index.internalPointer(), Ensemble):
+            if role == Qt.ForegroundRole:
+                return self._ensembleForeground(index)
+            if role == Qt.BackgroundRole:
+                return self._ensembleBackground(index)
+        return super(EnsembleModel, self).data(index, role)
 
     def appendIntent(self, intent: Intent, catalog):
         # return True  # should show "Ensemble 1" with child <uid> in view
@@ -389,13 +428,33 @@ class EnsembleModel(TreeModel):
         if not _any_projection_succeeded:
             notifyMessage("Data file was opened, but could not be interpreted in this GUI plugin.")
 
-    def appendEnsemble(self, ensemble: Ensemble, projectors):
+    def appendEnsemble(self, ensemble: Ensemble, projectors, active=False):
         parent_node = None
         parent_index = QModelIndex()
         ensemble_count = self.rowCount(parent_index)
-        self.beginInsertRows(parent_index, ensemble_count, ensemble_count + 1)
+        self.beginInsertRows(parent_index, ensemble_count, ensemble_count)
         self.tree.add_node(ensemble, parent_node)
         self.endInsertRows()
 
-        for catalog in ensemble.catalogs:
-            self.appendCatalog(ensemble, catalog, projectors)
+        # Wait until after adding node to tree to set it as active ensemble (since that triggers dataChanged)
+        if self.activeEnsemble is None or active:
+            self.activeEnsemble = ensemble
+
+        for catalog in self.activeEnsemble.catalogs:
+            self.appendCatalog(self.activeEnsemble, catalog, projectors)
+
+    @property
+    def activeEnsemble(self) -> Ensemble:
+        return self._active_ensemble
+
+    @activeEnsemble.setter
+    def activeEnsemble(self, ensemble):
+        """Sets the active ensemble.
+
+        Emits dataChanged on the active ensemble's foreground and background roles,
+        so attached view(s) will display active/inactive ensembles properly.
+        """
+        self._active_ensemble = ensemble
+        row, _ = self.tree.index(self._active_ensemble)
+        index = self.index(row, 0)
+        self.dataChanged.emit(index, index, [Qt.ForegroundRole, Qt.BackgroundRole])
