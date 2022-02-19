@@ -1,6 +1,8 @@
-from qtpy.QtCore import Qt, QModelIndex, QPoint, QRect, QItemSelection
+from qtpy.QtCore import Signal, Qt, QModelIndex, QPoint, QRect, QItemSelection
 from qtpy.QtGui import QRegion
 from qtpy.QtWidgets import QAbstractItemView, QHBoxLayout, QLabel, QTabWidget
+from xicam.gui.actions import Action
+from xicam.gui.canvases import XicamIntentCanvas
 from xicam.gui.models.treemodel import IntentsModel
 
 
@@ -44,16 +46,28 @@ class TabView(QAbstractItemView):
             index = self.model().index(i, 0, parent)
             data = self.model().data(index, Qt.DisplayRole)
             canvas = self.getWidgetFromIndex(index)
+            # TODO: only insert tab if widget not in mapping
             self.widget.insertTab(i, canvas, data)
 
     def rowsAboutToBeRemoved(self, parent: QModelIndex, start: int, end: int) -> None:
+        # TODO
+        # unrender
+        # if true: canvas can be removed (remove tab)
+        # then remove entry from mapping
         for i in reversed(range(start, end+1)):
             self.widget.removeTab(i)
 
     def getWidgetFromIndex(self, index: QModelIndex):
         raise NotImplementedError
 
-
+# TODO:
+#   mapping : {intent obj: widget}
+#   use mapping to determine if a widget already exists in the tab view (if so, don't add a new one)
 class IntentsTabView(TabView):
+
+    sigInteractiveAction = Signal(Action, XicamIntentCanvas)
+
     def getWidgetFromIndex(self, index: QModelIndex):
-        return self.model().data(index, IntentsModel.canvas_role)
+        canvas = self.model().data(index, IntentsModel.canvas_role)
+        canvas.sigInteractiveAction.connect(self.sigInteractiveAction, type=Qt.UniqueConnection)
+        return canvas

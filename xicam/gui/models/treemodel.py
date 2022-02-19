@@ -29,7 +29,7 @@ class Tree:
         self._child_mapping[parent].insert(row, node)
 
     def children(self, node: object) -> List[object]:
-        if node in self._parent_mapping:
+        if node in self._parent_mapping.values():
             return self._child_mapping[node]
         return []
 
@@ -162,24 +162,31 @@ class IntentsModel(QAbstractItemModel):
         if not index.isValid():
             return None
 
-        node = index.internalPointer()  # self.tree.node(index.row(), index.parent())
+        node = index.internalPointer()
 
         if role == Qt.DisplayRole:
             return node.name
         elif role == self.canvas_role:
-            if node not in self._canvas_mapping:
+            # If intent node not in canvas mapping (doesn't have an associated canvas),
+            # either examine canvas mapping for keys (intents) w/ identical match_keys,
+            # or, create a new canvas
+            canvas = self._find_matching_canvas(node)
+            if canvas is None:
                 canvas = plugin_manager.get_plugin_by_name(node.canvas, "IntentCanvasPlugin")(canvas_name=node.canvas_name)
-                self._canvas_mapping[node] = canvas
-                canvas.render(node)
+            self._canvas_mapping[node] = canvas
+            canvas.render(node)
             return self._canvas_mapping[node]
 
         return None
 
-    def canvas(self, node):
-        if node in self.canvases:
-            return self.canvases[node]
-        else:
-            canvas = ...
+    def _find_matching_canvas(self, node):
+        canvas = None
+        if node not in self._canvas_mapping:
+            for intent, canvas_ref in self._canvas_mapping.items():
+                if node.match_key == intent.match_key:
+                    canvas = canvas_ref
+                    break
+        return canvas
 
     def source_model_changed(self, topLeft: QModelIndex, bottomRight: QModelIndex, roles: Iterable[int] = ...) -> None:
         if Qt.CheckStateRole in roles:
@@ -407,7 +414,7 @@ class EnsembleModel(TreeModel):
         self.endInsertRows()
 
     def appendCatalog(self, ensemble: Ensemble, catalog: BlueskyRun, projectors):
-        catalog_parent = ensemble
+        catalog_parent = ensemble or self.activeEnsemble
         catalog_count = self.tree.child_count(ensemble)
         catalog_parent_index = self.createIndex(catalog_count, 0, catalog_parent)
         self.beginInsertRows(catalog_parent_index, catalog_count, catalog_count + 1)
@@ -428,7 +435,7 @@ class EnsembleModel(TreeModel):
         if not _any_projection_succeeded:
             notifyMessage("Data file was opened, but could not be interpreted in this GUI plugin.")
 
-    def appendEnsemble(self, ensemble: Ensemble, projectors, active=False):
+    def appendEnsemble(self, ensemble: Ensemble, projectors):
         parent_node = None
         parent_index = QModelIndex()
         ensemble_count = self.rowCount(parent_index)
@@ -436,12 +443,12 @@ class EnsembleModel(TreeModel):
         self.tree.add_node(ensemble, parent_node)
         self.endInsertRows()
 
+        # New ensemble will be come the active ensemble
         # Wait until after adding node to tree to set it as active ensemble (since that triggers dataChanged)
-        if self.activeEnsemble is None or active:
-            self.activeEnsemble = ensemble
+        self.activeEnsemble = ensemble
 
-        for catalog in self.activeEnsemble.catalogs:
-            self.appendCatalog(self.activeEnsemble, catalog, projectors)
+        for catalog in ensemble.catalogs:
+            self.appendCatalog(ensemble, catalog, projectors)
 
     @property
     def activeEnsemble(self) -> Ensemble:
