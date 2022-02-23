@@ -42,20 +42,10 @@ class TabView(QAbstractItemView):
         ...
 
     def rowsInserted(self, parent: QModelIndex, start: int, end: int) -> None:
-        for i in range(start, end+1):
-            index = self.model().index(i, 0, parent)
-            data = self.model().data(index, Qt.DisplayRole)
-            canvas = self.getWidgetFromIndex(index)
-            # TODO: only insert tab if widget not in mapping
-            self.widget.insertTab(i, canvas, data)
+        ...
 
     def rowsAboutToBeRemoved(self, parent: QModelIndex, start: int, end: int) -> None:
-        # TODO
-        # unrender
-        # if true: canvas can be removed (remove tab)
-        # then remove entry from mapping
-        for i in reversed(range(start, end+1)):
-            self.widget.removeTab(i)
+        ...
 
     def getWidgetFromIndex(self, index: QModelIndex):
         raise NotImplementedError
@@ -67,7 +57,49 @@ class IntentsTabView(TabView):
 
     sigInteractiveAction = Signal(Action, XicamIntentCanvas)
 
+    def __init__(self, parent=None):
+        super(IntentsTabView, self).__init__(parent)
+
+        self._intents_to_widget = {}
+
     def getWidgetFromIndex(self, index: QModelIndex):
-        canvas = self.model().data(index, IntentsModel.canvas_role)
-        canvas.sigInteractiveAction.connect(self.sigInteractiveAction, type=Qt.UniqueConnection)
+        intent = index.internalPointer()
+        # Need to lookup whether an intent is already mapped (rendered) to a canvas (tab widget)
+        if intent not in self._intents_to_widget:
+            canvas = self.model().data(index, IntentsModel.canvas_role)
+            canvas.sigInteractiveAction.connect(self.sigInteractiveAction, type=Qt.UniqueConnection)
+        else:
+            canvas = self._intents_to_widget[intent]
         return canvas
+
+    def rowsInserted(self, parent: QModelIndex, start: int, end: int) -> None:
+        for i in range(start, end+1):
+            index = self.model().index(i, 0, parent)
+            tab_title = self.model().data(index, Qt.DisplayRole)
+            canvas = self.getWidgetFromIndex(index)
+            # only insert tab if widget not in mapping
+            if canvas not in self._intents_to_widget.values():
+                self.widget.insertTab(i, canvas, tab_title)
+                self._intents_to_widget[index.internalPointer()] = canvas
+
+    def rowsAboutToBeRemoved(self, parent: QModelIndex, start: int, end: int) -> None:
+        # TODO
+        # unrender
+        # if true: canvas can be removed (remove tab)
+        # then remove entry from mapping
+        # TODO:
+        #    this doesn't work! the rows passed don't exist in the IntentsModel
+        #    (the intents have been unchecked, only checked intents appear as valid rows)
+        # for i in reversed(range(start, end+1)):
+        #     index = self.model().index(i, 0, parent)  # TODO cant use index here (See above)
+        #     canvas = self.getWidgetFromIndex(index)
+        #     can_remove = canvas.unrender(canvas)
+        #     if can_remove:
+        #         self.widget.removeTab(i)
+        #         del self._intents_to_widget[index.internalPointer()]
+        for intent in self.model().intents_to_remove:
+            canvas = self._intents_to_widget[intent]
+            can_remove = canvas.unrender(intent)
+            if can_remove:
+                self.widget.removeTab(self.widget.indexOf(canvas))
+                del self._intents_to_widget[intent]

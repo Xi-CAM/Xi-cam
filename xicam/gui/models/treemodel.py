@@ -4,7 +4,7 @@ from weakref import WeakValueDictionary
 
 from qtpy.QtGui import QPalette, QBrush
 from databroker.core import BlueskyRun
-from qtpy.QtCore import Qt, QAbstractItemModel, QModelIndex, QItemSelectionModel
+from qtpy.QtCore import Qt, QAbstractItemModel, QModelIndex, QItemSelectionModel, Signal
 from qtpy.QtWidgets import QApplication
 from xicam.core.data import ProjectionNotFound
 from xicam.core.intents import Intent
@@ -139,9 +139,19 @@ class IntentsModel(QAbstractItemModel):
         self.source_model = source_model
         self._canvas_mapping = WeakValueDictionary()
         self._last_checked_items = []
+        self._intents_to_remove = []  # source_data_changed manages this
         super(IntentsModel, self).__init__()
 
         self.source_model.dataChanged.connect(self.source_model_changed)
+        self.source_model.sigDerivedItemsAdded.connect(self.f)
+
+    @property
+    def intents_to_remove(self):
+        # Note that this is only ever non-empty during row removal (e.g. after beginRemoveRows, before beginEndRows)
+        return self._intents_to_remove
+
+    def f(self, low: Tuple, high: Tuple):
+        ...
 
     def index(self, row: int, column: int, parent: QModelIndex = QModelIndex()) -> QModelIndex:
         if not self.hasIndex(row, column, parent):
@@ -198,9 +208,22 @@ class IntentsModel(QAbstractItemModel):
                 self.beginInsertRows(QModelIndex(), min(rows), max(rows))
                 self.endInsertRows()
             elif len(new_checked_items) < len(self._last_checked_items):  # deletion
-                diff = set(self._last_checked_items) - set(new_checked_items)
-                rows = list(map(self._last_checked_items.index, diff))
-                self.beginRemoveRows(QModelIndex(), min(rows), max(rows))
+                # Temporarily store the intents we should remove, so that when beginRemoveRows is
+                # captured in a view's rowsAboutToBeRemoved, the view can access these intents
+                self._intents_to_remove = set(self._last_checked_items) - set(new_checked_items)
+                # rows = list(map(self._last_checked_items.index, self.intents_to_remove))
+                # TODO: issue
+                #   self.index will return QMI(), since self.hasIndex won't find the item --
+                #   if we uncheck an item in the tree view, it is unchecked and not
+                #   accessible via self.tree.checked_by_type(Intent)
+                #   unchecking is implicit removal
+                #   i.e. only checked intents are in this model, so how do remove an unchecked one properly in the view
+                #   if the indexes are invalid?
+                # values passed dont matter since this derived model
+                # (we can't access unchecked intents in this model via index())
+                self.beginRemoveRows(QModelIndex(), 0, 0)
+                # We removed the intents and we must clear the temporary storage of intents to remove
+                self._intents_to_remove.clear()
                 self.endRemoveRows()
 
             self._last_checked_items = new_checked_items
@@ -216,6 +239,9 @@ class TreeModel(QAbstractItemModel):
     1. We cannot defer to super(...).setData(...) in setData, since the parent implementation always returns False
     2. We must update the generic items' data via a private _setData call, which then emits a dataChanged signal
     """
+
+    sigDerivedItemsRemoved = Signal(list)
+    sigDerivedItemsAdded = Signal(list)
 
     def __init__(self, parent=None):
         super(TreeModel, self).__init__(parent)
@@ -351,6 +377,9 @@ class TreeModel(QAbstractItemModel):
 
         elif role == Qt.CheckStateRole:
             (lowest_row, lowest_parent), (highest_row, highest_parent) = self.tree.set_checked(node, value)
+            # if value == Qt.Unchecked:
+                # self.sigDerivedItemsRemoved.emit(self.tree.node(lowest_row, lowest_parent),
+                #                                  self.tree.node(highest_row, highest_parent))
             highest_index = self.createIndex(highest_row, 0, highest_parent)
             lowest_index = self.createIndex(lowest_row, 0, lowest_parent)
 
@@ -365,10 +394,6 @@ class TreeModel(QAbstractItemModel):
             node = self.tree.node(i, parent.internalPointer())
             self.tree.remove_node(node)
         self.endRemoveRows()
-
-        # TODO: right now, intents are cleared then re-added via IntentsModel and CanvasView,
-        #  so, indexes emitted here aren't important (for now)
-        self.dataChanged.emit(parent, QModelIndex(), [Qt.CheckStateRole])
         return True
 
 
@@ -404,8 +429,6 @@ class EnsembleModel(TreeModel):
         return super(EnsembleModel, self).data(index, role)
 
     def appendIntent(self, intent: Intent, catalog):
-        # return True  # should show "Ensemble 1" with child <uid> in view
-
         intent_parent = catalog
         intent_count = self.tree.child_count(catalog)
         intent_parent_index = self.createIndex(intent_count, 0, intent_parent)
@@ -462,6 +485,25 @@ class EnsembleModel(TreeModel):
         so attached view(s) will display active/inactive ensembles properly.
         """
         self._active_ensemble = ensemble
-        row, _ = self.tree.index(self._active_ensemble)
-        index = self.index(row, 0)
-        self.dataChanged.emit(index, index, [Qt.ForegroundRole, Qt.BackgroundRole])
+        if self._active_ensemble is not None:
+            row, _ = self.tree.index(self._active_ensemble)
+            index = self.index(row, 0)
+            self.dataChanged.emit(index, index, [Qt.ForegroundRole, Qt.BackgroundRole])
+
+    def removeRows(self, row: int, count: int, parent: QModelIndex = QModelIndex()) -> bool:
+        # Need to override TreeModel's implementation to handle when active ensemble is removed
+        self.beginRemoveRows(parent, row, row + count - 1)
+        active_removed = False
+        for i in reversed(range(row, row + count)):
+            node = self.tree.node(i, parent.internalPointer())
+            if node == self._active_ensemble:
+                active_removed = True
+            self.tree.remove_node(node)
+        self.endRemoveRows()
+
+        if active_removed:
+            if self.rowCount() > 0:  # active removed, let's just set it to the most recent ensemble
+                self.activeEnsemble = self.index(self.rowCount()-1, 0).internalPointer()
+            else:  # active removed, no ensembles left in tree
+                self.activeEnsemble = None
+        return True
