@@ -50,9 +50,7 @@ class TabView(QAbstractItemView):
     def getWidgetFromIndex(self, index: QModelIndex):
         raise NotImplementedError
 
-# TODO:
-#   mapping : {intent obj: widget}
-#   use mapping to determine if a widget already exists in the tab view (if so, don't add a new one)
+
 class IntentsTabView(TabView):
 
     sigInteractiveAction = Signal(Action, XicamIntentCanvas)
@@ -67,7 +65,10 @@ class IntentsTabView(TabView):
         # Need to lookup whether an intent is already mapped (rendered) to a canvas (tab widget)
         if intent not in self._intents_to_widget:
             canvas = self.model().data(index, IntentsModel.canvas_role)
-            canvas.sigInteractiveAction.connect(self.sigInteractiveAction, type=Qt.UniqueConnection)
+            try:
+                canvas.sigInteractiveAction.connect(self.sigInteractiveAction, type=Qt.UniqueConnection)
+            except Exception as e:
+                pass
         else:
             canvas = self._intents_to_widget[intent]
         return canvas
@@ -77,29 +78,21 @@ class IntentsTabView(TabView):
             index = self.model().index(i, 0, parent)
             tab_title = self.model().data(index, Qt.DisplayRole)
             canvas = self.getWidgetFromIndex(index)
+            intent = index.internalPointer()
             # only insert tab if widget not in mapping
             if canvas not in self._intents_to_widget.values():
                 self.widget.insertTab(i, canvas, tab_title)
-                self._intents_to_widget[index.internalPointer()] = canvas
+                self._intents_to_widget[intent] = canvas
+            if intent not in self._intents_to_widget:
+                self._intents_to_widget[intent] = canvas
 
     def rowsAboutToBeRemoved(self, parent: QModelIndex, start: int, end: int) -> None:
-        # TODO
-        # unrender
-        # if true: canvas can be removed (remove tab)
-        # then remove entry from mapping
-        # TODO:
-        #    this doesn't work! the rows passed don't exist in the IntentsModel
-        #    (the intents have been unchecked, only checked intents appear as valid rows)
-        # for i in reversed(range(start, end+1)):
-        #     index = self.model().index(i, 0, parent)  # TODO cant use index here (See above)
-        #     canvas = self.getWidgetFromIndex(index)
-        #     can_remove = canvas.unrender(canvas)
-        #     if can_remove:
-        #         self.widget.removeTab(i)
-        #         del self._intents_to_widget[index.internalPointer()]
+        # Ask IntentsModel for what intents are going to be removed (which have just been unchecked)
         for intent in self.model().intents_to_remove:
             canvas = self._intents_to_widget[intent]
             can_remove = canvas.unrender(intent)
+            # When safe, remove the tab
             if can_remove:
                 self.widget.removeTab(self.widget.indexOf(canvas))
-                del self._intents_to_widget[intent]
+            # make sure to remove the intent from the mapping
+            del self._intents_to_widget[intent]

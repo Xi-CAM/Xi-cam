@@ -190,7 +190,7 @@ class IntentsModel(QAbstractItemModel):
         return None
 
     def _find_matching_canvas(self, node):
-        canvas = None
+        canvas = self._canvas_mapping.get(node, None)
         if node not in self._canvas_mapping:
             for intent, canvas_ref in self._canvas_mapping.items():
                 if node.match_key == intent.match_key:
@@ -211,14 +211,6 @@ class IntentsModel(QAbstractItemModel):
                 # Temporarily store the intents we should remove, so that when beginRemoveRows is
                 # captured in a view's rowsAboutToBeRemoved, the view can access these intents
                 self._intents_to_remove = set(self._last_checked_items) - set(new_checked_items)
-                # rows = list(map(self._last_checked_items.index, self.intents_to_remove))
-                # TODO: issue
-                #   self.index will return QMI(), since self.hasIndex won't find the item --
-                #   if we uncheck an item in the tree view, it is unchecked and not
-                #   accessible via self.tree.checked_by_type(Intent)
-                #   unchecking is implicit removal
-                #   i.e. only checked intents are in this model, so how do remove an unchecked one properly in the view
-                #   if the indexes are invalid?
                 # values passed dont matter since this derived model
                 # (we can't access unchecked intents in this model via index())
                 self.beginRemoveRows(QModelIndex(), 0, 0)
