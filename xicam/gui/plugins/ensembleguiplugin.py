@@ -73,10 +73,7 @@ class EnsembleGUIPlugin(GUIPlugin):
             ensemble.append_catalog(catalog)
             self.ensemble_model.appendEnsemble(ensemble, self._projectors)
         else:
-            self.ensemble_model.appendCatalog(self.ensemble_model.activeEnsemble, catalog, self._projectors)
-
-        # self.ensemble_model.append_to_ensemble(catalog, None, self._projectors)
-
+            self.ensemble_model.appendCatalog(catalog, self._projectors)
 
 class HelpTextDisplay(QTextEdit):
     def __init__(self, text: str = "", parent=None):
