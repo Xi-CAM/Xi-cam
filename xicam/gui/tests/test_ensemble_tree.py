@@ -1,16 +1,13 @@
-from databroker.core import BlueskyRun
-from qtpy.QtCore import Qt, QModelIndex, QPoint, QRect, QAbstractItemModel
+import pytest
+from qtpy.QtCore import Qt, QModelIndex, QAbstractItemModel
 from qtpy.QtGui import QPainter, QStandardItemModel, QStandardItem
-from qtpy.QtWidgets import QApplication, QHBoxLayout, QLabel, QListView, QWidget, \
-    QPushButton, QSpinBox, QVBoxLayout, QTabWidget, QAbstractItemView, QTreeView, \
-    QStyleOptionViewItem, QStyledItemDelegate, QLineEdit, QMenu, QAction
-from xicam.core.data import ProjectionNotFound
-from xicam.core.intents import Intent
-from xicam.core.msg import notifyMessage, logMessage, WARNING
-from xicam.gui.models.treemodel import IntentsModel, TreeModel, EnsembleModel
+from qtpy.QtWidgets import QApplication, QHBoxLayout, QWidget, \
+    QPushButton, QSpinBox, QVBoxLayout, QStyleOptionViewItem, QStyledItemDelegate, QLineEdit
 from xicam.core.workspace import Ensemble
-from xicam.gui.views.tabview import TabView, IntentsTabView
+from xicam.gui.models.treemodel import IntentsModel, EnsembleModel
+from xicam.gui.views.tabview import IntentsTabView
 from xicam.gui.views.treeview import DataSelectorView
+from pytestqt import qtbot
 
 
 class AddRemoveItemsDemoWidget(QWidget):
@@ -56,6 +53,7 @@ class LineEditDelegate(QStyledItemDelegate):
 
     This class was written for using with the DataSelectorView.
     """
+
     def __init__(self, parent=None):
         super(LineEditDelegate, self).__init__(parent)
         self._default_text = "Untitled"
@@ -75,7 +73,6 @@ class LineEditDelegate(QStyledItemDelegate):
     def setModelData(self, editor: QWidget,
                      model: QAbstractItemModel,
                      index: QModelIndex):
-
         text = editor.text()
         if text == "":
             text = editor.placeholderText()
@@ -88,72 +85,49 @@ class LineEditDelegate(QStyledItemDelegate):
         return
 
 
-
-
-if __name__ == "__main__":
-
+@pytest.mark.skip(reason="need test data that can generate catalogs and intents")
+def test_ensemble_tree(qtbot):
     from xicam.plugins import manager as plugin_manager
-    app = QApplication([])
+
     plugin_manager.qt_is_safe = True
     plugin_manager.initialize_types()
     plugin_manager.collect_plugins()
 
-    if True:
-        # Create Ensemble
-        ensemble1 = Ensemble()
+    # Create Ensemble
+    ensemble1 = Ensemble()
 
-        # Add runs to the ensemble
-        import databroker
+    # Add runs to the ensemble
+    import databroker
 
-        db_catalog = databroker.catalog['local']
-        run1 = db_catalog['02e23b31']
-        run2 = db_catalog['b6dd84']
-        ensemble1.append_catalog(run1)
-        ensemble1.append_catalog(run2)
+    db_catalog = databroker.catalog['local']
+    run1 = db_catalog['02e23b31']  # TODO: replace this with generating catalogs from data files
+    run2 = db_catalog['b6dd84']
+    ensemble1.append_catalog(run1)
+    ensemble1.append_catalog(run2)
 
-        # Import projectors
-        from xicam.SAXS.projectors.nxcansas import project_nxcanSAS
-        from xicam.SAXS.projectors.edf import project_NXsas
+    # Import projectors
+    from xicam.SAXS.projectors.nxcansas import project_nxcanSAS
+    from xicam.SAXS.projectors.edf import project_NXsas
 
-        # Bind ensemble and projectors to ensemble model
-        ensemble_model = EnsembleModel()
-        ensemble_model.appendEnsemble(ensemble1, [project_NXsas, project_nxcanSAS])
+    # Bind ensemble and projectors to ensemble model
+    ensemble_model = EnsembleModel()
+    ensemble_model.appendEnsemble(ensemble1, [project_NXsas, project_nxcanSAS])
 
-        # Bind to views
-        # view = QTreeView()
-        view = DataSelectorView()
-        view.setModel(ensemble_model)
-        tab_view = IntentsTabView()
-        intents_model = IntentsModel(ensemble_model)
-        tab_view.setModel(intents_model)
+    # Bind to views
+    # view = QTreeView()
+    view = DataSelectorView()
+    view.setModel(ensemble_model)
+    tab_view = IntentsTabView()
+    intents_model = IntentsModel(ensemble_model)
+    tab_view.setModel(intents_model)
 
-        def check_index(index):
-            obj = index.internalPointer()
-            return obj
+    def check_index(index):
+        obj = index.internalPointer()
+        return obj
 
-        view.clicked.connect(check_index)
-        view.setHeaderHidden(True)
-        view.expandAll()
-
-        # selected_view = QListView()
-        # selected_view_model = QStandardItemModel()
-        # selected_view.setModel(selected_view_model)
-        #
-        # def selection_changed(selection, command):
-        #     selected_view_model.clear()
-        #     for index in selection.indexes():
-        #         item = QStandardItem(index.internalPointer().name)
-        #         selected_view_model.appendRow(item)
-        #
-        # ensemble_model.intent_selection_model.selectionChanged.connect(selection_changed)
-
-    else:
-        w = AddRemoveItemsDemoWidget()
-        view = QListView()
-        view.setModel(w.model)
-        tab_view = TabView()
-        tab_view.setModel(w.model)
-
+    view.clicked.connect(check_index)
+    view.setHeaderHidden(True)
+    view.expandAll()
 
     layout = QHBoxLayout()
     layout.addWidget(tab_view)
@@ -164,4 +138,4 @@ if __name__ == "__main__":
     widget.setLayout(layout)
     widget.show()
 
-    app.exec_()
+    qtbot.waitForWindowShown(widget)
