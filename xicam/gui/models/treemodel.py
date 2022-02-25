@@ -366,9 +366,6 @@ class TreeModel(QAbstractItemModel):
 
         elif role == Qt.CheckStateRole:
             (lowest_row, lowest_parent), (highest_row, highest_parent) = self.tree.set_checked(node, value)
-            # if value == Qt.Unchecked:
-                # self.sigDerivedItemsRemoved.emit(self.tree.node(lowest_row, lowest_parent),
-                #                                  self.tree.node(highest_row, highest_parent))
             highest_index = self.createIndex(highest_row, 0, highest_parent)
             lowest_index = self.createIndex(lowest_row, 0, lowest_parent)
 
