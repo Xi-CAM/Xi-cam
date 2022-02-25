@@ -23,8 +23,6 @@ class DataSelectorView(QTreeView):
         delegate = LineEditDelegate(self)
         self.setItemDelegate(delegate)
 
-        self.setDragEnabled(True)
-
         self.setAnimated(True)
 
         self.setWhatsThis("This widget helps organize and display any loaded data or data created within Xi-CAM. "
