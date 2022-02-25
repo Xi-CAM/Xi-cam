@@ -29,9 +29,9 @@ class Tree:
         self._child_mapping[parent].insert(row, node)
 
     def children(self, node: object) -> List[object]:
-        if node in self:
-            return self._child_mapping[node]
-        return []
+        if not (node in self or node is None):
+            raise KeyError('node not in tree')
+        return self._child_mapping[node]
 
     def parent(self, node: object) -> object:
         return self._parent_mapping[node]
@@ -51,6 +51,8 @@ class Tree:
         return row, parent
 
     def node(self, row, parent=None) -> object:
+        if not (parent in self or parent is None):
+            raise KeyError('parent not in tree')
         return self._child_mapping[parent][row]
 
     def __contains__(self, item):
@@ -58,9 +60,13 @@ class Tree:
 
     # Non-critical convenience methods
     def child_count(self, node: object) -> int:
+        if not (node in self or node is None):
+            raise KeyError('node not in tree')
         return len(self._child_mapping[node])
 
     def has_children(self, node: object) -> bool:
+        if not (node in self or node is None):
+            raise KeyError('node not in tree')
         return bool(self._child_mapping[node])
 
     def remove_children(self, node: object, drop_grandchildren=True):
