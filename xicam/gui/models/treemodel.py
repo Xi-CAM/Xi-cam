@@ -143,15 +143,11 @@ class IntentsModel(QAbstractItemModel):
         super(IntentsModel, self).__init__()
 
         self.source_model.dataChanged.connect(self.source_model_changed)
-        self.source_model.sigDerivedItemsAdded.connect(self.f)
 
     @property
     def intents_to_remove(self):
         # Note that this is only ever non-empty during row removal (e.g. after beginRemoveRows, before beginEndRows)
         return self._intents_to_remove
-
-    def f(self, low: Tuple, high: Tuple):
-        ...
 
     def index(self, row: int, column: int, parent: QModelIndex = QModelIndex()) -> QModelIndex:
         if not self.hasIndex(row, column, parent):
