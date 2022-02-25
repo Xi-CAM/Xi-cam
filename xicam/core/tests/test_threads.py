@@ -41,7 +41,7 @@ def test_threads_iterator(qtbot):
     def check():
         assert sum(results) == 3
 
-    t = threads.QThreadFutureIterator(testiterator, callback_slot=callback, finished_slot=check)
+    t = threads.QThreadFutureIterator(testiterator, yield_slot=callback, finished_slot=check)
     t.start()
     qtbot.waitSignal(t.sigFinished)
 
