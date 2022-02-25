@@ -11,7 +11,8 @@ from qtpy.QtWidgets import QWidget, QComboBox, QVBoxLayout
 from matplotlib import pyplot as plt
 from xarray import DataArray
 
-from xicam.core.intents import PlotIntent, ErrorBarIntent, BarIntent, PairPlotIntent, ROIIntent, ScatterIntent
+from xicam.core.intents import PlotIntent, ErrorBarIntent, BarIntent, PairPlotIntent, ROIIntent, ScatterIntent, \
+    ImageIntent
 from xicam.gui.actions import Action
 from xicam.plugins import manager as plugin_manager
 
@@ -102,8 +103,10 @@ class ImageIntentCanvas(XicamIntentCanvas):
 
         if isinstance(intent, ROIIntent):
             self.canvas_widget.view.addItem(intent.roi)
+            self.intent_to_items[intent] = intent.roi
         else:
             self.canvas_widget.setImage(intent.image.squeeze(), **kwargs)
+            self.intent_to_items[intent] = self.canvas_widget.imageItem
             self._primary_intent = intent
 
     def unrender(self, intent) -> bool:
@@ -111,8 +114,12 @@ class ImageIntentCanvas(XicamIntentCanvas):
         if self.canvas_widget:
             if isinstance(intent, ROIIntent):
                 self.canvas_widget.view.removeItem(intent.roi)
-                return False
-        return True
+            elif isinstance(intent, ImageIntent):
+                self.canvas_widget.imageItem.clear()
+            del self.intent_to_items[intent]
+        if not self.intent_to_items:
+            return True
+        return False
 
 
 class PlotIntentCanvasBlend(CurveLabels):

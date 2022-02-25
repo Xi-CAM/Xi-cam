@@ -4,11 +4,13 @@ from qtpy.QtWidgets import QApplication, QWidget, QTextEdit, QGroupBox, QVBoxLay
 from qtpy.QtCore import Qt, QEvent, QObject
 from databroker.core import BlueskyRun
 from xicam.core.execution import Workflow
+from xicam.core.workspace import Ensemble
 
 from xicam.gui.actions import Action
-from xicam.gui.models import EnsembleModel, IntentsModel
+from xicam.gui.models.treemodel import EnsembleModel, IntentsModel
+from xicam.gui.views.tabview import IntentsTabView
 from xicam.gui.widgets.linearworkfloweditor import WorkflowEditor
-from xicam.gui.widgets.views import DataSelectorView, StackedCanvasView
+from xicam.gui.views.treeview import DataSelectorView
 from xicam.plugins import GUIPlugin, GUILayout
 
 
@@ -42,13 +44,13 @@ class EnsembleGUIPlugin(GUIPlugin):
         self._projectors = []  # List[Callable[[BlueskyRun], List[Intent]]]
         self.ensemble_model = EnsembleModel()
 
-        self.intents_model = IntentsModel()
-        self.intents_model.setSourceModel(self.ensemble_model)
+        self.intents_model = IntentsModel(self.ensemble_model)
 
         self.ensemble_view = DataSelectorView()
         self.ensemble_view.setModel(self.ensemble_model)
 
-        self.canvases_view = StackedCanvasView()
+        # self.canvases_view = StackedCanvasView()
+        self.canvases_view = IntentsTabView()
         self.canvases_view.setModel(self.intents_model)
 
         self.canvases_view.sigInteractiveAction.connect(self.process_action)
@@ -66,8 +68,12 @@ class EnsembleGUIPlugin(GUIPlugin):
         ...
 
     def appendCatalog(self, catalog: BlueskyRun, **kwargs):
-        self.ensemble_model.append_to_ensemble(catalog, None, self._projectors)
-
+        if self.ensemble_model.activeEnsemble is None:
+            ensemble = Ensemble()
+            ensemble.append_catalog(catalog)
+            self.ensemble_model.appendEnsemble(ensemble, self._projectors)
+        else:
+            self.ensemble_model.appendCatalog(catalog, self._projectors)
 
 class HelpTextDisplay(QTextEdit):
     def __init__(self, text: str = "", parent=None):
