@@ -165,8 +165,6 @@ class QThreadFuture(QThread):
                         value = (value,)
                     if isinstance(self, QThreadFutureIterator) and self.callback_slot:
                         self.callback_slot(*value)
-                    # if self.callback_slot:
-                    #     self.callback_slot(*value)
                     self._result = value
                     break
                 if not isinstance(value, tuple):
