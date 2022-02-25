@@ -213,7 +213,9 @@ class IntentsModel(QAbstractItemModel):
                 self._intents_to_remove = set(self._last_checked_items) - set(new_checked_items)
                 # values passed dont matter since this derived model
                 # (we can't access unchecked intents in this model via index())
-                self.beginRemoveRows(QModelIndex(), 0, 0)
+                diff = set(self._last_checked_items) - set(new_checked_items)
+                rows = list(map(self._last_checked_items.index, diff))
+                self.beginRemoveRows(QModelIndex(), min(rows), max(rows))
                 # We removed the intents and we must clear the temporary storage of intents to remove
                 self._intents_to_remove.clear()
                 self.endRemoveRows()
@@ -385,6 +387,7 @@ class TreeModel(QAbstractItemModel):
         for i in reversed(range(row, row + count)):
             node = self.tree.node(i, parent.internalPointer())
             self.tree.remove_node(node)
+            self.setData(self.index(i, 0, parent), Qt.Unchecked, Qt.CheckStateRole)
         self.endRemoveRows()
         return True
 
@@ -424,17 +427,13 @@ class EnsembleModel(TreeModel):
         intent_parent = catalog
         intent_count = self.tree.child_count(catalog)
         intent_parent_index = self.createIndex(intent_count, 0, intent_parent)
-        self.beginInsertRows(intent_parent_index, intent_count, intent_count + 1)
-        self.tree.add_node(intent, catalog)
-        self.endInsertRows()
+        self.insert_and_check(intent_count, intent_parent_index, intent)
 
     def appendCatalog(self, ensemble: Ensemble, catalog: BlueskyRun, projectors):
         catalog_parent = ensemble or self.activeEnsemble
         catalog_count = self.tree.child_count(ensemble)
         catalog_parent_index = self.createIndex(catalog_count, 0, catalog_parent)
-        self.beginInsertRows(catalog_parent_index, catalog_count, catalog_count + 1)
-        self.tree.add_node(catalog, parent=ensemble)
-        self.endInsertRows()
+        self.insert_and_check(catalog_count, catalog_parent_index, catalog)
 
         _any_projection_succeeded = False
         for projector in projectors:
@@ -454,9 +453,7 @@ class EnsembleModel(TreeModel):
         parent_node = None
         parent_index = QModelIndex()
         ensemble_count = self.rowCount(parent_index)
-        self.beginInsertRows(parent_index, ensemble_count, ensemble_count)
-        self.tree.add_node(ensemble, parent_node)
-        self.endInsertRows()
+        self.insert_and_check(ensemble_count, parent_index, ensemble)
 
         # New ensemble will be come the active ensemble
         # Wait until after adding node to tree to set it as active ensemble (since that triggers dataChanged)
@@ -490,12 +487,21 @@ class EnsembleModel(TreeModel):
             node = self.tree.node(i, parent.internalPointer())
             if node == self._active_ensemble:
                 active_removed = True
+            self.setData(self.index(i, 0, parent), Qt.Unchecked, Qt.CheckStateRole)
             self.tree.remove_node(node)
         self.endRemoveRows()
 
         if active_removed:
             if self.rowCount() > 0:  # active removed, let's just set it to the most recent ensemble
-                self.activeEnsemble = self.index(self.rowCount()-1, 0).internalPointer()
+                self.activeEnsemble = self.index(self.rowCount() - 1, 0).internalPointer()
             else:  # active removed, no ensembles left in tree
                 self.activeEnsemble = None
         return True
+
+    def insert_and_check(self, row: int, parent: QModelIndex, node) -> bool:
+        self.beginInsertRows(parent, row, row)
+        self.tree.add_node(node, parent.internalPointer())
+        self.endInsertRows()
+
+        if isinstance(node, Intent):
+            self.setData(self.index(row, 0, parent), Qt.Checked, role=Qt.CheckStateRole)
