@@ -354,9 +354,12 @@ class WorkflowWidget(QWidget):
         # Button is being checked (i.e. workflow is being started)
         if running:
             self.run_button.setText("Cancel Workflow")
+            self.run_button.setStyleSheet('background-color:red;color:white;font-weight:bold;')
+
         # Button is being unchecked (e.g. workflow exception or cancelled / terminated)
         else:
             self.run_button.setText("Run Workflow")
+            self.run_button.setStyleSheet('')
 
 
 class DisablableListView(QListView):
