@@ -29,7 +29,7 @@ class Tree:
         self._child_mapping[parent].insert(row, node)
 
     def children(self, node: object) -> List[object]:
-        if node in self._parent_mapping.values():
+        if node in self:
             return self._child_mapping[node]
         return []
 
