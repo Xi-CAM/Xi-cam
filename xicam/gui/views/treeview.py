@@ -52,8 +52,6 @@ class DataSelectorView(QTreeView):
     def _remove_action(self, _):
         index = self.currentIndex()  # QModelIndex
         removed = self.model().removeRow(index.row(), index.parent())
-        # self.model().dataChanged.emit(QModelIndex(), QModelIndex())
-        ...
 
     def _create_ensemble_action(self, _):
         ensemble = Ensemble()
