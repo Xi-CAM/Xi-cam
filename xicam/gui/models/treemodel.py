@@ -421,7 +421,7 @@ class EnsembleModel(TreeModel):
         intent_parent_index = self.createIndex(intent_count, 0, intent_parent)
         self.insert_and_check(intent_count, intent_parent_index, intent)
 
-    def appendCatalog(self, ensemble: Ensemble, catalog: BlueskyRun, projectors):
+    def appendCatalog(self, catalog: BlueskyRun, projectors, ensemble: Ensemble = None):
         catalog_parent = ensemble or self.activeEnsemble
         catalog_count = self.tree.child_count(ensemble)
         catalog_parent_index = self.createIndex(catalog_count, 0, catalog_parent)
