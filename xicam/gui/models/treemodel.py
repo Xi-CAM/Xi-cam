@@ -452,7 +452,7 @@ class EnsembleModel(TreeModel):
         self.activeEnsemble = ensemble
 
         for catalog in ensemble.catalogs:
-            self.appendCatalog(ensemble, catalog, projectors)
+            self.appendCatalog(catalog, projectors, ensemble)
 
     @property
     def activeEnsemble(self) -> Ensemble:
