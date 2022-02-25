@@ -139,7 +139,7 @@ class IntentsModel(QAbstractItemModel):
         self.source_model = source_model
         self._canvas_mapping = WeakValueDictionary()
         self._last_checked_items = []
-        self._intents_to_remove = []  # source_data_changed manages this
+        self._intents_to_remove = tuple()  # source_data_changed manages this
         super(IntentsModel, self).__init__()
 
         self.source_model.dataChanged.connect(self.source_model_changed)
@@ -206,14 +206,13 @@ class IntentsModel(QAbstractItemModel):
             elif len(new_checked_items) < len(self._last_checked_items):  # deletion
                 # Temporarily store the intents we should remove, so that when beginRemoveRows is
                 # captured in a view's rowsAboutToBeRemoved, the view can access these intents
-                self._intents_to_remove = set(self._last_checked_items) - set(new_checked_items)
+                self._intents_to_remove = tuple(set(self._last_checked_items) - set(new_checked_items))
                 # values passed dont matter since this derived model
                 # (we can't access unchecked intents in this model via index())
-                diff = set(self._last_checked_items) - set(new_checked_items)
-                rows = list(map(self._last_checked_items.index, diff))
+                rows = list(map(self._last_checked_items.index, self._intents_to_remove))
                 self.beginRemoveRows(QModelIndex(), min(rows), max(rows))
                 # We removed the intents and we must clear the temporary storage of intents to remove
-                self._intents_to_remove.clear()
+                self._intents_to_remove = tuple()
                 self.endRemoveRows()
 
             self._last_checked_items = new_checked_items
