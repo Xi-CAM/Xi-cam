@@ -150,6 +150,7 @@ class WorkflowEditor(QSplitter):
                         # Grab the user-oriented message from the kwargs callable exception
                         msg.notifyMessage(str(e), title="Workflow Error", level=msg.ERROR)
                         msg.logError(e)
+                        self._reset_run_button()
                     else:
                         mixed_kwargs.update(called_kwargs)
                         mixed_kwargs.update(kwargs)
