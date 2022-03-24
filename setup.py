@@ -86,6 +86,7 @@ setup(
                       "requests",
                       "appdirs",
                       "entrypoints",
+                      "pydm==1.13.0",
                       "pyqtgraph==0.11.0",
                       "qtconsole",
                       "scipy",
