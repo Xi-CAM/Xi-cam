@@ -1,3 +1,5 @@
+import threading
+
 from dask.diagnostics import Profiler, ResourceProfiler, CacheProfiler
 from dask.diagnostics import visualize
 from xicam.core import msg
@@ -23,12 +25,17 @@ class DaskExecutor(object):
         dask_graph, end_task_ids = wf.as_dask_graph()
 
         # with Profiler() as prof, ResourceProfiler(dt=0.25) as rprof, CacheProfiler() as cprof:
-        result = client.get(dask_graph, end_task_ids)
+        yield threading.current_thread()
+        try:
+            wf.lastresult = client.get(dask_graph, end_task_ids)
+        except RuntimeError as ex:
+            if str(ex) != 'cannot schedule new futures after shutdown':
+                raise ex
+        else:
+            return wf.lastresult
+
+        return tuple()
 
         # path = user_config_dir('xicam/profile.html')
         # visualize([prof, rprof, cprof], show=False, file_path=path)
         # msg.logMessage(f'Profile saved: {path}')
-
-        wf.lastresult = result
-
-        return result

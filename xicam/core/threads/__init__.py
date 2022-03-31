@@ -153,11 +153,27 @@ class QThreadFuture(QThread):
         if self.showBusy:
             show_busy()
         try:
-            for self._result in self._run(*args, **kwargs):
-                if not isinstance(self._result, tuple):
-                    self._result = (self._result,)
-                if self.callback_slot:
-                    invoke_in_main_thread(self.callback_slot, *self._result)
+            # while not self.isInterruptionRequested():
+            value = [None]
+            runner = self._run(*args, **kwargs)
+            while True:
+                try:
+                    value = next(runner)
+                except StopIteration as ex:
+                    value = ex.value
+                    if not isinstance(value, tuple):
+                        value = (value,)
+                    if isinstance(self, QThreadFutureIterator) and self.callback_slot:
+                        self.callback_slot(*value)
+                    self._result = value
+                    break
+                if not isinstance(value, tuple):
+                    value = (value,)
+                if isinstance(self, QThreadFutureIterator) and self.yield_slot:
+                    invoke_in_main_thread(self.yield_slot, *value)
+                elif isinstance(self, QThreadFuture) and self.callback_slot:
+                    invoke_in_main_thread(self.callback_slot, *value)
+
 
         except Exception as ex:
             self.exception = ex
@@ -170,6 +186,7 @@ class QThreadFuture(QThread):
                 level=logging.ERROR,
             )
             log_error(ex)
+            return
         else:
             self.sigFinished.emit()
         finally:
@@ -200,6 +217,7 @@ class QThreadFuture(QThread):
         self.cancelled = True
         if self.except_slot:
             invoke_in_main_thread(self.except_slot, InterruptedError("Thread cancelled."))
+        # self.requestInterruption()
         self.quit()
         self.wait()
 
@@ -208,9 +226,12 @@ class QThreadFutureIterator(QThreadFuture):
     """
     Same as QThreadFuture, but emits to the callback_slot for every yielded value of a generator
     """
+    def __init__(self, *args, yield_slot=None, **kwargs):
+        super(QThreadFutureIterator, self).__init__(*args, **kwargs)
+        self.yield_slot = yield_slot
 
     def _run(self, *args, **kwargs):
-        yield from self.method(*self.args, **self.kwargs)
+        return (yield from self.method(*self.args, **self.kwargs))
 
 
 class InvokeEvent(QEvent):
@@ -340,6 +361,7 @@ def iterator(
     finished_slot=None,
     interrupt_signal=None,
     except_slot=None,
+    yield_slot=None,
     default_exhandle=True,
     lock=None,
     threadkey: str = None,
@@ -381,6 +403,7 @@ def iterator(
                 callback_slot=callback_slot,
                 finished_slot=finished_slot,
                 except_slot=except_slot,
+                yield_slot=yield_slot,
                 default_exhandle=default_exhandle,
                 lock=lock,
                 threadkey=threadkey,
@@ -394,3 +417,36 @@ def iterator(
         return _runnable_method
 
     return wrap_runnable_method
+
+
+if __name__ == "__main__":
+    app = QApplication([])
+
+    def callback(*_):
+        print("Callback")
+
+    def finished():
+        print("finished")
+
+    @method(callback, finished)
+    def do_thing():
+        time.sleep(1)
+        print("DONE")
+
+    def cancel_thread():
+        print("Cancelling")
+        thread.cancel()
+
+    thread = QThreadFuture(do_thing)
+    print("Start")
+    future = thread.run()
+    # QTimer.singleShot(3000, cancel_thread)
+
+    app.exec_()
+
+    # TODO:
+    # fix extra callback_slot being called in QThreadFuture.run
+    #   if isinstance(self, QThreadFutureIterator): call callback_slot on StopIteration
+    # Modify QThreadFutureIterator to have a yield_slot
+    #   modify all usages of QThreadFutureIterator to use yield_slot
+    # fix cancel()

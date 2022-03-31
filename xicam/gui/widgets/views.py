@@ -1,18 +1,16 @@
 import itertools
 import sys
 
-from qtpy.QtCore import Signal, QModelIndex, QPoint, Qt, QAbstractItemModel
-from qtpy.QtGui import QIcon, QMouseEvent, QPainter, QBrush, QFont
+from qtpy.QtCore import Signal, QModelIndex, QPoint, Qt
+from qtpy.QtGui import QIcon
 from qtpy.QtWidgets import QAbstractItemView, QApplication, QButtonGroup, QHBoxLayout, QPushButton, \
-    QSplitter, QStackedWidget, QStyleFactory, QTabWidget, QTreeView, QVBoxLayout, QWidget, QStyledItemDelegate, \
-    QStyleOptionViewItem, QLineEdit, QStyle, QAction, QMenu
-from xicam.core.workspace import WorkspaceDataType, Ensemble
+    QSplitter, QStackedWidget, QStyleFactory, QTabWidget, QVBoxLayout, QWidget
 from xicam.gui.canvases import XicamIntentCanvas
 from xicam.gui.actions import Action
 
 from xicam.gui.static import path
 from xicam.gui.canvasmanager import XicamCanvasManager
-from xicam.gui.models import EnsembleModel
+from xicam.gui.models.treemodel import EnsembleModel
 from xicam.core import msg
 
 
@@ -441,169 +439,6 @@ class SplitGridView(SplitView):
         for canvas in itertools.islice(canvases, 2):
             self.bottom_splitter.addWidget(canvas)
             canvas.setVisible(True)
-
-
-class LineEditDelegate(QStyledItemDelegate):
-    """Custom editing delegate that allows renaming text and updating placeholder text in a line edit.
-
-    This class was written for using with the DataSelectorView.
-    """
-    def __init__(self, parent=None):
-        super(LineEditDelegate, self).__init__(parent)
-        self._default_text = "Untitled"
-
-    def createEditor(self, parent: QWidget,
-                     option: QStyleOptionViewItem,
-                     index: QModelIndex) -> QWidget:
-        editor = QLineEdit(parent)
-        editor.setPlaceholderText(self._default_text)
-        editor.setFrame(False)
-        return editor
-
-    def setEditorData(self, editor: QWidget, index: QModelIndex):
-        value = index.model().data(index, Qt.DisplayRole)
-        editor.setText(value)
-
-    def setModelData(self, editor: QWidget,
-                     model: QAbstractItemModel,
-                     index: QModelIndex):
-
-        text = editor.text()
-        if text == "":
-            text = editor.placeholderText()
-        # Update the "default" text to the previous value edited in
-        self._default_text = text
-        model.setData(index, text, Qt.DisplayRole)
-
-    def paint(self, painter: QPainter, option: QStyleOptionViewItem, index: QModelIndex):
-        super(LineEditDelegate, self).paint(painter, option, index)
-        return
-
-        # if index.data(role=EnsembleModel.active_role):
-        #     active_brush = QBrush(Qt.cyan)
-        #     painter.save()
-        #     painter.fillRect(option.rect, active_brush)
-        #     painter.restore()
-        #
-        # super(LineEditDelegate, self).paint(painter, option, index)
-
-
-class DataSelectorView(QTreeView):
-    def __init__(self, parent=None):
-        super(DataSelectorView, self).__init__(parent)
-
-        # We are implementing our own custom context menu
-        self.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.customContextMenuRequested.connect(self.customMenuRequested)
-
-        # Don't allow double-clicking for expanding; use it for editing
-        self.setExpandsOnDoubleClick(False)
-        self.setEditTriggers(QAbstractItemView.DoubleClicked)
-
-        # Attach a custom delegate for the editing
-        delegate = LineEditDelegate(self)
-        self.setItemDelegate(delegate)
-
-        self.setDragEnabled(True)
-
-        self.setAnimated(True)
-
-        self.setWhatsThis("This widget helps organize and display any loaded data or data created within Xi-CAM. "
-                          "Data is displayed in a tree-like manner:\n"
-                          "  Collection\n"
-                          "    Catalog\n"
-                          "      Visualizable Data\n"
-                          "Click on the items' checkboxes to visualize them.\n"
-                          "Right-click a Collection to rename it.\n"
-                          "Right-click in empty space to create a new Collection.\n")
-
-    def setModel(self, model):
-        try:
-            self.model().rowsInserted.disconnect(self._expand_rows)
-        except Exception:
-            ...
-        super(DataSelectorView, self).setModel(model)
-        self.model().rowsInserted.connect(self._expand_rows)
-
-    def _expand_rows(self, parent: QModelIndex, first: int, last: int):
-        self.expandRecursively(parent)
-
-    def _rename_action(self, _):
-        # Request editor (see the delegate created in the constructor) to change the ensemble's name
-        self.edit(self.currentIndex())
-
-    def _remove_action(self, _):
-        index = self.currentIndex()  # QModelIndex
-        removed = self.model().removeRow(index.row(), index.parent())
-        # self.model().dataChanged.emit(QModelIndex(), QModelIndex())
-        ...
-
-    def _create_ensemble_action(self, _):
-        ensemble = Ensemble()
-        # Note this ensemble has no catalogs; so we don't need projectors passed (just [])
-        self.model().add_ensemble(ensemble, [], active=True)
-
-    def _set_active_action(self, checked: bool):
-        # Update the model data with the currentIndex corresponding to where the user right-clicked
-        # Update the active role based on the value of checked
-        self.model().setData(self.currentIndex(), checked, EnsembleModel.active_role)
-
-    def customMenuRequested(self, position):
-        """Builds a custom menu for items items"""
-        index = self.indexAt(position)  # type: QModelIndex
-        menu = QMenu(self)
-
-        if index.isValid():
-
-            if index.data(EnsembleModel.data_type_role) == WorkspaceDataType.Ensemble:
-
-                # Allow renaming the ensemble via the context menu
-                rename_action = QAction("Rename Collection", menu)
-                rename_action.triggered.connect(self._rename_action)
-                menu.addAction(rename_action)
-
-                # Allow toggling the active ensemble via the context menu
-                # * there can only be at most 1 active ensemble
-                # * there are only 0 active ensembles when data has not yet been loaded ???
-                # * opening data updates the active ensemble to that data
-                is_active = index.data(EnsembleModel.active_role)
-                active_text = "Active"
-                toggle_active_action = QAction(active_text, menu)
-                toggle_active_action.setCheckable(True)
-                if is_active is True:
-                    toggle_active_action.setChecked(True)
-                else:
-                    toggle_active_action.setChecked(False)
-                    toggle_active_action.setText(f"Not {active_text}")
-
-                # Make sure to update the model with the active / deactivated ensemble
-                toggle_active_action.toggled.connect(self._set_active_action)
-                # Don't allow deactivating the active ensemble if there is only one loaded
-                if self.model().rowCount() == 1:
-                    toggle_active_action.setEnabled(False)
-                menu.addAction(toggle_active_action)
-
-                menu.addSeparator()
-
-            remove_text = "Remove "
-            data_type_role = index.data(EnsembleModel.data_type_role)
-            if data_type_role == WorkspaceDataType.Ensemble:
-                remove_text += "Ensemble"
-            elif data_type_role == WorkspaceDataType.Catalog:
-                remove_text += "Catalog"
-            elif data_type_role == WorkspaceDataType.Intent:
-                remove_text += "Item"
-            remove_action = QAction(remove_text, menu)
-            remove_action.triggered.connect(self._remove_action)
-            menu.addAction(remove_action)
-
-        else:
-            create_ensemble_action = QAction("Create New Collection", menu)
-            create_ensemble_action.triggered.connect(self._create_ensemble_action)
-            menu.addAction(create_ensemble_action)
-
-        # Display menu wherever the user right-clicked
-        menu.popup(self.viewport().mapToGlobal(position))
 
 
 def main():
