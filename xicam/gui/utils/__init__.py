@@ -40,17 +40,17 @@ class ParameterizedPlan(object):
             self._parameter = args_to_params(*self.args, **self.kwargs)
         return self._parameter
 
-    @staticmethod
-    def _resolve_parameter(arg):
+    @classmethod
+    def _resolve_parameter(cls, arg):
         if isinstance(arg, Parameter):
             arg = arg.value()
         elif isinstance(arg, list):
-            arg = list(map(self._resolve_parameters, arg))
+            arg = list(map(cls._resolve_parameter, arg))
         return arg
 
     def __iter__(self):
-        args = list(map(self._resolve_parameters, args))
-        kwargs = dict.fromkeys(kwargs.keys(), map(self._resolve_parameter, kwargs.values()))
+        args = list(map(self._resolve_parameter, self.args))
+        kwargs = dict.fromkeys(self.kwargs.keys(), map(self._resolve_parameter, self.kwargs.values()))
         return self.plan(*args, **kwargs)
 
     # def __next__(self):
