@@ -257,7 +257,9 @@ class XArrayView(ImageView):
 
     def quickMinMax(self, data):
         """
-        Estimate the min/max values of *data* by subsampling. MODIFIED TO USE THE 99TH PERCENTILE instead of max.
+        Estimate the min/max values of *data* by subsampling. MODIFIED TO USE:
+        - second lowest value as min
+        - 99TH PERCENTILE instead of max
         """
         if data is None:
             return 0, 0
@@ -265,7 +267,10 @@ class XArrayView(ImageView):
         sl = slice(None, None, max(1, int(data.size // 1e6)))
         data = np.asarray(data[sl])
 
-        levels = (np.nanmin(data), np.nanpercentile(np.where(data < np.nanmax(data), data, np.nanmin(data)), 99))
+        img_max = np.nanmax(data)
+        img_min = np.nanmin(data)
+        levels = np.min(data, where=data > img_min, initial=img_max), np.nanpercentile(
+            np.where(data < img_max, data, img_min), 99)
 
         return [levels]
 
