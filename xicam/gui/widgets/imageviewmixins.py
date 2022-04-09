@@ -1021,9 +1021,10 @@ class CatalogImagePlotView(StreamSelector, FieldSelector, MetaDataView):
                 msg.logError(ex)
                 return
 
-            eventStream = stream.to_dask()[self.field]
+            self.xarray = stream.to_dask()[self.field]
 
-            self.xarray = np.squeeze(eventStream)
+            if self.xarray.ndim > 3:
+                self.xarray = np.squeeze(self.xarray)
 
             kwargs['antialias'] = True
             kwargs['pen'] = pg.mkPen(width=2)
