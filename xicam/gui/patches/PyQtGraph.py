@@ -15,6 +15,8 @@ from typing import Iterable, Sequence
 from pyqtgraph.parametertree.parameterTypes import WidgetParameterItem, ListParameter
 import pyqtgraph as pg
 
+pg.setConfigOption('imageAxisOrder', 'row-major')
+
 GradientEditorItem.__dict__["Gradients"] = OrderedDict(
     [
         (
