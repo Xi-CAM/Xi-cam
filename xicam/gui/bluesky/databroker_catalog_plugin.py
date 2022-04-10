@@ -110,7 +110,7 @@ class SearchingCatalogController(QWidget):
 
         # Add a button that does something with the currently-selected Runs
         # when you click it.
-        open_button = QPushButton("Open")
+        self.open_button = QPushButton("Open")
 
         def on_click():
             for uid, run in search_model.selection_as_catalog.items():
@@ -120,11 +120,11 @@ class SearchingCatalogController(QWidget):
             self.sigPreview.emit(event.run)
 
         # connect the open_entries in the search model to sigOpen
-        open_button.clicked.connect(on_click)
+        self.open_button.clicked.connect(on_click)
 
         search_model.events.active_run.connect(preview_entry)
         layout.addWidget(self.centralWidget)
-        layout.addWidget(open_button)
+        layout.addWidget(self.open_button)
 
 
 class DatabrokerCatalogPlugin(CatalogPlugin):
