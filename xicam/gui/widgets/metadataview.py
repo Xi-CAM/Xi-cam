@@ -94,6 +94,12 @@ class MetadataWidget(MetadataWidgetBase):
             self.header.setName(doc["uid"])
         super(MetadataWidget, self).insert(name, doc, self.groups)
 
+    def show_catalog(self, catalog, reset=True):
+        if reset:
+            self.reset()
+        for name, doc in catalog.canonical(fill='no'):
+            self.doc_consumer(name, doc)
+
     def reset(self):
         self.header = HeaderParameter(name=" ")
         self.groups = {group.name(): group for group in self.header.children()}
