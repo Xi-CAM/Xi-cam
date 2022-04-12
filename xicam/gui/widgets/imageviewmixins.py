@@ -942,6 +942,9 @@ class StreamSelector(CatalogView, BetterLayout):
             if self.stream_filter:
                 streams = list(filter(is_image_field, streams))
             self.streamComboBox.addItems(streams)
+            if 'primary' in streams:
+                self.streamComboBox.setCurrentText('primary')
+
         return self.streamComboBox.currentText()
 
 
@@ -984,10 +987,7 @@ class MetaDataView(CatalogView, BetterLayout):
         self.sigCatalogChanged.connect(self._updateView)
 
     def _updateView(self, catalog):
-        self.metadataView.reset()
-        # with self.metadataView.header.treeChangeBlocker():
-        for doctype, document in catalog.documents(fill='no'):
-            self.metadataView.doc_consumer(doctype, document)
+        self.metadataView.show_catalog(catalog)
 
 
 class CatalogImagePlotView(StreamSelector, FieldSelector, MetaDataView):

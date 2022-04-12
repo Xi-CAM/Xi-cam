@@ -1,8 +1,10 @@
 from pyqtgraph.parametertree import ParameterTree
 from pyqtgraph.parametertree.parameterTypes import Parameter, GroupParameter
 from collections import deque, OrderedDict, defaultdict
+from queue import Queue
 from qtpy.QtGui import QStandardItem, QStandardItemModel
-from qtpy.QtCore import QItemSelectionModel, Signal, Qt
+from qtpy.QtWidgets import QProgressBar, QWidget, QVBoxLayout
+from qtpy.QtCore import QItemSelectionModel, Signal, Qt, QTimer
 import sys
 import uuid
 import datetime
@@ -10,7 +12,7 @@ import numpy as np
 import warnings
 from typing import Iterable, Sequence
 from databroker.core import BlueskyRun
-from xicam.core import msg
+from xicam.core import msg, threads
 from xicam.gui.patches.PyQtGraph import CounterGroupParameter, LazyGroupParameter, from_dict
 
 
@@ -29,11 +31,11 @@ class MetadataWidgetBase(ParameterTree):
         LazyGroupParameter.itemClass.initialize_treewidget(self)
         self.kwargs = kwargs
 
-    def insert(self, doctype: str, document, groups: dict):
-        if doctype == "start":
-            for group in groups.values():
-                group.clearChildren()
+    def insert(self, doctype: str, child, groups: dict):
+        group = groups[doctype]
+        group.addChildren([child])
 
+    def make_child(self, doctype: str, document: dict, groups: dict):
         if doctype not in groups:
             text = f"doctype '{doctype}' is not supported by MetadataWidget (not in header parameters); skipping"
             msg.logError(KeyError(text))
@@ -54,14 +56,9 @@ class MetadataWidgetBase(ParameterTree):
                 msg.logMessage(f"Insert failed for {doctype} document")
                 return
             else:
-                group = groups[doctype]
-                group.addChildren(
-                    [
-                        GroupParameter(
-                            name=name, value=None, type=None, children=new_children, expanded=False, readonly=True
-                        )
-                    ]
-                )
+
+                return GroupParameter(name=name, value=None, type=None, children=new_children, expanded=False,
+                                      readonly=True)
 
     @staticmethod
     def _lookup_name_for_group(doctype, document):
@@ -80,30 +77,80 @@ class MetadataWidgetBase(ParameterTree):
             raise KeyError(f"Cannot find document type '{doctype}' in supported header parameters")
 
 
-
-
-class MetadataWidget(MetadataWidgetBase):
+class MetadataWidget(QWidget):
     def __init__(self, *args, **kwargs):
-        super(MetadataWidget, self).__init__(*args, **kwargs)
+        super(MetadataWidget, self).__init__()
         self.header = None  # type: HeaderParameter
         self.groups = dict()
+        self.insert_queue = Queue()
+        self.insert_timer = QTimer()
+        self.tasks_done = 0
+
+        self.insert_timer.setInterval(100)
+        self.insert_timer.timeout.connect(self.insert)
+
+        self.setLayout(QVBoxLayout())
+        self.metadata_base = MetadataWidgetBase(*args, **kwargs)
+        self.progress_bar = QProgressBar()
+        self.layout().addWidget(self.metadata_base)
+        self.layout().addWidget(self.progress_bar)
+        self.progress_bar.hide()
+        self.progress_bar.setRange(0, 0)
+
         self.reset()
 
-    def doc_consumer(self, name, doc):
+    def make_child(self, name, doc):
         if name == "start":
             self.header.setName(doc["uid"])
-        super(MetadataWidget, self).insert(name, doc, self.groups)
+        child = self.metadata_base.make_child(name, doc, self.groups)
+        return child
+
+    def doc_consumer(self, name, doc):
+        child = self.make_child(name, doc)
+        self.insert_queue.put((name, child))
+        if not self.insert_timer.isActive():
+            self.insert_timer.start()
+        if not self.progress_bar.isVisible():
+            self.progress_bar.show()
 
     def show_catalog(self, catalog, reset=True):
         if reset:
             self.reset()
-        for name, doc in catalog.canonical(fill='no'):
-            self.doc_consumer(name, doc)
+        self._show_catalog(catalog)  # must be done as an event to make sure that it happens after reset is complete
+        self.progress_bar.show()
+
+    def _show_catalog(self, catalog):
+        for name, doc in catalog.documents(fill='no'):
+            child = self.make_child(name, doc)
+            if child:
+                self.insert_queue.put((name, child))
+        self.progress_bar.setRange(0, len(self.insert_queue.queue))
 
     def reset(self):
+        with self.insert_queue.mutex:
+            self.insert_queue.queue.clear()
         self.header = HeaderParameter(name=" ")
         self.groups = {group.name(): group for group in self.header.children()}
-        self.setParameters(self.header)
+        self.metadata_base.setParameters(self.header)
+        self.insert_timer.start()
+        self.tasks_done = 0
+
+    def insert(self):
+        i = 0
+        while not self.insert_queue.empty() and i < 10:
+            doctype, child = self.insert_queue.get()
+            self.metadata_base.insert(doctype, child, self.groups)
+            self.insert_queue.task_done()
+            i += 1
+            self.tasks_done += 1
+
+        if self.progress_bar.maximum():
+            self.progress_bar.setValue(self.tasks_done)
+
+        if self.insert_queue.empty():
+            self.insert_timer.stop()
+            self.progress_bar.hide()
+            self.progress_bar.setRange(0, 0)
 
 
 class MetadataView(MetadataWidgetBase):
@@ -136,7 +183,7 @@ class MetadataView(MetadataWidgetBase):
         # TODO: make compatible with actively streaming header
 
         # filter out documents already emitted in the stream
-        for doctype, document in catalog.canonical(fill='no'):
+        for doctype, document in catalog.documents(fill='no'):
             uid = document["uid"]
 
             # for event-page's, make the uid value hashable by joining
@@ -147,7 +194,7 @@ class MetadataView(MetadataWidgetBase):
                 continue
 
             self._seen.add(uid)
-            self.insert(doctype, document, groups)
+            self.insert(doctype, self.make_child(doctype, document, groups), groups)
 
         if catalog.name != self._last_uid:
             self._last_uid = catalog.name
