@@ -1,3 +1,4 @@
+import math
 from enum import Enum, auto
 from functools import wraps
 from types import FunctionType
@@ -108,7 +109,11 @@ class CurveLabels(HoverHighlight, ClickHighlight):
         self._arrow = pg.ArrowItem(angle=90)
         self._arrow.setParentItem(self._curvepoint)
         self._arrow.setZValue(10000)
-        self._text = pg.TextItem(f'{item.name()}\nx: {point._data["x"]}\ny: {point._data["y"]}', anchor=(0.5, -.5), border=pg.mkPen("w"), fill=pg.mkBrush("k"))
+        # item.xData[point._index] contains *actual* current point x data value
+        # (as opposed to item.xDisp[point._index] or point._data)
+        x_data = item.xData[point._index]
+        y_data = item.yData[point._index]
+        self._text = pg.TextItem(f'{item.name()}\nx: {x_data}\ny: {y_data}', anchor=(0.5, -.5), border=pg.mkPen("w"), fill=pg.mkBrush("k"))
         self._text.setZValue(10000)
         self._text.setParentItem(self._curvepoint)
 
