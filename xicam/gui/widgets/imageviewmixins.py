@@ -4,15 +4,18 @@ import pyqtgraph as pg
 from pyqtgraph import ImageView, InfiniteLine, mkPen, ScatterPlotItem, ImageItem, PlotItem
 from qtpy.QtGui import QTransform, QPolygonF, QIcon, QPixmap
 from qtpy.QtWidgets import QLabel, QErrorMessage, QSizePolicy, QPushButton, QHBoxLayout, QVBoxLayout, QComboBox, \
-    QWidget, QToolBar, QActionGroup, QAction, QLayout
+    QWidget, QToolBar, QActionGroup, QAction, QLayout, QCheckBox, QProgressBar
 from qtpy.QtCore import Qt, Signal, Slot, QSize, QPointF, QRectF
 import numpy as np
 from databroker.core import BlueskyRun
 from xarray import DataArray
+from caproto import CaprotoTimeoutError
+from ophyd.signal import ConnectionTimeoutError
+import time
 
 # from pyFAI.geometry import Geometry
 from camsaxs.remesh_bbox import remesh, q_from_geometry
-from xicam.core import msg
+from xicam.core import msg, threads
 from xicam.core.data import MetaXArray
 from xicam.core.data.bluesky_utils import fields_from_stream, streams_from_run, is_image_field
 from xicam.gui.actions import ROIAction
@@ -1364,6 +1367,7 @@ class AxesLabels(ImageView):
 
     This reserves usage of the kwarg "labels".
     """
+
     def __init__(self, *args, labels=None, **kwargs):
         if "view" in kwargs:
             raise ValueError("view cannot be passed as a kwarg")
@@ -1376,20 +1380,178 @@ class AxesLabels(ImageView):
         super(AxesLabels, self).__init__(*args, **kwargs)
 
 
+@live_plugin('ImageMixinPlugin')
+class DeviceView(BetterLayout):
+    def __init__(self, *args, device=None, preprocess=None, max_fps=4, **kwargs):
+        super(DeviceView, self).__init__(*args, **kwargs)
+        self.device = device
+        self.preprocess = preprocess
+        self.max_fps = max_fps
+        self.thread = None
+        self.passive = QCheckBox('Passive')  # Not in any lay'out until active mode is revisited
+        self.passive.setChecked(True)
+        self.getting_frame = False
+        self._last_timestamp = time.time()
+        self._autolevel = True
+
+        self.acquire_progress = QProgressBar()
+        self.acquire_progress.setTextVisible(True)
+        self.acquire_progress.setFormat("%v of %m (%p%)")
+        self.acquire_progress.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Minimum)
+        self.ui.right_layout.addWidget(self.acquire_progress)
+
+        self.error_text = pg.TextItem('Waiting for data...')
+        self.view.addItem(self.error_text)
+
+        self.setPassive(self.passive.isChecked())
+
+    def setPassive(self, passive):
+        if self.thread:
+            self.thread.cancel()
+            self.thread = None
+
+        if passive:
+            update_action = self.updateFrame
+        else:
+            update_action = self.device.trigger
+
+        self.thread = threads.QThreadFuture(self._update_thread, update_action, showBusy=False,
+                                            except_slot=lambda ex: self.device.unstage())
+        self.thread.start()
+
+    def _update_thread(self, update_action: Callable):
+        while True:
+            if not self.passive.isChecked():
+                break
+
+            if self.visibleRegion().isEmpty():
+                time.sleep(1)  # Sleep for 1 sec if the display is not in view
+                continue
+
+            try:
+                if not self.device.connected:
+                    with msg.busyContext():
+                        msg.showMessage('Connecting to device...')
+                        self.device.wait_for_connection()
+
+                update_action()
+
+                num_exposures_counter = self.device.cam.num_exposures_counter.get()
+                num_exposures = self.device.cam.num_exposures.get()
+                num_captured = self.device.hdf5.num_captured.get()
+                num_capture = self.device.hdf5.num_capture.get()
+                capturing = self.device.hdf5.capture.get()
+                if capturing:
+                    current = num_exposures_counter + num_captured * num_exposures
+                    total = num_exposures * num_capture
+                elif num_exposures == 1:  # Show 'busy' for just one exposure
+                    current = 0
+                    total = 0
+                else:
+                    current = num_exposures_counter
+                    total = num_exposures
+                threads.invoke_in_main_thread(self._update_progress, current, total)
+
+                while self.getting_frame:
+                    time.sleep(.01)
+
+            except (RuntimeError, CaprotoTimeoutError, ConnectionTimeoutError, TimeoutError) as ex:
+                threads.invoke_in_main_thread(self.error_text.setText,
+                                              'An error occurred communicating with this device.')
+                msg.logError(ex)
+            except Exception as e:
+                threads.invoke_in_main_thread(self.error_text.setText,
+                                              'Unknown error occurred when attempting to communicate with device.')
+                msg.logError(e)
+
+            t = time.time()
+            max_period = 1 / self.max_fps
+            current_elapsed = t - self._last_timestamp
+
+            if current_elapsed < max_period:
+                time.sleep(max_period - current_elapsed)
+
+            self._last_timestamp = time.time()
+
+    def updateFrame(self):
+        image = self.device.image1.shaped_image.get()
+        if image is not None and len(image):
+            if self.preprocess:
+                try:
+                    image = self.preprocess(image)
+                except Exception as ex:
+                    pass
+                    # msg.logError(ex)
+            self.getting_frame = True
+            threads.invoke_in_main_thread(self._setFrame, image)
+
+    def _setFrame(self, image):
+
+        if self.image is None and len(image):
+            self.setImage(image, autoHistogramRange=True, autoLevels=True)
+        else:
+            self.imageDisp = None
+            self.error_text.setText('')
+            self.image = image
+            # self.imageview.updateImage(autoHistogramRange=kwargs['autoLevels'])
+            image = self.getProcessedImage()
+            if self._autolevel:
+                self.ui.histogram.setHistogramRange(self.levelMin, self.levelMax)
+                self.autoLevels()
+            self.imageItem.updateImage(image)
+
+            self._autolevel = False
+
+        self.error_text.setText(f'Update time: {(time.time() - self._last_timestamp):.2f} s')
+        self.getting_frame = False
+
+    def _update_progress(self, current, total):
+        self.acquire_progress.setMaximum(total)
+        self.acquire_progress.setValue(current)
+
+
+@live_plugin('ImageMixinPlugin')
+class AreaDetectorROI(DeviceView):
+    def __init__(self, *args, roi_plugin=None, **kwargs):
+        super(AreaDetectorROI, self).__init__(*args, **kwargs)
+
+        if roi_plugin is None:
+            roi_plugin = self.device.roi_stat1
+        self.roi_plugin = roi_plugin
+
+        pos = self.roi_plugin.min_.get()
+        size = self.roi_plugin.size.get()
+        self.areadetector_roi = BetterRectROI(pos=pos, size=size)
+        self.view.addItem(self.areadetector_roi)
+
+        self.roi_stat_text = pg.TextItem()
+        self.view.addItem(self.roi_stat_text)
+
+        self.areadetector_roi.sigRegionChangeFinished.connect(self.roi_changed)
+
+    def updateFrame(self):  # on frame updates, also get stats
+        super(AreaDetectorROI, self).updateFrame()
+
+        stats = self.roi_plugin.get()
+        text = '\nROI Stats\n'
+        for stat_name in ['max_value', 'mean_value', 'min_value', 'net', 'total']:
+            text += f'{stat_name}: {getattr(stats, stat_name)}\n'
+        threads.invoke_in_main_thread(self.roi_stat_text.setText, text)
+
+    def roi_changed(self, roi):
+        self.roi_plugin.min_.put(roi.pos())
+        self.roi_plugin.size.put(roi.size())
+
+
 if __name__ == "__main__":
     from qtpy.QtWidgets import QApplication
 
     qapp = QApplication([])
 
-    # cls = type('Blend', (StreamSelector, FieldSelector), {})
-    cls = type('Blend', (ToolbarLayout,), {})
-    tb = QToolBar()
-    tb.addAction("BLAH")
-    w = cls(toolbar=tb)
+    from xicam.Acquire.devices.fastccd import ProductionCamTriggered
 
-    cls = type('Blend', (PixelCoordinates,), {})
-    w = cls()
-    w.setImage(np.random.rand(10, 10))
+    d = ProductionCamTriggered('ES7011:FastCCD:', name='fastccd')
+    w = AreaDetectorROI(device=d)
     w.show()
 
     qapp.exec_()
