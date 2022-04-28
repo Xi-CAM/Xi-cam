@@ -1519,16 +1519,20 @@ class AreaDetectorROI(DeviceView):
             roi_plugin = self.device.roi_stat1
         self.roi_plugin = roi_plugin
 
-        pos = self.roi_plugin.min_.get()
-        pos[1] = self.image.shape[-2] - pos[1]
-        size = self.roi_plugin.size.get()
-        self.areadetector_roi = BetterRectROI(pos=pos, size=size)
-        self.view.addItem(self.areadetector_roi)
+        self.areadetector_roi = None
 
         self.roi_stat_text = pg.TextItem()
         self.view.addItem(self.roi_stat_text)
 
-        self.areadetector_roi.sigRegionChangeFinished.connect(self.roi_changed)
+    def setImage(self, image,  *args, **kwargs):
+        super(AreaDetectorROI, self).setImage(image, *args, **kwargs)
+        if image is not None and image.size:
+            pos = list(self.roi_plugin.min_.get())
+            size = self.roi_plugin.size.get()
+            pos[1] = self.image.shape[-2] - pos[1] - size[1]
+            self.areadetector_roi = BetterRectROI(pos=pos, size=size)
+            self.view.addItem(self.areadetector_roi)
+            self.areadetector_roi.sigRegionChangeFinished.connect(self.roi_changed)
 
     def updateFrame(self):  # on frame updates, also get stats
         super(AreaDetectorROI, self).updateFrame()
@@ -1541,9 +1545,10 @@ class AreaDetectorROI(DeviceView):
 
     def roi_changed(self, roi):
         pos = roi.pos()
-        pos[1] = self.image.shape[-2] - pos[1]
+        size = roi.size()
+        pos[1] = self.image.shape[-2] - pos[1] - size[1]
         self.roi_plugin.min_.put(pos)
-        self.roi_plugin.size.put(roi.size())
+        self.roi_plugin.size.put(size)
 
 
 if __name__ == "__main__":
