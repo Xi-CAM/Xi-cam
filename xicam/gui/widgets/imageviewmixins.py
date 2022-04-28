@@ -1520,6 +1520,7 @@ class AreaDetectorROI(DeviceView):
         self.roi_plugin = roi_plugin
 
         pos = self.roi_plugin.min_.get()
+        pos[1] = self.image.shape[-2] - pos[1]
         size = self.roi_plugin.size.get()
         self.areadetector_roi = BetterRectROI(pos=pos, size=size)
         self.view.addItem(self.areadetector_roi)
@@ -1539,7 +1540,9 @@ class AreaDetectorROI(DeviceView):
         threads.invoke_in_main_thread(self.roi_stat_text.setText, text)
 
     def roi_changed(self, roi):
-        self.roi_plugin.min_.put(roi.pos())
+        pos = roi.pos()
+        pos[1] = self.image.shape[-2] - pos[1]
+        self.roi_plugin.min_.put(pos)
         self.roi_plugin.size.put(roi.size())
 
 
