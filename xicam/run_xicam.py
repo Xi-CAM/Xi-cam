@@ -97,11 +97,11 @@ def exit_checks():
     msg.logMessage('Background threads:', threading.active_count()-1)
     # msg.logMessage('Active background threads:', len([thread for thread in threading.enumerate() if not isinstance(thread, threading._DummyThread)])-1)
     msg.logMessage('Active background threads:',
-                   len(list(filter(lambda thread: not isinstance(thread, threading._DummyThread),
+                   len(list(filter(lambda thread: not isinstance(thread, threading._DummyThread) and not thread.daemon,
                                    threading.enumerate())))-1)
 
     for thread in threading.enumerate():
-        if thread is threading.current_thread() or isinstance(thread, threading._DummyThread):# or thread.daemon
+        if thread is threading.current_thread() or isinstance(thread, threading._DummyThread) or thread.daemon:
             continue
         msg.logMessage('Waiting for thread:', thread.name)
 

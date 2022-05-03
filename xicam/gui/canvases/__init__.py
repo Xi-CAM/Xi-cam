@@ -143,7 +143,9 @@ class PlotIntentCanvas(XicamIntentCanvas):
 
             for item in items:
                 if isinstance(item, pg.PlotDataItem):
-                    item.setData(pen=color, symbolBrush=color, symbolPen='w')
+                    item.setPen(color)
+                    item.setSymbolBrush(color)
+                    item.setSymbolPen('w')
 
     def render(self, intent):
         if not self.canvas_widget:
