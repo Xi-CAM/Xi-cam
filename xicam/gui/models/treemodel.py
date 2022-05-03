@@ -46,7 +46,7 @@ class Tree:
         del self._parent_mapping[node]
 
     def index(self, node: object) -> Tuple[int, object]:
-        parent = self._parent_mapping[node]
+        parent = self._parent_mapping.get(node, None)
         row = self._child_mapping[parent].index(node)
         return row, parent
 
@@ -385,7 +385,7 @@ class TreeModel(QAbstractItemModel):
         for i in reversed(range(row, row + count)):
             node = self.tree.node(i, parent.internalPointer())
             self.tree.remove_node(node)
-            self.setData(self.index(i, 0, parent), Qt.Unchecked, Qt.CheckStateRole)
+            # self.setData(self.index(i, 0, parent), Qt.Unchecked, Qt.CheckStateRole)
         self.endRemoveRows()
         return True
 
@@ -485,7 +485,7 @@ class EnsembleModel(TreeModel):
             node = self.tree.node(i, parent.internalPointer())
             if node == self._active_ensemble:
                 active_removed = True
-            self.setData(self.index(i, 0, parent), Qt.Unchecked, Qt.CheckStateRole)
+            # self.setData(self.index(i, 0, parent), Qt.Unchecked, Qt.CheckStateRole)
             self.tree.remove_node(node)
         self.endRemoveRows()
 
