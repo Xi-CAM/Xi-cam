@@ -41,24 +41,19 @@ class MetadataWidgetBase(ParameterTree):
             msg.logError(KeyError(text))
             return
 
-        try:
-            new_children = from_dict(document, self.excludedkeys)
-        except Exception as ex:
-            msg.logError(ex)
-            print(f"failed to make children for {doctype}")
-        else:
-            # TODO: add responsive design to uid display
-            # Attach meaningful names to group name if document has a name (e.g. descriptors)
-            try:
-                name = MetadataView._lookup_name_for_group(doctype, document)
-            except KeyError as ex:
-                msg.logError(ex)
-                msg.logMessage(f"Insert failed for {doctype} document")
-                return
-            else:
 
-                return GroupParameter(name=name, value=None, type=None, children=new_children, expanded=False,
-                                      readonly=True)
+        # TODO: add responsive design to uid display
+        # Attach meaningful names to group name if document has a name (e.g. descriptors)
+        try:
+            name = MetadataView._lookup_name_for_group(doctype, document)
+        except KeyError as ex:
+            msg.logError(ex)
+            msg.logMessage(f"Insert failed for {doctype} document")
+            return
+        else:
+
+            return LazyGroupParameter(name=name, children=document, expanded=False,
+                                  readonly=True)
 
     @staticmethod
     def _lookup_name_for_group(doctype, document):
@@ -137,7 +132,7 @@ class MetadataWidget(QWidget):
 
     def insert(self):
         i = 0
-        while not self.insert_queue.empty() and i < 10:
+        while not self.insert_queue.empty() and i < 100:
             doctype, child = self.insert_queue.get()
             self.metadata_base.insert(doctype, child, self.groups)
             self.insert_queue.task_done()

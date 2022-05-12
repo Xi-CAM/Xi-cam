@@ -7,7 +7,7 @@ from collections import OrderedDict
 from qtpy.QtWidgets import QTreeWidgetItem, QWidget, QPushButton, QCheckBox
 from qtpy.QtGui import QIcon, QPainterPath
 from qtpy.QtCore import Signal
-from xicam.core import msg
+from xicam.core import msg, threads
 from xicam.gui.static import path
 import datetime
 from typing import Iterable, Sequence
@@ -426,25 +426,6 @@ class TupleGroupParameter(BetterGroupParameter):
 
 registerParameterType("tuple", TupleGroupParameter, override=True)
 
-
-class CounterGroupParameterItem(BetterGroupParameteritem):
-    def __init__(self, *args, **kwargs):
-        super(CounterGroupParameterItem, self).__init__(*args, **kwargs)
-        self.param.sigChildAdded.connect(self.updateText)
-        self.param.sigChildRemoved.connect(self.updateText)
-
-    def updateText(self, *_):
-        # Use title in place of name if provided in the Parameter
-        text = self.param.opts.get('title', self.param.name())
-        self.setText(0, f"{text} ({self.childCount()})")
-
-
-class CounterGroupParameter(BetterGroupParameter):
-    itemClass = CounterGroupParameterItem
-
-
-registerParameterType("countergroup", CounterGroupParameter, override=True)
-
 typemap = {
     bool: "bool",
     int: "int",
@@ -543,31 +524,64 @@ class LazyGroupParameterItem(BetterGroupParameteritem):
 
     @staticmethod
     def itemExpanded(item):
-        for i in range(item.childCount()):
-            if hasattr(item.child(i), "flushChildren"):
-                item.child(i).flushChildren()
+        if hasattr(item, "flushChildren"):
+            item.flushChildren()
 
     def childAdded(self, *childargs):
-        self._queuedchildren.append(childargs)
+        if childargs[1].name() == 'placeholder_child' or not self.childCount():
+            super(LazyGroupParameterItem, self).childAdded(*childargs)
+        else:
+            self._queuedchildren.append(childargs)
         if self.isExpanded():
             self.flushChildren()
 
     def flushChildren(self):
-        if not self.param.children():
+        if not self.isExpanded():
+            return
+        children = self.param.children()
+        if len(children) == 1 and children[0].name() == 'placeholder_child':
+            self.param.removeChild(children[0])
             self.param.addChildren(from_dict(self.param.lazy_children))
-        while len(self._queuedchildren):
+        if len(self._queuedchildren):
             super(LazyGroupParameterItem, self).childAdded(*self._queuedchildren.pop(0))
+            threads.invoke_as_event(self.flushChildren)
 
 
 class LazyGroupParameter(BetterGroupParameter):
     itemClass = LazyGroupParameterItem
 
+    placeholder_child = dict(name='placeholder_child', type='str')
+
     def __init__(self, *args, children=[], **kwargs):
         self.lazy_children = children
-        super(LazyGroupParameter, self).__init__(*args, children=[], **kwargs)
+
+        if children:
+            children = [self.placeholder_child]
+
+        super(LazyGroupParameter, self).__init__(*args, children=children, **kwargs)
+
 
 
 registerParameterType("lazygroup", LazyGroupParameter, override=True)
+
+
+class CounterGroupParameterItem(LazyGroupParameterItem):
+    def __init__(self, *args, **kwargs):
+        super(CounterGroupParameterItem, self).__init__(*args, **kwargs)
+        self.param.sigChildAdded.connect(self.updateText)
+        self.param.sigChildRemoved.connect(self.updateText)
+
+    def updateText(self, *_):
+        # Use title in place of name if provided in the Parameter
+        text = self.param.opts.get('title', self.param.name())
+        self.setText(0, f"{text} ({self.childCount() + len(self.param.lazy_children) + len(self._queuedchildren)})")
+
+
+class CounterGroupParameter(LazyGroupParameter):
+    itemClass = CounterGroupParameterItem
+
+
+registerParameterType("countergroup", CounterGroupParameter, override=True)
 
 
 class EnumListParameter(ListParameter):
