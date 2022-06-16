@@ -215,7 +215,7 @@ class SafeImageView(ImageView):
             return
         if len(img) < 4:
             return
-        super(SafeImageView, self).setImage(np.squeeze(img), *args, **kwargs)
+        super(SafeImageView, self).setImage(np.asarray(np.squeeze(img)), *args, **kwargs)
 
 
 class ImageParameterItem(WidgetParameterItem):
