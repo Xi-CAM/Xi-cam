@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 import time
-from functools import WRAPPER_ASSIGNMENTS
+from functools import WRAPPER_ASSIGNMENTS, lru_cache
 
 import pyqtgraph as pg
 from pyqtgraph import ImageView, InfiniteLine, mkPen, ScatterPlotItem, ImageItem, PlotItem
@@ -172,6 +172,7 @@ class XArrayView(ImageView):
         self.axesItem = PlotItem()
         self.axesItem.axes["left"]["item"].setZValue(10)
         self.axesItem.axes["top"]["item"].setZValue(10)
+        self._min_max_cache = dict()
 
         if "view" not in kwargs:
             kwargs["view"] = self.axesItem
@@ -263,17 +264,25 @@ class XArrayView(ImageView):
         Estimate the min/max values of *data* by subsampling. MODIFIED TO USE:
         - second lowest value as min
         - 99TH PERCENTILE instead of max
+        NOTE: memoization assumes that data does not mutate
         """
+
+        if id(data) in self._min_max_cache:
+            return self._min_max_cache[id(data)]
+
         if data is None:
             return 0, 0
 
-        sl = slice(None, None, max(1, int(data.size // 1e6)))
+        sl = slice(None, None, max(1, int(np.prod(np.asarray(data.shape, dtype=np.float_)) // 1e6)))  # can't trust data.size due to likely overflow
         data = np.asarray(data[sl])
 
         img_max = np.nanmax(data)
         img_min = np.nanmin(data)
         levels = np.min(data, where=data > img_min, initial=img_max), np.nanpercentile(
             np.where(data < img_max, data, img_min), 99)
+
+        self._min_max_cache[id(data)] = [levels]
+        # TODO: prune cache
 
         return [levels]
 
