@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
+import time
 from functools import WRAPPER_ASSIGNMENTS
+
 import pyqtgraph as pg
 from pyqtgraph import ImageView, InfiniteLine, mkPen, ScatterPlotItem, ImageItem, PlotItem
 from qtpy.QtGui import QTransform, QPolygonF, QIcon, QPixmap
@@ -9,9 +11,6 @@ from qtpy.QtCore import Qt, Signal, Slot, QSize, QPointF, QRectF
 import numpy as np
 from databroker.core import BlueskyRun
 from xarray import DataArray
-from caproto import CaprotoTimeoutError
-from ophyd.signal import ConnectionTimeoutError
-import time
 
 # from pyFAI.geometry import Geometry
 from camsaxs.remesh_bbox import remesh, q_from_geometry
@@ -1434,6 +1433,8 @@ class DeviceView(BetterLayout):
         self.thread.start()
 
     def _update_thread(self, update_action: Callable):
+        from caproto import CaprotoTimeoutError
+        from ophyd.signal import ConnectionTimeoutError
         while True:
             if not self.passive.isChecked():
                 break
