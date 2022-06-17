@@ -1,4 +1,6 @@
 import weakref
+
+from pyFAI.azimuthalIntegrator import AzimuthalIntegrator
 from pyqtgraph import ROI, PolyLineROI, Point
 from pyqtgraph.graphicsItems.ROI import Handle, RectROI, LineROI
 from qtpy.QtCore import QRectF, QPointF, Qt, Signal, QSize
@@ -481,8 +483,6 @@ class ArcROI(BetterROI):
         # self.addRotateHandle([1.0, 0.5], [0.5, 0.5])
         # self.addScaleHandle([0.5*2.**-0.5 + 0.5, 0.5*2.**-0.5 + 0.5], [0.5, 0.5])
 
-        self.startangle = 30
-        self.arclength = 120
         self.radius_name = 'Radius'
         self.aspectLocked = True
 
@@ -696,6 +696,13 @@ class ArcQROI(ArcROI):
     radius_units = '\u212B\u207B\u00B9'
     name_base = "Q ROI"
 
+    def getLabelArray(self, arr, img: pg.ImageItem = None, geometry: AzimuthalIntegrator = None):
+        q = geometry.qArray(arr.shape) / 10
+        chi = geometry.chiArray(arr.shape)  # radians
+        q_mask = np.logical_and(self.innerradius < q, q < self.outerradius)
+        offset_chi = ((np.degrees(chi) - 90 - self.thetacenter + self.thetawidth / 2) % 360)
+        chi_mask = offset_chi < self.thetawidth
+        return np.logical_and(q_mask, chi_mask).astype(np.int)
 
 class ArcPXROI(ArcROI):
     is_px_based = True
