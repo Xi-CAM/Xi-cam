@@ -1,3 +1,4 @@
+import itertools
 from collections import defaultdict
 from typing import Any, List, Tuple, Union, Iterable
 from weakref import WeakValueDictionary
@@ -9,6 +10,7 @@ from qtpy.QtWidgets import QApplication
 from xicam.core.data import ProjectionNotFound
 from xicam.core.intents import Intent
 from xicam.core.msg import logMessage, WARNING, notifyMessage
+from xicam.core.threads import invoke_in_main_thread
 from xicam.core.workspace import Ensemble
 from xicam.plugins import manager as plugin_manager
 
@@ -375,7 +377,7 @@ class TreeModel(QAbstractItemModel):
             highest_index = self.createIndex(highest_row, 0, highest_parent)
             lowest_index = self.createIndex(lowest_row, 0, lowest_parent)
 
-            self.dataChanged.emit(highest_index, lowest_index, [role])
+            invoke_in_main_thread(self.dataChanged.emit, highest_index, lowest_index, [role])  # unclear why this must be done via events?
             return True
 
         return False
@@ -427,6 +429,17 @@ class EnsembleModel(TreeModel):
         intent_parent_index = self.createIndex(intent_count, 0, intent_parent)
         self.insert_and_check(intent_count, intent_parent_index, intent)
 
+    def intents(self, node: Union[BlueskyRun, Ensemble]):
+        if isinstance(node, Ensemble):
+            return list(itertools.chain(*[self.tree.children(catalog) for catalog in self.tree.children(node)]))
+        elif isinstance(node, BlueskyRun):
+            return self.tree.children(node)
+
+    def catalogs(self, ensemble: Ensemble = None):
+        if not ensemble:
+            ensemble = self.activeEnsemble
+        return self.tree.children(ensemble)
+
     def appendCatalog(self, catalog: BlueskyRun, projectors, ensemble: Ensemble = None):
         catalog_parent = ensemble or self.activeEnsemble
         catalog_count = self.tree.child_count(ensemble)
@@ -456,9 +469,6 @@ class EnsembleModel(TreeModel):
         # New ensemble will be come the active ensemble
         # Wait until after adding node to tree to set it as active ensemble (since that triggers dataChanged)
         self.activeEnsemble = ensemble
-
-        for catalog in ensemble.catalogs:
-            self.appendCatalog(catalog, projectors, ensemble)
 
     @property
     def activeEnsemble(self) -> Ensemble:
