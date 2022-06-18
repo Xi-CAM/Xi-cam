@@ -117,7 +117,6 @@ class HelpWidget(QGroupBox):
             return entered_widget.isAncestorOf(widget)
         return False
 
-
     def eventFilter(self, obj: QObject, event: QEvent) -> bool:
         """Event filter to process an event for the given destination.
 
@@ -149,4 +148,3 @@ class HelpWidget(QGroupBox):
                         self._help_display.setText(self._help_display.placeholderText())
 
         return super(HelpWidget, self).eventFilter(obj, event)
-                
