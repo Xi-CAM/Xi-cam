@@ -4,7 +4,6 @@ Catalog Plugin for browsing pre-configured databroker catalogs
 from distutils.version import LooseVersion
 from xicam.plugins.catalogplugin import CatalogPlugin
 from xicam.gui.widgets.dataresourcebrowser import QListView
-from databroker.core import BlueskyRun
 from qtpy.QtCore import Signal
 from qtpy.QtWidgets import QApplication, QPushButton, QVBoxLayout, QWidget
 import logging
@@ -79,7 +78,7 @@ class SearchingCatalogController(QWidget):
 
     sigOpen = Signal(object)
     sigSelectedRun = Signal([list])
-    sigPreview = Signal(BlueskyRun)
+    sigPreview = Signal(object)
     catalog = None
 
     def __init__(self, root_catalog):
