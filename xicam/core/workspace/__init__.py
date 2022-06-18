@@ -19,7 +19,6 @@ class Ensemble:
     def __init__(self, parent=None, name=""):
         # super(Ensemble, self).__init__(parent)
 
-        self.catalogs = []
         self._name = name
         self._count = next(self._count)
 
@@ -34,10 +33,3 @@ class Ensemble:
         if not name:
             return
         self._name = name
-
-    def append_catalog(self, catalog):
-        self.catalogs.append(catalog)
-
-    def append_catalogs(self, *catalogs):
-        for catalog in catalogs:
-            self.append_catalog(catalog)

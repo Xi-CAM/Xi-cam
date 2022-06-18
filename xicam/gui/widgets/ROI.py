@@ -1,8 +1,10 @@
 import weakref
+
+from pyFAI.azimuthalIntegrator import AzimuthalIntegrator
 from pyqtgraph import ROI, PolyLineROI, Point
 from pyqtgraph.graphicsItems.ROI import Handle, RectROI, LineROI
 from qtpy.QtCore import QRectF, QPointF, Qt, Signal, QSize
-from qtpy.QtGui import QColor, QPainter, QPainterPath, QBrush, QPainterPathStroker, QCursor
+from qtpy.QtGui import QColor, QPainter, QPainterPath, QBrush, QPainterPathStroker, QCursor, QTransform
 from qtpy.QtWidgets import QAction, QVBoxLayout, QWidget, QMenu
 import numpy as np
 from itertools import count
@@ -61,7 +63,6 @@ class ROIOperation(OperationPlugin):
                 print(f"2: {(label_array == 2).sum()}")
                 print()
 
-
         return roi_masks, label_array
 
     # TODO: might need this for adjusting roi's manually
@@ -70,6 +71,187 @@ class ROIOperation(OperationPlugin):
     #     if not self._param:
     #         self._param = self.roi.parameter()
     #     return self._param
+
+
+class FreeTranslateFixROI(ROI):
+    # This monkey patch allows ROIs to have both translate and free handles without the free handles getting inflated positions
+
+    def movePoint(self, handle, pos, modifiers=Qt.KeyboardModifier(), finish=True, coords='parent'):
+        ## called by Handles when they are moved.
+        ## pos is the new position of the handle in scene coords, as requested by the handle.
+
+        newState = self.stateCopy()
+        index = self.indexOfHandle(handle)
+        h = self.handles[index]
+        p0 = self.mapToParent(h['pos'] * self.state['size'])
+        p1 = Point(pos)
+
+        if coords == 'parent':
+            pass
+        elif coords == 'scene':
+            p1 = self.mapSceneToParent(p1)
+        else:
+            raise Exception("New point location must be given in either 'parent' or 'scene' coordinates.")
+
+        ## Handles with a 'center' need to know their local position relative to the center point (lp0, lp1)
+        if 'center' in h:
+            c = h['center']
+            cs = c * self.state['size']
+            lp0 = self.mapFromParent(p0) - cs
+            lp1 = self.mapFromParent(p1) - cs
+
+        if h['type'] == 't':
+            snap = True if (modifiers & Qt.ControlModifier) else None
+            self.translate(p1 - p0, snap=snap, update=False)
+
+        elif h['type'] == 'f':
+            newPos = self.mapFromParent(p1)
+            h['item'].setPos(newPos)
+            h['pos'] = newPos / self.size()[0]
+            self.freeHandleMoved = True
+
+        elif h['type'] == 's':
+            ## If a handle and its center have the same x or y value, we can't scale across that axis.
+            if h['center'][0] == h['pos'][0]:
+                lp1[0] = 0
+            if h['center'][1] == h['pos'][1]:
+                lp1[1] = 0
+
+            ## snap
+            if self.scaleSnap or (modifiers & Qt.ControlModifier):
+                lp1[0] = round(lp1[0] / self.scaleSnapSize) * self.scaleSnapSize
+                lp1[1] = round(lp1[1] / self.scaleSnapSize) * self.scaleSnapSize
+
+            ## preserve aspect ratio (this can override snapping)
+            if h['lockAspect'] or (modifiers & Qt.AltModifier):
+                # arv = Point(self.preMoveState['size']) -
+                lp1 = lp1.proj(lp0)
+
+            ## determine scale factors and new size of ROI
+            hs = h['pos'] - c
+            if hs[0] == 0:
+                hs[0] = 1
+            if hs[1] == 0:
+                hs[1] = 1
+            newSize = lp1 / hs
+
+            ## Perform some corrections and limit checks
+            if newSize[0] == 0:
+                newSize[0] = newState['size'][0]
+            if newSize[1] == 0:
+                newSize[1] = newState['size'][1]
+            if not self.invertible:
+                if newSize[0] < 0:
+                    newSize[0] = newState['size'][0]
+                if newSize[1] < 0:
+                    newSize[1] = newState['size'][1]
+            if self.aspectLocked:
+                newSize[0] = newSize[1]
+
+            ## Move ROI so the center point occupies the same scene location after the scale
+            s0 = c * self.state['size']
+            s1 = c * newSize
+            cc = self.mapToParent(s0 - s1) - self.mapToParent(Point(0, 0))
+
+            ## update state, do more boundary checks
+            newState['size'] = newSize
+            newState['pos'] = newState['pos'] + cc
+            if self.maxBounds is not None:
+                r = self.stateRect(newState)
+                if not self.maxBounds.contains(r):
+                    return
+
+            self.setPos(newState['pos'], update=False)
+            self.setSize(newState['size'], update=False)
+
+        elif h['type'] in ['r', 'rf']:
+            if h['type'] == 'rf':
+                self.freeHandleMoved = True
+
+            if not self.rotatable:
+                return
+            ## If the handle is directly over its center point, we can't compute an angle.
+            try:
+                if lp1.length() == 0 or lp0.length() == 0:
+                    return
+            except OverflowError:
+                return
+
+            ## determine new rotation angle, constrained if necessary
+            ang = newState['angle'] - lp0.angle(lp1)
+            if ang is None:  ## this should never happen..
+                return
+            if self.rotateSnap or (modifiers & Qt.ControlModifier):
+                ang = round(ang / self.rotateSnapAngle) * self.rotateSnapAngle
+
+            ## create rotation transform
+            tr = QTransform()
+            tr.rotate(ang)
+
+            ## move ROI so that center point remains stationary after rotate
+            cc = self.mapToParent(cs) - (tr.map(cs) + self.state['pos'])
+            newState['angle'] = ang
+            newState['pos'] = newState['pos'] + cc
+
+            ## check boundaries, update
+            if self.maxBounds is not None:
+                r = self.stateRect(newState)
+                if not self.maxBounds.contains(r):
+                    return
+            self.setPos(newState['pos'], update=False)
+            self.setAngle(ang, update=False)
+
+            ## If this is a free-rotate handle, its distance from the center may change.
+
+            if h['type'] == 'rf':
+                h['item'].setPos(self.mapFromScene(p1))  ## changes ROI coordinates of handle
+                h['pos'] = self.mapFromParent(p1)
+
+        elif h['type'] == 'sr':
+            if h['center'][0] == h['pos'][0]:
+                scaleAxis = 1
+                nonScaleAxis = 0
+            else:
+                scaleAxis = 0
+                nonScaleAxis = 1
+
+            try:
+                if lp1.length() == 0 or lp0.length() == 0:
+                    return
+            except OverflowError:
+                return
+
+            ang = newState['angle'] - lp0.angle(lp1)
+            if ang is None:
+                return
+            if self.rotateSnap or (modifiers & Qt.ControlModifier):
+                ang = round(ang / self.rotateSnapAngle) * self.rotateSnapAngle
+
+            hs = abs(h['pos'][scaleAxis] - c[scaleAxis])
+            newState['size'][scaleAxis] = lp1.length() / hs
+            # if self.scaleSnap or (modifiers & QtCore.Qt.ControlModifier):
+            if self.scaleSnap:  ## use CTRL only for angular snap here.
+                newState['size'][scaleAxis] = round(newState['size'][scaleAxis] / self.snapSize) * self.snapSize
+            if newState['size'][scaleAxis] == 0:
+                newState['size'][scaleAxis] = 1
+            if self.aspectLocked:
+                newState['size'][nonScaleAxis] = newState['size'][scaleAxis]
+
+            c1 = c * newState['size']
+            tr = QTransform()
+            tr.rotate(ang)
+
+            cc = self.mapToParent(cs) - (tr.map(c1) + self.state['pos'])
+            newState['angle'] = ang
+            newState['pos'] = newState['pos'] + cc
+            if self.maxBounds is not None:
+                r = self.stateRect(newState)
+                if not self.maxBounds.contains(r):
+                    return
+
+            self.setState(newState, update=False)
+
+        self.stateChanged(finish=finish)
 
 
 class WorkflowableROI(ROI):
@@ -128,7 +310,7 @@ class WorkflowableROI(ROI):
 
 # MIXIN!~
 # Now with 100% more ROI!
-class BetterROI(WorkflowableROI):
+class BetterROI(FreeTranslateFixROI, WorkflowableROI):
     roi_count = count(1)
     index = None
 
@@ -291,6 +473,8 @@ class ArcROI(BetterROI):
     A washer-wedge-shaped ROI for selecting q-ranges
 
     """
+    radius_units = 'px'
+    name_base = "Arc ROI"
 
     def __init__(self, pos, radius, **kwargs):
         # QtGui.QGraphicsRectItem.__init__(self, 0, 0, size[0], size[1])
@@ -299,71 +483,83 @@ class ArcROI(BetterROI):
         # self.addRotateHandle([1.0, 0.5], [0.5, 0.5])
         # self.addScaleHandle([0.5*2.**-0.5 + 0.5, 0.5*2.**-0.5 + 0.5], [0.5, 0.5])
 
-        self.startangle = 30
-        self.arclength = 120
         self.radius_name = 'Radius'
-        self.radius_units = 'px'
-
         self.aspectLocked = True
 
         # only these values are in external space, others are internal (-.5,.5)
-        self.innerradius = 0.5 * radius
-        self.outerradius = radius
-        self.thetawidth = 120.0
-        self.thetacenter = 90.0
+        # self.innerradius = 0.5 * radius
+        # self.outerradius = radius
+        # self.thetawidth = 120.0
+        # self.thetacenter = 90.0
 
-        self.innerhandle = self.addFreeHandle([0.0, self.innerradius / self.outerradius], [0, 0])
-        self.outerhandle = self.addFreeHandle([0.0, 1], [0, 0])
+        self.outerhandle = self.addScaleRotateHandle([0.0, 1.0], [0, 0])
+        self.innerhandle = self.addFreeHandle([0.0, 0.5])
         self.widthhandle = self.addFreeHandle(np.array([-0.433 * 2, 0.25 * 2]))
 
         self.path = None
         self._param = None  # type: Parameter
         self._restyle()
 
-        self._name = "Arc ROI"
+        self._name = self.name_base
+
+    @property
+    def outerradius(self):
+        return self.size()[0]
+
+    @property
+    def innerradius(self):
+        return self.innerhandle.pos().length() / self.outerhandle.pos().length() * self.size()[0]
+
+    @property
+    def thetacenter(self):
+        return self.angle()
+
+    @property
+    def thetawidth(self):
+        return max(2 * self.widthhandle.pos().angle(self.innerhandle.pos()), 0)
 
     def boundingRect(self):
-        size = self.outerradius
+        size = self.size()[0]
         return QRectF(-size, -size, size * 2, size * 2).normalized()
 
-    def movePoint(self, handle, pos, modifiers=Qt.KeyboardModifier(), finish=True, coords="parent"):
-        super(ArcROI, self).movePoint(handle, pos, modifiers, finish, coords)
+    # def movePoint(self, handle, pos, modifiers=Qt.KeyboardModifier(), finish=True, coords="parent"):
+    #     super(ArcROI, self).movePoint(handle, pos, modifiers, finish, coords)
 
-        self._update_internal_parameters(handle)
+    # self._update_internal_parameters(handle)
 
-    def _update_internal_parameters(self, handle=None):
-        # Set internal parameters
-        if handle is self.innerhandle:
-            self.innerradius = min(self.innerhandle.pos().length(), self.outerhandle.pos().length())
+    # def _update_internal_parameters(self, handle=None):
+    # # Set internal parameters
+    # if handle is self.innerhandle:
+    #     self.innerradius = min(self.innerhandle.pos().length(), self.outerhandle.pos().length())
 
-        elif handle is self.outerhandle:
-            self.innerradius = self.innerhandle.pos().length()
-            self.outerradius = self.outerhandle.pos().length()
+    # elif handle is self.outerhandle:
+    #     self.innerradius = self.innerhandle.pos().length()
+    #     self.outerradius = self.outerhandle.pos().length()
 
-        if handle is self.outerhandle:
-            self.thetacenter = self.outerhandle.pos().angle(Point(1, 0))
-
-        elif handle is self.widthhandle:
-            self.thetawidth = max(2 * self.widthhandle.pos().angle(self.innerhandle.pos()), 0)
-
-        self.handleChanged()
+    # if handle is self.outerhandle:
+    #     self.thetacenter = self.outerhandle.pos().angle(Point(1, 0))
+    #
+    # elif handle is self.widthhandle:
+    #     self.thetawidth = max(2 * self.widthhandle.pos().angle(self.innerhandle.pos()), 0)
+    #
+    # self.handleChanged()
 
     def paint(self, p, opt, widget):
 
         # Enforce constraints on handles
-        r2 = Point(np.cos(np.radians(self.thetacenter)),
-                   np.sin(np.radians(self.thetacenter)))  # chi center direction vector
+        r2 = Point(np.cos(np.radians(90)),
+                   np.sin(np.radians(90)))  # chi center direction vector
         # constrain innerhandle to be parallel to outerhandle, and shorter than outerhandle
-        self.innerhandle.setPos(r2 * self.innerradius)
+        self.innerhandle.setPos(r2 * self.innerhandle.pos().length())
         if self.innerhandle.pos().length() > self.outerhandle.pos().length():
-            self.innerhandle.setPos(r2 * self.outerradius)
+            self.innerhandle.setPos(r2 * self.outerhandle.pos().length())
         # constrain widthhandle to be counter-clockwise from innerhandle
-        widthangle = np.radians(self.thetawidth / 2 + self.thetacenter)
+        widthangle = np.radians(self.thetawidth / 2 + 90)
         widthv = Point(np.cos(widthangle), np.sin(widthangle)) if self.thetawidth > 0 else r2
         # constrain widthhandle to half way between inner and outerhandles
-        self.widthhandle.setPos(widthv * (self.innerradius + self.outerradius) / 2)
+        self.widthhandle.setPos(widthv * (self.innerhandle.pos().length() + self.outerhandle.pos().length()) / 2)
         # constrain handles to base values
-        self.outerhandle.setPos(r2 * self.outerradius)
+        # self.outerhandle.setPos(r2 * self.outerhandle.pos().length())
 
         pen = self.currentPen
         pen.setColor(QColor(0, 255, 255))
@@ -377,17 +573,17 @@ class ArcROI(BetterROI):
 
         p.scale(r.width(), r.height())  # workaround for GL bug
 
-        centerangle = self.innerhandle.pos().angle(Point(1, 0))
-        startangle = centerangle - self.thetawidth / 2
-        endangle = centerangle + self.thetawidth / 2
+        startangle = 90 - self.thetawidth / 2
+        endangle = 90 + self.thetawidth / 2
 
-        r = QCircRectF(radius=0.5)
+        r = QCircRectF(radius=self.innerradius / self.outerradius / 2)
+        # p.drawRect(r)
         if self.innerradius < self.outerradius and self.thetawidth > 0:
             p.drawArc(r, -startangle * 16, -self.thetawidth * 16)
 
         radius = self.innerradius / self.outerradius / 2
-        r = QCircRectF()
-        r.radius = radius
+        r = QCircRectF(radius=.5)
+        # p.drawRect(r)
 
         if self.innerradius < self.outerradius and self.thetawidth > 0:
             p.drawArc(r, -startangle * 16, -self.thetawidth * 16)
@@ -404,10 +600,12 @@ class ArcROI(BetterROI):
             path = QPainterPath()
             path.moveTo((-1.0 * self.widthhandle.pos() + 2 * self.widthhandle.pos().dot(r1v) * r1v).norm() / 2)
             path.arcTo(r, -startangle, -self.thetawidth)  # inside
-            path.lineTo(self.widthhandle.pos().norm() / 2)  # ? side
-            path.arcTo(QCircRectF(radius=0.5), -endangle, self.thetawidth)  # outside
-            path.lineTo((-1.0 * self.widthhandle.pos() + 2 * self.widthhandle.pos().dot(r1v) * r1v).norm() / 2)
+            path.lineTo(self.widthhandle.pos().norm() * self.innerhandle.pos().length() / self.outerhandle.pos().length() / 2)  # ? side
+            path.arcTo(QCircRectF(radius=self.innerhandle.pos().length() / self.outerhandle.pos().length() / 2), -endangle, self.thetawidth)  # outside
+            path.lineTo((-1.0 * self.widthhandle.pos() + 2 * self.widthhandle.pos().dot(r1v) * r1v).norm() * self.innerhandle.pos().length() / self.outerhandle.pos().length() / 2)
             self.path = path
+            # p.setPen(pg.mkPen('r'))
+            p.drawPath(path)
             p.fillPath(path, QBrush(QColor(0, 255, 255, 20)))
 
     def getArrayRegion(self, arr, img=None):
@@ -418,20 +616,20 @@ class ArcROI(BetterROI):
         w = arr.shape[-2]
         h = arr.shape[-1]
 
-        centerangle = self.outerhandle.pos().angle(Point(1, 0))
+        centerangle = self.thetacenter + 90
         startangle = centerangle - self.thetawidth / 2
 
         # generate an ellipsoidal mask
         mask = np.fromfunction(
             lambda y, x: (
                                  self.innerhandle.pos().length() < (
-                                     (x - self.pos().y()) ** 2.0 + (y - self.pos().x()) ** 2.0) ** 0.5
+                                 (x - self.pos().x()) ** 2.0 + (y - self.pos().y()) ** 2.0) ** 0.5
                          )
-                         & (((x - self.pos().y()) ** 2.0 + (
-                        y - self.pos().x()) ** 2.0) ** 0.5 < self.outerhandle.pos().length())
-                         & ((np.degrees(np.arctan2(y - self.pos().x(), x - self.pos().y())) - startangle) % 360 > 0)
+                         & (((x - self.pos().x()) ** 2.0 + (
+                    y - self.pos().y()) ** 2.0) ** 0.5 < self.outerhandle.pos().length())
+                         & ((np.degrees(np.arctan2(y - self.pos().y(), x - self.pos().x())) - startangle) % 360 > 0)
                          & ((np.degrees(
-                np.arctan2(y - self.pos().x(), x - self.pos().y())) - startangle) % 360 < self.thetawidth),
+                np.arctan2(y - self.pos().y(), x - self.pos().x())) - startangle) % 360 < self.thetawidth),
             (w, h),
         )
 
@@ -493,8 +691,22 @@ class ArcROI(BetterROI):
         self.parameter().child("thetacenter").setValue(self.thetacenter)
 
 
-class ArcQRoi(ArcROI):
-    ...
+class ArcQROI(ArcROI):
+    is_Q_based = True
+    radius_units = '\u212B\u207B\u00B9'
+    name_base = "Q ROI"
+
+    def getLabelArray(self, arr, img: pg.ImageItem = None, geometry: AzimuthalIntegrator = None):
+        q = geometry.qArray(arr.shape) / 10
+        chi = geometry.chiArray(arr.shape)  # radians
+        q_mask = np.logical_and(self.innerradius < q, q < self.outerradius)
+        offset_chi = ((np.degrees(chi) - 90 - self.thetacenter + self.thetawidth / 2) % 360)
+        chi_mask = offset_chi < self.thetawidth
+        return np.logical_and(q_mask, chi_mask).astype(np.int)
+
+class ArcPXROI(ArcROI):
+    is_px_based = True
+    name_base = "Pixel Arc ROI"
 
 
 class SegmentedArcROI(ArcROI):
@@ -845,8 +1057,8 @@ if __name__ == "__main__":
     data = np.random.random((100, 100))
     imageview.setImage(data)
 
-    # roi = ArcROI(pos=(50, 50), radius=50)
-    roi = BetterRectROI(pos=(0, 0), size=(10, 10))
+    roi = ArcROI(pos=(50, 50), radius=50)
+    # roi = BetterRectROI(pos=(0, 0), size=(10, 10))
     # roi = SegmentedArcROI(pos=(50,50), radius=50)
     # roi = BetterCrosshairROI((0, 0), parent=imageview.view)
     imageview.view.addItem(roi)
@@ -860,6 +1072,8 @@ if __name__ == "__main__":
     def show_labels():
         iv2.setImage(roi.getLabelArray(data, imageview.imageItem))
 
+
+    show_labels()
 
     roi.sigRegionChanged.connect(show_labels)
     qapp.exec_()
