@@ -88,7 +88,11 @@ class IntentsTabView(TabView):
 
     def rowsAboutToBeRemoved(self, parent: QModelIndex, start: int, end: int) -> None:
         # Ask IntentsModel for what intents are going to be removed (which have just been unchecked)
-        for intent in self.model().intents_to_remove:
+
+        self._remove_intents(self.model().intents_to_remove)
+
+    def _remove_intents(self, intents):
+        for intent in intents:
             canvas = self._intents_to_widget[intent]
             can_remove = canvas.unrender(intent)
             # When safe, remove the tab
@@ -96,3 +100,9 @@ class IntentsTabView(TabView):
                 self.widget.removeTab(self.widget.indexOf(canvas))
             # make sure to remove the intent from the mapping
             del self._intents_to_widget[intent]
+
+    def refresh(self):
+        current_index = self.widget.currentIndex()
+        self._remove_intents([self.model().index(i, 0).internalPointer() for i in range(self.widget.count())])
+        self.rowsInserted(QModelIndex(), 0, self.model().rowCount())
+        self.widget.setCurrentIndex(current_index)

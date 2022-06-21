@@ -135,14 +135,21 @@ class PlotIntentCanvas(XicamIntentCanvas):
 
     def colorize(self):
         count = len(self.intent_to_items)
-        for i, items in enumerate(self.intent_to_items.values()):
+
+        def get_color(i, count):
             if count < 9:
                 color = pg.mkColor(i)
             else:
                 color = pg.intColor(i, hues=count, minHue=180, maxHue=300)
+            return color
 
-            for item in items:
+        for i, items in enumerate(self.intent_to_items.values()):
+            color = get_color(i, count)
+
+            for j, item in enumerate(items):
                 if isinstance(item, pg.PlotDataItem):
+                    if count == 1:
+                        color = get_color(j, len(items))
                     item.setPen(color)
                     item.setSymbolBrush(color)
                     item.setSymbolPen('w')

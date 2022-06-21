@@ -69,7 +69,7 @@ setup(
     # your project is installed. For an analysis of "install_requires" vs pip's
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=["PyQt5>=5.9.2,<=5.15.0",
+    install_requires=["PyQt5",
                       "qtpy",
                       "astropy",
                       "numpy>=1.16.0",
@@ -91,7 +91,7 @@ setup(
                       "matplotlib",
                       "h5py",
                       "scikit-image",
-                      "camsaxs",],
+                      "camsaxs", ],
     setup_requires=["cython"],  # cython is a missing required dep of astropy
     # List additional groups of dependencies here (e.g. development
     # dependencies). You can install these using the following syntax,

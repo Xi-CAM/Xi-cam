@@ -73,7 +73,6 @@ class PreviewWidget(GraphicsLayoutWidget):
         levels = np.min(imgdata, where=imgdata > img_min, initial=img_max), np.nanpercentile(
             np.where(imgdata < img_max, imgdata, img_min), 99)
         self.imageitem.setImage(imgdata, levels=levels)
-        self.imageitem.setTransform(QTransform(1, 0, 0, -1, 0, imgdata.shape[-2]))
         self.view.autoRange()
 
     def setText(self, text):

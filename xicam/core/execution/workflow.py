@@ -729,7 +729,12 @@ class Workflow(Graph):
         if executor is None:
             executor = execution.executor
 
-        return executor.execute(self)
+        executor_gen = executor.execute(self)
+        try:
+            while True:
+                next(executor_gen)  # skip yielded threadfuture to get to returned value
+        except StopIteration as ex:
+            return ex.value
 
     def execute_all(
             self,

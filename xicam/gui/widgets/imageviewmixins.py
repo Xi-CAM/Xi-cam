@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
-from functools import WRAPPER_ASSIGNMENTS
+import time
+from functools import WRAPPER_ASSIGNMENTS, lru_cache
+
 import pyqtgraph as pg
 from pyqtgraph import ImageView, InfiniteLine, mkPen, ScatterPlotItem, ImageItem, PlotItem
 from qtpy.QtGui import QTransform, QPolygonF, QIcon, QPixmap
@@ -9,21 +11,19 @@ from qtpy.QtCore import Qt, Signal, Slot, QSize, QPointF, QRectF
 import numpy as np
 from databroker.core import BlueskyRun
 from xarray import DataArray
-from caproto import CaprotoTimeoutError
-from ophyd.signal import ConnectionTimeoutError
-import time
 
 # from pyFAI.geometry import Geometry
 from camsaxs.remesh_bbox import remesh, q_from_geometry
 from xicam.core import msg, threads
 from xicam.core.data import MetaXArray
 from xicam.core.data.bluesky_utils import fields_from_stream, streams_from_run, is_image_field
+from xicam.core.threads import invoke_as_event
 from xicam.gui.actions import ROIAction
 from xicam.gui.widgets.elidedlabel import ElidedLabel
 from xicam.gui.static import path
 from xicam.gui.widgets.metadataview import MetadataWidget
 from xicam.gui.widgets.ROI import BetterPolyLineROI, BetterCrosshairROI, BetterRectROI, ArcROI, SegmentedArcROI, \
-    SegmentedRectROI
+    SegmentedRectROI, ArcQROI, ArcPXROI
 import enum
 from typing import Callable
 from functools import partial
@@ -172,6 +172,7 @@ class XArrayView(ImageView):
         self.axesItem = PlotItem()
         self.axesItem.axes["left"]["item"].setZValue(10)
         self.axesItem.axes["top"]["item"].setZValue(10)
+        self._min_max_cache = dict()
 
         if "view" not in kwargs:
             kwargs["view"] = self.axesItem
@@ -263,17 +264,25 @@ class XArrayView(ImageView):
         Estimate the min/max values of *data* by subsampling. MODIFIED TO USE:
         - second lowest value as min
         - 99TH PERCENTILE instead of max
+        NOTE: memoization assumes that data does not mutate
         """
+
+        if id(data) in self._min_max_cache:
+            return self._min_max_cache[id(data)]
+
         if data is None:
             return 0, 0
 
-        sl = slice(None, None, max(1, int(data.size // 1e6)))
+        sl = slice(None, None, max(1, int(np.prod(np.asarray(data.shape, dtype=np.float_)) // 1e6)))  # can't trust data.size due to likely overflow
         data = np.asarray(data[sl])
 
         img_max = np.nanmax(data)
         img_min = np.nanmin(data)
         levels = np.min(data, where=data > img_min, initial=img_max), np.nanpercentile(
             np.where(data < img_max, data, img_min), 99)
+
+        self._min_max_cache[id(data)] = [levels]
+        # TODO: prune cache
 
         return [levels]
 
@@ -294,26 +303,26 @@ class PixelSpace(XArrayView, RowMajor):
         self.imageItem.sigImageChanged.connect(self.updateAxes)
 
     def transform(self, img=None):
-        # Build Quads
-        shape = img.shape
-        a = [(0, shape[-2] - 1), (shape[-1] - 1, shape[-2] - 1), (shape[-1] - 1, 0), (0, 0)]
-
-        b = [(0, 1), (shape[-1] - 1, 1), (shape[-1] - 1, shape[-2]), (0, shape[-2])]
-
-        quad1 = QPolygonF()
-        quad2 = QPolygonF()
-        for p, q in zip(a, b):
-            quad1.append(QPointF(*p))
-            quad2.append(QPointF(*q))
-
-        transform = QTransform()
-        QTransform.quadToQuad(quad1, quad2, transform)
-
-        for item in self.view.items:
-            if isinstance(item, ImageItem):
-                item.setTransform(transform)
-        self._transform = transform
-        return transform
+        # # Build Quads
+        # shape = img.shape
+        # a = [(0, shape[-2] - 1), (shape[-1] - 1, shape[-2] - 1), (shape[-1] - 1, 0), (0, 0)]
+        #
+        # b = [(0, 1), (shape[-1] - 1, 1), (shape[-1] - 1, shape[-2]), (0, shape[-2])]
+        #
+        # quad1 = QPolygonF()
+        # quad2 = QPolygonF()
+        # for p, q in zip(a, b):
+        #     quad1.append(QPointF(*p))
+        #     quad2.append(QPointF(*q))
+        #
+        # transform = QTransform()
+        # QTransform.quadToQuad(quad1, quad2, transform)
+        #
+        # for item in self.view.items:
+        #     if isinstance(item, ImageItem):
+        #         item.setTransform(transform)
+        # self._transform = transform
+        return QTransform()
 
     def setImage(self, img, *args, **kwargs):
         if img is None:
@@ -543,17 +552,17 @@ class QCoordinates(QSpace, PixelCoordinates):
                 q = q_from_geometry(self.imageItem.image.shape,
                                     self._geometry,
                                     reflection=False,
-                                    alphai=0)[int(pxpos.y()), int(pxpos.x())]
+                                    alphai=0)[int(self.imageItem.image.shape[-2] - pxpos.y()), int(pxpos.x())]
 
                 self._coordslabel.setText(
                     f"x={pxpos.x():0.1f}, "
                     f"y={self.imageItem.image.shape[-2] - pxpos.y():0.1f}, "
                     f"I={I:0.0f}, "
                     f"q={np.sqrt(np.sum(np.square(q))):0.3f} \u212B\u207B\u00B9, "
-                    f"q<sub>z</sub>={q[1]:0.3f} \u212B\u207B\u00B9, "
+                    f"q<sub>z</sub>={-q[1]:0.3f} \u212B\u207B\u00B9, "
                     f"q<sub>\u2225</sub>={q[0]:0.3f} \u212B\u207B\u00B9, "
                     f"d={2 * np.pi / np.sqrt(q[0] ** 2 + q[1] ** 2) * 10:0.3f} nm, "
-                    f"\u03B8={np.rad2deg(np.arctan2(q[1], q[0])):.2f}&#176;"
+                    f"\u03B8={np.rad2deg(np.arctan2(-q[1], q[0])):.2f}&#176;"
                 )
         else:
             super(QCoordinates, self).formatCoordinates(pxpos, pos)
@@ -1197,10 +1206,19 @@ class EwaldCorrected(QSpace, RowMajor, ToolbarLayout, ProcessingView):
         if hasattr(self, "drawCenter"):
             self.drawCenter()
         self.setTransform()
+        invoke_as_event(self.autoRange)
+        self.setROIVisibility()
+
+    def setROIVisibility(self):
+        for item in self.view.items:
+            if getattr(item, 'is_q_based', False):
+                item.setVisible(self.displaymode == DisplayMode.remesh)
+            elif getattr(item, 'is_px_based', False):
+                item.setVisible(self.displaymode == DisplayMode.raw)
 
     def process(self, image):
         if self.displaymode == DisplayMode.remesh:
-            image, q_x, q_z = remesh(image, self._geometry, reflection=False, alphai=1)
+            image, q_x, q_z = remesh(np.asarray(image), self._geometry, reflection=False, alphai=1)
         return image
 
     def transform(self, img=None):
@@ -1211,7 +1229,7 @@ class EwaldCorrected(QSpace, RowMajor, ToolbarLayout, ProcessingView):
             img = img[0]
 
         img, q_x, q_z = remesh(np.asarray(img), self._geometry,
-                               reflection=(self.geometry_mode or 'transission' != 'transmission'),
+                               reflection=(self.geometry_mode or 'transmission') != 'transmission',
                                alphai=self.incidence_angle)
 
         # Build Quads
@@ -1223,7 +1241,7 @@ class EwaldCorrected(QSpace, RowMajor, ToolbarLayout, ProcessingView):
 
         quad1 = QPolygonF()
         quad2 = QPolygonF()
-        for p, q in zip([a, b, c, d], [d, c, b, a]):  # the zip does the flip :P
+        for p, q in zip([a, b, c, d], [a, b, c, d]):
             quad1.append(QPointF(*p[::-1]))
             quad2.append(QPointF(q_x[q], q_z[q]))
 
@@ -1303,12 +1321,16 @@ class ROICreator(ToolbarLayout):
         return rect
 
     def _create_arc_roi(self):
-        c = (0.0, 0.0)
-        r = min(*self.image.shape[-2:]) / 3
+        r = self.transform(self.image).map(self.imageItem.boundingRect().bottomRight()).y() / 3
         if self._geometry is not None:
             fit = self._geometry.getFit2D()
-            c = (fit['centerX'], fit['centerY'])
-        return ArcROI(pos=c, radius=r, removable=False, movable=(self._geometry is None))
+            mode = getattr(self, 'displaymode', DisplayMode.raw)
+            if mode == DisplayMode.raw:
+                c = (fit['centerX'], fit['centerY'])
+                return ArcPXROI(pos=c, radius=r, removable=False, movable=(self._geometry is None))
+            elif mode == DisplayMode.remesh:
+                c = (0, 0)
+                return ArcQROI(pos=c, radius=r, removable=False, movable=(self._geometry is None))
 
     def _create_segmented_arc_roi(self):
         # FIXME: code duplication
@@ -1329,8 +1351,8 @@ class ROICreator(ToolbarLayout):
 
     def _create_roi_action(self, roi_creator):
         roi_action = ROIAction(roi_creator())
-        print(f"ROI: {roi_action.roi}")
-        self.parent().sigInteractiveAction.emit(roi_action, self.parent())
+        if roi_action.roi:
+            self.parent().sigInteractiveAction.emit(roi_action, self.parent())
 
     def _roi_activated(self, index: int):
         # Ignore invalid index
@@ -1426,6 +1448,8 @@ class DeviceView(BetterLayout):
             self.passive.setText("Active")
 
     def _update_thread(self):
+        from caproto import CaprotoTimeoutError
+        from ophyd.signal import ConnectionTimeoutError
         while True:
             if self.visibleRegion().isEmpty():
                 time.sleep(1)  # Sleep for 1 sec if the display is not in view

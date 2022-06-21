@@ -68,12 +68,11 @@ class EnsembleGUIPlugin(GUIPlugin):
         ...
 
     def appendCatalog(self, catalog: BlueskyRun, **kwargs):
-        if self.ensemble_model.activeEnsemble is None:
+        ensemble = self.ensemble_model.activeEnsemble
+        if ensemble is None:
             ensemble = Ensemble()
-            ensemble.append_catalog(catalog)
             self.ensemble_model.appendEnsemble(ensemble, self._projectors)
-        else:
-            self.ensemble_model.appendCatalog(catalog, self._projectors)
+        self.ensemble_model.appendCatalog(catalog, self._projectors, ensemble=ensemble)
 
 class HelpTextDisplay(QTextEdit):
     def __init__(self, text: str = "", parent=None):
@@ -118,7 +117,6 @@ class HelpWidget(QGroupBox):
             return entered_widget.isAncestorOf(widget)
         return False
 
-
     def eventFilter(self, obj: QObject, event: QEvent) -> bool:
         """Event filter to process an event for the given destination.
 
@@ -150,4 +148,3 @@ class HelpWidget(QGroupBox):
                         self._help_display.setText(self._help_display.placeholderText())
 
         return super(HelpWidget, self).eventFilter(obj, event)
-                
