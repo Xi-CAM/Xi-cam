@@ -6,9 +6,10 @@ import atexit
 from xicam.core.args import parse_args
 import ctypes
 
-# https://stackoverflow.com/questions/67599432/setting-the-same-icon-as-application-icon-in-task-bar-for-pyqt5-application
-myappid = 'camera.xicam'  # arbitrary string
-ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)  # Allows taskbar icon to be shown on windows
+if os.name == 'nt':
+    # https://stackoverflow.com/questions/67599432/setting-the-same-icon-as-application-icon-in-task-bar-for-pyqt5-application
+    myappid = 'camera.xicam'  # arbitrary string
+    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)  # Allows taskbar icon to be shown on windows
 
 print("args:", sys.argv)
 print("path:", sys.path)
