@@ -1404,14 +1404,17 @@ class AxesLabels(ImageView):
 
 @live_plugin('ImageMixinPlugin')
 class DeviceView(BetterLayout):
-    def __init__(self, *args, device=None, preprocess=None, max_fps=4, **kwargs):
+    def __init__(self, *args, device=None, preprocess=None, max_fps=4, allow_active=True, **kwargs):
         super(DeviceView, self).__init__(*args, **kwargs)
         self.device = device
         self.preprocess = preprocess
         self.max_fps = max_fps
         self.thread = None
-        self.passive = QCheckBox('Passive')  # Not in any lay'out until active mode is revisited
+        self.passive = QPushButton('Passive')
+        self.passive.setCheckable(True)
         self.passive.setChecked(True)
+        if allow_active:
+            self.ui.right_layout.addWidget(self.passive)
         self.getting_frame = False
         self._last_timestamp = time.time()
         self._autolevel = True
@@ -1425,29 +1428,29 @@ class DeviceView(BetterLayout):
         self.error_text = pg.TextItem('Waiting for data...')
         self.view.addItem(self.error_text)
 
+        self._update_action = None
         self.setPassive(self.passive.isChecked())
+        self.passive.clicked.connect(self.setPassive)
 
-    def setPassive(self, passive):
-        if self.thread:
-            self.thread.cancel()
-            self.thread = None
-
-        if passive:
-            update_action = self.updateFrame
-        else:
-            update_action = self.device.trigger
-
-        self.thread = threads.QThreadFuture(self._update_thread, update_action, showBusy=False,
+        self.thread = threads.QThreadFuture(self._update_thread, showBusy=False,
                                             except_slot=lambda ex: self.device.unstage())
         self.thread.start()
 
-    def _update_thread(self, update_action: Callable):
+    def active_trigger(self):
+        self.device.trigger()
+        self.updateFrame()
+
+    def setPassive(self, passive):
+        if passive:
+            self._update_action = self.updateFrame
+        else:
+            self._update_action = self.active_trigger
+            self.passive.setText("Active")
+
+    def _update_thread(self):
         from caproto import CaprotoTimeoutError
         from ophyd.signal import ConnectionTimeoutError
         while True:
-            if not self.passive.isChecked():
-                break
-
             if self.visibleRegion().isEmpty():
                 time.sleep(1)  # Sleep for 1 sec if the display is not in view
                 continue
@@ -1458,23 +1461,24 @@ class DeviceView(BetterLayout):
                         msg.showMessage('Connecting to device...')
                         self.device.wait_for_connection()
 
-                update_action()
+                self._update_action()
 
-                num_exposures_counter = self.device.cam.num_exposures_counter.get()
-                num_exposures = self.device.cam.num_exposures.get()
-                num_captured = self.device.hdf5.num_captured.get()
-                num_capture = self.device.hdf5.num_capture.get()
-                capturing = self.device.hdf5.capture.get()
-                if capturing:
-                    current = num_exposures_counter + num_captured * num_exposures
-                    total = num_exposures * num_capture
-                elif num_exposures == 1:  # Show 'busy' for just one exposure
-                    current = 0
-                    total = 0
-                else:
-                    current = num_exposures_counter
-                    total = num_exposures
-                threads.invoke_in_main_thread(self._update_progress, current, total)
+                if hasattr(self.device, 'hdf5'):
+                    num_exposures_counter = self.device.cam.num_exposures_counter.get()
+                    num_exposures = self.device.cam.num_exposures.get()
+                    num_captured = self.device.hdf5.num_captured.get()
+                    num_capture = self.device.hdf5.num_capture.get()
+                    capturing = self.device.hdf5.capture.get()
+                    if capturing:
+                        current = num_exposures_counter + num_captured * num_exposures
+                        total = num_exposures * num_capture
+                    elif num_exposures == 1 or self._update_action == self.active_trigger:  # Show 'busy' for just one exposure or active mode
+                        current = 0
+                        total = 0
+                    else:
+                        current = num_exposures_counter
+                        total = num_exposures
+                    threads.invoke_in_main_thread(self._update_progress, current, total)
 
                 while self.getting_frame:
                     time.sleep(.01)
@@ -1510,24 +1514,25 @@ class DeviceView(BetterLayout):
             threads.invoke_in_main_thread(self._setFrame, image)
 
     def _setFrame(self, image):
+        try:
+            if self.image is None and len(image):
+                self.setImage(image, autoHistogramRange=True, autoLevels=True)
+            else:
+                self.imageDisp = None
+                self.error_text.setText('')
+                self.image = image
+                # self.imageview.updateImage(autoHistogramRange=kwargs['autoLevels'])
+                image = self.getProcessedImage()
+                if self._autolevel:
+                    self.ui.histogram.setHistogramRange(self.levelMin, self.levelMax)
+                    self.autoLevels()
+                self.imageItem.updateImage(image)
 
-        if self.image is None and len(image):
-            self.setImage(image, autoHistogramRange=True, autoLevels=True)
-        else:
-            self.imageDisp = None
-            self.error_text.setText('')
-            self.image = image
-            # self.imageview.updateImage(autoHistogramRange=kwargs['autoLevels'])
-            image = self.getProcessedImage()
-            if self._autolevel:
-                self.ui.histogram.setHistogramRange(self.levelMin, self.levelMax)
-                self.autoLevels()
-            self.imageItem.updateImage(image)
+                self._autolevel = False
 
-            self._autolevel = False
-
-        self.error_text.setText(f'Update time: {(time.time() - self._last_timestamp):.2f} s')
-        self.getting_frame = False
+            self.error_text.setText(f'Update time: {(time.time() - self._last_timestamp):.2f} s')
+        finally:
+            self.getting_frame = False
 
     def _update_progress(self, current, total):
         self.acquire_progress.setMaximum(total)
@@ -1540,7 +1545,7 @@ class AreaDetectorROI(DeviceView):
         super(AreaDetectorROI, self).__init__(*args, **kwargs)
 
         if roi_plugin is None:
-            roi_plugin = self.device.roi_stat1
+            roi_plugin = getattr(self.device, 'roi_stat1', None)
         self.roi_plugin = roi_plugin
 
         self.areadetector_roi = None
@@ -1551,21 +1556,23 @@ class AreaDetectorROI(DeviceView):
     def setImage(self, image,  *args, **kwargs):
         super(AreaDetectorROI, self).setImage(image, *args, **kwargs)
         if image is not None and image.size:
-            pos = list(self.roi_plugin.min_.get())
-            size = self.roi_plugin.size.get()
-            pos[1] = self.image.shape[-2] - pos[1] - size[1]
-            self.areadetector_roi = BetterRectROI(pos=pos, size=size)
-            self.view.addItem(self.areadetector_roi)
-            self.areadetector_roi.sigRegionChangeFinished.connect(self.roi_changed)
+            if self.roi_plugin:
+                pos = list(self.roi_plugin.min_.get())
+                size = self.roi_plugin.size.get()
+                pos[1] = self.image.shape[-2] - pos[1] - size[1]
+                self.areadetector_roi = BetterRectROI(pos=pos, size=size)
+                self.view.addItem(self.areadetector_roi)
+                self.areadetector_roi.sigRegionChangeFinished.connect(self.roi_changed)
 
     def updateFrame(self):  # on frame updates, also get stats
         super(AreaDetectorROI, self).updateFrame()
 
-        stats = self.roi_plugin.get()
-        text = '\nROI Stats\n'
-        for stat_name in ['max_value', 'mean_value', 'min_value', 'net', 'total']:
-            text += f'{stat_name}: {getattr(stats, stat_name)}\n'
-        threads.invoke_in_main_thread(self.roi_stat_text.setText, text)
+        if self.roi_plugin:
+            stats = self.roi_plugin.get()
+            text = '\nROI Stats\n'
+            for stat_name in ['max_value', 'mean_value', 'min_value', 'net', 'total']:
+                text += f'{stat_name}: {getattr(stats, stat_name)}\n'
+            threads.invoke_in_main_thread(self.roi_stat_text.setText, text)
 
     def roi_changed(self, roi):
         pos = roi.pos()
