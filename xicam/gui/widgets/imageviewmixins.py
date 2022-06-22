@@ -1218,7 +1218,7 @@ class EwaldCorrected(QSpace, RowMajor, ToolbarLayout, ProcessingView):
 
     def process(self, image):
         if self.displaymode == DisplayMode.remesh:
-            image, q_x, q_z = remesh(np.asarray(image), self._geometry, reflection=False, alphai=1)
+            image, q_x, q_z = remesh(np.asarray(image), self._geometry, reflection=self.geometry_mode == 'reflection', alphai=self.incidence_angle)
         return image
 
     def transform(self, img=None):
