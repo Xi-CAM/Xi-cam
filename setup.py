@@ -18,10 +18,12 @@ loosebits = ["numpy.core._methods", "numpy.lib.recfunctions"]
 
 from setuptools import setup, find_packages, find_namespace_packages
 
-# Set the long_description from the README
-here = path.abspath(path.dirname(__file__))
-with open(path.join(here, "README.md"), encoding="utf-8") as f:
-    long_description = f.read()
+# read the contents of your README file
+from pathlib import Path
+
+this_directory = Path(__file__).parent
+long_description = (this_directory / "README.md").read_text()
+
 setup(
     name="xicam",
     # Versions should comply with PEP440.  For a discussion on single-sourcing
