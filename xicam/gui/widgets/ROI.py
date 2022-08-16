@@ -866,9 +866,9 @@ class BetterRectROI(BetterROI, RectROI):
                 name="Rectangular ROI",
                 children=[
                     parameterTypes.SimpleParameter(title="Width", name="width", value=self.width, type="float", units="px"),
-                    parameterTypes.SimpleParameter(
-                        title="Height", name="height", value=self.height, type="float", units="px"
-                    ),
+                    parameterTypes.SimpleParameter(title="Height", name="height", value=self.height, type="float", units="px"),
+                    parameterTypes.SimpleParameter(title="Pos X", name="pos_x", value=self.pos()[0], type='float', units='px'),
+                    parameterTypes.SimpleParameter(title="Pos Y", name="pos_y", value=self.pos()[1], type='float', units='px')
                 ],
             )
 
@@ -879,6 +879,11 @@ class BetterRectROI(BetterROI, RectROI):
     def handleChanged(self):
         self.parameter().child("width").setValue(self.width)
         self.parameter().child("height").setValue(self.height)
+
+    def _moveFinished(self):
+        super(BetterRectROI, self)._moveFinished()
+        self.parameter().child('pos_x').setValue(self.pos()[0])
+        self.parameter().child('pos_y').setValue(self.pos()[1])
 
     def getLabelArray(self, arr, img: pg.ImageItem = None):
         # TODO : make more generic for all rectangle ROIs, segmented (multi-labeled) and non-segmented (single-labeled)
