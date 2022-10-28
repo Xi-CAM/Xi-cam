@@ -1443,9 +1443,12 @@ class DeviceView(BetterLayout):
     def setPassive(self, passive):
         if passive:
             self._update_action = self.updateFrame
+            self.passive.setText("Passive")
+            self.passive.setStyleSheet('background-color: initial;')
         else:
             self._update_action = self.active_trigger
             self.passive.setText("Active")
+            self.passive.setStyleSheet('background-color: red;')
 
     def _update_thread(self):
         from caproto import CaprotoTimeoutError
