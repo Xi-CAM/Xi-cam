@@ -1043,13 +1043,14 @@ class CatalogImagePlotView(StreamSelector, FieldSelector, MetaDataView):
             kwargs['symbol'] = 'o'
             kwargs['labels'] = {'left': self.field}
 
-            try:
-                scan_axis_field_name = self.catalog.metadata['start']['hints']['dimensions'][0][0][0]
-            except Exception as ex:
-                msg.logError(ex)
-            else:
-                kwargs['x'] = stream.to_dask()[scan_axis_field_name]
-                kwargs['labels']['bottom'] = scan_axis_field_name
+            if 'hints' in self.catalog.metadata['start']:
+                try:
+                    scan_axis_field_name = self.catalog.metadata['start']['hints']['dimensions'][0][0][0]
+                except Exception as ex:
+                    msg.logError(ex)
+                else:
+                    kwargs['x'] = stream.to_dask()[scan_axis_field_name]
+                    kwargs['labels']['bottom'] = scan_axis_field_name
 
             self.setData(data=self.xarray, *args, **kwargs)
         else:
@@ -1467,21 +1468,17 @@ class DeviceView(BetterLayout):
                 self._update_action()
 
                 if hasattr(self.device, 'hdf5'):
-                    num_exposures_counter = self.device.cam.num_exposures_counter.get()
-                    num_exposures = self.device.cam.num_exposures.get()
                     num_captured = self.device.hdf5.num_captured.get()
-                    num_capture = self.device.hdf5.num_capture.get()
+                    num_images = self.device.cam.num_images.get()
                     capturing = self.device.hdf5.capture.get()
+                    acquiring = self.device.cam.acquire.get()
                     if capturing:
-                        current = num_exposures_counter + num_captured * num_exposures
-                        total = num_exposures * num_capture
-                    elif num_exposures == 1 or self._update_action == self.active_trigger:  # Show 'busy' for just one exposure or active mode
-                        current = 0
-                        total = 0
+                        threads.invoke_in_main_thread(self._update_progress, num_captured, num_images)
+                    elif self._update_action == self.active_trigger or acquiring:  # Show 'busy' for just one exposure or active mode
+                        threads.invoke_in_main_thread(self._update_progress, 0, 0)
                     else:
-                        current = num_exposures_counter
-                        total = num_exposures
-                    threads.invoke_in_main_thread(self._update_progress, current, total)
+                        threads.invoke_in_main_thread(self._update_progress, 0, 1, show_text=False)
+
 
                 while self.getting_frame:
                     time.sleep(.01)
@@ -1537,9 +1534,11 @@ class DeviceView(BetterLayout):
         finally:
             self.getting_frame = False
 
-    def _update_progress(self, current, total):
+    def _update_progress(self, current, total, show_text=True):
+        self.acquire_progress.show()
         self.acquire_progress.setMaximum(total)
         self.acquire_progress.setValue(current)
+        self.acquire_progress.setTextVisible(show_text)
 
 
 @live_plugin('ImageMixinPlugin')
