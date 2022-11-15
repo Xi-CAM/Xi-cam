@@ -47,8 +47,8 @@ class SearchLineEdit(QLineEdit):
     def resizeEvent(self, event):
         sz = self.clearButton.sizeHint()
         frameWidth = self.style().pixelMetric(QStyle.PM_DefaultFrameWidth)
-        self.clearButton.move(self.rect().right() - frameWidth - sz.width(), (self.rect().bottom() + 1 - sz.height()) / 2)
-        self.searchButton.move(self.rect().left() + 1, (self.rect().bottom() + 1 - sz.height()) / 2)
+        self.clearButton.move(int(self.rect().right() - frameWidth - sz.width()), int((self.rect().bottom() + 1 - sz.height()) / 2))
+        self.searchButton.move(int(self.rect().left() + 1), int((self.rect().bottom() + 1 - sz.height()) / 2))
 
     def updateCloseButton(self, text):
         if text:
