@@ -91,6 +91,7 @@ setup(
                       "matplotlib",
                       "h5py",
                       "scikit-image",
+                      "pyflakes<2.5",
                       "camsaxs", ],
     setup_requires=["cython"],  # cython is a missing required dep of astropy
     # List additional groups of dependencies here (e.g. development
