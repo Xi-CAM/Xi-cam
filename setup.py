@@ -87,7 +87,7 @@ setup(
                       "requests",
                       "appdirs",
                       "entrypoints",
-                      "pyqtgraph==0.11.0",
+                      "pyqtgraph<0.14",
                       "qtconsole",
                       "scipy",
                       "matplotlib",
