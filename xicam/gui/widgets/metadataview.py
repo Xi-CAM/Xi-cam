@@ -1,5 +1,5 @@
 from pyqtgraph.parametertree import ParameterTree
-from pyqtgraph.parametertree.parameterTypes import Parameter, GroupParameter
+from pyqtgraph.parametertree.parameterTypes import GroupParameter
 from collections import deque, OrderedDict, defaultdict
 from queue import Queue
 from qtpy.QtGui import QStandardItem, QStandardItemModel
