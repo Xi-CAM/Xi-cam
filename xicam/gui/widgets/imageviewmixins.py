@@ -698,7 +698,6 @@ class PolygonROI(ImageView):
         return self.imageItem.boundingRect().intersects(rectangle)
 
 
-import collections
 from pyqtgraph import functions as fn
 from pyqtgraph import debug
 from pyqtgraph import Point
@@ -726,7 +725,7 @@ class LogScaleImageItem(ImageItem):
         profile = debug.Profiler()
         if self.image is None or self.image.size == 0:
             return
-        if isinstance(self.lut, collections.Callable):
+        if isinstance(self.lut, Callable):
             lut = self.lut(self.image)
         else:
             lut = self.lut
