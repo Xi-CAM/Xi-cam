@@ -1,4 +1,10 @@
 import collections
+import sys
+if sys.version_info.major == 3 and sys.version_info.minor >= 10:
+
+    from collections.abc import MutableMapping
+else:
+    from collections import MutableMapping
 import json
 from urllib import parse
 import os, sys
@@ -126,7 +132,7 @@ def uninstall(name: str):
     return not failure
 
 
-class pkg_registry(collections.MutableMapping):
+class pkg_registry(MutableMapping):
     def __init__(self):
         self._store = dict()
         self.update(self._store)  # use the free update to set keys
