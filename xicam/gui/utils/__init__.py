@@ -50,7 +50,7 @@ class ParameterizedPlan(object):
 
     def __iter__(self):
         args = list(map(self._resolve_parameter, self.args))
-        kwargs = dict.fromkeys(self.kwargs.keys(), map(self._resolve_parameter, self.kwargs.values()))
+        kwargs = dict(zip(self.kwargs.keys(), map(self._resolve_parameter, self.kwargs.values())))
         return self.plan(*args, **kwargs)
 
     # def __next__(self):
