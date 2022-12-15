@@ -579,14 +579,14 @@ class ArcROI(BetterROI):
         r = QCircRectF(radius=self.innerradius / self.outerradius / 2)
         # p.drawRect(r)
         if self.innerradius < self.outerradius and self.thetawidth > 0:
-            p.drawArc(r, -startangle * 16, -self.thetawidth * 16)
+            p.drawArc(QRectF(r), -int(startangle * 16), -int(self.thetawidth * 16))
 
         radius = self.innerradius / self.outerradius / 2
         r = QCircRectF(radius=.5)
         # p.drawRect(r)
 
         if self.innerradius < self.outerradius and self.thetawidth > 0:
-            p.drawArc(r, -startangle * 16, -self.thetawidth * 16)
+            p.drawArc(QRectF(r), -int(startangle * 16), -int(self.thetawidth * 16))
 
         pen.setStyle(Qt.DashLine)
         p.setPen(pen)
@@ -746,7 +746,7 @@ class SegmentedArcROI(ArcROI):
         for segment_radius in segment_radii:
             r.radius = segment_radius / self.outerradius / 2
             # p.drawRect(r)
-            p.drawArc(r, -startangle * 16, -self.thetawidth * 16)
+            p.drawArc(QRectF(r), -int(startangle * 16), -int(self.thetawidth * 16))
 
         if self.innerradius < self.outerradius:
             for segment_angle in segment_angles:
