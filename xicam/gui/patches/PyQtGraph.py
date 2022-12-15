@@ -295,7 +295,7 @@ class ImageParameter(Parameter):
 registerParameterType("ndarray", ImageParameter, override=True)
 
 
-class FixableWidgetParameterItem(parameterTypes.WidgetParameterItem):
+class FixableWidgetParameterItem(parameterTypes.NumericParameterItem):
     def __init__(self, param, depth):
         super(FixableWidgetParameterItem, self).__init__(param, depth)
         if param.opts.get("fixable"):
