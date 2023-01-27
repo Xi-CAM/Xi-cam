@@ -3,6 +3,7 @@ import time
 from functools import WRAPPER_ASSIGNMENTS, lru_cache
 
 import pyqtgraph as pg
+from ophyd.signal import ReadTimeoutError
 from pyqtgraph import ImageView, InfiniteLine, mkPen, ScatterPlotItem, ImageItem, PlotItem
 from qtpy.QtGui import QTransform, QPolygonF, QIcon, QPixmap
 from qtpy.QtWidgets import QLabel, QErrorMessage, QSizePolicy, QPushButton, QHBoxLayout, QVBoxLayout, QComboBox, \
@@ -1501,7 +1502,12 @@ class DeviceView(BetterLayout):
             self._last_timestamp = time.time()
 
     def updateFrame(self):
-        image = self.device.image1.shaped_image.get()
+        try:
+            image = self.device.image1.shaped_image.get()
+        except ReadTimeoutError as ex:
+            msg.logMessage('Unable to get shaped image from device:', self.device, level=msg.WARNING)
+            return
+
         if image is not None and len(image):
             if self.preprocess:
                 try:
