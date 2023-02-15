@@ -1584,7 +1584,7 @@ class AreaDetectorROI(DeviceView):
     def roi_changed(self, roi):
         pos = roi.pos()
         size = roi.size()
-        pos[1] = self.image.shape[-2] - pos[1] - size[1]
+        # pos[1] = self.image.shape[-2] - pos[1] - size[1]
         self.roi_plugin.min_.put(pos)
         self.roi_plugin.size.put(size)
 
