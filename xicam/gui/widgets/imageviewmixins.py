@@ -985,6 +985,10 @@ class FieldSelector(CatalogView, BetterLayout):
             if self.field_filter:
                 fields = list(filter(partial(self.field_filter, catalog, stream), fields))
             self.fieldComboBox.addItems(fields)
+            for field in fields:
+                if '_image' in field:
+                    self.fieldComboBox.setCurrentText('field')
+                    break
         return self.fieldComboBox.currentText()
 
 
