@@ -4,7 +4,7 @@ from functools import WRAPPER_ASSIGNMENTS, lru_cache
 
 import pyqtgraph as pg
 from ophyd.signal import ReadTimeoutError
-from pyqtgraph import ImageView, InfiniteLine, mkPen, ScatterPlotItem, ImageItem, PlotItem
+from pyqtgraph import ImageView, InfiniteLine, mkPen, ScatterPlotItem, ImageItem, PlotItem, InfLineLabel
 from qtpy.QtGui import QTransform, QPolygonF, QIcon, QPixmap
 from qtpy.QtWidgets import QLabel, QErrorMessage, QSizePolicy, QPushButton, QHBoxLayout, QVBoxLayout, QComboBox, \
     QWidget, QToolBar, QActionGroup, QAction, QLayout, QCheckBox, QProgressBar
@@ -1002,7 +1002,19 @@ class MetaDataView(CatalogView, BetterLayout):
         self.metadataView.show_catalog(catalog)
 
 
-class CatalogImagePlotView(StreamSelector, FieldSelector, MetaDataView):
+class TimelineIndex(ImageView):
+    def __init__(self, *args, **kwargs):
+        super(TimelineIndex, self).__init__(*args, **kwargs)
+        (ind, time) = self.timeIndex(self.timeLine)
+        self.timeline_label = InfLineLabel(self.timeLine,text=f'{{value}} [{ind}]')
+        # self.view.addItem(self.timeline_label)
+    def timeLineChanged(self):
+        super(TimelineIndex, self).timeLineChanged()
+        (ind, time) = self.timeIndex(self.timeLine)
+        self.timeline_label.setFormat(f'{{value}} [{ind}]')
+
+
+class CatalogImagePlotView(StreamSelector, FieldSelector, TimelineIndex, MetaDataView):
     def __init__(self, catalog=None, stream=None, field=None, *args, **kwargs):
         # Turn off image field filtering for this mixin
         super(CatalogImagePlotView, self).__init__(catalog, stream, field, *args, **kwargs)
@@ -1020,10 +1032,12 @@ class CatalogImagePlotView(StreamSelector, FieldSelector, MetaDataView):
             self.view.setAspectLocked(False)
         else:
             self.view.addItem(self.imageItem)
-            self.setImage(data)
+            self.setImage(data, xvals=np.asarray(np.squeeze(kwargs.get('x', None))))
             self.ui.roiPlot.show()
             self.ui.histogram.show()
             self.view.setAspectLocked(True)
+            if "labels" in kwargs:
+                self.ui.roiPlot.plotItem.setLabels(**kwargs['labels'])
 
     def _updateCatalog(self, *args, **kwargs):
         if all([self.catalog, self.stream, self.field]):
