@@ -392,7 +392,6 @@ class Pseudo3DFrameArray(object):
 
 class ProcessingView(pg.ImageView):
     def getProcessedImage(self):
-        self._imageLevels = self.quickMinMax(self.image)
 
         # FIXME: do all incoming images need to be treated as Pseudo3DFrameArrays?
         #   - (1, X, Y) vs (X, Y) images
@@ -402,6 +401,8 @@ class ProcessingView(pg.ImageView):
         else:
             image = self.process(image)
 
+        self._imageLevels = self.quickMinMax(image)
+
         self.levelMin, self.levelMax = self.process_levels(self._imageLevels)
 
         return image
@@ -410,8 +411,8 @@ class ProcessingView(pg.ImageView):
         raise NotImplementedError
 
     def process_levels(self, levels):
-        level_min = min([level[0] for level in self._imageLevels])
-        level_max = max([level[1] for level in self._imageLevels])
+        level_min = min([level[0] for level in levels])
+        level_max = max([level[1] for level in levels])
 
         return level_min, level_max
 
