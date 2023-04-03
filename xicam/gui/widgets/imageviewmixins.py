@@ -1260,7 +1260,7 @@ class EwaldCorrected(QSpace, RowMajor, ToolbarLayout, ProcessingView):
 
         quad1 = QPolygonF()
         quad2 = QPolygonF()
-        for p, q in zip([a, b, c, d], [a, b, c, d]):
+        for p, q in zip([a, b, c, d], [d, c, b, a]):
             quad1.append(QPointF(*p[::-1]))
             quad2.append(QPointF(q_x[q], q_z[q]))
 
