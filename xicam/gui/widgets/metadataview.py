@@ -2,8 +2,8 @@ from pyqtgraph.parametertree import ParameterTree
 from pyqtgraph.parametertree.parameterTypes import GroupParameter
 from collections import deque, OrderedDict, defaultdict
 from queue import Queue
-from qtpy.QtGui import QStandardItem, QStandardItemModel
-from qtpy.QtWidgets import QProgressBar, QWidget, QVBoxLayout
+from qtpy.QtGui import QStandardItem, QStandardItemModel, QGuiApplication
+from qtpy.QtWidgets import QProgressBar, QWidget, QVBoxLayout, QTreeWidgetItem
 from qtpy.QtCore import QItemSelectionModel, Signal, Qt, QTimer
 import sys
 import uuid
@@ -30,6 +30,7 @@ class MetadataWidgetBase(ParameterTree):
         super(MetadataWidgetBase, self).__init__(*args, **kwargs)
         LazyGroupParameter.itemClass.initialize_treewidget(self)
         self.kwargs = kwargs
+        self.itemClicked.connect(self.onItemClicked)
 
     def insert(self, doctype: str, child, groups: dict):
         group = groups[doctype]
@@ -70,6 +71,12 @@ class MetadataWidgetBase(ParameterTree):
             return f"{document['uid'][0][:6]}"
         else:
             raise KeyError(f"Cannot find document type '{doctype}' in supported header parameters")
+
+    def onItemClicked(self, item: QTreeWidgetItem, column):
+        clipboard = QGuiApplication.instance().clipboard()
+        if not item.parent():# and item.text(0) != clipboard.text():
+            clipboard.setText(item.text(0))
+            msg.showMessage(f'UID copied to clipboard: {item.text(0)}', timeout=3)
 
 
 class MetadataWidget(QWidget):
