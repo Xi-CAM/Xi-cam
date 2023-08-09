@@ -123,6 +123,8 @@ class BetterLayout(ImageView):
         self.ui.roiBtn.setParent(self)
         self.ui.roiBtn.hide()
 
+    def add_button(self, button):
+        self.ui.right_layout.addWidget(button)
 
 
 class BetterButtons(BetterLayout):
@@ -1023,10 +1025,40 @@ class CatalogImagePlotView(StreamSelector, FieldSelector, TimelineIndex, MetaDat
     def __init__(self, catalog=None, stream=None, field=None, *args, **kwargs):
         # Turn off image field filtering for this mixin
         super(CatalogImagePlotView, self).__init__(catalog, stream, field, *args, **kwargs)
+        self._breadcrumbs = []
+        self.back_button = QPushButton('Back')
+        self.add_button(self.back_button)
+        self.back_button.hide()
+        self.back_button.clicked.connect(self.go_back)
 
     def setData(self, data, *args, **kwargs):
+        self._breadcrumbs.append((data, args, kwargs))
         self.axesItem.clearPlots()
-        if len(data.shape) == 1:
+        if len(self.catalog.metadata['start'].get('shape', [])) == 2 and len(data.shape) == 1 and len(self._breadcrumbs)==1:
+            self.ui.roiPlot.hide()
+            self.ui.histogram.hide()
+            self.view.removeItem(self.imageItem)
+            x = self.catalog.primary.to_dask()[self.catalog.metadata['start']['motors'][0]]
+            y = self.catalog.primary.to_dask()[self.catalog.metadata['start']['motors'][1]]
+            self.axesItem.plot(x=x, y=y, symbol='o', pen=mkPen(width=2))
+            self.axesItem.setLabels(bottom=self.catalog.metadata['start']['motors'][0],
+                                    left=self.catalog.metadata['start']['motors'][1])
+            self.view.enableAutoRange(x=True, y=True)
+            self.view.setAspectLocked(False)
+        elif len(self.catalog.metadata['start'].get('shape', [])) == 2 and len(data.shape) > 1 and len(self._breadcrumbs)==1:
+            self.ui.roiPlot.hide()
+            self.ui.histogram.hide()
+            self.view.removeItem(self.imageItem)
+            x = self.catalog.primary.to_dask()[self.catalog.metadata['start']['motors'][0]]
+            y = self.catalog.primary.to_dask()[self.catalog.metadata['start']['motors'][1]]
+            self.plot_item = self.axesItem.plot(x=x, y=y, symbol='o', pen=mkPen(width=2))
+            self.axesItem.setLabels(bottom=self.catalog.metadata['start']['motors'][0],
+                                    left=self.catalog.metadata['start']['motors'][1])
+            self.view.enableAutoRange(x=True, y=True)
+            self.view.setAspectLocked(False)
+            self.plot_item.sigPointsClicked.connect(self.points_clicked)
+
+        elif len(data.shape) == 1:
             self.ui.roiPlot.hide()
             self.ui.histogram.hide()
             self.view.removeItem(self.imageItem)
@@ -1036,13 +1068,31 @@ class CatalogImagePlotView(StreamSelector, FieldSelector, TimelineIndex, MetaDat
             self.view.enableAutoRange(x=True, y=True)
             self.view.setAspectLocked(False)
         else:
+            # TODO: find a way to represent x,y,j,k grid_scan arrays
             self.view.addItem(self.imageItem)
-            self.setImage(data, xvals=np.asarray(np.squeeze(kwargs.get('x', None))))
+            img_kwargs = {}
+            if 'x' in kwargs:
+                img_kwargs['xvals'] = np.asarray(np.squeeze(kwargs['x']))
+            self.setImage(data, **img_kwargs)
             self.ui.roiPlot.show()
             self.ui.histogram.show()
             self.view.setAspectLocked(True)
             if "labels" in kwargs:
                 self.ui.roiPlot.plotItem.setLabels(**kwargs['labels'])
+
+    def points_clicked(self, item, points, ev):
+        index = points[0].index()
+        data, args, kwargs = self._breadcrumbs[-1]
+        self.setData(data[index])
+        self.back_button.show()
+
+    def go_back(self):
+        self._breadcrumbs.pop()
+        data, args, kwargs = self._breadcrumbs[-1]
+        self._breadcrumbs.pop()
+        self.setData(data, *args, **kwargs)
+        if len(self._breadcrumbs) < 2:
+            self.back_button.hide()
 
     def _updateCatalog(self, *args, **kwargs):
         if all([self.catalog, self.stream, self.field]):
