@@ -375,6 +375,8 @@ class pluginModeWidget(QToolBar):
             nodes = node.children
             if len(nodes) > 1:
                 self._showNodes(nodes, direction)
+                if not isinstance(nodes[0].object, dict):
+                    self.showNode(nodes[0])
 
         elif isinstance(node.object, (PluginType,)):
             nodes = node.children
