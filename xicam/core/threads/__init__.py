@@ -174,7 +174,6 @@ class QThreadFuture(QThread):
                 elif isinstance(self, QThreadFuture) and self.callback_slot:
                     invoke_in_main_thread(self.callback_slot, *value)
 
-
         except Exception as ex:
             self.exception = ex
             self.sigExcept.emit(ex)
