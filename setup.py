@@ -72,7 +72,7 @@ setup(
     # requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
     install_requires=["PyQt5",
-                      "qtpy",
+                      "qtpy<2.4",
                       "astropy",
                       "numpy>=1.16.0",
                       "appdirs",
