@@ -5,6 +5,7 @@
 [![Documentation Status](https://readthedocs.org/projects/xi-cam/badge/?version=latest)](https://xi-cam.readthedocs.io/en/latest/?badge=latest)
 [![Test Coverage](https://img.shields.io/codecov/c/github/Xi-cam/Xi-cam/master.svg)](https://codecov.io/github/Xi-cam/Xi-cam?branch=master)
 [![Slack Status](https://img.shields.io/badge/slack-@ronpandolfi/nikea-yellow.svg?logo=slack)](https://nikea.slack.com/messages/U7Q1N42F6)
+[![DOI](https://zenodo.org/badge/260052126.svg)](https://zenodo.org/doi/10.5281/zenodo.10531225)
 
 Xi-cam is a graphical environment for synchrotron data analysis,
 management, and visualization developed by the Advanced Light Source at
