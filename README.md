@@ -1,7 +1,7 @@
 # Xi-CAM
 [![PyPI](https://badgen.net/pypi/v/xicam)](https://pypi.org/project/xicam/)
 [![License](https://badgen.net/pypi/license/xicam)](https://github.com/Xi-cam/Xi-cam)
-[![Build Status](https://img.shields.io/travis/Xi-cam/Xi-cam/master.svg)](https://travis-ci.org/Xi-cam/Xi-cam)
+[![Github Actions](https://github.com/Xi-CAM/Xi-cam/actions/workflows/build.yml/badge.svg)](https://github.com/Xi-CAM/Xi-cam/actions/workflows/build.yml)
 [![Documentation Status](https://readthedocs.org/projects/xi-cam/badge/?version=latest)](https://xi-cam.readthedocs.io/en/latest/?badge=latest)
 [![Test Coverage](https://img.shields.io/codecov/c/github/Xi-cam/Xi-cam/master.svg)](https://codecov.io/github/Xi-cam/Xi-cam?branch=master)
 [![Slack Status](https://img.shields.io/badge/slack-@ronpandolfi/nikea-yellow.svg?logo=slack)](https://nikea.slack.com/messages/U7Q1N42F6)
