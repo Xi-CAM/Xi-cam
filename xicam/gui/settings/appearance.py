@@ -71,5 +71,5 @@ class AppearanceSettingsPlugin(ParameterSettingsPlugin):
         )
 
     def apply(self):
-        self["Theme"]()
-        self["Plot Theme (requires restart)"]()
+        (self["Theme"] or setDefault)()
+        (self["Plot Theme (requires restart)"] or setPlotDefault)()
