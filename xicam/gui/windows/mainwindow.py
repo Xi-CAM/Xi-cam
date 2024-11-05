@@ -48,8 +48,7 @@ class XicamMainWindow(QMainWindow):
         # Set size and position
         self.setGeometry(0, 0, 1000, 600)
         frameGm = self.frameGeometry()
-        screen = QApplication.desktop().screenNumber(QApplication.desktop().cursor().pos())
-        centerPoint = QApplication.desktop().screenGeometry(screen).center()
+        centerPoint = QApplication.primaryScreen().geometry().center()
         frameGm.moveCenter(centerPoint)
         self.move(frameGm.topLeft())
 
@@ -95,10 +94,11 @@ class XicamMainWindow(QMainWindow):
         file = QMenu("&File", parent=menubar)
         plugins = QMenu("&Plugins", parent=menubar)
         menubar.addMenu(file)
-        file.addAction("Se&ttings", self.showSettings, shortcut=QKeySequence(Qt.CTRL + Qt.ALT + Qt.Key_S))
+        file.addAction("Se&ttings", self.showSettings, QKeySequence(Qt.CTRL | Qt.ALT | Qt.Key_S))
         file.addAction("E&xit", self.close)
         menubar.addMenu(plugins)
-        plugins.addAction("Open User &Plugin Directory", self.openUserPluginDir, shortcut=QKeySequence(Qt.CTRL + Qt.ALT + Qt.Key_P))
+        plugins.addAction("Open User &Plugin Directory", self.openUserPluginDir,
+                          QKeySequence(Qt.CTRL | Qt.ALT | Qt.Key_P))
 
         # Set up help
         help = QMenu("&Help", parent=menubar)
@@ -411,7 +411,7 @@ class pluginModeWidget(QToolBar):
         duration = 200
         self._effects = []
         for action in self.actions():
-            for widget in action.associatedWidgets():
+            for widget in action.associatedObjects():
                 if widget is not self:
                     a = QPropertyAnimation(widget, b"pos", widget)
                     a.setStartValue(widget.pos())
@@ -441,7 +441,7 @@ class pluginModeWidget(QToolBar):
         for action in self.actions():
             effect = QGraphicsOpacityEffect(self)
             self._effects.append(effect)
-            for widget in action.associatedWidgets():
+            for widget in action.associatedObjects():
                 if widget is not self:
                     widget.setGraphicsEffect(effect)
             a = QPropertyAnimation(effect, b"opacity")

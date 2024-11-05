@@ -209,11 +209,11 @@ def notifyMessage(*args, timeout=8000, title="", level: int = INFO):
     if trayicon:
         icon = None
         if level in [INFO, DEBUG]:
-            icon = trayicon.Information
+            icon = trayicon.MessageIcon.Information
         if level == WARNING:
-            icon = trayicon.Warning
+            icon = trayicon.MessageIcon.Warning
         if level in [ERROR, CRITICAL]:
-            icon = trayicon.Critical
+            icon = trayicon.MessageIcon.Critical
         if icon is None:
             raise ValueError("Invalid message level.")
         from .. import threads  # must be a late import

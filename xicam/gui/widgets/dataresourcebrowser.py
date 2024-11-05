@@ -10,6 +10,7 @@ from qtpy.QtWidgets import (
     QWidget,
     QSizePolicy,
     QTabBar,
+    QAbstractItemView
 )
 from qtpy.QtCore import QObject, QAbstractItemModel, QSize, Qt, QEvent, Signal, QSettings
 from qtpy.QtGui import QIcon, QPixmap, QKeyEvent
@@ -185,23 +186,21 @@ class BrowserTabBar(ContextMenuTabBar):
             self.sigAddBrowser.emit(plugin.controller, plugin.name)
 
 
-class DataResourceView(QObject):
-    def __init__(self, model: QAbstractItemModel):
+class DataResourceView():
+    def __init__(self):
         super(DataResourceView, self).__init__()
-        self._model = model  # type: QAbstractItemModel
-        self.setModel(self._model)
-        self.doubleClicked.connect(self.open)
-        self.setSelectionMode(self.ExtendedSelection)
-        self.setSelectionBehavior(self.SelectRows)
-        self.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.customContextMenuRequested.connect(self.menuRequested)
+        threads.invoke_as_event(self.doubleClicked.connect, self.open)
+        threads.invoke_as_event(self.setSelectionMode, self.SelectionMode.ExtendedSelection)
+        threads.invoke_as_event(self.setSelectionBehavior, self.SelectionBehavior.SelectRows)
+        threads.invoke_as_event(self.setContextMenuPolicy, Qt.CustomContextMenu)
+        threads.invoke_as_event(self.customContextMenuRequested.connect, self.menuRequested)
 
         self.menu = QMenu()
         standardActions = [
-            QAction("Open", self),
-            QAction("Open Externally", self),
-            QAction("Enable/Disable Streaming", self),
-            QAction("Delete", self),
+            QAction("Open"),
+            QAction("Open Externally"),
+            QAction("Enable/Disable Streaming"),
+            QAction("Delete"),
         ]
         self.menu.addActions(standardActions)
         standardActions[0].triggered.connect(self.open)
@@ -228,7 +227,7 @@ class DataResourceTree(QTreeView, DataResourceView):
     sigURIChanged = Signal()
 
     def __init__(self, model):
-        super(DataResourceTree, self).__init__(model=model)
+        super(DataResourceTree, self).__init__()
         self.setModel(model)
 
     def refresh(self):

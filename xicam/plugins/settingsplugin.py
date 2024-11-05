@@ -45,7 +45,7 @@ class SettingsPlugin(QObject, PluginType):
     def restore(self):
         try:
             state = QSettings().value(self.name())
-            if state != pickle.dumps(self.toState()):
+            if state != pickle.dumps(self.toState()) and state:
                 self.fromState(pickle.loads(state))
             # else:
             #     msg.logMessage(f"skipped restoring {self.name()}")

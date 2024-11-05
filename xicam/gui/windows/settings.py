@@ -40,12 +40,13 @@ class ConfigDialog(QDialog):
         self.needs_reload = True
 
         # Set size and position
-        self.setGeometry(0, 0, 900, 550)
-        frameGm = self.frameGeometry()
-        screen = QApplication.desktop().screenNumber(QApplication.desktop().cursor().pos())
-        centerPoint = QApplication.desktop().screenGeometry(screen).center()
-        frameGm.moveCenter(centerPoint)
-        self.move(frameGm.topLeft())
+        self.setMinimumSize(900, 550)
+        # self.setGeometry(0, 0, 900, 550)
+        # frameGm = self.frameGeometry()
+        # screen = QApplication.primaryScreen()
+        # centerPoint = QApplication.desktop().screenGeometry(screen).center()
+        # frameGm.moveCenter(centerPoint)
+        # self.move(frameGm.topLeft())
 
         self.contentsWidget = QListView()
         self.contentsWidget.setViewMode(QListView.IconMode)

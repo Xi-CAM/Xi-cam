@@ -1,3 +1,163 @@
+[build-system]
+requires = ["hatchling", "hatch-vcs"]
+build-backend = "hatchling.build"
+
+[project]
+name = "xicam"
+dynamic = ["version"]
+description = "The CAMERA platform for synchrotron data management, visualization, and reduction."
+long_description = "file: README.md"
+long_description_content_type = "text/markdown"
+readme = "README.md"
+license = { file = "LICENSE.md" }
+authors = [
+    { name = "Ronald J Pandolfi", email = "ronpandolfi@lbl.gov" },
+]
+keywords = [
+    "analysis",
+    "scattering",
+    "synchrotron",
+    "tomography",
+    "x-ray",
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: BSD License",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Physics",
+]
+dependencies = [
+    "appdirs",
+    "astropy",
+    "bluesky-widgets",
+    "camsaxs",
+    "dask[array,bag]",
+    "databroker",
+    "distributed",
+    "entrypoints",
+    "h5py",
+    "matplotlib",
+    "numpy",
+    "PySide6",
+    "pyqtgraph",
+    "qdarkstyle",
+    "qtconsole",
+    "qtmodern",
+    "qtpy",
+    "requests",
+    "setuptools", # silent dependency of intake (from databroker)
+    "scikit-image",
+    "scipy",
+    "virtualenv",
+]
+
+[project.optional-dependencies]
+docs = [
+    "docutils<=0.16",
+    "recommonmark",
+    "sphinx",
+    "sphinx-markdown-tables",
+    "sphinx_bootstrap_theme",
+]
+tests = [
+    "codecov",
+    "coverage",
+    "coveralls",
+    "pylint",
+    "pytest",
+    "pytest-cov",
+    "pytest-qt",
+]
+
+[project.gui-scripts]
+xicam = "xicam.run_xicam:main"
+
+[project.entry-points."databroker.ingestors"]
+"application/x-npy" = "xicam.core.formats.NPYPlugin:ingest_npy"
+
+[project.entry-points."databroker.intents"]
+BarIntent = "xicam.core.intents:BarIntent"
+ErrorBarIntent = "xicam.core.intents:ErrorBarIntent"
+ImageIntent = "xicam.core.intents:ImageIntent"
+PairPlotIntent = "xicam.core.intents:PairPlotIntent"
+PlotIntent = "xicam.core.intents:PlotIntent"
+ScatterIntent = "xicam.core.intents:ScatterIntent"
+
+[project.entry-points."xicam.plugins.CatalogPlugin"]
+databroker_catalog_plugin = "xicam.gui.bluesky.databroker_catalog_plugin:DatabrokerCatalogPlugin"
+
+[project.entry-points."xicam.plugins.DataHandlerPlugin"]
+npy = "xicam.core.formats.NPYPlugin:NPYPlugin"
+
+[project.entry-points."xicam.plugins.ImageMixinPlugin"]
+RowMajor = "xicam.gui.widgets.imageviewmixins:RowMajor"
+
+[project.entry-points."xicam.plugins.IntentCanvasPlugin"]
+image_canvas = "xicam.gui.canvases:ImageIntentCanvas"
+pairplot_canvas = "xicam.gui.canvases:PairPlotIntentCanvas"
+plot_canvas = "xicam.gui.canvases:PlotIntentCanvas"
+
+[project.entry-points."xicam.plugins.OperationPlugin"]
+absolute_square = "xicam.core.operations:absolute_square"
+fourier_transform = "xicam.core.operations:fourier_transform"
+inverse_fourier_transform = "xicam.core.operations:inverse_fourier_transform"
+low_band_pass = "xicam.core.operations:low_band_pass"
+raccoon_face = "xicam.core.operations:raccoon_face"
+random_array = "xicam.core.operations:random_array"
+tuple_test = "xicam.core.operations:tuple_test"
+
+[project.entry-points."xicam.plugins.PlotMixinPlugin"]
+ToggleSymbols = "xicam.gui.widgets.plotwidgetmixins:ToggleSymbols"
+
+[project.entry-points."xicam.plugins.PluginType"]
+CatalogPlugin = "xicam.plugins.catalogplugin:CatalogPlugin"
+ControllerPlugin = "xicam.plugins.controllerplugin:ControllerPlugin"
+DataHandlerPlugin = "xicam.plugins.datahandlerplugin:DataHandlerPlugin"
+DataResourcePlugin = "xicam.plugins.dataresourceplugin:DataResourcePlugin"
+EZPlugin = "xicam.plugins.ezplugin:_EZPlugin"
+Fittable1DModelPlugin = "xicam.plugins.fittablemodelplugin:Fittable1DModelPlugin"
+GUIPlugin = "xicam.plugins.guiplugin:GUIPlugin"
+ImageMixinPlugin = "xicam.plugins.imagemixinplugin:ImageMixinPlugin"
+IntentCanvasPlugin = "xicam.plugins.intentcanvasplugin:IntentCanvasPlugin"
+OperationPlugin = "xicam.plugins.operationplugin:OperationPlugin"
+PlotMixinPlugin = "xicam.plugins.plotmixinplugin:PlotMixinPlugin"
+QWidgetPlugin = "xicam.plugins.widgetplugin:QWidgetPlugin"
+SettingsPlugin = "xicam.plugins.settingsplugin:SettingsPlugin"
+ingestors = "xicam.plugins.ingestorplugin:IngestorPlugin"
+intents = "xicam.plugins.intentplugin:IntentPlugin"
+sniffers = "xicam.plugins.snifferplugin:SnifferPlugin"
+
+[project.entry-points."xicam.plugins.SettingsPlugin"]
+appearance = "xicam.gui.settings.appearance:AppearanceSettingsPlugin"
+cammart = "xicam.gui.cammart:CamMartSettingsPlugin"
+connections = "xicam.gui.connections:ConnectionSettingsPlugin"
+databroker = "xicam.gui.settings.databroker:DatabrokerSettingsPlugin"
+execution = "xicam.gui.settings.execution:ExecutionSettingsPlugin"
+logging = "xicam.gui.settings.logging:LoggingSettingsPlugin"
+venvs = "xicam.gui.cammart.venvs:VenvsSettingsPlugin"
+
+[project.urls]
+Download = "https://pypi.org/project/xicam/"
+Homepage = "https://github.com/Xi-cam/Xi-cam"
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "xicam",
+]
+[tool.hatch.build.targets.wheel]
+packages = [
+    "xicam/core",
+]
+[tool.hatch.build.hooks.vcs]
+version-file = "_version.py"
+
+
+only-include = ["sphinxcontrib"]
+
 [tool.black]
 # 120 + 5%
 line-length = 126

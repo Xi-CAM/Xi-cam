@@ -41,7 +41,7 @@ class LoggingSettingsPlugin(ParameterSettingsPlugin):
                 # Show users where the log directory is, don't let them modify it though
                 dict(
                     name="Log Directory",
-                    value=msg.log_dir,
+                    default=msg.log_dir,
                     type="str",
                     readonly=True,
                     tip="Location where Xi-CAM writes its logs to.",
@@ -49,16 +49,16 @@ class LoggingSettingsPlugin(ParameterSettingsPlugin):
                 # Allow users to configure the default log level for the xicam logger's FileHandler
                 dict(
                     name=msg.FILE_LOG_LEVEL_SETTINGS_NAME,
-                    values=msg_levels(recommended="DEBUG"),
-                    value=msg.DEFAULT_FILE_LOG_LEVEL,
+                    limits=msg_levels(recommended="DEBUG"),
+                    default=msg.DEFAULT_FILE_LOG_LEVEL,
                     type="list",
                     tip="Changes how much information is logged to the log file in 'Log Directory.'",
                 ),
                 # Allow users to configure the default log level for the xicam logger's StreamHandler
                 dict(
                     name=msg.STREAM_LOG_LEVEL_SETTINGS_NAME,
-                    values=msg_levels(),
-                    value=msg.DEFAULT_STREAM_LOG_LEVEL,
+                    limits=msg_levels(),
+                    default=msg.DEFAULT_STREAM_LOG_LEVEL,
                     type="list",
                     tip="Changes how much information is logged to the system console / terminal.",
                 ),

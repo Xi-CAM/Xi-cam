@@ -3,7 +3,6 @@ import time
 from functools import WRAPPER_ASSIGNMENTS, lru_cache
 
 import pyqtgraph as pg
-from ophyd.signal import ReadTimeoutError
 from pyqtgraph import ImageView, InfiniteLine, mkPen, ScatterPlotItem, ImageItem, PlotItem, InfLineLabel
 from qtpy.QtGui import QTransform, QPolygonF, QIcon, QPixmap
 from qtpy.QtWidgets import QLabel, QErrorMessage, QSizePolicy, QPushButton, QHBoxLayout, QVBoxLayout, QComboBox, \
@@ -1571,6 +1570,7 @@ class DeviceView(BetterLayout):
             self._last_timestamp = time.time()
 
     def updateFrame(self):
+        from ophyd.signal import ReadTimeoutError
         try:
             image = self.device.image1.shaped_image.get()
         except ReadTimeoutError as ex:
