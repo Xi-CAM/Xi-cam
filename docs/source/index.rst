@@ -47,6 +47,7 @@ Developer Documentation
    gui-plugin
    entry-points
    operation-plugin
+   intents
    workflow
    ingestors
    resources

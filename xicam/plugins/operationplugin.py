@@ -674,12 +674,12 @@ def intent(intent_type: Type[Intent], name="", output_map={}, *args, **kwargs):
     --------
     Make an operation that defines a PlotIntent that displays its plot item with a red line (pen='r' kwarg).
 
-    >>>@operation
-    >>>@output_names('output1', 'output2')
-    >>>@intent(PlotHint, name="Output1 v. Output2", output_map={'x': 'output1', 'y': 'output2'}, labels={} pen='r')
-    >>>def op():
-    >>>    ...
-    >>>    return(array_1, array_2)
+    >>> @operation
+    >>> @output_names('output1', 'output2')
+    >>> @intent(PlotHint, name="Output1 v. Output2", output_map={'x': 'output1', 'y': 'output2'}, labels={} pen='r')
+    >>> def op():
+    >>>     ...
+    >>>     return(array_1, array_2)
     """
     def decorator(func):
         if not hasattr(func, 'intent_blueprints'):
