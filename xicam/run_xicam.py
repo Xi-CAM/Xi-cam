@@ -26,13 +26,15 @@ if ".zip/" in os.__file__:
     zip_ref.extractall(os.path.dirname(os.path.dirname(os.__file__)))
     zip_ref.close()
 
-os.environ["QT_API"] = "pyqt5"
+os.environ["QT_API"] = "pyside6"
 import qtpy
 from qtpy.QtWidgets import QApplication, QErrorMessage
 from qtpy.QtCore import QCoreApplication, QProcess, QTimer
 
 if qtpy.API_NAME == "PyQt5" and "PySide" in sys.modules:
     del sys.modules["PySide"]
+elif qtpy.API_NAME == "PySide2" and "PyQt5" in sys.modules:
+    del sys.modules["PyQt5"]
 elif qtpy.API_NAME == "PySide2" and "PyQt5" in sys.modules:
     del sys.modules["PyQt5"]
 
@@ -52,35 +54,39 @@ def check_show_mainwindow():
         show_check_timer.stop()
 
 
-def _main(args, exec=True):
+def _main(args, exec=True, splash=False):
     global mainwindow, splash_proc, show_check_timer
     # import pydm
     # app = QApplication([])
     # app = pydm.PyDMApplication()
     app = QApplication.instance() or QApplication([])
     signal.signal(signal.SIGINT, signal.SIG_DFL)
+    if splash:
+        from xicam.gui.windows import splash
+        from xicam.core import msg
 
-    from xicam.gui.windows import splash
-    from xicam.core import msg
+        if getattr(args, 'verbose', False):
+            QErrorMessage.qtHandler()
 
-    if getattr(args, 'verbose', False):
-        QErrorMessage.qtHandler()
+        # start splash in subprocess
+        splash_proc = QProcess()
+        # splash_proc.started.connect(lambda: print('started splash'))
+        # splash_proc.finished.connect(lambda: print('finished splashing'))
+        log_file = msg.file_handler.baseFilename
+        initial_length = os.path.getsize(log_file)
+        splash_proc.start(sys.executable, [splash.__file__, log_file, str(initial_length)])
 
-    # start splash in subprocess
-    splash_proc = QProcess()
-    # splash_proc.started.connect(lambda: print('started splash'))
-    # splash_proc.finished.connect(lambda: print('finished splashing'))
-    log_file = msg.file_handler.baseFilename
-    initial_length = os.path.getsize(log_file)
-    splash_proc.start(sys.executable, [splash.__file__, log_file, str(initial_length)])
-
-    show_check_timer = QTimer()
-    show_check_timer.timeout.connect(check_show_mainwindow)
-    show_check_timer.start(100)
+        show_check_timer = QTimer()
+        show_check_timer.timeout.connect(check_show_mainwindow)
+        show_check_timer.start(100)
 
     from xicam.gui.windows.mainwindow import XicamMainWindow
 
     mainwindow = XicamMainWindow()
+
+    if not splash:
+        mainwindow.show()
+        mainwindow.activateWindow()
 
     if exec:
         return app.exec_()

@@ -28,6 +28,7 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Physics",
 ]
 dependencies = [
+    "area-detector-handlers",
     "appdirs",
     "astropy",
     "bluesky-widgets",
@@ -39,7 +40,7 @@ dependencies = [
     "h5py",
     "matplotlib",
     "numpy",
-    "PySide6",
+    "PyQt5",
     "pyqtgraph",
     "qdarkstyle",
     "qtconsole",
