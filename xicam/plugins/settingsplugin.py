@@ -57,18 +57,19 @@ class SettingsPlugin(QObject, PluginType):
             )
 
 
-class ParameterSettingsPlugin(GroupParameter, SettingsPlugin):
+class ParameterSettingsPlugin(SettingsPlugin):
     def __init__(self, icon, name: str, paramdicts: List[dict], **kwargs):
+        self.parameter = GroupParameter(name=name, type="group", children=paramdicts, **kwargs)
         self.icon = icon
         self._name = name
         self._widget = None
-        GroupParameter.__init__(self, name=name, type="group", children=paramdicts, **kwargs)
+        super().__init__(icon, name, paramdicts)
         self.restore()
 
     @property
     def widget(self):
         widget = ParameterTree()
-        widget.setParameters(self, showTop=False)
+        widget.setParameters(self.parameter, showTop=False)
         return widget
 
     def apply(self):
@@ -76,7 +77,10 @@ class ParameterSettingsPlugin(GroupParameter, SettingsPlugin):
 
     def toState(self):
         self.apply()
-        return self.saveState(filter="user")
+        return self.parameter.saveState(filter="user")
 
     def fromState(self, state):
-        self.restoreState(state, addChildren=False, removeChildren=False)
+        self.parameter.restoreState(state, addChildren=False, removeChildren=False)
+
+    def __getitem__(self, item):
+        return self.parameter[item]
