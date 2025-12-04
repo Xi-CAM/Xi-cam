@@ -19,6 +19,7 @@ from timeit import default_timer
 
 import entrypoints
 
+from core.threads import invoke_as_event
 from xicam.core import msg
 from xicam.core import threads
 from xicam.core.args import parse_args
@@ -100,9 +101,9 @@ class XicamPluginManager:
         self.type_mapping = {}
         self.plugin_types = {}
         self.instantiating = False
+        self.plugin_loader = None
 
-        # A QRunnable-based background Worker
-        self.plugin_loader = threads.QThreadFutureIterator(self._load_plugins)
+        invoke_as_event(self.start_loader_thread)
 
         # Remember all modules loaded before any plugins are loaded; don't bother unloading these
         self._preloaded_modules = set(sys.modules.keys())
@@ -124,6 +125,10 @@ class XicamPluginManager:
         # ...if so, blacklist it
         if not include_cammart:
             self._blacklist.extend(["cammart", "venvs"])
+
+    def start_loader_thread(self):
+        # A QRunnable-based background Worker
+        self.plugin_loader = threads.QThreadFutureIterator(self._load_plugins)
 
     def initialize_types(self):
         for plugins in self.type_mapping.values():
@@ -152,7 +157,8 @@ class XicamPluginManager:
         Find, load, and instantiate all Xi-cam plugins matching known plugin types
 
         """
-
+        if not self.plugin_loader:
+            self.start_loader_thread()
         self._discover_plugins()
         if not self.plugin_loader.isRunning():
             self.plugin_loader.start()
@@ -162,6 +168,8 @@ class XicamPluginManager:
         Register a class as a plugin. For in-memory usage. If `replace`, then any earlier instances are purged first
 
         """
+        if not self.plugin_loader:
+            self.start_loader_thread()
         if replace:
             # Clear cache by name
             self.type_mapping[type_name].pop(plugin_name, None)
