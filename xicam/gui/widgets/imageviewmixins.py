@@ -1571,6 +1571,8 @@ class DeviceView(BetterLayout):
 
     def updateFrame(self):
         from ophyd.signal import ReadTimeoutError
+        if np.any(np.asarray(self.device.image1.array_size.get())==0):
+            return
         try:
             image = self.device.image1.shaped_image.get()
         except ReadTimeoutError as ex:
