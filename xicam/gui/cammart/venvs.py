@@ -32,8 +32,8 @@ execfile = lambda filename, globals=None, locals=None: exec(open(filename).read(
 
 class VenvsSettingsPlugin(SettingsPlugin):
     def __init__(self):
-        if not current_environment:
-            initialize_venv()
+        # if not current_environment:
+        #     initialize_venv()
 
         self.widget = QLabel("test")
         super(VenvsSettingsPlugin, self).__init__(QIcon(str(path("icons/python.png"))), "Virtual Environments", self.widget)
