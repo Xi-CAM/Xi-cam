@@ -219,7 +219,7 @@ class DataResourceView():
         pass
 
 
-class DataResourceTree(QTreeView, DataResourceView):
+class DataResourceTree(QTreeView):
     sigOpen = Signal(object)
     sigOpenPath = Signal(str)
     sigOpenExternally = Signal(str)
@@ -228,7 +228,28 @@ class DataResourceTree(QTreeView, DataResourceView):
 
     def __init__(self, model):
         super(DataResourceTree, self).__init__()
+        threads.invoke_as_event(self.doubleClicked.connect, self.open)
+        threads.invoke_as_event(self.setSelectionMode, self.SelectionMode.ExtendedSelection)
+        threads.invoke_as_event(self.setSelectionBehavior, self.SelectionBehavior.SelectRows)
+        threads.invoke_as_event(self.setContextMenuPolicy, Qt.CustomContextMenu)
+        threads.invoke_as_event(self.customContextMenuRequested.connect, self.menuRequested)
+
+        self.menu = QMenu()
+        standardActions = [
+            QAction("Open"),
+            QAction("Open Externally"),
+            QAction("Enable/Disable Streaming"),
+            QAction("Delete"),
+        ]
+        self.menu.addActions(standardActions)
+        standardActions[0].triggered.connect(self.open)
+        standardActions[1].triggered.connect(self.openExternally)
+
         self.setModel(model)
+
+    def menuRequested(self, position):
+        self.menu.exec_(self.viewport().mapToGlobal(position))
+        QTreeView.__init__(self)
 
     def refresh(self):
         self.model().refresh()
@@ -262,7 +283,8 @@ class DataResourceList(QListView, DataResourceView):
 
 class LocalFileSystemTree(DataResourceTree):
     def __init__(self):
-        super(LocalFileSystemTree, self).__init__(LocalFileSystemResourcePlugin())
+        self._model = LocalFileSystemResourcePlugin()
+        super(LocalFileSystemTree, self).__init__(self._model)
 
     def open(self, _=None):
         indexes = self.selectionModel().selectedRows()
@@ -316,7 +338,9 @@ class DataResourceBrowser(QWidget):
         self.browsertabbar.tabCloseRequested.connect(self.closetab)
 
         # Add the required 'Local' browser
-        self.addBrowser(DataBrowser(LocalFileSystemTree()), "Local", closable=False)
+        self._local_tree = LocalFileSystemTree()
+        self._local_browser = DataBrowser(self._local_tree)
+        self.addBrowser(self._local_browser, "Local", closable=False)
         # self.addBrowser(DatabrokerCatalogPlugin().controller, "Databroker", closable=False)
         self.browsertabbar.setCurrentIndex(index)
 
