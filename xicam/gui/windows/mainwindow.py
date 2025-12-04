@@ -22,7 +22,7 @@ from qtpy.QtWidgets import (
     QMessageBox, QWhatsThis,
 )
 
-from core.threads import invoke_as_event
+from xicam.core.threads import invoke_as_event
 from xicam import _version as version
 from xicam.plugins import manager as pluginmanager, user_plugin_dir
 from xicam.plugins import PluginType

@@ -19,7 +19,7 @@ from timeit import default_timer
 
 import entrypoints
 
-from core.threads import invoke_as_event
+from xicam.core.threads import invoke_as_event
 from xicam.core import msg
 from xicam.core import threads
 from xicam.core.args import parse_args
