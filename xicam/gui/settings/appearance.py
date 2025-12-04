@@ -61,11 +61,13 @@ class AppearanceSettingsPlugin(ParameterSettingsPlugin):
                         ]
                     ),
                     type="list",
+                    value='QtModern'
                 ),
                 dict(
                     name="Plot Theme (requires restart)",
                     values=OrderedDict([("Default (Dark)", setPlotDefault), ("Publication (White)", setPlotWhite)]),
                     type="list",
+                    value='Default (Dark)'
                 ),
             ],
         )
