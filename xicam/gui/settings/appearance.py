@@ -67,7 +67,7 @@ class AppearanceSettingsPlugin(ParameterSettingsPlugin):
                     name="Plot Theme (requires restart)",
                     values=OrderedDict([("Default (Dark)", setPlotDefault), ("Publication (White)", setPlotWhite)]),
                     type="list",
-                    value='Default (Dark)'
+                    value=setModern
                 ),
             ],
         )
