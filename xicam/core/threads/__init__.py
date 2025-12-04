@@ -26,7 +26,7 @@ class ThreadManager(QStandardItemModel):
         self.timer = QTimer()
         self.timer.setInterval(1000)
         self.timer.timeout.connect(self.update)
-        self.timer.start()
+        invoke_as_event(self.timer.start)
         self._threads = []
 
     @property
@@ -59,9 +59,6 @@ class ThreadManager(QStandardItemModel):
         item.setData(thread, role=self.ThreadRole)
         self.appendRow(item)
         self._threads.append(thread)
-
-
-manager = ThreadManager()
 
 
 # Justification for subclassing qthread: https://woboq.com/blog/qthread-you-were-not-doing-so-wrong.html
@@ -417,6 +414,8 @@ def iterator(
 
     return wrap_runnable_method
 
+
+manager = ThreadManager()
 
 if __name__ == "__main__":
     app = QApplication([])
