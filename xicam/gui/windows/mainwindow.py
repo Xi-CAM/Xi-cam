@@ -21,6 +21,8 @@ from qtpy.QtWidgets import (
     QSpinBox,
     QMessageBox, QWhatsThis,
 )
+
+from core.threads import invoke_as_event
 from xicam import _version as version
 from xicam.plugins import manager as pluginmanager, user_plugin_dir
 from xicam.plugins import PluginType
@@ -71,8 +73,8 @@ class XicamMainWindow(QMainWindow):
         # Load plugins
         pluginmanager.qt_is_safe = True
         pluginmanager.initialize_types()
-        pluginmanager.collect_plugins()
-        pluginmanager.collect_user_plugins()
+        invoke_as_event(pluginmanager.collect_plugins)
+        invoke_as_event(pluginmanager.collect_user_plugins)
 
         # Setup center/toolbar/statusbar/progressbar
         self.pluginmodewidget = pluginModeWidget()
@@ -411,7 +413,11 @@ class pluginModeWidget(QToolBar):
         duration = 200
         self._effects = []
         for action in self.actions():
-            for widget in action.associatedObjects():
+            if hasattr(action, 'associatedObjects'):
+                widgets = action.associatedObjects()
+            else:
+                widgets = action.associatedWidgets()
+            for widget in widgets:
                 if widget is not self:
                     a = QPropertyAnimation(widget, b"pos", widget)
                     a.setStartValue(widget.pos())
@@ -441,7 +447,11 @@ class pluginModeWidget(QToolBar):
         for action in self.actions():
             effect = QGraphicsOpacityEffect(self)
             self._effects.append(effect)
-            for widget in action.associatedObjects():
+            if hasattr(action, 'associatedObjects'):
+                widgets = action.associatedObjects()
+            else:
+                widgets = action.associatedWidgets()
+            for widget in widgets:
                 if widget is not self:
                     widget.setGraphicsEffect(effect)
             a = QPropertyAnimation(effect, b"opacity")
