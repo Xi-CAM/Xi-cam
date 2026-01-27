@@ -1497,6 +1497,8 @@ class DeviceView(BetterLayout):
         self.error_text = pg.TextItem('Waiting for data...')
         self.view.addItem(self.error_text)
 
+        self.view.invertY(False)
+
         self._update_action = None
         self.setPassive(self.passive.isChecked())
         self.passive.clicked.connect(self.setPassive)
