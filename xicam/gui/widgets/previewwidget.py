@@ -19,7 +19,7 @@ class PreviewWidget(GraphicsLayoutWidget):
         self.imageitem = ImageItem()
         self.textitem = TextItem(anchor=(0.5, 0))
         self.textitem.setFont(QFont("Zero Threes"))
-        self.imageitem.setOpts(axisOrder="row-major")
+        self.imageitem.setOpts(axisOrder="col-major")
 
         self.view.addItem(self.imageitem)
         self.view.addItem(self.textitem)

@@ -177,9 +177,13 @@ def signature_to_param(signature: inspect.Signature,
         elif param_type == 'EnumMeta':
             parameter_dict['limits'] = {enum.name: enum.value for enum in parameter.annotation.__members__.values()}
         parameter_dict['units'] = units.get(name)
+        parameter_dict['siPrefix'] = bool(units.get(name))
         parameter_dict['fixed'] = fixed.get(name)
         parameter_dict['fixable'] = fixable.get(name)
         parameter_dict['visible'] = visible.get(name, True)
+        parameter_dict['decimals'] = 6
+        if param_type == 'float':
+            parameter_dict['format'] = "{prefix}{prefixGap}{scaledValue:.{decimals}f}{suffixGap}{siPrefix}{suffix}"
         parameter_dict.update(opts.get(name, {}))
 
         parameter_dicts.append(parameter_dict)

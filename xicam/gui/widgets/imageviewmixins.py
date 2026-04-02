@@ -182,7 +182,7 @@ class XArrayView(ImageView):
 
         super(XArrayView, self).__init__(*args, **kwargs)
 
-        self.view.invertY(False)
+        self.imageItem.setOpts(axisOrder="col-major")
 
     def setImage(self, img, **kwargs):
 

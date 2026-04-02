@@ -13,8 +13,7 @@ class DynImageView(ImageView):
         self.getHistogramWidget().setMinimumWidth(10)
 
         # Don't invert Y axis
-        self.view.invertY(False)
-        self.imageItem.setOpts(axisOrder="row-major")
+        self.imageItem.setOpts(axisOrder="col-major")
 
         # Setup late signal
         self.sigTimeChangeFinished = self.timeLine.sigPositionChangeFinished
