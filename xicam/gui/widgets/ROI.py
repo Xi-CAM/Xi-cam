@@ -848,6 +848,22 @@ class BetterRectROI(BetterROI, RectROI):
         self.state['size'] = size
         self.stateChanged()
 
+    @property
+    def pos_x(self):
+        return self.pos().x()
+
+    @pos_x.setter
+    def pos_x(self, value):
+        self.setPos(value, self.pos().y())
+
+    @property
+    def pos_y(self):
+        return self.pos().y()
+
+    @pos_y.setter
+    def pos_y(self, value):
+        self.setPos(self.pos().x(), value)
+
     def __reduce__(self):
         # FIXME: very simple reduce for allowing copy (to help with weakref management)
         return self.__class__, (self.pos(), self.size())
