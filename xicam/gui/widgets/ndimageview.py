@@ -368,7 +368,7 @@ class SliceableGraphicsView(GraphicsView, SlicingView):
                 getattr(self.view, sig).connect(getattr(self, sig))
 
         # Add imageitem
-        self.image_item = ImageItem(axisOrder='row-major')
+        self.image_item = ImageItem(axisOrder='col-major')
         self.image_item.setOpts()
         self.view.addItem(self.image_item)
 

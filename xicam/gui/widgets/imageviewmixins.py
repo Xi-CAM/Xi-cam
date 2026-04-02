@@ -63,12 +63,6 @@ class DisplayMode(enum.Enum):
     remesh = enum.auto()
 
 
-class RowMajor(ImageView):
-    def __init__(self, *args, **kwargs):
-        super(RowMajor, self).__init__(*args, **kwargs)
-        self.imageItem.setOpts(replace=True, axisOrder='row-major')
-
-
 class BetterTicks(ImageView):
     def __init__(self, *args, **kwargs):
         super(BetterTicks, self).__init__(*args, **kwargs)
@@ -290,7 +284,7 @@ class XArrayView(ImageView):
         return [levels]
 
 
-class PixelSpace(XArrayView, RowMajor):
+class PixelSpace(XArrayView):
     def __init__(self, *args, **kwargs):
         # Add axes
         self.axesItem = PlotItem()
@@ -516,7 +510,7 @@ class PixelCoordinates(PixelSpace, BetterLayout):
         """
 
         try:
-            I = self.imageItem.image[int(pxpos.y()), int(pxpos.x())]
+            I = self.imageItem.image[int(pxpos.x()), int(pxpos.y())]
         except IndexError:
             I = 0
 
@@ -534,12 +528,12 @@ class QCoordinates(QSpace, PixelCoordinates):
         if self._geometry:
             if self.displaymode == DisplayMode.remesh:
                 try:
-                    I = self.imageItem.image[int(pxpos.y()), int(pxpos.x())]
+                    I = self.imageItem.image[int(pxpos.x()), int(pxpos.y())]
                 except IndexError:
                     I = 0
                 self._coordslabel.setText(
                     f"x={pxpos.x():0.1f}, "
-                    f"y={self.imageItem.image.shape[-2] - pxpos.y():0.1f}, "
+                    f"y={self.imageItem.image.shape[-1] - pxpos.y():0.1f}, "
                     f"I={I:0.0f}, "
                     f"q={np.sqrt(pos.x() ** 2 + pos.y() ** 2):0.3f} \u212B\u207B\u00B9, "
                     f"q<sub>z</sub>={pos.y():0.3f} \u212B\u207B\u00B9, "
@@ -549,18 +543,18 @@ class QCoordinates(QSpace, PixelCoordinates):
                 )
             elif self.displaymode == DisplayMode.raw:
                 try:
-                    I = self.imageItem.image[int(pxpos.y()), int(pxpos.x())]
+                    I = self.imageItem.image[int(pxpos.x()), int(pxpos.y())]
                 except IndexError:
                     I = 0
 
                 q = q_from_geometry(self.imageItem.image.shape,
                                     self._geometry,
                                     reflection=False,
-                                    alphai=0)[int(self.imageItem.image.shape[-2] - pxpos.y()), int(pxpos.x())]
+                                    alphai=0)[int(pxpos.x()), int(self.imageItem.image.shape[-1] - pxpos.y())]
 
                 self._coordslabel.setText(
                     f"x={pxpos.x():0.1f}, "
-                    f"y={self.imageItem.image.shape[-2] - pxpos.y():0.1f}, "
+                    f"y={self.imageItem.image.shape[-1] - pxpos.y():0.1f}, "
                     f"I={I:0.0f}, "
                     f"q={np.sqrt(np.sum(np.square(q))):0.3f} \u212B\u207B\u00B9, "
                     f"q<sub>z</sub>={-q[1]:0.3f} \u212B\u207B\u00B9, "
@@ -1241,7 +1235,7 @@ class ToolbarLayout(BetterLayout):
         return actn
 
 
-class EwaldCorrected(QSpace, RowMajor, ToolbarLayout, ProcessingView):
+class EwaldCorrected(QSpace, ToolbarLayout, ProcessingView):
     def __init__(self, *args, **kwargs):
         self.geometry_mode = 'transmission'
         self.incidence_angle = 0

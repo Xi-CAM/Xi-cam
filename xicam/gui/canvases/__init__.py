@@ -88,7 +88,7 @@ class ImageIntentCanvas(XicamIntentCanvas):
             bases = dict(map(lambda name: (plugin_manager.type_mapping['ImageMixinPlugin'][name], 0), bases_names))
             self.canvas_widget = type('ImageViewBlend', (*bases.keys(), ImageView), {})(**constructor_kwargs)
             self.layout().addWidget(self.canvas_widget)
-            self.canvas_widget.imageItem.setOpts(imageAxisOrder='row-major')
+            self.canvas_widget.imageItem.setOpts(axisOrder='col-major')
 
         for key, value in kwargs.items():
             if isinstance(value, DataArray):
