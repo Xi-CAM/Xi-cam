@@ -1,6 +1,6 @@
 import weakref
 
-from pyFAI.azimuthalIntegrator import AzimuthalIntegrator
+from pyFAI.integrator.azimuthal import AzimuthalIntegrator
 from pyqtgraph import ROI, PolyLineROI, Point
 from pyqtgraph.graphicsItems.ROI import Handle, RectROI, LineROI
 from qtpy.QtCore import QRectF, QPointF, Qt, Signal, QSize
